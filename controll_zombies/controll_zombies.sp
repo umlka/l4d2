@@ -462,7 +462,7 @@ void GetModeCvars()
 				{
 					case 2:
 						RemoveSurvivorModelGlow(i);
-						
+					//这里没有必要，因为当服务器模式变动时玩家会自动获得相关信息	
 					/*case 3:
 					{
 						if(!IsFakeClient(i))
