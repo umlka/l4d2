@@ -1869,9 +1869,9 @@ void RemoveSurvivorModelGlow(int client)
 	if(!IsValidEntRef(g_iModelEntRef[client]))
 		return;
 
-	AcceptEntityInput(g_iModelEntRef[client], "TurnOff");
-	SetVariantString("!activator");
-	AcceptEntityInput(g_iModelEntRef[client], "ClearParent");
+	//AcceptEntityInput(g_iModelEntRef[client], "TurnOff");
+	//SetVariantString("!activator");
+	//AcceptEntityInput(g_iModelEntRef[client], "ClearParent");
 	RemoveEntity(g_iModelEntRef[client]);
 	g_iModelEntRef[client] = -1;
 }
