@@ -471,7 +471,7 @@ void GetModeCvars()
 				}
 			}
 		}
-		else //versus->coop
+		else if(HasPlayerZombie()) //versus->coop
 		{
 			for(int i = 1; i <= MaxClients; i++)
 			{
