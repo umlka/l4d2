@@ -1062,7 +1062,7 @@ public void Hook_PostThinkPost(int client)
 		return;
 		
 	static int iModelIndex[MAXPLAYERS + 1] = {0, ...};		
-	if(iModelIndex[client] == 0 || iModelIndex[client] != GetEntProp(client, Prop_Data, "m_nModelIndex"))
+	if(iModelIndex[client] && iModelIndex[client] != GetEntProp(client, Prop_Data, "m_nModelIndex"))
 	{
 		iModelIndex[client] = GetEntProp(client, Prop_Data, "m_nModelIndex");
 
