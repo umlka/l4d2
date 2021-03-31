@@ -1851,7 +1851,8 @@ void CreateSurvivorModelGlow(int client)
 
 	SetGlowColor(client);
 
-	SetEntityRenderMode(iEntity, RENDER_NONE);
+	SetEntityRenderMode(iEntity, RENDER_TRANSCOLOR);
+	SetEntityRenderColor(iEntity, 0, 0, 0, 0);
 
 	SDKHook(iEntity, SDKHook_SetTransmit, Hook_SetTransmit);
 }
