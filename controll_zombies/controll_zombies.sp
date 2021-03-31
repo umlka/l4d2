@@ -1833,9 +1833,9 @@ void CreateSurvivorModelGlow(int client)
 	DispatchKeyValueFloat(iEntity, "fademaxdist", 22000.0);
 
 	SetVariantString("!activator");
-	AcceptEntityInput(iEntity, "SetParent", client, iEntity);
+	AcceptEntityInput(iEntity, "SetParent", client);
 	SetVariantString("!activator");
-	AcceptEntityInput(iEntity, "SetAttached", client, iEntity);
+	AcceptEntityInput(iEntity, "SetAttached", client);
 	DispatchSpawn(iEntity);
 
 	ActivateEntity(iEntity);	
@@ -1866,14 +1866,10 @@ public Action Hook_SetTransmit(int entity, int client)
 
 void RemoveSurvivorModelGlow(int client)
 {
-	if(!IsValidEntRef(g_iModelEntRef[client]))
-		return;
+	if(IsValidEntRef(g_iModelEntRef[client]))
+		RemoveEntity(g_iModelEntRef[client]);
 
-	//AcceptEntityInput(g_iModelEntRef[client], "TurnOff");
-	//SetVariantString("!activator");
-	//AcceptEntityInput(g_iModelEntRef[client], "ClearParent");
-	RemoveEntity(g_iModelEntRef[client]);
-	g_iModelEntRef[client] = -1;
+	g_iModelEntRef[client] = 0;
 }
 
 bool IsValidEntRef(int entity)
