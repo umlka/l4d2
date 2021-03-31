@@ -1238,10 +1238,13 @@ public Action Timer_LadderAndGlow(Handle timer, int client)
 		else
 		{
 			SendConVarValue(client, g_hGameMode, g_sGameMode);
-			if(!HasPlayerZombie())
+			for(int i = 1; i <= MaxClients; i++)
+				RemoveSurvivorModelGlow(i);
+
+			if(HasPlayerZombie())
 			{
 				for(int i = 1; i <= MaxClients; i++)
-					RemoveSurvivorModelGlow(i);
+					CreateSurvivorModelGlow(i);
 			}
 		}
 	}
@@ -1829,21 +1832,10 @@ void CreateSurvivorModelGlow(int client)
 	static char sModelName[128];
 	GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
 	SetEntityModel(iEntity, sModelName);
-	DispatchKeyValueFloat(iEntity, "fademindist", 20000.0);
-	DispatchKeyValueFloat(iEntity, "fademaxdist", 22000.0);
-
-	SetVariantString("!activator");
-	AcceptEntityInput(iEntity, "SetParent", client);
-	SetVariantString("!activator");
-	AcceptEntityInput(iEntity, "SetAttached", client);
 	DispatchSpawn(iEntity);
 
-	ActivateEntity(iEntity);	
-	AcceptEntityInput(iEntity, "TurnOn");
-	SetEntProp(iEntity, Prop_Send, "m_hOwnerEntity", client);
-	SetEntProp(iEntity, Prop_Send, "m_nMinGPULevel", 1);
-	SetEntProp(iEntity, Prop_Send, "m_nMaxGPULevel", 1);
-
+	SetEntProp(iEntity, Prop_Send, "m_nSolidType", 0);
+	SetEntProp(iEntity, Prop_Send, "m_CollisionGroup", 0);
 	SetEntProp(iEntity, Prop_Send, "m_iGlowType", 3);
 	SetEntProp(iEntity, Prop_Send, "m_nGlowRange", 20000);
 
@@ -1851,18 +1843,20 @@ void CreateSurvivorModelGlow(int client)
 
 	SetGlowColor(client);
 
-	SetEntityRenderMode(iEntity, RENDER_TRANSCOLOR);
-	SetEntityRenderColor(iEntity, 0, 0, 0, 0);
+	SetEntityRenderMode(iEntity, RENDER_NONE);
+
+	SetVariantString("!activator");
+	AcceptEntityInput(iEntity, "SetAttached", client);
 
 	SDKHook(iEntity, SDKHook_SetTransmit, Hook_SetTransmit);
 }
 
 public Action Hook_SetTransmit(int entity, int client)
 {
-	if(GetClientTeam(client) != 3)
-		return Plugin_Handled;
+	if(GetClientTeam(client) == 3)
+		return Plugin_Continue;
 	
-	return Plugin_Continue;
+	return Plugin_Handled;
 }
 
 void RemoveSurvivorModelGlow(int client)
