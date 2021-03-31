@@ -557,24 +557,24 @@ bool IsRealClient(int client)
 	return client && IsClientInGame(client) && !IsFakeClient(client);
 }
 
-bool IsPlayerGhost(int client)
+bool IsGhost(int client)
 {
-	return GetEntProp(client, Prop_Send, "m_isGhost") == 1;
+	return client && GetEntProp(client, Prop_Send, "m_isGhost") == 1;
 }
 
-bool IsClientTank(int client)
+bool IsTank(int client)
 {
-	return GetEntProp(client, Prop_Send, "m_zombieClass") == 8;
+	return client && GetEntProp(client, Prop_Send, "m_zombieClass") == 8;
 }
 
-bool IsClientSurvivor(int client)
+bool IsSurvivor(int client)
 {
-	return GetClientTeam(client) == 2;
+	return client && GetClientTeam(client) == 2;
 }
 
-bool IsClientInfected(int client)
+bool IsInfected(int client)
 {
-	return GetClientTeam(client) == 3;
+	return client && GetClientTeam(client) == 3;
 }
 
 bool IsModEnabled()
@@ -1102,7 +1102,7 @@ public void Event_Kill(Event event, const char[] name, bool dontBroadcast)
 
 	if(IsModEnabled() && IsRealClient(iAttackerIndex))
 	{
-		if(IsClientSurvivor(iAttackerIndex))
+		if(IsSurvivor(iAttackerIndex))
 		{
 			if(bHeadShot)
 				EventHeadShots(iAttackerIndex);
@@ -1118,7 +1118,7 @@ public void Event_Incap(Event event, const char[] name, bool dontBroadcast)
 
 	if(IsModEnabled() && IsRealClient(iAttackerIndex))
 	{
-		if(IsClientInfected(iAttackerIndex))
+		if(IsInfected(iAttackerIndex))
 		{
 			int iIncapPoints = g_hPointRewards[InfecIncapSurv].IntValue;
 			if(iIncapPoints > 0)
@@ -1134,14 +1134,14 @@ public void Event_Death(Event event, const char[] name, bool dontBroadcast)
 
 	if(IsModEnabled() && IsRealClient(iAttackerIndex))
 	{
-		if(IsClientSurvivor(iAttackerIndex))
+		if(IsSurvivor(iAttackerIndex))
 		{
 			int iInfectedKilledReward = g_hPointRewards[SurvKillInfec].IntValue;
 			if(iInfectedKilledReward > 0)
 			{
-				if(IsClientInfected(iVictimIndex))
+				if(IsInfected(iVictimIndex))
 				{ // If the person killed by the survivor is infected
-					if(IsClientTank(iVictimIndex)) // Ignore tank death since it is handled elsewhere
+					if(IsTank(iVictimIndex)) // Ignore tank death since it is handled elsewhere
 						return;
 					else
 					{
@@ -1151,12 +1151,12 @@ public void Event_Death(Event event, const char[] name, bool dontBroadcast)
 				}
 			}
 		}
-		else if(IsClientInfected(iAttackerIndex))
+		else if(IsInfected(iAttackerIndex))
 		{
 			int iSurvivorKilledReward = g_hPointRewards[InfecKillSurv].IntValue;
 			if(iSurvivorKilledReward > 0)
 			{
-				if(IsClientSurvivor(iVictimIndex)) // If the person killed by the infected is a survivor
+				if(IsSurvivor(iVictimIndex)) // If the person killed by the infected is a survivor
 					AddPoints(iAttackerIndex, iSurvivorKilledReward, "Killed Survivor");
 			}
 		}
@@ -1174,7 +1174,7 @@ void TankKilledPoints(int client, int iPoints, const char[] sMessage)
 {
 	if(client > 0 && MaxClients >= client)
 	{
-		if(IsRealClient(client) && IsClientSurvivor(client) && IsPlayerAlive(client))
+		if(IsRealClient(client) && IsSurvivor(client) && IsPlayerAlive(client))
 			AddPoints(client, iPoints, sMessage);
 
 		TankKilledPoints(++client, iPoints, sMessage);
@@ -1186,7 +1186,7 @@ public void Event_TankDeath(Event event, const char[] name, bool dontBroadcast)
 	int iAttackerIndex = GetAttackerIndex(event);
 	if(IsModEnabled() && IsRealClient(iAttackerIndex))
 	{
-		if(IsClientSurvivor(iAttackerIndex))
+		if(IsSurvivor(iAttackerIndex))
 		{
 			if(event.GetBool("solo")) // If kill was solo
 			{
@@ -1206,7 +1206,7 @@ public void Event_WitchDeath(Event event, const char[] name, bool dontBroadcast)
 	int client = GetClientIndex(event);
 	if(IsModEnabled() && IsRealClient(client))
 	{
-		if(IsClientSurvivor(client))
+		if(IsSurvivor(client))
 		{
 			int iWitchKilledReward = g_hPointRewards[SurvKillWitch].IntValue;
 			if(iWitchKilledReward > 0)
@@ -1228,7 +1228,7 @@ public void Event_Heal(Event event, const char[] name, bool dontBroadcast)
 	int client = GetClientIndex(event);
 	if(IsModEnabled() && IsRealClient(client))
 	{
-		if(IsClientSurvivor(client))
+		if(IsSurvivor(client))
 		{
 			if(client != GetClientOfUserId(event.GetInt("subject")))
 			{ // If player did not heal himself with the medkit
@@ -1266,14 +1266,14 @@ void EventProtect(int client)
 public void Event_Protect(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientIndex(event);
-	if(IsModEnabled() && IsRealClient(client) && IsClientSurvivor(client) && event.GetInt("award") == 67)
+	if(IsModEnabled() && IsRealClient(client) && IsSurvivor(client) && event.GetInt("award") == 67)
 		EventProtect(client);
 }
 
 public void Event_Revive(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientIndex(event);
-	if(IsModEnabled() && IsRealClient(client) && IsClientSurvivor(client) && client != GetClientOfUserId(event.GetInt("subject")))
+	if(IsModEnabled() && IsRealClient(client) && IsSurvivor(client) && client != GetClientOfUserId(event.GetInt("subject")))
 	{
 		if(event.GetBool("ledge_hang"))
 		{
@@ -1293,7 +1293,7 @@ public void Event_Revive(Event event, const char[] name, bool dontBroadcast)
 public void Event_Shock(Event event, const char[] name, bool dontBroadcast)
 { // Defib
 	int client = GetClientIndex(event);
-	if(IsModEnabled() && IsRealClient(client) && IsClientSurvivor(client))
+	if(IsModEnabled() && IsRealClient(client) && IsSurvivor(client))
 	{
 		int iDefibReward = g_hPointRewards[SurvTeamDefib].IntValue;
 		if(iDefibReward > 0)
@@ -1304,7 +1304,7 @@ public void Event_Shock(Event event, const char[] name, bool dontBroadcast)
 public void Event_Choke(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientIndex(event);
-	if(IsModEnabled() && IsRealClient(client) && IsClientInfected(client))
+	if(IsModEnabled() && IsRealClient(client) && IsInfected(client))
 	{
 		int iChokeReward = g_hPointRewards[InfecChokeSurv].IntValue;
 		if(iChokeReward > 0)
@@ -1317,18 +1317,18 @@ public void Event_Boom(Event event, const char[] name, bool dontBroadcast)
 	int iAttackerIndex = GetAttackerIndex(event);
 	if(IsModEnabled() && IsRealClient(iAttackerIndex))
 	{
-		if(IsClientInfected(iAttackerIndex)) // If boomer biles survivors
+		if(IsInfected(iAttackerIndex)) // If boomer biles survivors
 		{ 
 			int iBoomedReward = g_hPointRewards[InfecBoomSurv].IntValue;
 			if(iBoomedReward > 0)
 				AddPoints(iAttackerIndex, iBoomedReward, "Boom");
 		}
-		else if(IsClientSurvivor(iAttackerIndex)) // If survivor biles a tank
+		else if(IsSurvivor(iAttackerIndex)) // If survivor biles a tank
 		{
 			int iBiledReward = g_hPointRewards[SurvBileTank].IntValue;
 			if(iBiledReward > 0)
 			{
-				if(IsClientTank(GetClientIndex(event)))
+				if(IsTank(GetClientIndex(event)))
 					AddPoints(iAttackerIndex, iBiledReward, "Biled");
 			}
 		}
@@ -1338,7 +1338,7 @@ public void Event_Boom(Event event, const char[] name, bool dontBroadcast)
 public void Event_Pounce(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientIndex(event);
-	if(IsModEnabled() && IsRealClient(client) && IsClientInfected(client))
+	if(IsModEnabled() && IsRealClient(client) && IsInfected(client))
 	{
 		int iPounceReward = g_hPointRewards[InfecPounceSurv].IntValue;
 		if(iPounceReward > 0)
@@ -1349,7 +1349,7 @@ public void Event_Pounce(Event event, const char[] name, bool dontBroadcast)
 public void Event_Ride(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientIndex(event);
-	if(IsModEnabled() && IsRealClient(client) && IsClientInfected(client))
+	if(IsModEnabled() && IsRealClient(client) && IsInfected(client))
 	{
 		int iRideReward = g_hPointRewards[InfecRideSurv].IntValue;
 		if(iRideReward > 0)
@@ -1362,7 +1362,7 @@ public void Event_Carry(Event event, const char[] name, bool dontBroadcast)
 	int client = GetClientIndex(event);
 	if(IsModEnabled() && IsRealClient(client))
 	{
-		if(IsClientInfected(client))
+		if(IsInfected(client))
 		{
 			int iCarryReward = g_hPointRewards[InfecChargeSurv].IntValue;
 			if(iCarryReward > 0)
@@ -1374,7 +1374,7 @@ public void Event_Carry(Event event, const char[] name, bool dontBroadcast)
 public void Event_Impact(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientIndex(event);
-	if(IsModEnabled() && IsRealClient(client) && IsClientInfected(client))
+	if(IsModEnabled() && IsRealClient(client) && IsInfected(client))
 	{
 		int iImpactReward = g_hPointRewards[InfecImpactSurv].IntValue;
 		if(iImpactReward > 0)
@@ -1390,7 +1390,7 @@ public void Event_Burn(Event event, const char[] name, bool dontBroadcast)
 
 	if(IsModEnabled() && IsRealClient(client))
 	{
-		if(IsClientSurvivor(client))
+		if(IsSurvivor(client))
 		{
 			if(!strcmp(sVictimName, "Tank", false))
 			{
@@ -1453,7 +1453,7 @@ public void Event_Hurt(Event event, const char[] name, bool dontBroadcast)
 	int iAttackerIndex = GetAttackerIndex(event);
 	if(IsModEnabled() && IsRealClient(iAttackerIndex))
 	{
-		if(IsClientInfected(iAttackerIndex) && IsClientSurvivor(GetClientIndex(event)))
+		if(IsInfected(iAttackerIndex) && IsSurvivor(GetClientIndex(event)))
 		{
 			g_esPlayerData[iAttackerIndex].iHurtCount++;
 			int iSurvivorDamagedReward = g_hPointRewards[InfecHurtSurv].IntValue;
@@ -1533,7 +1533,7 @@ void JoinInfected(int client, int iCost)
 {
 	if(IsRealClient(client))
 	{
-		if(IsClientSurvivor(client))
+		if(IsSurvivor(client))
 		{
 			ChangeClientTeam(client, 3);
 			RemovePoints(client, iCost);
@@ -1545,7 +1545,7 @@ void PerformSuicide(int client, int iCost)
 {
 	if(IsRealClient(client))
 	{
-		if(IsClientInfected(client))
+		if(IsInfected(client))
 		{
 			ForcePlayerSuicide(client);
 			RemovePoints(client, iCost);
@@ -2751,7 +2751,7 @@ public int InfectedMenu(Menu menu, MenuAction action, int client, int iPosition)
 			if(!strcmp(sItem, "heal", false))
 			{
 				strcopy(g_esPlayerData[client].sItemName, 64, "give health");
-				if(IsClientTank(client))
+				if(IsTank(client))
 					g_esPlayerData[client].iItemCost = g_hItemCosts[CostInfectedHeal].IntValue * g_hItemCosts[CostTankHealMultiplier].IntValue;
 				else
 					g_esPlayerData[client].iItemCost = g_hItemCosts[CostInfectedHeal].IntValue;
@@ -3426,7 +3426,7 @@ public int MenuHandler_ConfirmI(Menu menu, MenuAction action, int param1, int pa
 				}
 				else if(StrContains(g_esPlayerData[param1].sItemName, "z_spawn_old", false) != -1 && StrContains(g_esPlayerData[param1].sItemName, "mob", false) == -1)
 				{
-					if(IsPlayerAlive(param1) || IsPlayerGhost(param1))
+					if(IsPlayerAlive(param1) || IsGhost(param1))
 						return;
 
 					bool[] bResetGhost = new bool[MaxClients + 1];
@@ -3436,7 +3436,7 @@ public int MenuHandler_ConfirmI(Menu menu, MenuAction action, int param1, int pa
 						if(i == param1 || !IsClientInGame(i) || GetClientTeam(i) != 3 || IsFakeClient(i))
 							continue;
 
-						if(IsPlayerGhost(i))
+						if(IsGhost(i))
 						{
 							bResetGhost[i] = true;
 							SetEntProp(i, Prop_Send, "m_isGhost", 0);
