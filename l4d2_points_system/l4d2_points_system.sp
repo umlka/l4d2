@@ -1068,9 +1068,9 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 void EventHeadShots(int client)
 {
 	int iHeadShotReward = g_hPointRewards[SurvRewardHeadShots].IntValue;
-	int iHeadShotsRequired = PluginSettings[hHeadShotNum].IntValue;
 	if(iHeadShotReward > 0)
 	{
+		int iHeadShotsRequired = PluginSettings[hHeadShotNum].IntValue;
 		g_esPlayerData[client].iHeadShotCount++;
 		if(g_esPlayerData[client].iHeadShotCount >= iHeadShotsRequired)
 		{
@@ -1083,9 +1083,9 @@ void EventHeadShots(int client)
 void EventKillSpree(int client)
 {
 	int iKillSpreeReward = g_hPointRewards[SurvRewardKillSpree].IntValue;
-	int iKillSpreeRequired = PluginSettings[hKillSpreeNum].IntValue;
 	if(iKillSpreeReward > 0)
 	{
+		int iKillSpreeRequired = PluginSettings[hKillSpreeNum].IntValue;
 		g_esPlayerData[client].iKillCount++;
 		if(g_esPlayerData[client].iKillCount >= iKillSpreeRequired)
 		{
@@ -1097,14 +1097,12 @@ void EventKillSpree(int client)
 
 public void Event_Kill(Event event, const char[] name, bool dontBroadcast)
 {
-	bool bHeadShot = event.GetBool("headshot");
 	int iAttackerIndex = GetAttackerIndex(event);
-
 	if(IsModEnabled() && IsRealClient(iAttackerIndex))
 	{
 		if(IsSurvivor(iAttackerIndex))
 		{
-			if(bHeadShot)
+			if(event.GetBool("headshot"))
 				EventHeadShots(iAttackerIndex);
 
 			EventKillSpree(iAttackerIndex);
@@ -1115,7 +1113,6 @@ public void Event_Kill(Event event, const char[] name, bool dontBroadcast)
 public void Event_Incap(Event event, const char[] name, bool dontBroadcast)
 {
 	int iAttackerIndex = GetAttackerIndex(event);
-
 	if(IsModEnabled() && IsRealClient(iAttackerIndex))
 	{
 		if(IsInfected(iAttackerIndex))
@@ -1130,10 +1127,9 @@ public void Event_Incap(Event event, const char[] name, bool dontBroadcast)
 public void Event_Death(Event event, const char[] name, bool dontBroadcast)
 {
 	int iAttackerIndex = GetAttackerIndex(event);
-	int iVictimIndex = GetClientIndex(event);
-
 	if(IsModEnabled() && IsRealClient(iAttackerIndex))
 	{
+		int iVictimIndex = GetClientIndex(event);
 		if(IsSurvivor(iAttackerIndex))
 		{
 			int iInfectedKilledReward = g_hPointRewards[SurvKillInfec].IntValue;
@@ -1384,14 +1380,13 @@ public void Event_Impact(Event event, const char[] name, bool dontBroadcast)
 
 public void Event_Burn(Event event, const char[] name, bool dontBroadcast)
 {
-	char sVictimName[30];
-	event.GetString("victimname", sVictimName, sizeof(sVictimName));
 	int client = GetClientIndex(event);
-
 	if(IsModEnabled() && IsRealClient(client))
 	{
 		if(IsSurvivor(client))
 		{
+			char sVictimName[30];
+			event.GetString("victimname", sVictimName, sizeof(sVictimName));
 			if(!strcmp(sVictimName, "Tank", false))
 			{
 				int iTankBurnReward = g_hPointRewards[SurvBurnTank].IntValue;
