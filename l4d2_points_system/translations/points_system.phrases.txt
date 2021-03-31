@@ -1,0 +1,304 @@
+"Phrases"
+{
+	"all Infected players"
+	{
+		"en"		"all Infected players"
+	}
+
+	"all Survivor players"
+	{
+		"en"		"all Survivor players"
+	}
+
+	"Head Hunter"
+	{
+		"#format"	"{1:d}"
+		"en"		"Head Hunter +{1} points"
+	}
+	
+	"Killing Spree"
+	{
+		"#format"	"{1:d}"
+		"en"		"Killing Spree +{1} points"
+	}
+	
+	"Incapped Survivor"
+	{
+		"#format"	"{1:d}"
+		"en"		"Incapped Survivor +{1} points"
+	}
+	
+	"Killed SI"
+	{
+		"#format"	"{1:d}"
+		"en"		"Killed Special Infected +{1} points"
+	}
+	
+	"Killed Survivor"
+	{
+		"#format"	"{1:d}"
+		"en"		"Killed Survivor +{1} points"
+	}
+	
+	"TANK SOLO"
+	{
+		"#format"	"{1:d}"
+		"en"		"TANK SOLO! +{1} points"
+	}
+	
+	"Killed Tank"
+	{
+		"#format"	"{1:d}"
+		"en"		"Killed Tank +{1} points"
+	}
+	
+	"Killed Witch"
+	{
+		"#format"	"{1:d}"
+		"en"		"Killed Witch +{1} points"
+	}
+	
+	"Crowned Witch"
+	{
+		"#format"	"{1:d}"
+		"en"		"Cr0wned The Witch +{1} points"
+	}
+	
+	"Team Heal"
+	{
+		"#format"	"{1:d}"
+		"en"		"Healed Team Mate +{1} points"
+	}
+	
+	"Team Heal Warning"
+	{
+		"#format"	"{1:d}"
+		"en"		"Don't Harvest Heal Points! +{1} points"
+	}
+	
+	"Protect"
+	{
+		"#format"	"{1:d}"
+		"en"		"Protected Team Mate +{1} points"
+	}
+	
+	"Revive"
+	{
+		"#format"	"{1:d}"
+		"en"		"Revived Team Mate +{1} points"
+	}
+	
+	"Ledge Revive"
+	{
+		"#format"	"{1:d}"
+		"en"		"Revived Team Mate From Ledge +{1} points"
+	}
+	
+	"Defib"
+	{
+		"#format"	"{1:d}"
+		"en"		"Defibbed Team Mate +{1} points"
+	}
+	
+	"Smoke"
+	{
+		"#format"	"{1:d}"
+		"en"		"Choked Survivor +{1} points"
+	}
+	
+	"Boom"
+	{
+		"#format"	"{1:d}"
+		"en"		"Boomed Survivor +{1} points"
+	}
+	
+	"Biled"
+	{
+		"#format"	"{1:d}"
+		"en"		"Biled Tank +{1} points"
+	}
+	
+	"Pounce"
+	{
+		"#format"	"{1:d}"
+		"en"		"Pounced Survivor +{1} points"
+	}
+	
+	"Jockey Ride"
+	{
+		"#format"	"{1:d}"
+		"en"		"Jockeyed Survivor +{1} points"
+	}
+	
+	"Charge"
+	{
+		"#format"	"{1:d}"
+		"en"		"Charged Survivor +{1} points"
+	}
+	
+	"Charge Collateral"
+	{
+		"#format"	"{1:d}"
+		"en"		"Crashed Into Another Survivor +{1} points"
+	}
+	
+	"Burn Tank"
+	{
+		"#format"	"{1:d}"
+		"en"		"Burned The Tank +{1} points"
+	}
+	
+	"Burn Witch"
+	{
+		"#format"	"{1:d}"
+		"en"		"Burned The Witch +{1} points"
+	}
+	
+	"Spit Damage"
+	{
+		"#format"	"{1:d}"
+		"en"		"Spitter Damage +{1} points"
+	}
+	
+	"Cloud Damage"
+	{
+		"#format"	"{1:d}"
+		"en"		"Smoker Cloud Damage +{1} points"
+	}
+	
+	"Damage"
+	{
+		"#format"	"{1:d}"
+		"en"		"Multiple Damage +{1} points"
+	}
+	
+	"Your Points"
+	{
+		"#format"	"{1:d}"
+		"en"		"You Have {1} points"
+	}
+	
+	"Usage sm_repeatbuy"
+	{
+		"#format"	"{1:s}"
+		"en"		"{1} Usage: sm_repeatbuy"
+	}
+	
+	"Insufficient Funds"
+	{
+		"en"		"Not Enough Points!"
+	}
+	
+	"Item Disabled"
+	{
+		"en"		"Item Disabled"
+	}
+	
+	"Primary Warning"
+	{
+		"en"		"You must have a primary weapon to refill ammo!"
+	}
+	
+	"Usage sm_heal"
+	{
+		"en"		"Usage: sm_heal <target>"
+	}
+	
+	"Give Health"
+	{
+		"#format"	"{1:s}"
+		"en"		"Healed {1}"
+	}
+	
+	"Usage sm_givepoints"
+	{
+		"en"		"Usage: sm_givepoints <#userid|name> [number of points]"
+	}
+	
+	"Give Points"
+	{
+		"#format"	"{1:d},{2:N}"
+		"en"		"{1} points were given to {2}."
+	}
+	
+	"Give Target"
+	{
+		"#format"	"{1:N},{2:d}"
+		"en"		"{1} given you {2} points."
+	}
+
+	"Usage sm_setpoints"
+	{
+		"#format"	"{1:s}"
+		"en"		"Usage: sm_setpoints <#userid|name> [number of points]"
+	}
+	
+	"Set Points"
+	{
+		"#format"	"{1:N},{2:d}"
+		"en"		"{1}'s points were set to {2}."
+	}
+	
+	"Set Target"
+	{
+		"#format"	"{1:N},{2:d}"
+		"en"		"{1} set your points to {2}"
+	}
+	
+	"Infected Player Limit"
+	{
+		"en"		"Infected Player Limit Reached!"
+	}
+	
+	"Tank Limit"
+	{
+		"en"		"Tank Limit Reached!"
+	}
+	
+	"Witch Limit"
+	{
+		"en"		"Witch Limit Reached!"
+	}
+	
+	"Points Left"
+	{
+		"#format"	"{1:d}"
+		"en"		"{1} Points Left"
+	}
+	
+	"Cost"
+	{
+		"#format"	"{1:d}"
+		"en"		"Cost: {1}"
+	}
+
+	"Spawn Failed"
+	{
+		"en"		"Failed to spawn!"
+	}
+	
+	"Modules"
+	{
+		"en"		"Current modules loaded into Points System:"
+	}
+	
+	"End..."
+	{
+		"en"		"End..."
+	}
+	
+	"Module: Warning 1"
+	{
+		"en"		"[PS] Module of same name already registered!"
+	}
+	
+	"Module: Error 1"
+	{
+		"en"		"[PS] Incompatible version of Points System is loaded, please update!"
+	}
+	
+	"Module: Error 2"
+	{
+		"en"		"[PS] Points System natives were not found!"
+	}
+}	
