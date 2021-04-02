@@ -1832,10 +1832,21 @@ void CreateSurvivorModelGlow(int client)
 	static char sModelName[128];
 	GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
 	SetEntityModel(iEntity, sModelName);
+	DispatchKeyValueFloat(iEntity, "fademindist", 20000.0);
+	DispatchKeyValueFloat(iEntity, "fademaxdist", 22000.0);
+
+	SetVariantString("!activator");
+	AcceptEntityInput(iEntity, "SetParent", client);
+	SetVariantString("!activator");
+	AcceptEntityInput(iEntity, "SetAttached", client);
 	DispatchSpawn(iEntity);
 
-	SetEntProp(iEntity, Prop_Send, "m_nSolidType", 0);
-	SetEntProp(iEntity, Prop_Send, "m_CollisionGroup", 0);
+	ActivateEntity(iEntity);	
+	AcceptEntityInput(iEntity, "TurnOn");
+	SetEntProp(iEntity, Prop_Send, "m_hOwnerEntity", client);
+	SetEntProp(iEntity, Prop_Send, "m_nMinGPULevel", 1);
+	SetEntProp(iEntity, Prop_Send, "m_nMaxGPULevel", 1);
+
 	SetEntProp(iEntity, Prop_Send, "m_iGlowType", 3);
 	SetEntProp(iEntity, Prop_Send, "m_nGlowRange", 20000);
 
@@ -1844,9 +1855,6 @@ void CreateSurvivorModelGlow(int client)
 	SetGlowColor(client);
 
 	SetEntityRenderMode(iEntity, RENDER_NONE);
-
-	SetVariantString("!activator");
-	AcceptEntityInput(iEntity, "SetAttached", client);
 
 	SDKHook(iEntity, SDKHook_SetTransmit, Hook_SetTransmit);
 }
