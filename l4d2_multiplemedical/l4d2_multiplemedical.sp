@@ -8,6 +8,8 @@
 
 ArrayList g_ListSpawner;
 
+int g_iRoundStart; 
+int g_iPlayerSpawn;
 int g_iGlobalWeaponRules[view_as<int>(L4D2WeaponId)] = {-1, ...};
 
 public Plugin myinfo = 
@@ -22,6 +24,8 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_PostNoCopy);
 	HookEvent("spawner_give_item", Event_SpawnerGiveItem, EventHookMode_Pre);
 	
 	RegServerCmd("addweaponmultiple", CmdAddWeaponMultiple);
@@ -51,7 +55,7 @@ public Action CmdAddWeaponMultiple(int args)
 
 void AddWeaponMultiple(L4D2WeaponId match, int multiple)
 {
-	if(L4D2_IsValidWeaponId(match) && multiple > 0)
+	if(L4D2_IsValidWeaponId(match) && multiple >= 0)
         g_iGlobalWeaponRules[match] = multiple;
 }
 
@@ -69,6 +73,8 @@ void ResetWeaponRules()
 
 public void OnMapEnd()
 {
+	g_iRoundStart = 0;
+	g_iPlayerSpawn = 0;
 	g_ListSpawner.Clear();
 }
 
@@ -77,9 +83,56 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 	OnMapEnd();
 }
 
+public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+{
+	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
+		CreateTimer(1.0, Timer_UpdateCounts, _, TIMER_FLAG_NO_MAPCHANGE);
+	g_iPlayerSpawn = 1;
+}
+
+public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
+{
+	if(g_iRoundStart == 0 && g_iPlayerSpawn == 1)
+		CreateTimer(1.0, Timer_UpdateCounts, _, TIMER_FLAG_NO_MAPCHANGE);
+	g_iRoundStart = 1;
+}
+
+public Action Timer_UpdateCounts(Handle timer)
+{
+	int iMaxEnts = GetMaxEntities();
+	for(int i = MaxClients + 1; i <= iMaxEnts; i++)
+	{
+		if(!IsValidEntity(i))
+			continue;
+			
+		static char classname[32];
+		GetEdictClassname(i, classname, sizeof(classname));
+		if(classname[0] != 'w' || classname[6] != '_')
+			return;
+
+		int len = strlen(classname);
+		if(strncmp(classname[len - 6], "_spawn", 7) != 0)
+			return;
+		
+		classname[len - 6] = '\0';
+		L4D2WeaponId source = L4D2_GetWeaponIdByWeaponName(classname);
+		if(source > L4D2WeaponId_None)
+		{
+			if(g_iGlobalWeaponRules[source] == 0)
+				RemoveEntity(i);
+			else
+			{
+				static char sCount[5];
+				IntToString(g_iGlobalWeaponRules[source], sCount, sizeof(sCount));
+				DispatchKeyValue(i, "count", sCount);
+			}
+		}
+	}
+}
+
 public void OnEntityDestroyed(int entity)
 {
-	if(entity <= MaxClients || entity > 2048 || !IsValidEdict(entity))
+	if(entity <= MaxClients || entity > 2048 || !IsValidEntity(entity))
 		return;
 	
 	static char classname[32];
@@ -104,7 +157,7 @@ public void OnEntityDestroyed(int entity)
 public void Event_SpawnerGiveItem(Event event, const char[] name, bool dontBroadcast)
 {
 	int entity = event.GetInt("spawner");
-	if(entity <= MaxClients || entity > 2048 || !IsValidEdict(entity))
+	if(entity <= MaxClients || entity > 2048 || !IsValidEntity(entity))
 		return;
 
 	int iCount = GetEntProp(entity, Prop_Data, "m_itemCount");
