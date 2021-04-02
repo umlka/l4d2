@@ -94,9 +94,6 @@ public void OnEntityDestroyed(int entity)
 		
 	classname[len - 6] = '\0';
 	L4D2WeaponId source = L4D2_GetWeaponIdByWeaponName(classname);
-	if(g_iGlobalWeaponRules[source] < 1)
-		return;
-	
 	if(source > L4D2WeaponId_None && g_iGlobalWeaponRules[source] > 0)
 	{
 		int index = g_ListSpawner.FindValue(EntIndexToEntRef(entity), 0);
@@ -126,9 +123,6 @@ public void Event_SpawnerGiveItem(Event event, const char[] name, bool dontBroad
 		
 	classname[len - 6] = '\0';
 	L4D2WeaponId source = L4D2_GetWeaponIdByWeaponName(classname);
-	if(g_iGlobalWeaponRules[source] < 1)
-		return;
-
 	if(source > L4D2WeaponId_None && g_iGlobalWeaponRules[source] > 0)
 	{
 		if(g_iGlobalWeaponRules[source] == 1)
