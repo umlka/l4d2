@@ -69,7 +69,6 @@ void ResetWeaponRules()
 
 public void OnMapEnd()
 {
-	ResetWeaponRules();
 	g_ListSpawner.Clear();
 }
 
