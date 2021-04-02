@@ -1,0 +1,105 @@
+"Games"
+{
+	"left4dead2"
+	{
+		"Addresses"
+		{
+			"CVomit::IsAbilityReadyToFire"
+			{
+				"linux"
+				{
+					"signature" "CVomit::IsAbilityReadyToFire"
+				}
+			}
+			"CTongue::OnUpdateAttachedToTargetState"
+			{
+				"linux"
+				{
+					"signature" "CTongue::OnUpdateAttachedToTargetState"
+				}
+			}
+			"CTongue::IsAbilityReadyToFire"
+			{
+				"linux"
+				{
+					"signature" "CTongue::IsAbilityReadyToFire"
+				}
+			}
+			"CCharge::ActivateAbility"
+			{
+				"linux"
+				{
+					"signature" "CCharge::ActivateAbility"
+				}
+			}
+			"CTerrorGun::ShouldUnzoom"
+			{
+				"linux"
+				{
+					"signature" "CTerrorGun::ShouldUnzoom"
+				}
+			}
+		}
+		"Offsets"
+		{
+			"boomer_offset"
+			{
+				"linux"		"126"
+			}
+			"smoker_offset"
+			{
+				"linux"		"49"
+			}
+			"smoker_ability_offset"
+			{
+				"linux"		"112"
+			}
+			"charger_ability"
+			{
+				"linux"		"451"
+			}
+			"zoom_offset"
+			{
+				"linux"		"55"
+			}
+		}
+		"Signatures" 
+		{
+			"CVomit::IsAbilityReadyToFire"
+			{
+				// * CVomit::IsAbilityReadyToFire(CVomit *this)
+				
+				"library"	"server"
+				"linux"	"@_ZNK6CVomit20IsAbilityReadyToFireEv"
+			}
+			"CTongue::OnUpdateAttachedToTargetState"
+			{
+				// * CTongue::OnUpdateAttachedToTargetState(CTongue *this)
+				
+				"library"	"server"
+				"linux"	"@_ZN7CTongue29OnUpdateAttachedToTargetStateEv"
+			}
+			"CTongue::IsAbilityReadyToFire"
+			{
+				// * CTongue::IsAbilityReadyToFire(CTongue *this)
+				
+				"library"	"server"
+				"linux"	"@_ZNK7CTongue20IsAbilityReadyToFireEv"
+			}
+			"CCharge::ActivateAbility"
+			{
+				// * CCharge::ActivateAbility(CCharge *this)
+				
+				"library"	"server"
+				"linux"	"@_ZN7CCharge15ActivateAbilityEv"
+			}
+			"CTerrorGun::ShouldUnzoom"
+			{
+				// * CTerrorGun::ShouldUnzoom(CTerrorGun *this)
+				
+				"library"	"server"
+				"linux"	"@_ZNK10CTerrorGun12ShouldUnzoomEv"
+			}
+		}
+	}
+}
