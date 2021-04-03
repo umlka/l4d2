@@ -6,7 +6,7 @@
 
 #define PLUGIN_VERSION "1.1"
 
-ArrayList g_ListSpawner;
+//ArrayList g_ListSpawner;
 
 int g_iRoundStart; 
 int g_iPlayerSpawn;
@@ -26,12 +26,12 @@ public void OnPluginStart()
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_PostNoCopy);
-	HookEvent("spawner_give_item", Event_SpawnerGiveItem, EventHookMode_Pre);
+	//HookEvent("spawner_give_item", Event_SpawnerGiveItem, EventHookMode_Pre);
 	
 	RegServerCmd("addweaponmultiple", CmdAddWeaponMultiple);
 	RegServerCmd("resetweaponmultiple", CmdResetWeaponMultiple);
 
-	g_ListSpawner = new ArrayList(2);
+	//g_ListSpawner = new ArrayList(2);
 	
 	ResetWeaponRules();
 }
@@ -46,7 +46,7 @@ public Action CmdAddWeaponMultiple(int args)
 
     char sBuffer[64];
     GetCmdArg(1, sBuffer, sizeof(sBuffer));
-    L4D2WeaponId match = L4D2_GetWeaponIdByWeaponName(sBuffer);
+    L4D2WeaponId match = L4D2_GetWeaponIdByWeaponName2(sBuffer);
 
     GetCmdArg(2, sBuffer, sizeof(sBuffer));
     int multiple = StringToInt(sBuffer);
@@ -77,7 +77,7 @@ public void OnMapEnd()
 {
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
-	g_ListSpawner.Clear();
+	//g_ListSpawner.Clear();
 }
 
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -119,6 +119,18 @@ public Action Timer_UpdateCounts(Handle timer)
 	}
 }
 
+stock L4D2WeaponId L4D2_GetWeaponIdByWeaponName2(const char[] classname)
+{
+    static char sBuffer[64] = "weapon_";
+    L4D2WeaponId wepid = L4D2_GetWeaponIdByWeaponName(classname);
+    if(wepid == L4D2WeaponId_None)
+    {
+        strcopy(sBuffer[7], sizeof(sBuffer) - 7, classname);
+        wepid = L4D2_GetWeaponIdByWeaponName(sBuffer);
+    }
+    return view_as<L4D2WeaponId>(wepid);
+}
+
 stock L4D2WeaponId IdentifyWeapon(int entity)
 {
 	if(!entity || !IsValidEntity(entity))
@@ -140,7 +152,7 @@ stock L4D2WeaponId IdentifyWeapon(int entity)
 
 	return L4D2_GetWeaponIdByWeaponName(classname);
 }
-
+/*
 public void OnEntityDestroyed(int entity)
 {
 	if(entity <= MaxClients || entity > 2048)
@@ -187,4 +199,4 @@ public void Event_SpawnerGiveItem(Event event, const char[] name, bool dontBroad
 			}
 		}
 	}
-}
+}*/
