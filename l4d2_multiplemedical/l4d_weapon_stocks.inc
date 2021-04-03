@@ -249,7 +249,7 @@ stock bool L4D2_IsValidWeaponId(L4D2WeaponId weaponId)
  * @param weaponName    Weapon name to check for validity.
  * @return              True if weapon name is valid, false otherwise.
  */
-stock bool L4D2_IsValidWeaponName(char[] weaponName)
+stock bool L4D2_IsValidWeaponName(const char[] weaponName)
 {
     return L4D2_GetWeaponIdByWeaponName(weaponName) != L4D2WeaponId_None;
 }
@@ -282,10 +282,8 @@ stock bool L4D2_HasValidWeaponWorldModel(L4D2WeaponId weaponId)
  */
 stock int L4D2_GetWeaponModelByWeaponId(L4D2WeaponId weaponId, char[] dest, int destlen)
 {
-    if (!L4D2_IsValidWeaponId(weaponId))
-    {
+    if(!L4D2_IsValidWeaponId(weaponId))
         return 0;
-    }
 
     return strcopy(dest, destlen, L4D2WeaponWorldModel[weaponId]);
 }
@@ -300,12 +298,10 @@ stock int L4D2_GetWeaponModelByWeaponId(L4D2WeaponId weaponId, char[] dest, int 
  */
 stock L4D2WeaponId L4D2_GetWeaponIdByWeaponModel(const char[] model)
 {
-    for (int i = 0; i < sizeof(L4D2WeaponWorldModel); i++)
+    for(int i; i < sizeof(L4D2WeaponWorldModel); i++)
     {
-        if (StrEqual(model, L4D2WeaponWorldModel[i], false))
-        {
+        if(strcmp(model, L4D2WeaponWorldModel[i], false) == 0)
             return view_as<L4D2WeaponId>(i);
-        }
     }
 
     return L4D2WeaponId_None;
@@ -318,7 +314,7 @@ stock L4D2WeaponId L4D2_GetWeaponIdByWeaponModel(const char[] model)
  * @return              The corresponding weapon id if found, else 
  *                      L4D2WeaponId_None.
  */
-stock L4D2WeaponId L4D2_GetWeaponIdByWeaponName(char[] weaponName)
+stock L4D2WeaponId L4D2_GetWeaponIdByWeaponName(const char[] weaponName)
 {
     L4D2_InitWeaponNameTrie();
     L4D2WeaponId weaponId;
@@ -335,10 +331,8 @@ stock L4D2WeaponId L4D2_GetWeaponIdByWeaponName(char[] weaponName)
  */
 stock int L4D2_GetWeaponNameByWeaponId(L4D2WeaponId weaponId, char[] dest, int destlen)
 {
-    if (!L4D2_IsValidWeaponId(weaponId))
-    {
+    if(!L4D2_IsValidWeaponId(weaponId))
         return 0;
-    }
 
     return strcopy(dest, destlen, L4D2WeaponName[weaponId]);
 }
@@ -353,21 +347,15 @@ stock int L4D2_GetWeaponNameByWeaponId(L4D2WeaponId weaponId, char[] dest, int d
 stock L4D2WeaponId L4D2_GetWeaponId(int weapon)
 {
     char classname[64];
-    if (!GetEdictClassname(weapon, classname, sizeof(classname)))
-    {
+    if(!GetEdictClassname(weapon, classname, sizeof(classname)))
         return L4D2WeaponId_None;
-    }
 
-    if (StrEqual(classname, "weapon_spawn"))
-    {
+    if(strcmp(classname, "weapon_spawn") == 0)
         return view_as<L4D2WeaponId>(GetEntProp(weapon, Prop_Send, "m_weaponID"));
-    }
 
     int len = strlen(classname);
     if(len - 6 > 0 && StrEqual(classname[len - 6], "_spawn"))
-    {
         classname[len - 6] = '\0';
-    }
 
     return L4D2_GetWeaponIdByWeaponName(classname);
 }
@@ -381,13 +369,9 @@ stock L4D2WeaponId L4D2_GetWeaponId(int weapon)
 stock void L4D2_InitWeaponNameTrie()
 {
     if(g_hWeaponNameTrie != null)
-    {
         return;
-    }
 
     g_hWeaponNameTrie = new StringMap();
-    for (int i = 0; i < view_as<int>(L4D2WeaponId); i++)
-    {
+    for(int i; i < view_as<int>(L4D2WeaponId); i++)
         g_hWeaponNameTrie.SetValue(L4D2WeaponName[view_as<L4D2WeaponId>(i)], i);
-    }
 }
