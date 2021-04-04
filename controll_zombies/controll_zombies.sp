@@ -151,7 +151,6 @@ stock void CSayText2(int client, int author, const char[] sMessage)
 #define GAMEDATA 			"controll_zombies"
 #define CVAR_FLAGS 			FCVAR_NOTIFY
 #define SOUND_CLASSMENU		"ui/helpful_event_1.wav"
-#define MODEL_SPRITE		"materials/vgui/icon_download.vmt"
 
 #define COLOR_NORMAL		0
 #define COLOR_INCAPA		1
@@ -217,8 +216,8 @@ Handle g_hSDK_Call_SetHumanSpec;
 Handle g_hSDK_Call_TakeOverBot;
 Handle g_hSDK_Call_HasPlayerControlledZombies;
 
-Handle g_hPZSuicideTimer[MAXPLAYERS + 1];
 Handle g_hPZRespawnTimer[MAXPLAYERS + 1];
+Handle g_hPZSuicideTimer[MAXPLAYERS + 1];
 
 ConVar g_hGameMode;
 ConVar g_hCoopSphereFix;
@@ -239,7 +238,7 @@ ConVar g_hPZTeamLimit;
 ConVar g_hCmdCooldownTime;
 ConVar g_hCmdEnterCooling;
 ConVar g_hPZChangeTeamTo;
-ConVar g_hRenderColor[4];
+ConVar g_hGlowColor[4];
 ConVar g_hAccessAdminFlags;
 ConVar g_hAdminImmunityLevels;
 ConVar g_hSILimit;
@@ -267,14 +266,12 @@ int g_iPZTeamLimit;
 int g_iPZChangeTeamTo;
 int g_iAutoDisplayMenu;
 int g_iCmdEnterCooling;
-int g_iRenderColor[4];
-int g_iRenderColors[4][3];
+int g_iGlowColor[4];
 int g_iSpawnLimits[6];
 int g_iSpawnWeights[6];
 int g_iSpawnCounts[6];
 int g_iAccessAdminFlags[6];
 int g_iAdminImmunityLevels[6];
-int g_iLastRenderColor[MAXPLAYERS + 1];
 
 int g_iTankBot[MAXPLAYERS + 1];
 int g_iDisplayed[MAXPLAYERS + 1];
@@ -282,8 +279,8 @@ int g_iPZSpawned[MAXPLAYERS + 1];
 int g_iPlayerBot[MAXPLAYERS + 1];
 int g_iBotPlayer[MAXPLAYERS + 1];
 int g_iLastTeamId[MAXPLAYERS + 1];
-int g_iTargetEntRef[MAXPLAYERS + 1];
-int g_iMarkerEntRef[MAXPLAYERS + 1];
+int g_iModelIndex[MAXPLAYERS + 1];
+int g_iModelEntRef[MAXPLAYERS + 1];
 int g_iWeaponInfo[MAXPLAYERS + 1][14];
 int g_iPZRespawnCountdown[MAXPLAYERS + 1];
 
@@ -332,10 +329,10 @@ public void OnPluginStart()
 	g_hCmdCooldownTime = CreateConVar("cz_cmd_cooldown_time", "60.0" , "sm_team2,sm_team3两个命令的冷却时间(0.0-无冷却)", CVAR_FLAGS, true, 0.0);
 	g_hCmdEnterCooling = CreateConVar("cz_return_enter_cooling", "31" , "什么情况下sm_team2,sm_team3命令会进入冷却(1=使用其中一个命令,2=坦克玩家掉控,4=坦克玩家死亡,8=坦克玩家未及时重生,16=特感玩家杀掉生还者玩家,31=所有)", CVAR_FLAGS);
 	g_hPZChangeTeamTo = CreateConVar("cz_pz_change_team_to", "0" , "换图,过关以及任务失败时是否自动将特感玩家切换到哪个队伍?(0=不切换,1=旁观者,2=生还者)", CVAR_FLAGS, true, 0.0, true, 2.0);
-	g_hRenderColor[COLOR_NORMAL] = CreateConVar("cz_survivor_color_normal", "0 180 0" , "特感玩家看到的正常状态生还者发光颜色", CVAR_FLAGS);
-	g_hRenderColor[COLOR_INCAPA] = CreateConVar("cz_survivor_color_incapacitated", "180 0 0" , "特感玩家看到的倒地状态生还者发光颜色", CVAR_FLAGS);
-	g_hRenderColor[COLOR_BLACKW] = CreateConVar("cz_survivor_color_blackwhite", "255 255 255" , "特感玩家看到的黑白状态生还者发光颜色", CVAR_FLAGS);
-	g_hRenderColor[COLOR_VOMITED] = CreateConVar("cz_survivor_color_nowit", "155 0 180" , "特感玩家看到的被Boomer喷或炸中过的生还者发光颜色", CVAR_FLAGS);
+	g_hGlowColor[COLOR_NORMAL] = CreateConVar("cz_survivor_color_normal", "0 180 0" , "特感玩家看到的正常状态生还者发光颜色", CVAR_FLAGS);
+	g_hGlowColor[COLOR_INCAPA] = CreateConVar("cz_survivor_color_incapacitated", "180 0 0" , "特感玩家看到的倒地状态生还者发光颜色", CVAR_FLAGS);
+	g_hGlowColor[COLOR_BLACKW] = CreateConVar("cz_survivor_color_blackwhite", "255 255 255" , "特感玩家看到的黑白状态生还者发光颜色", CVAR_FLAGS);
+	g_hGlowColor[COLOR_VOMITED] = CreateConVar("cz_survivor_color_nowit", "155 0 180" , "特感玩家看到的被Boomer喷或炸中过的生还者发光颜色", CVAR_FLAGS);
 	g_hAccessAdminFlags = CreateConVar("cz_admin_flags", "z;;;;;z" , "哪些标志能绕过sm_team4,sm_team2,sm_team3,sm_bp,sm_class,鼠标中键重置冷却的使用限制(留空表示所有人都不会被限制)", CVAR_FLAGS);
 	g_hAdminImmunityLevels = CreateConVar("cz_admin_immunitylevels", "99;99;99;99;99;99" , "要达到什么免疫级别才能绕过sm_team4,sm_team2,sm_team3,sm_bp,sm_class,鼠标中键重置冷的使用限制", CVAR_FLAGS);
 
@@ -385,7 +382,7 @@ public void OnPluginStart()
 
 	int i;
 	for(i = 0; i < 4; i++)
-		g_hRenderColor[i].AddChangeHook(ConVarChanged_Color);
+		g_hGlowColor[i].AddChangeHook(ConVarChanged_Color);
 
 	g_hAccessAdminFlags.AddChangeHook(ConVarChanged_Admin);
 	g_hAdminImmunityLevels.AddChangeHook(ConVarChanged_Admin);
@@ -403,17 +400,18 @@ public void OnPluginStart()
 	g_hCoopSphereFix.SetBounds(ConVarBound_Upper, true, 0.0);
 	g_hCoopSphereFix.SetInt(0);
 
-	HookEvent("player_left_start_area", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
-	HookEvent("player_left_checkpoint", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
-	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("player_team", Event_PlayerTeam);
-	HookEvent("player_spawn", Event_PlayerSpawn);
-	HookEvent("player_death", Event_PlayerDeath);
-	HookEvent("tank_frustrated", Event_TankFrustrated);
-	HookEvent("bot_player_replace", Event_ClientReplace);
-	HookEvent("player_bot_replace", Event_ClientReplace);
+	//https://wiki.alliedmods.net/Events_(SourceMod_Scripting)#Hooking_Events 防止某些插件在Pre挂钩上面阻止事件广播，导致Post挂钩监听不到事件触发
+	HookEvent("player_left_start_area", Event_PlayerLeftStartArea, EventHookMode_Pre);
+	HookEvent("player_left_checkpoint", Event_PlayerLeftStartArea, EventHookMode_Pre);
+	HookEvent("round_start", Event_RoundStart, EventHookMode_Pre);
+	HookEvent("round_end", Event_RoundEnd, EventHookMode_Pre);
+	HookEvent("map_transition", Event_RoundEnd, EventHookMode_Pre);
+	HookEvent("player_team", Event_PlayerTeam, EventHookMode_Pre);
+	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
+	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
+	HookEvent("tank_frustrated", Event_TankFrustrated, EventHookMode_Pre);
+	HookEvent("bot_player_replace", Event_ClientReplace, EventHookMode_Pre);
+	HookEvent("player_bot_replace", Event_ClientReplace, EventHookMode_Pre);
 
 	AddCommandListener(CommandListener_Spawn, "z_add");
 	AddCommandListener(CommandListener_Spawn, "z_spawn");
@@ -433,7 +431,7 @@ public void OnPluginEnd()
 	g_hCoopSphereFix.SetBounds(ConVarBound_Upper, false);
 	g_hCoopSphereFix.RestoreDefault();
 	for(int i = 1; i <= MaxClients; i++)
-		RemoveSurvivorMarker(i);
+		RemoveSurvivorModelGlow(i);
 }
 
 public void OnConfigsExecuted()
@@ -460,7 +458,7 @@ void GetModeCvars()
 			for(int i = 1; i <= MaxClients; i++)
 			{
 				if(IsClientInGame(i) && GetClientTeam(i) == 2)
-					RemoveSurvivorMarker(i);
+					RemoveSurvivorModelGlow(i);
 			}
 		}
 		else if(HasPlayerZombie()) //versus->coop
@@ -473,7 +471,7 @@ void GetModeCvars()
 				switch(GetClientTeam(i))
 				{
 					case 2:
-						CreateSurvivorMarker(i);
+						CreateSurvivorModelGlow(i);
 
 					case 3:
 					{
@@ -527,26 +525,23 @@ void GetColorCvars()
 	g_iSurvivorMaxIncapacitatedCount = g_hSurvivorMaxIncapacitatedCount.IntValue;
 
 	for(int i; i < 4; i++)
-		g_iRenderColor[i] = GetColor(i);
+		g_iGlowColor[i] = GetColor(g_hGlowColor[i]);
 		
 	if(g_bHasPlayerControlledZombies == false && HasPlayerZombie())
 	{
 		for(int i = 1; i <= MaxClients; i++)
 		{
-			if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && IsValidEntRef(g_iMarkerEntRef[i]))
-				SetRenderColor(i);
+			if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && IsValidEntRef(g_iModelEntRef[i]))
+				SetGlowColor(i);
 		}
 	}
 }
 
-void SetRenderColor(int client)
+void SetGlowColor(int client)
 {
 	static int iColorType;
-	if(g_iLastRenderColor[client] != g_iRenderColor[(iColorType = GetColorType(client))])
-	{
-		g_iLastRenderColor[client] = g_iRenderColor[iColorType];
-		SetEntityRenderColor(g_iMarkerEntRef[client], g_iRenderColors[iColorType][0], g_iRenderColors[iColorType][1], g_iRenderColors[iColorType][2], 255);
-	}
+	if(GetEntProp(g_iModelEntRef[client], Prop_Send, "m_glowColorOverride") != g_iGlowColor[(iColorType = GetColorType(client))])
+		SetEntProp(g_iModelEntRef[client], Prop_Send, "m_glowColorOverride", g_iGlowColor[iColorType]);
 }
 
 static int GetColorType(int client)
@@ -567,13 +562,10 @@ static int GetColorType(int client)
 	}
 }
 
-int GetColor(int index)
+int GetColor(ConVar hConVar)
 {
-	for(int i; i < 3; i++)
-		g_iRenderColors[index][i] = 0;
-	
 	char sTemp[12];
-	g_hRenderColor[index].GetString(sTemp, sizeof(sTemp));
+	hConVar.GetString(sTemp, sizeof(sTemp));
 
 	if(sTemp[0] == 0)
 		return 0;
@@ -584,9 +576,9 @@ int GetColor(int index)
 	if(color != 3)
 		return 0;
 
-	color = (g_iRenderColors[index][0] = StringToInt(sColors[0]));
-	color += 256 * (g_iRenderColors[index][1] = StringToInt(sColors[1]));
-	color += 65536 * (g_iRenderColors[index][2] = StringToInt(sColors[2]));
+	color = StringToInt(sColors[0]);
+	color += 256 * StringToInt(sColors[1]);
+	color += 65536 * StringToInt(sColors[2]);
 
 	return color;
 }
@@ -693,7 +685,7 @@ public Action CmdTeam2(int client, int args)
 
 	if(GetClientTeam(client) != 3)
 	{
-		PrintToChat(client, "只有感染者才能使用该指令.");
+		PrintToChat(client, "只有感染者才能使用该指令");
 		return Plugin_Handled;
 	}
 
@@ -726,7 +718,7 @@ public Action CmdTeam3(int client, int args)
 			int iTeam2 = GetTeamPlayers(2);
 			if((g_iPZTeamLimit > 0 && iTeam3 >= g_iPZTeamLimit) || (g_iPZTeamLimit < 0 && iTeam3 >= iTeam2))
 			{
-				PrintToChat(client, "已到达感染玩家数量限制.");
+				PrintToChat(client, "已到达感染玩家数量限制");
 				return Plugin_Handled;
 			}
 		}
@@ -787,13 +779,13 @@ public Action CmdChangeClass(int client, int args)
 
 	if(GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_isGhost") == 0)
 	{
-		PrintToChat(client, "灵魂状态下的特感才能使用该指令.");
+		PrintToChat(client, "灵魂状态下的特感才能使用该指令");
 		return Plugin_Handled;
 	}
 
 	if(g_iPZSpawned[client] != 1)
 	{
-		PrintToChat(client, "第一次灵魂状态下才能使用该指令.");
+		PrintToChat(client, "第一次灵魂状态下才能使用该指令");
 		return Plugin_Handled;
 	}
 	
@@ -925,7 +917,7 @@ public Action CommandListener_CallVote(int client, const char[] command, int arg
 	return Plugin_Continue;
 }
 
-//https://gist.github.com/ProdigySim/04912e5e76f69027f8c4
+// https://gist.github.com/ProdigySim/04912e5e76f69027f8c4
 // Spawn State - These look like flags, but get used like static values quite often.
 // These names were pulled from reversing client.dll--specifically CHudGhostPanel::OnTick()'s uses of the "#L4D_Zombie_UI_*" strings
 //
@@ -963,11 +955,8 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 		if(buttons & IN_ATTACK)
 		{
 			static int iSpawnState;
-			if(GetEntProp(client, Prop_Send, "m_ghostSpawnState") == 1)
-			{
+			if((iSpawnState = GetEntProp(client, Prop_Send, "m_ghostSpawnState")) == 1)
 				SetEntProp(client, Prop_Send, "m_ghostSpawnState", 0);
-				iSpawnState = 1;
-			}
 			else if(iSpawnState == 1 && GetEntProp(client, Prop_Send, "m_ghostSpawnState") == 0)
 			{
 				buttons &= ~IN_ATTACK;
@@ -1006,7 +995,6 @@ stock void ResetInfectedAbility(int client, float fTime)
 public void OnMapStart()
 {
 	PrecacheSound(SOUND_CLASSMENU);
-	PrecacheModel(MODEL_SPRITE, true);
 }
 
 public void OnMapEnd()
@@ -1023,7 +1011,7 @@ public void OnMapEnd()
 public void OnClientDisconnect(int client)
 {
 	DeleteTimer(client);
-	RemoveSurvivorMarker(client);
+	RemoveSurvivorModelGlow(client);
 
 	if(g_iLastTeamId[client] == 2)
 		g_iLastTeamId[client] = GetClientTeam(client);
@@ -1057,10 +1045,19 @@ public void Hook_PostThinkPost(int client)
 	if(g_bHasPlayerControlledZombies == true || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
 		return;
 
-	if(!IsValidEntRef(g_iMarkerEntRef[client]))
+	if(!IsValidEntRef(g_iModelEntRef[client]))
 		return;
-	
-	SetRenderColor(client);
+		
+	if(g_iModelIndex[client] && g_iModelIndex[client] != GetEntProp(client, Prop_Data, "m_nModelIndex"))
+	{
+		g_iModelIndex[client] = GetEntProp(client, Prop_Data, "m_nModelIndex");
+
+		static char sModelName[128];
+		GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
+		SetEntityModel(g_iModelEntRef[client], sModelName);
+	}
+
+	SetGlowColor(client);
 }
 
 //------------------------------------------------------------------------------
@@ -1175,7 +1172,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 
 	DeleteTimer(client);
 	g_iPZSpawned[client] = 0;
-	RemoveSurvivorMarker(client);
+	RemoveSurvivorModelGlow(client);
 	RequestFrame(OnNextFrame_CreateSurvivorModelGlow, userid);
 	
 	if(IsFakeClient(client))
@@ -1221,16 +1218,19 @@ public Action Timer_LadderAndGlow(Handle timer, int client)
 			if(GetTeamPlayers(3) == 1)
 			{
 				for(int i = 1; i <= MaxClients; i++)
-					CreateSurvivorMarker(i);
+					CreateSurvivorModelGlow(i);
 			}
 		}
 		else
 		{
 			SendConVarValue(client, g_hGameMode, g_sGameMode);
-			if(!HasPlayerZombie())
+			for(int i = 1; i <= MaxClients; i++)
+				RemoveSurvivorModelGlow(i);
+
+			if(HasPlayerZombie())
 			{
 				for(int i = 1; i <= MaxClients; i++)
-					RemoveSurvivorMarker(i);
+					CreateSurvivorModelGlow(i);
 			}
 		}
 	}
@@ -1271,7 +1271,7 @@ public void OnNextFrame_PlayerSpawn(int userid)
 		case 2:
 		{
 			if(g_bHasPlayerControlledZombies == false && HasPlayerZombie())
-				CreateSurvivorMarker(client);
+				CreateSurvivorModelGlow(client);
 		}
 		
 		case 3:
@@ -1322,7 +1322,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 	{
 		case 2:
 		{
-			RemoveSurvivorMarker(client);
+			RemoveSurvivorModelGlow(client);
 			if(g_bHasPlayerControlledZombies == false && g_bExchangeTeam && !IsFakeClient(client))
 			{
 				int attacker = GetClientOfUserId(event.GetInt("attacker"));
@@ -1374,9 +1374,9 @@ public Action Timer_PZRespawn(Handle timer, int client)
 				g_hPZRespawnTimer[client] = null;
 				return Plugin_Stop;
 			}
-			else if(--g_iPZRespawnCountdown[client] <= -10)
+			else if(--g_iPZRespawnCountdown[client] <= -25)
 			{
-				PrintHintText(client, "重生失败,请联系服主检查地图或者服务器配置");
+				CPrintToChat(client, "{red}重生失败, 请联系服主检查地图或者服务器配置");
 				g_hPZRespawnTimer[client] = null;
 				return Plugin_Stop;
 			}
@@ -1391,30 +1391,23 @@ public Action Timer_PZRespawn(Handle timer, int client)
 	return Plugin_Stop;
 }
 
+// https://forums.alliedmods.net/showpost.php?p=2305983&postcount=2
+// IsClientObserver();
+// Client entity prop "m_iObserverMode" - Observer Mode
+// #define SPECMODE_NONE 0
+// #define SPECMODE_FIRSTPERSON 4
+// #define SPECMODE_3RDPERSON 5
+// #define SPECMODE_FREELOOK 6
+// Client entity prop "m_hObserverTarget" - Spectated Client
 stock bool RespawnPZ(int client, int iZombieClass)
 {
-	int iClient = GetRandomClient();
-	if(iClient != -1)
-	{
-		float vPos[3], vAng[3];
-		GetClientAbsOrigin(iClient, vPos);
-		GetClientAbsAngles(iClient, vAng);
-		TeleportEntity(client, vPos, vAng, NULL_VECTOR);
-	}
+	/*if(GetEntProp(client, Prop_Send, "m_iObserverMode") != 6)
+		SetEntProp(client, Prop_Send, "m_iObserverMode", 6);*/
+
+	FakeClientCommand(client, "spec_next"); //相比于手动获取玩家位置传送，更省力和节约资源的方法
+
 	CheatCmd_SpawnOld(client, g_sZombieClass[iZombieClass]);
 	return IsPlayerAlive(client);
-}
-
-stock int GetRandomClient()
-{
-	int iNum;
-	int[] iClients = new int[MaxClients];
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && IsPlayerAlive(i)) 
-			iClients[iNum++] = i;
-	}
-	return (iNum == 0) ? -1 : iClients[GetRandomInt(0, iNum - 1)];
 }
 
 stock void CheatCmd_SpawnOld(int client, const char[] args = "")
@@ -1803,65 +1796,60 @@ stock bool IsSurvivorPinned(int client)
 public void OnNextFrame_CreateSurvivorModelGlow(int client)
 {
 	if(g_bHasPlayerControlledZombies == false && HasPlayerZombie())
-		CreateSurvivorMarker(GetClientOfUserId(client));
+		CreateSurvivorModelGlow(GetClientOfUserId(client));
 }
 
-//https://forums.alliedmods.net/showthread.php?p=2740646
-void CreateSurvivorMarker(int client)
+void CreateSurvivorModelGlow(int client)
 {
-	if(g_bIsRoundEnd == true || client == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client) || IsValidEntRef(g_iMarkerEntRef[client]) || IsValidEntRef(g_iTargetEntRef[client]))
+	if(g_bIsRoundEnd == true || client == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client) || IsValidEntRef(g_iModelEntRef[client]))
 		return;
 
-	int target = CreateEntityByName("info_target");
-	g_iTargetEntRef[client] = EntIndexToEntRef(target);
-	DispatchSpawn(target);
-	ActivateEntity(target);
+	int iEntity = CreateEntityByName("prop_dynamic_ornament");
+	if(iEntity == -1)
+		return;
 
-	int sprite = CreateEntityByName("env_sprite");
-	g_iMarkerEntRef[client] = EntIndexToEntRef(sprite);
-	SDKHook(sprite, SDKHook_SetTransmit, OnSetTransmitMarker);
-	
-	DispatchKeyValue(sprite, "model", MODEL_SPRITE);
-	g_iLastRenderColor[client] = 0;
-	SetRenderColor(client);
-	DispatchKeyValue(sprite, "scale", "0.5");
+	g_iModelEntRef[client] = EntIndexToEntRef(iEntity);
+	g_iModelIndex[client] = GetEntProp(client, Prop_Data, "m_nModelIndex");
 
-	DispatchSpawn(sprite);
-	ActivateEntity(sprite);
+	static char sModelName[128];
+	GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
+	DispatchKeyValue(iEntity, "model", sModelName);
+
+	DispatchKeyValue(iEntity, "solid", "0");
+	DispatchKeyValue(iEntity, "rendermode", "0");
+	DispatchKeyValueFloat(iEntity, "fademindist", 20000.0);
+	DispatchKeyValueFloat(iEntity, "fademaxdist", 22000.0);
+	DispatchKeyValue(iEntity, "disableshadows", "1");
+	DispatchKeyValue(iEntity, "disablereceiveshadows", "1");
+	DispatchKeyValue(iEntity, "mingpulevel", "1");
+	DispatchKeyValue(iEntity, "maxgpulevel", "1");
+	DispatchKeyValue(iEntity, "MoveType", "0");
+	DispatchKeyValue(iEntity, "CollisionGroup", "0");
+	DispatchSpawn(iEntity);
+
+	SetEntProp(iEntity, Prop_Send, "m_iGlowType", 3);
+	SetEntProp(iEntity, Prop_Send, "m_nGlowRange", 20000);
+	SetEntProp(iEntity, Prop_Send, "m_nGlowRangeMin", 1);
+	SetGlowColor(client);
 
 	SetVariantString("!activator");
-	AcceptEntityInput(sprite, "SetParent", target); // We need parent the entity to an info_target, otherwise SetTransmit won't work
-	TeleportEntity(target, view_as<float>({-3.0, 0.0, 15.0}), NULL_VECTOR, NULL_VECTOR);
-	
-	SetVariantString("!activator");
-	AcceptEntityInput(target, "SetParent", client);
-	SetVariantString("eyes");
-	AcceptEntityInput(target, "SetParentAttachment");
-	TeleportEntity(target, view_as<float>({-3.0, 0.0, 15.0}), NULL_VECTOR, NULL_VECTOR);
+	AcceptEntityInput(iEntity, "SetAttached", client);
 
-	SetEntProp(sprite, Prop_Data, "m_iEFlags", 0);
-
-	AcceptEntityInput(sprite, "ShowSprite");
+	SDKHook(iEntity, SDKHook_SetTransmit, Hook_SetTransmit);
 }
 
-public Action OnSetTransmitMarker(int entity, int client)
+public Action Hook_SetTransmit(int entity, int client)
 {
-	if(GetClientTeam(client) == 3)
+	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 3)
 		return Plugin_Continue;
-	
+
 	return Plugin_Handled;
 }
 
-void RemoveSurvivorMarker(int client)
+void RemoveSurvivorModelGlow(int client)
 {
-	int entity = g_iMarkerEntRef[client];
-	g_iMarkerEntRef[client] = 0;
-
-	if(IsValidEntRef(entity))
-		RemoveEntity(entity);
-
-	entity = g_iTargetEntRef[client];
-	g_iTargetEntRef[client] = 0;
+	int entity = g_iModelEntRef[client];
+	g_iModelEntRef[client] = 0;
 
 	if(IsValidEntRef(entity))
 		RemoveEntity(entity);
