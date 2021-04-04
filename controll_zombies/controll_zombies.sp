@@ -955,8 +955,11 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 		if(buttons & IN_ATTACK)
 		{
 			static int iSpawnState;
-			if((iSpawnState = GetEntProp(client, Prop_Send, "m_ghostSpawnState")) == 1)
+			if(GetEntProp(client, Prop_Send, "m_ghostSpawnState") == 1)
+			{
 				SetEntProp(client, Prop_Send, "m_ghostSpawnState", 0);
+				iSpawnState = 1;
+			}
 			else if(iSpawnState == 1 && GetEntProp(client, Prop_Send, "m_ghostSpawnState") == 0)
 			{
 				buttons &= ~IN_ATTACK;
