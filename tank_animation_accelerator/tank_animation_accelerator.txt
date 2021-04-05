@@ -1,0 +1,16 @@
+"Games"
+{
+    "left4dead2"
+    {
+		"Signatures"
+		{
+			"CTerrorPlayer::SelectWeightedSequence"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer22SelectWeightedSequenceE8Activity"
+				"windows"	"\x55\x8B\x2A\x56\x57\x8B\x2A\x2A\x8B\x2A\x81\x2A\x2A\x2A\x2A\x2A\x75\x2A"
+				"mac"		"@_ZN13CTerrorPlayer22SelectWeightedSequenceE8Activity"
+			}
+		}
+    }
+}
