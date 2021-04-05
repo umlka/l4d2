@@ -110,11 +110,7 @@ public Action Timer_UpdateCounts(Handle timer)
 			if(g_iGlobalWeaponRules[source] == 0)
 				RemoveEntity(i);
 			else
-			{
-				static char sCount[5];
-				IntToString(g_iGlobalWeaponRules[source], sCount, sizeof(sCount));
-				DispatchKeyValue(i, "count", sCount);
-			}
+				SetEntProp(i, Prop_Data, "m_itemCount", g_iGlobalWeaponRules[source]);
 		}
 	}
 }
@@ -133,23 +129,24 @@ stock L4D2WeaponId L4D2_GetWeaponIdByWeaponName2(const char[] classname)
 
 stock L4D2WeaponId IdentifyWeapon(int entity)
 {
-	if(!entity || !IsValidEntity(entity))
+	if(!IsValidEntity(entity))
 		return L4D2WeaponId_None;
 
 	static char classname[64];
 	if(!GetEdictClassname(entity, classname, sizeof(classname)))
 		return L4D2WeaponId_None;
 
-	if(strcmp(classname, "weapon_spawn") == 0)
-		return view_as<L4D2WeaponId>(GetEntProp(entity,Prop_Send,"m_weaponID"));
+	if(strncmp(classname, "weapon_", 7) != 0)
+		return L4D2WeaponId_None;
 
 	int len = strlen(classname);
-	if(len - 6 > 0 && strcmp(classname[len - 6], "_spawn") == 0)
-	{
-		classname[len - 6] = '\0';
-		return L4D2_GetWeaponIdByWeaponName(classname);
-	}
+	if(strncmp(classname[len - 6], "_spawn", 7) != 0)
+		return L4D2WeaponId_None;
 
+	if(len == 12)
+		return view_as<L4D2WeaponId>(GetEntProp(entity,Prop_Send,"m_weaponID"));
+
+	classname[len - 6] = '\0';
 	return L4D2_GetWeaponIdByWeaponName(classname);
 }
 /*
