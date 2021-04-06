@@ -1638,7 +1638,7 @@ void GhostsModeProtector(int iState=0)
 	}
 
 	if(iState == 0)
-		RequestFrame(GhostsModeProtector);
+		RequestFrame(GhostsModeProtector, 1);
 }
 
 void SetGodMode(int client, float fDuration)
