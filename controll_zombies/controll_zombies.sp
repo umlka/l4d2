@@ -1627,11 +1627,14 @@ void GhostsModeProtector(int iState=0)
 		{
 			for(i = 1; i <= MaxClients; i++)
 			{
-				if(iGhost[i] == 1)
-					SetEntProp(i, Prop_Send, "m_isGhost", 1);
+				if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3)
+				{
+					if(iGhost[i] == 1)
+						SetEntProp(i, Prop_Send, "m_isGhost", 1);
 						
-				if(iLifeState[i] == 1)
-					SetEntProp(i, Prop_Send, "m_lifeState", 1);
+					if(iLifeState[i] == 1 && g_iPZSpawned[i] == 0)
+						SetEntProp(i, Prop_Send, "m_lifeState", 1);
+				}
 				
 				iGhost[i] = 0;
 				iLifeState[i] = 0;
