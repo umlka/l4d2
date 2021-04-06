@@ -896,6 +896,7 @@ stock int GetZombieClass(const char[] sClass)
 //兼容总监的多特.hud.api.扩展.7+版本
 public Action BinHook_OnSpawnSpecial()
 {
+	g_iPZOnSpawn = 0;
 	GhostsModeProtector();
 }
 
