@@ -898,15 +898,17 @@ public Action BinHook_OnSpawnSpecial()
 {
 	g_iPZOnSpawn = 0;
 	GhostsModeProtector();
+	g_iPZOnSpawn = 0;
 }
 
-public Action CommandListener_Spawn(int client, const char[] cmd, int args)
+public Action CommandListener_Spawn(int client, const char[] command, int argc)
 {
 	g_iPZOnSpawn = client;
 	GhostsModeProtector();
+	g_iPZOnSpawn = 0;
 }
 
-public Action CommandListener_CallVote(int client, const char[] command, int args)
+public Action CommandListener_CallVote(int client, const char[] command, int argc)
 {
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Continue;
