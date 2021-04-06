@@ -257,6 +257,7 @@ bool g_bIsPlayerBP[MAXPLAYERS + 1];
 bool g_bUsedClassCmd[MAXPLAYERS + 1];
 
 int g_iSILimit;
+int g_iPZOnSpawn;
 int g_iSurvivorMaxIncapacitatedCount;
 int g_iAllowSurvuivorLimit;
 int g_iMaxTankPlayer;
@@ -900,7 +901,8 @@ public Action BinHook_OnSpawnSpecial()
 
 public Action CommandListener_Spawn(int client, const char[] cmd, int args)
 {
-	GhostsModeProtector(client);
+	g_iPZOnSpawn = client;
+	GhostsModeProtector();
 }
 
 public Action CommandListener_CallVote(int client, const char[] command, int args)
@@ -1084,7 +1086,7 @@ public Action CheckSurvivorLeftSafeArea(Handle timer)
 
 		for(int i = 1; i <= MaxClients; i++)
 		{
-			if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3 && !IsPlayerAlive(i))
+			if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3 && g_iPZSpawned[i] == 0)
 			{
 				delete g_hPZRespawnTimer[i];
 				CalculatePZRespawnTime(i);
@@ -1368,7 +1370,7 @@ public Action Timer_PZRespawn(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) && IsClientInGame(client))
 	{
-		if(g_bHasPlayerControlledZombies == false && !IsFakeClient(client) && GetClientTeam(client) == 3 && !IsPlayerAlive(client))
+		if(g_bHasPlayerControlledZombies == false && !IsFakeClient(client) && GetClientTeam(client) == 3 && g_iPZSpawned[client] == 0)
 		{
 			if(g_iPZRespawnCountdown[client] > 0)
 				PrintHintText(client, "%d 秒后重生", g_iPZRespawnCountdown[client]--);
@@ -1409,6 +1411,9 @@ stock bool RespawnPZ(int client, int iZombieClass)
 
 	FakeClientCommand(client, "spec_next"); //相比于手动获取玩家位置传送，更省力和节约资源的方法
 
+	if(GetEntProp(client, Prop_Send, "m_lifeState") != 1)
+		SetEntProp(client, Prop_Send, "m_lifeState", 1);
+	
 	CheatCmd_SpawnOld(client, g_sZombieClass[iZombieClass]);
 	return IsPlayerAlive(client);
 }
@@ -1587,10 +1592,9 @@ int GetTeleportTarget(int client)
 }
 
 //https://forums.alliedmods.net/showthread.php?t=291562
-void GhostsModeProtector(int client=-1) 
+void GhostsModeProtector(int iState=0) 
 {
 	static int i;
-	static int iState;
 	static int iGhost[MAXPLAYERS + 1];
 	static int iLifeState[MAXPLAYERS + 1];
 
@@ -1600,7 +1604,7 @@ void GhostsModeProtector(int client=-1)
 		{
 			for(i = 1; i <= MaxClients; i++)
 			{
-				if(i == client || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
+				if(i == g_iPZOnSpawn || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
 					continue;
 
 				if(GetEntProp(i, Prop_Send, "m_isGhost") == 1) 
@@ -1614,7 +1618,6 @@ void GhostsModeProtector(int client=-1)
 					iLifeState[i] = 1;
 				}
 			}
-			iState = 1;
 		}
 
 		case 1: 
@@ -1630,11 +1633,10 @@ void GhostsModeProtector(int client=-1)
 				iGhost[i] = 0;
 				iLifeState[i] = 0;
 			}
-			iState = 0;
 		}
 	}
 
-	if(iState == 1)
+	if(iState == 0)
 		RequestFrame(GhostsModeProtector);
 }
 
