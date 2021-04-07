@@ -247,7 +247,6 @@ ConVar g_hSpawnWeights[6];
 
 bool g_bHasAnySurvivorLeftSafeArea;
 bool g_bHasPlayerControlledZombies;
-bool g_bIsRoundEnd;
 bool g_bSbAllBotGame; 
 bool g_bAllowAllBotSurvivorTeam;
 bool g_bDirectorNoSpecials;
@@ -258,6 +257,8 @@ bool g_bUsedClassCmd[MAXPLAYERS + 1];
 
 int g_iSILimit;
 int g_iPZOnSpawn;
+int g_iRoundStart; 
+int g_iPlayerSpawn;
 int g_iSurvivorMaxIncapacitatedCount;
 int g_iAllowSurvuivorLimit;
 int g_iMaxTankPlayer;
@@ -1007,7 +1008,8 @@ public void OnMapStart()
 
 public void OnMapEnd()
 {
-	g_bIsRoundEnd = true;
+	g_iRoundStart = 0;
+	g_iPlayerSpawn = 0;
 	g_bHasAnySurvivorLeftSafeArea = false;
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -1072,10 +1074,15 @@ public void Hook_PostThinkPost(int client)
 //Event
 public void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
 { 
-	if(g_bIsRoundEnd == true || g_bHasAnySurvivorLeftSafeArea == true || !L4D2_HasAnySurvivorLeftSafeArea())
+	if(IsRoundStarted() == false || g_bHasAnySurvivorLeftSafeArea == true || !L4D2_HasAnySurvivorLeftSafeArea())
 		return;
 	
 	CreateTimer(0.1, CheckSurvivorLeftSafeArea, _, TIMER_FLAG_NO_MAPCHANGE);
+}
+
+bool IsRoundStarted()
+{
+	return g_iRoundStart && g_iPlayerSpawn;
 }
 
 public Action CheckSurvivorLeftSafeArea(Handle timer) 
@@ -1134,14 +1141,30 @@ void CalculatePZRespawnTime(int client)
 
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
-	g_bIsRoundEnd = false;
+	if(g_iRoundStart == 0 && g_iPlayerSpawn == 1)
+		RemoveInfectedClips();
+	g_iRoundStart = 1;
+
 	for(int i = 1; i <= MaxClients; i++)
 		DeleteTimer(i);
 }
 
+//移除一些限制特感的透明墙体，增加活动空间. 并且能够修复C2M5上面坦克卡住的情况
+void RemoveInfectedClips()
+{
+	int entity = MaxClients + 1;
+	while((entity = FindEntityByClassname(entity, "func_playerinfected_clip")) != INVALID_ENT_REFERENCE)
+		RemoveEntity(entity);
+		
+	entity = MaxClients + 1;
+	while((entity = FindEntityByClassname(entity, "func_playerghostinfected_clip")) != INVALID_ENT_REFERENCE)
+		RemoveEntity(entity);
+}
+
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
-	g_bIsRoundEnd = true;
+	g_iRoundStart = 0;
+	g_iPlayerSpawn = 0;
 	g_bHasAnySurvivorLeftSafeArea = false;
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -1261,6 +1284,10 @@ public void OnNextFrame_ChangeTeamTo(int client)
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) 
 {
+	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
+		RemoveInfectedClips();
+	g_iPlayerSpawn = 1;
+
 	int userid = event.GetInt("userid");
 	
 	g_iTankBot[GetClientOfUserId(userid)] = 0;
@@ -1284,7 +1311,7 @@ public void OnNextFrame_PlayerSpawn(int userid)
 		
 		case 3:
 		{
-			if(g_bIsRoundEnd == false)
+			if(IsRoundStarted() == true)
 			{
 				if(IsFakeClient(client))
 				{
@@ -1610,15 +1637,21 @@ void GhostsModeProtector(int iState=0)
 				if(i == g_iPZOnSpawn || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
 					continue;
 
-				if(GetEntProp(i, Prop_Send, "m_isGhost") == 1) 
+				if(g_iPZSpawned[i] != 0)
 				{
-					SetEntProp(i, Prop_Send, "m_isGhost", 0);
-					iGhost[i] = 1;
+					if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
+					{
+						SetEntProp(i, Prop_Send, "m_isGhost", 0);
+						iGhost[i] = 1;
+					}
 				}
-				else if(!IsPlayerAlive(i))
+				else
 				{
-					SetEntProp(i, Prop_Send, "m_lifeState", 0);
-					iLifeState[i] = 1;
+					if(!IsPlayerAlive(i))
+					{
+						SetEntProp(i, Prop_Send, "m_lifeState", 0);
+						iLifeState[i] = 1;
+					}
 				}
 			}
 		}
@@ -1629,11 +1662,16 @@ void GhostsModeProtector(int iState=0)
 			{
 				if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3)
 				{
-					if(iGhost[i] == 1)
-						SetEntProp(i, Prop_Send, "m_isGhost", 1);
-						
-					if(iLifeState[i] == 1 && g_iPZSpawned[i] == 0)
-						SetEntProp(i, Prop_Send, "m_lifeState", 1);
+					if(g_iPZSpawned[i] != 0)
+					{
+						if(iGhost[i] == 1)
+							SetEntProp(i, Prop_Send, "m_isGhost", 1);
+					}
+					else
+					{
+						if(iLifeState[i] == 1)
+							SetEntProp(i, Prop_Send, "m_lifeState", 1);
+					}
 				}
 				
 				iGhost[i] = 0;
@@ -1812,7 +1850,7 @@ public void OnNextFrame_CreateSurvivorModelGlow(int client)
 
 void CreateSurvivorModelGlow(int client)
 {
-	if(g_bIsRoundEnd == true || client == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client) || IsValidEntRef(g_iModelEntRef[client]))
+	if(IsRoundStarted() == false || client == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client) || IsValidEntRef(g_iModelEntRef[client]))
 		return;
 
 	int iEntity = CreateEntityByName("prop_dynamic_ornament");
@@ -1909,7 +1947,7 @@ void ChangeTeamToSurvivor(int client)
 	{
 		ChangeClientTeam(client, 2);
 
-		if(g_bIsRoundEnd == false)
+		if(IsRoundStarted() == true)
 		{
 			if(!IsPlayerAlive(client))
 				Respawn(client);
@@ -2544,7 +2582,7 @@ void SetupDetours(GameData hGameData = null)
 
 public MRESReturn EnterGhostStatePre(int pThis, DHookReturn hReturn, DHookParam hParams)
 {
-	if(g_bHasPlayerControlledZombies == false && g_bIsRoundEnd == true)
+	if(g_bHasPlayerControlledZombies == false && IsRoundStarted() == false)
 	{
 		hReturn.Value = 0;
 		return MRES_Supercede; //阻止死亡状态下的特感玩家在团灭后下一回合开始前进入Ghost State
