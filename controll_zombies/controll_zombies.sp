@@ -1441,7 +1441,7 @@ stock bool RespawnPZ(int client, int iZombieClass)
 
 	FakeClientCommand(client, "spec_next"); //相比于手动获取玩家位置传送，更省力和节约资源的方法
 
-	if(GetEntProp(client, Prop_Send, "m_lifeState") != 1)
+	if(/*GetClientTeam(client) == 3 && */GetEntProp(client, Prop_Send, "m_lifeState") != 1)
 		SetEntProp(client, Prop_Send, "m_lifeState", 1);
 	
 	CheatCmd_SpawnOld(client, g_sZombieClass[iZombieClass]);
@@ -1634,24 +1634,32 @@ void GhostsModeProtector(int iState=0)
 		{
 			for(i = 1; i <= MaxClients; i++)
 			{
-				if(i == g_iPZOnSpawn || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
+				if(!IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
 					continue;
 
-				if(g_iPZSpawned[i] != 0)
+				if(i != g_iPZOnSpawn)
 				{
-					if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
+					if(g_iPZSpawned[i] != 0)
 					{
-						SetEntProp(i, Prop_Send, "m_isGhost", 0);
-						iGhost[i] = 1;
+						if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
+						{
+							SetEntProp(i, Prop_Send, "m_isGhost", 0);
+							iGhost[i] = 1;
+						}
+					}
+					else
+					{
+						if(!IsPlayerAlive(i))
+						{
+							SetEntProp(i, Prop_Send, "m_lifeState", 0);
+							iLifeState[i] = 1;
+						}
 					}
 				}
 				else
 				{
-					if(!IsPlayerAlive(i))
-					{
-						SetEntProp(i, Prop_Send, "m_lifeState", 0);
-						iLifeState[i] = 1;
-					}
+					iGhost[i] = 0;
+					iLifeState[i] = 0;
 				}
 			}
 		}
@@ -1660,7 +1668,7 @@ void GhostsModeProtector(int iState=0)
 		{
 			for(i = 1; i <= MaxClients; i++)
 			{
-				if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3)
+				if(i != g_iPZOnSpawn && IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3)
 				{
 					if(g_iPZSpawned[i] != 0)
 					{
