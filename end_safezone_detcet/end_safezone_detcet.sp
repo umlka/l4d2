@@ -312,8 +312,11 @@ stock void SuicideInfectedAttacker()
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(!g_bIsInEndSafezone[i] && IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && L4D2_GetSurvivorVictim(i) > 0)
+		if(!g_bIsInEndSafezone[i] && IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && L4D2_HasSurvivorVictim(i))
+		{
+			SetEntProp(i, Prop_Send, "m_fFlags", GetEntProp(i, Prop_Send, "m_fFlags") & ~FL_FROZEN);
 			ForcePlayerSuicide(i);
+		}
 	}
 }
 
@@ -357,7 +360,10 @@ stock void RemoveAllInfected()
 	for(i = 1; i <= MaxClients; i++)
 	{
 		if(g_bIsInEndSafezone[i] && IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i))
+		{
+			SetEntProp(i, Prop_Send, "m_fFlags", GetEntProp(i, Prop_Send, "m_fFlags") & ~FL_FROZEN);
 			ForcePlayerSuicide(i);
+		}
 	}
 	
 	char sClassName[32];
@@ -378,36 +384,25 @@ stock void RemoveAllInfected()
 	}
 }
 
-//l4d_stocks.inc
-stock int L4D2_GetSurvivorVictim(int client)
+stock bool L4D2_HasSurvivorVictim(int client)
 {
-	int victim;
-
 	/* Charger */
-	victim = GetEntPropEnt(client, Prop_Send, "m_pummelVictim");
-	if(victim > 0)
-		return victim;
-
-	victim = GetEntPropEnt(client, Prop_Send, "m_carryVictim");
-	if(victim > 0)
-		return victim;
+	if(GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0)
+		return true;
 
 	/* Hunter */
-	victim = GetEntPropEnt(client, Prop_Send, "m_pounceVictim");
-	if(victim > 0)
-		return victim;
+	if(GetEntPropEnt(client, Prop_Send, "m_pounceVictim") > 0)
+		return true;
 
 	/* Smoker */
-/*	victim = GetEntPropEnt(client, Prop_Send, "m_tongueVictim");
-	if(victim > 0)
-		return victim;
-*/
-	/* Jockey */
-	victim = GetEntPropEnt(client, Prop_Send, "m_jockeyVictim");
-	if(victim > 0)
-		return victim;
+	if(GetEntPropEnt(client, Prop_Send, "m_tongueVictim") > 0)
+		return true;
 
-	return -1;
+	/* Jockey */
+	if(GetEntPropEnt(client, Prop_Send, "m_jockeyVictim") > 0)
+		return true;
+
+	return false;
 }
 
 stock bool IsAliveSurvivor(int client)
