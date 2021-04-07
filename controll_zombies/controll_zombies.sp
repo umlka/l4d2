@@ -1765,8 +1765,6 @@ bool TakeOverTank(int tank)
 	client = (iPbCount == 0) ? (FloatCompare(GetRandomFloat(0.0, 1.0), g_fSurvuivorAllowChance) == -1 ? (iOtherCount == 0 ? -1 : iOtherClients[GetRandomInt(0, iOtherCount - 1)]) : -1) : iPbClients[GetRandomInt(0, iPbCount - 1)]; //随机抽取一名幸运玩家
 	if(client != -1 && StandingSurvivor() >= g_iAllowSurvuivorLimit)
 	{
-		int iVictim;
-		float vOrigin[3];
 		switch((g_iLastTeamId[client] = GetClientTeam(client)))
 		{
 			case 2:
@@ -1779,25 +1777,13 @@ bool TakeOverTank(int tank)
 			{
 				if(IsPlayerAlive(client))
 				{
-					if(GetEntProp(client, Prop_Send, "m_zombieClass") == 6)
-					{
-						iVictim = GetEntPropEnt(client, Prop_Send, "m_pummelVictim");
-						if(iVictim == -1)
-							iVictim = GetEntPropEnt(client, Prop_Send, "m_carryVictim");
-
-						if(iVictim > 0)
-							GetClientAbsOrigin(client, vOrigin);
-					}
-				
+					SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") & ~FL_FROZEN);
 					ForcePlayerSuicide(client);
 				}
 			}
 		}
 
 		TakeOverZombieBot(client, tank);
-
-		if(iVictim > 0)
-			TeleportEntity(client, vOrigin, NULL_VECTOR, NULL_VECTOR);
 
 		CPrintToChatAll("{green}★ {red}AI Tank {default}已被 {red}%N {olive}接管", client);
 
