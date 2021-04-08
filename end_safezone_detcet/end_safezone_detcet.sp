@@ -56,20 +56,20 @@ public void OnPluginStart()
 	HookEvent("round_start", Event_RoundStart, EventHookMode_Pre);
 	
 	RegAdminCmd("sm_warpend", CmdWarpEnd, ADMFLAG_RCON, "传送所有生还者到终点安全区域");
-	RegAdminCmd("sm_finale", CmdFinale, ADMFLAG_RCON, "结局关卡强制过关(强制触发finale_win事件)");
+	RegAdminCmd("sm_finale", CmdFinale, ADMFLAG_RCON, "结局关卡强制过关");
 }
 
 public Action CmdWarpEnd(int client, int args)
 {
 	if(g_iRoundStart == 0 || g_iPlayerSpawn == 0)
 	{
-		ReplyToCommand(client, "回合尚未开始.");
+		ReplyToCommand(client, "回合尚未开始");
 		return Plugin_Handled;
 	}
 
 	if(!IsValidEntRef(g_iChangelevel))
 	{
-		ReplyToCommand(client, "当前章节无changelevel实体或是结局地图");
+		ReplyToCommand(client, "当前章节未发现changelevel实体");
 		return Plugin_Handled;
 	}
 
@@ -82,14 +82,14 @@ public Action CmdFinale(int client, int args)
 {
 	if(g_iRoundStart == 0 || g_iPlayerSpawn == 0)
 	{
-		ReplyToCommand(client, "回合尚未开始.");
+		ReplyToCommand(client, "回合尚未开始");
 		return Plugin_Handled;
 	}
 
 	int iFinaleEntity;
 	if((iFinaleEntity = FindEntityByClassname(MaxClients + 1, "trigger_finale")) == INVALID_ENT_REFERENCE)
 	{
-		ReplyToCommand(client, "当前章节不是结局地图.");
+		ReplyToCommand(client, "当前章节未发现trigger_finale实体");
 		return Plugin_Handled;
 	}
 	
