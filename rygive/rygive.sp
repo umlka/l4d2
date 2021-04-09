@@ -1552,56 +1552,33 @@ stock void TeleportCheck(int client)
 	if(GetClientTeam(client) != 2)
 		return;
 	
+	if(GetEntityMoveType(client) == MOVETYPE_NOCLIP)
+		SetEntityMoveType(client, MOVETYPE_WALK);
+
+	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") & ~FL_FROZEN);
+
 	if(IsHanging(client))
 		L4D2_ReviveFromIncap(client);
 	else
-		ChargerCheck(client);
-}
-
-//https://github.com/LuxLuma/Scuffle
-stock void ChargerCheck(int client)
-{
-	static const char attackTypes[][] = 
 	{
-		"m_pummelAttacker",
-		"m_carryAttacker" 
-	};
-	for(int i; i < sizeof(attackTypes); i++)
-	{
-		if(HasEntProp(client, Prop_Send, attackTypes[i]))
+		int attacker = L4D2_GetInfectedAttacker(client);
+		if(attacker > 0 && IsClientInGame(attacker) && IsPlayerAlive(attacker))
 		{
-			int attackerId = GetEntPropEnt(client, Prop_Send, attackTypes[i]);
-			if(attackerId > 0)
-			{
-				L4D2_Stagger(attackerId);
-				break;
-			}
+			SetEntProp(attacker, Prop_Send, "m_fFlags", GetEntProp(attacker, Prop_Send, "m_fFlags") & ~FL_FROZEN);
+			ForcePlayerSuicide(attacker);
 		}
 	}
 }
 
-stock void L4D2_Stagger(int iClient, float fPos[3]=NULL_VECTOR) 
+stock void L4D2_ReviveFromIncap(int client) 
 {
-    /**
-    * Stagger a client (Credit to Timocop)
-    *
-    * @param iClient    Client to stagger
-    * @param fPos       Vector to stagger
-    * @return void
-    */
-
-    L4D2_RunScript("GetPlayerFromUserID(%d).Stagger(Vector(%d,%d,%d))", GetClientUserId(iClient), RoundFloat(fPos[0]), RoundFloat(fPos[1]), RoundFloat(fPos[2]));
+	L4D2_RunScript("GetPlayerFromUserID(%d).ReviveFromIncap()", GetClientUserId(client));
 }
 
 //https://forums.alliedmods.net/showpost.php?p=2681159&postcount=10
 stock bool IsHanging(int client)
 {
 	return GetEntProp(client, Prop_Send, "m_isHangingFromLedge") > 0;
-}
-
-stock void L4D2_ReviveFromIncap(int client) 
-{
-	L4D2_RunScript("GetPlayerFromUserID(%d).ReviveFromIncap()", GetClientUserId(client));
 }
 
 stock void L4D2_RunScript(const char[] sCode, any ...) 
@@ -1627,6 +1604,47 @@ stock void L4D2_RunScript(const char[] sCode, any ...)
 	VFormat(sBuffer, sizeof(sBuffer), sCode, 2);
 	SetVariantString(sBuffer);
 	AcceptEntityInput(iScriptLogic, "RunScriptCode");
+}
+
+/**
+ * Returns infected attacker of survivor victim.
+ *
+ * Note: Infected attacker means the infected player that is currently
+ * pinning down the survivor. Such as hunter, smoker, charger and jockey.
+ *
+ * @param client        Survivor client index.
+ * @return              Infected attacker index, -1 if not found.
+ * @error               Invalid client index.
+ */
+stock int L4D2_GetInfectedAttacker(int client)
+{
+    int attacker;
+
+    /* Charger */
+    attacker = GetEntPropEnt(client, Prop_Send, "m_pummelAttacker");
+    if(attacker > 0)
+        return attacker;
+
+    attacker = GetEntPropEnt(client, Prop_Send, "m_carryAttacker");
+    if(attacker > 0)
+        return attacker;
+
+    /* Hunter */
+    attacker = GetEntPropEnt(client, Prop_Send, "m_pounceAttacker");
+    if(attacker > 0)
+        return attacker;
+
+    /* Smoker */
+    attacker = GetEntPropEnt(client, Prop_Send, "m_tongueOwner");
+    if(attacker > 0)
+        return attacker;
+
+    /* Jockey */
+    attacker = GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker");
+    if(attacker > 0)
+        return attacker;
+
+    return -1;
 }
 
 void ForcePanicEvent(int client)
