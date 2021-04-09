@@ -3,7 +3,6 @@
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
-#include <left4dhooks>
 #include <navmesh>
 
 #define SOUND_COUNTDOWN "buttons/blip1.wav"
@@ -136,7 +135,7 @@ public void OnPluginStart()
 	RegAdminCmd("sm_warpstart", CmdWarpStart, ADMFLAG_RCON, "传送所有生还者到起点安全区域");
 	RegAdminCmd("sm_warpend", CmdWarpEnd, ADMFLAG_RCON, "传送所有生还者到终点安全区域");
 	RegAdminCmd("sm_finale", CmdFinale, ADMFLAG_RCON, "结局关卡强制过关");
-	RegAdminCmd("sm_esd", CmdEsd, ADMFLAG_ROOT, "");
+	//RegAdminCmd("sm_esd", CmdEsd, ADMFLAG_ROOT, "测试");
 	
 	g_hEndNavMeshAreas = new ArrayList(1);
 	g_hStartNavMeshAreas = new ArrayList(1);
@@ -209,42 +208,12 @@ public Action CmdFinale(int client, int args)
 	AcceptEntityInput(iFinaleEntity, "FinaleEscapeFinished");
 	return Plugin_Handled;
 }
-
+/*
 public Action CmdEsd(int client, int args)
 {
-	float vAbsOrigin[3];
-	GetClientAbsOrigin(client, vAbsOrigin);
-	if(!IsOnValidMesh(vAbsOrigin))
-	{
-		ReplyToCommand(client, "无效区域");
-		return Plugin_Handled;
-	}
-
-	CNavArea area = NavMesh_GetNearestArea(vAbsOrigin);
-	if(area == INVALID_NAV_AREA)
-		ReplyToCommand(client, "无效区域");
-	else
-	{
-		int index = g_hStartNavMeshAreas.FindValue(area);
-		if(index != -1)
-			ReplyToCommand(client, "你处于起点区域内");
-		else
-		{
-			index = g_hEndNavMeshAreas.FindValue(area);
-			if(index != -1)
-				ReplyToCommand(client, "你处于终点区域内");
-		}
-	}
 	return Plugin_Handled;
 }
-
-stock bool IsOnValidMesh(float vPos[3])
-{
-	static Address pNavArea;
-	pNavArea = L4D2Direct_GetTerrorNavArea(vPos);
-	return pNavArea != Address_Null;
-}
-
+*/
 public void OnConfigsExecuted()
 {
 	GetCvars();
@@ -274,15 +243,6 @@ public void OnMapEnd()
 	g_iPlayerSpawn = 0;
 	g_bHasTriggered = false;
 	g_bFinalVehicleReady = false;
-
-	if(g_hNavMeshAreas != null)
-		g_hNavMeshAreas.Clear();
-		
-	if(g_hEndNavMeshAreas != null)
-		g_hEndNavMeshAreas.Clear();
-		
-	if(g_hStartNavMeshAreas != null)
-		g_hStartNavMeshAreas.Clear();
 }
 
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -315,6 +275,12 @@ public void Event_FinaleVehicleReady(Event event, const char[] name, bool dontBr
 
 void InitPlugin()
 {
+	if(g_hNavMeshAreas != null)
+		g_hNavMeshAreas.Clear();
+
+	g_hEndNavMeshAreas.Clear();
+	g_hStartNavMeshAreas.Clear();
+
 	g_hNavMeshAreas = view_as<ArrayList>(NavMesh_GetAreas()).Clone();
 	
 	HookEndAreaEntity();
@@ -328,7 +294,7 @@ void InitPlugin()
 				g_hStartNavMeshAreas.Push(iAreaIndex);
 			else if(g_hNavMeshAreas.Get(iAreaIndex, TerrorNavArea_SpawnAttributes) & TERROR_NAV_CHECKPOINT)
 			{
-				if(GetFlow(iAreaIndex) > 3000.0)
+				if(NavMeshAreaInEndSafeArea(iAreaIndex))
 					g_hEndNavMeshAreas.Push(iAreaIndex);
 				else
 					g_hStartNavMeshAreas.Push(iAreaIndex);
@@ -342,16 +308,17 @@ void InitPlugin()
 				g_hEndNavMeshAreas.Push(iAreaIndex);
 		}
 	}
+
 	FindSafeDoor();
 }
 
-float GetFlow(int iAreaIndex)
+bool NavMeshAreaInEndSafeArea(int iAreaIndex)
 {
 	static float vBuffer[3];
 	if(!NavMeshArea_GetCenter(iAreaIndex, vBuffer))
-		return 0.0;
+		return false;
 	
-	return L4D2Direct_GetTerrorNavAreaFlow(L4D2Direct_GetTerrorNavArea(vBuffer));
+	return PointInEndSafeArea(vBuffer);
 }
 
 void HookEndAreaEntity()
@@ -360,6 +327,14 @@ void HookEndAreaEntity()
 	g_iRescueVehicle = 0;
 	//g_iStartSafeDoor = 0;
 	g_iLastSafeDoor = 0;
+	
+	g_vMins[0] -= 0.0;
+	g_vMins[1] -= 0.0;
+	g_vMins[2] -= 0.0;
+
+	g_vMaxs[0] += 0.0;
+	g_vMaxs[1] += 0.0;
+	g_vMaxs[2] += 0.0;
 
 	int entity = MaxClients + 1;
 	if((entity = FindEntityByClassname(MaxClients + 1, "info_changelevel")) == INVALID_ENT_REFERENCE)
@@ -367,9 +342,10 @@ void HookEndAreaEntity()
 
 	if(entity != INVALID_ENT_REFERENCE)
 	{
+		GetEndAreaEntityVectors(entity);
+		g_iChangelevel = EntIndexToEntRef(entity);
 		SDKHook(entity, SDKHook_EndTouch, OnEndTouch);
 		SDKHook(entity, SDKHook_StartTouch, OnStartTouch);
-		g_iChangelevel = EntIndexToEntRef(entity);
 	}
 	else
 	{
@@ -388,13 +364,33 @@ void HookEndAreaEntity()
 			CNavArea area = NavMesh_GetNearestArea(vOrigin);
 			if(area != INVALID_NAV_AREA && g_hNavMeshAreas.Get(view_as<int>(area), TerrorNavArea_SpawnAttributes) & TERROR_NAV_RESCUE_VEHICLE)
 			{
-				g_iRescueVehicle = entity;
+				GetEndAreaEntityVectors(entity);
+				g_iRescueVehicle = EntIndexToEntRef(entity);
 				SDKHook(entity, SDKHook_EndTouch, OnEndTouch);
 				SDKHook(entity, SDKHook_StartTouch, OnStartTouch);
 				break;
 			}
 		}
 	}
+}
+
+void GetEndAreaEntityVectors(int entity)
+{
+	float vOrigin[3];
+	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
+	GetEntPropVector(entity, Prop_Send, "m_vecMins", g_vMins);
+	GetEntPropVector(entity, Prop_Send, "m_vecMaxs", g_vMaxs);
+
+	g_vMins[0] -= 100.0;
+	g_vMins[1] -= 100.0;
+	g_vMins[2] -= 100.0;
+
+	g_vMaxs[0] += 200.0;
+	g_vMaxs[1] += 200.0;
+	g_vMaxs[2] += 200.0;
+
+	AddVectors(vOrigin, g_vMins, g_vMins);
+	AddVectors(vOrigin, g_vMaxs, g_vMaxs);
 }
 
 void FindSafeDoor()
@@ -409,20 +405,21 @@ void FindSafeDoor()
 	
 		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vOrigin);
 		CNavArea area = NavMesh_GetNearestArea(vOrigin);
-		index = g_hStartNavMeshAreas.FindValue(area);
+		index = g_hEndNavMeshAreas.FindValue(area);
 		if(index != -1)
 		{
-			//g_iStartSafeDoor = EntIndexToEntRef(entity);
-			g_hStartNavMeshAreas.Erase(index);
+			g_iLastSafeDoor = EntIndexToEntRef(entity);
+			g_hEndNavMeshAreas.Erase(index);
 		}
+		else if(PointInEndSafeArea(vOrigin))
+			g_iLastSafeDoor = EntIndexToEntRef(entity);
 		else
 		{
-			index = g_hEndNavMeshAreas.FindValue(area);
+			index = g_hStartNavMeshAreas.FindValue(area);
 			if(index != -1)
-			{
-				g_iLastSafeDoor = EntIndexToEntRef(entity);
-				g_hEndNavMeshAreas.Erase(index);
-			}
+				g_hStartNavMeshAreas.Erase(index);
+
+			//g_iStartSafeDoor = EntIndexToEntRef(entity);
 		}
 	}
 }
@@ -613,7 +610,7 @@ stock void RemoveAllInfected()
 		if(strcmp(sClassName, "infected") == 0 || strcmp(sClassName, "witch") == 0)
 		{
 			GetEntPropVector(i, Prop_Send, "m_vecOrigin", vOrigin);
-			if(IsPointInEndSafeArea(vOrigin))
+			if(PointInEndSafeArea(vOrigin))
 				RemoveEntity(i);
 		}
 	}
@@ -694,11 +691,8 @@ bool NoPlayerInEndArea()
 }
 
 //https://forums.alliedmods.net/showpost.php?p=2680639&postcount=3
-stock bool IsPointInEndSafeArea(const float vLoca[3])
+stock bool PointInEndSafeArea(const float vLoca[3])
 {
-	if(!IsValidEntRef(g_iChangelevel))
-		return false;
-
 	return g_vMins[0] < vLoca[0] < g_vMaxs[0] && g_vMins[1] < vLoca[1] < g_vMaxs[1] && g_vMins[2] < vLoca[2] < g_vMaxs[2];
 }
 
