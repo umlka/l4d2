@@ -150,7 +150,9 @@ public Action CmdWarpStart(int client, int args)
 		return Plugin_Handled;
 	}
 
+	int iRandom;
 	int iAreaCount = g_hStartNavMeshAreas.Length;
+	float vCenter[3];
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsAliveSurvivor(i))
@@ -160,9 +162,8 @@ public Action CmdWarpStart(int client, int args)
 
 			SetEntProp(i, Prop_Send, "m_fFlags", GetEntProp(i, Prop_Send, "m_fFlags") & ~FL_FROZEN);
 			L4D2_ReviveFromIncap(i);
-			int iRandom = GetRandomInt(0, iAreaCount - 1);
+			iRandom = GetRandomInt(0, iAreaCount - 1);
 			CNavArea iRandomArea = view_as<CNavArea>(g_hStartNavMeshAreas.Get(iRandom));
-			float vCenter[3];
 			iRandomArea.GetCenter(vCenter);
 			TeleportEntity(i, vCenter, NULL_VECTOR, NULL_VECTOR);
 		}
@@ -568,7 +569,9 @@ void TeleportAllSurvivorsToCheckpoint()
 
 	SuicideInfectedAttacker();
 
+	int iRandom;
 	int iAreaCount = g_hEndNavMeshAreas.Length;
+	float vCenter[3];
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsAliveSurvivor(i))
@@ -578,9 +581,8 @@ void TeleportAllSurvivorsToCheckpoint()
 
 			SetEntProp(i, Prop_Send, "m_fFlags", GetEntProp(i, Prop_Send, "m_fFlags") & ~FL_FROZEN);
 			L4D2_ReviveFromIncap(i);
-			int iRandom = GetRandomInt(0, iAreaCount - 1);
+			iRandom = GetRandomInt(0, iAreaCount - 1);
 			CNavArea iRandomArea = view_as<CNavArea>(g_hEndNavMeshAreas.Get(iRandom));
-			float vCenter[3];
 			iRandomArea.GetCenter(vCenter);
 			TeleportEntity(i, vCenter, NULL_VECTOR, NULL_VECTOR);
 		}
