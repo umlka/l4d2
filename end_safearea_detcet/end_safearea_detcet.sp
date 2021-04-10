@@ -80,6 +80,7 @@ enum
 ArrayList g_hNavMeshAreas;
 ArrayList g_hEndNavMeshAreas;
 ArrayList g_hStartNavMeshAreas;
+ArrayList g_hBlockedNavMeshAreas;
 
 Handle g_hTimer;
 
@@ -105,6 +106,12 @@ bool g_bFinalVehicleReady;
 bool g_bRemoveAllInfected;
 bool g_bIsInEndSafeArea[MAXPLAYERS + 1];
 
+static const char g_sMethod[][] =
+{
+	"传送",
+	"处死",
+};
+
 public Plugin myinfo = 
 {
     name = "End Area Detcet",
@@ -117,7 +124,7 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	g_hEndSafeAreaMethod = CreateConVar("end_safearea_method", "0", "如何处理未进入终点安全区域的玩家?(0=传送,1=处死)", _, true, 0.0, true, 1.0);
-	g_hEndSafeAreaTime = CreateConVar("end_safearea_time", "30", "倒计时多久(0=关闭该功能)", _, true, 0.0);
+	g_hEndSafeAreaTime = CreateConVar("end_safearea_time", "15", "倒计时多久(0=关闭该功能)", _, true, 0.0);
 	g_hRemoveAllInfected = CreateConVar("end_safearea_remove", "1", "传送前是否移除终点安全区域内的感染者", _, true, 0.0, true, 1.0);
 	
 	g_hEndSafeAreaMethod.AddChangeHook(ConVarChanged);
@@ -131,6 +138,7 @@ public void OnPluginStart()
 	HookEvent("round_start", Event_RoundStart, EventHookMode_Pre);
 	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
 	HookEvent("finale_vehicle_ready", Event_FinaleVehicleReady, EventHookMode_Pre);
+	HookEvent("nav_blocked", Event_NavBlocked, EventHookMode_Pre);
 	
 	RegAdminCmd("sm_warpstart", CmdWarpStart, ADMFLAG_RCON, "传送所有生还者到起点安全区域");
 	RegAdminCmd("sm_warpend", CmdWarpEnd, ADMFLAG_RCON, "传送所有生还者到终点安全区域");
@@ -139,6 +147,7 @@ public void OnPluginStart()
 	
 	g_hEndNavMeshAreas = new ArrayList(1);
 	g_hStartNavMeshAreas = new ArrayList(1);
+	g_hBlockedNavMeshAreas = new ArrayList(1);
 }
 
 public Action CmdWarpStart(int client, int args)
@@ -149,8 +158,14 @@ public Action CmdWarpStart(int client, int args)
 		return Plugin_Handled;
 	}
 
-	int iRandom;
 	int iAreaCount = g_hStartNavMeshAreas.Length;
+	if(iAreaCount == 0)
+	{
+		ReplyToCommand(client, "未发现起点Nav区域");
+		return Plugin_Handled;
+	}
+	
+	int iRandom;
 	float vCenter[3];
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -179,9 +194,9 @@ public Action CmdWarpEnd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(g_iRescueVehicle && !g_bFinalVehicleReady)
+	if(g_hEndNavMeshAreas.Length == 0)
 	{
-		ReplyToCommand(client, "救援载具尚未准备好");
+		ReplyToCommand(client, "未发现终点Nav区域");
 		return Plugin_Handled;
 	}
 
@@ -201,7 +216,7 @@ public Action CmdFinale(int client, int args)
 	int iFinaleEntity;
 	if((iFinaleEntity = FindEntityByClassname(MaxClients + 1, "trigger_finale")) == INVALID_ENT_REFERENCE)
 	{
-		ReplyToCommand(client, "当前章节未发现trigger_finale实体");
+		ReplyToCommand(client, "未发现trigger_finale实体");
 		return Plugin_Handled;
 	}
 	
@@ -211,6 +226,12 @@ public Action CmdFinale(int client, int args)
 /*
 public Action CmdEsd(int client, int args)
 {
+	int iAreaCount = g_hBlockedNavMeshAreas.Length;
+	for(int iAreaIndex; iAreaIndex < iAreaCount; iAreaIndex++)
+	{
+		int iSpawnAttributes = g_hNavMeshAreas.Get(g_hBlockedNavMeshAreas.Get(iAreaIndex), TerrorNavArea_SpawnAttributes);
+		ReplyToCommand(client, "iAreaIndex->%d iSpawnAttributes->%x", g_hBlockedNavMeshAreas.Get(iAreaIndex), iSpawnAttributes);
+	}
 	return Plugin_Handled;
 }
 */
@@ -243,6 +264,10 @@ public void OnMapEnd()
 	g_iPlayerSpawn = 0;
 	g_bHasTriggered = false;
 	g_bFinalVehicleReady = false;
+
+	g_hEndNavMeshAreas.Clear();
+	g_hStartNavMeshAreas.Clear();
+	g_hBlockedNavMeshAreas.Clear();
 }
 
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -273,20 +298,59 @@ public void Event_FinaleVehicleReady(Event event, const char[] name, bool dontBr
 	g_bFinalVehicleReady = true;
 }
 
+public void Event_NavBlocked(Event event, const char[] name, bool dontBroadcast)
+{
+	int iAreaID = event.GetInt("area");
+	int iAreaIndex = view_as<int>(NavMesh_FindAreaByID(iAreaID));
+	if(iAreaIndex != -1)
+	{
+		//bool bBlocked = view_as<bool>(event.GetInt("blocked"));
+		if(g_hBlockedNavMeshAreas.FindValue(iAreaIndex) == -1)
+			g_hBlockedNavMeshAreas.Push(iAreaIndex);
+			
+		if(g_bFinalVehicleReady == true && g_bHasTriggered == false && g_iEndSafeAreaTime != 0 && g_hEndNavMeshAreas.Length == 0 && g_hBlockedNavMeshAreas.Length != 0)
+		{
+			int index;
+			int entity = MaxClients + 1;
+			float vMins[3], vMaxs[3], vOrigin[3];
+			while((entity = FindEntityByClassname(entity, "trigger_multiple")) != INVALID_ENT_REFERENCE)
+			{
+				GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
+				GetEntPropVector(entity, Prop_Send, "m_vecMins", vMins);
+				GetEntPropVector(entity, Prop_Send, "m_vecMaxs", vMaxs);
+	
+				vOrigin[0] = vOrigin[0] + (vMins[0] + vMaxs[0]) * 0.5;
+				vOrigin[1] = vOrigin[1] + (vMins[1] + vMaxs[1]) * 0.5;
+				vOrigin[2] = vOrigin[2] + (vMins[2] + vMaxs[2]) * 0.5;
+			
+				int area = view_as<int>(NavMesh_GetNearestArea(vOrigin));
+				index = g_hBlockedNavMeshAreas.FindValue(area);
+				if(index != -1 && view_as<bool>(g_hNavMeshAreas.Get(area, NavMeshArea_Blocked)) == false)
+				{
+					g_hEndNavMeshAreas.Push(g_hBlockedNavMeshAreas.Get(index));
+					GetEndAreaEntityVectors(entity);
+					g_iRescueVehicle = EntIndexToEntRef(entity);
+					SDKHook(entity, SDKHook_EndTouch, OnEndTouch);
+					SDKHook(entity, SDKHook_StartTouch, OnStartTouch);
+					break;
+				}
+			}
+		}
+	}	
+}
+
 void InitPlugin()
 {
-	if(g_hNavMeshAreas != null)
-		g_hNavMeshAreas.Clear();
-
-	g_hEndNavMeshAreas.Clear();
-	g_hStartNavMeshAreas.Clear();
-
-	g_hNavMeshAreas = view_as<ArrayList>(NavMesh_GetAreas()).Clone();
-	
+	g_hNavMeshAreas = view_as<ArrayList>(NavMesh_GetAreas());
 	HookEndAreaEntity();
+	InitSafeAreaArray();
+	FindSafeAreaDoor();
+}
 
+void InitSafeAreaArray()
+{
 	int iAreaCount = g_hNavMeshAreas.Length;
-	for(int iAreaIndex = 0; iAreaIndex < iAreaCount; iAreaIndex++)
+	for(int iAreaIndex; iAreaIndex < iAreaCount; iAreaIndex++)
 	{
 		if(g_iChangelevel)
 		{
@@ -308,8 +372,6 @@ void InitPlugin()
 				g_hEndNavMeshAreas.Push(iAreaIndex);
 		}
 	}
-
-	FindSafeDoor();
 }
 
 bool NavMeshAreaInEndSafeArea(int iAreaIndex)
@@ -327,16 +389,8 @@ void HookEndAreaEntity()
 	g_iRescueVehicle = 0;
 	//g_iStartSafeDoor = 0;
 	g_iLastSafeDoor = 0;
-	
-	g_vMins[0] -= 0.0;
-	g_vMins[1] -= 0.0;
-	g_vMins[2] -= 0.0;
 
-	g_vMaxs[0] += 0.0;
-	g_vMaxs[1] += 0.0;
-	g_vMaxs[2] += 0.0;
-
-	int entity = MaxClients + 1;
+	int entity = INVALID_ENT_REFERENCE;
 	if((entity = FindEntityByClassname(MaxClients + 1, "info_changelevel")) == INVALID_ENT_REFERENCE)
 		entity = FindEntityByClassname(MaxClients + 1, "trigger_changelevel");
 
@@ -376,6 +430,9 @@ void HookEndAreaEntity()
 
 void GetEndAreaEntityVectors(int entity)
 {
+	g_vMins = view_as<float>({0.0, 0.0, 0.0});
+	g_vMaxs = view_as<float>({0.0, 0.0, 0.0});
+
 	float vOrigin[3];
 	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
 	GetEntPropVector(entity, Prop_Send, "m_vecMins", g_vMins);
@@ -393,7 +450,7 @@ void GetEndAreaEntityVectors(int entity)
 	AddVectors(vOrigin, g_vMaxs, g_vMaxs);
 }
 
-void FindSafeDoor()
+void FindSafeAreaDoor()
 {
 	int index;
 	float vOrigin[3];
@@ -404,7 +461,7 @@ void FindSafeDoor()
 			continue;
 	
 		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vOrigin);
-		CNavArea area = NavMesh_GetNearestArea(vOrigin);
+		int area = view_as<int>(NavMesh_GetNearestArea(vOrigin));
 		index = g_hEndNavMeshAreas.FindValue(area);
 		if(index != -1)
 		{
@@ -450,12 +507,6 @@ public Action OnStartTouch(int entity, int other)
 	delete g_hTimer;
 	g_hTimer = CreateTimer(1.0, Timer_NotifySurvivor, _, TIMER_REPEAT);
 }
-
-static const char g_sMethod[][] =
-{
-	"传送",
-	"处死",
-};
 
 public Action Timer_NotifySurvivor(Handle timer)
 {
@@ -566,8 +617,11 @@ void TeleportAllSurvivorsToCheckpoint()
 
 	SuicideInfectedAttacker();
 
-	int iRandom;
 	int iAreaCount = g_hEndNavMeshAreas.Length;
+	if(iAreaCount == 0)
+		return;
+
+	int iRandom;
 	float vCenter[3];
 	for(int i = 1; i <= MaxClients; i++)
 	{
