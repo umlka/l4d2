@@ -2,6 +2,7 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
+#include <sdkhooks>
 
 #define GAMEDATA "rygive"
 #define NAME_CreateSmoker "NextBotCreatePlayerBot<Smoker>"
@@ -361,20 +362,34 @@ public Action Rygive(int client)
 {
 	Menu menu = new Menu(MenuHandler_Rygive);
 	menu.SetTitle("多功能插件");
-	menu.AddItem("0", "武器");
-	menu.AddItem("1", "物品");
-	menu.AddItem("2", "感染");
-	menu.AddItem("3", "杂项");
-	menu.AddItem("4", "团队控制");
-	if(g_bDebug == false)
-		menu.AddItem("5", "开启调试模式");
-	else
-		menu.AddItem("5", "关闭调试模式");
+	menu.AddItem("w", "武器");
+	menu.AddItem("i", "物品");
+	menu.AddItem("z", "感染");
+	menu.AddItem("o", "杂项");
+	menu.AddItem("t", "团队控制");
 	if(g_bWeaponHandling)
-		menu.AddItem("6", "武器操纵性(攻速/装填等)");
+		menu.AddItem("c", "武器操纵性");
+	if(GetClientImmunityLevel(client) > 98)
+	{
+		if(g_bDebug == false)
+			menu.AddItem("d", "开启调试模式");
+		else
+			menu.AddItem("d", "关闭调试模式");
+	}
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 	return Plugin_Handled;
+}
+
+int GetClientImmunityLevel(int client)
+{
+	static char sSteamID[64];
+	GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID));
+	AdminId admin = FindAdminByIdentity(AUTHMETHOD_STEAM, sSteamID);
+	if(admin == INVALID_ADMIN_ID)
+		return -999;
+
+	return admin.ImmunityLevel;
 }
 
 public int MenuHandler_Rygive(Menu menu, MenuAction action, int client, int param2)
@@ -383,22 +398,24 @@ public int MenuHandler_Rygive(Menu menu, MenuAction action, int client, int para
 	{
 		case MenuAction_Select:
 		{
-			switch(param2)
+			char sItem[2];
+			menu.GetItem(param2, sItem, sizeof(sItem));
+			switch(sItem[0])
 			{
-				case 0:
+				case 'w':
 					Action_Weapons(client);
-				case 1:
+				case 'i':
 					Action_Items(client, 0);
-				case 2:
+				case 'z':
 					Action_Infected(client, 0);
-				case 3:
+				case 'o':
 					Action_Othoer(client, 0);
-				case 4:
+				case 't':
 					Action_TeamSwitch(client, 0);
-				case 5:
-					Action_DebugMode(client);
-				case 6:
+				case 'c':
 					Action_HandlingAPI(client, 0);
+				case 'd':
+					Action_DebugMode(client);
 			}
 		}
 		case MenuAction_End:
@@ -998,7 +1015,7 @@ void IncapCheck(int client)
 {
 	if(IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client) && !IsIncapacitated(client))
 	{
-		if(FindConVar("survivor_max_incapacitated_count").IntValue == GetEntProp(client, Prop_Send, "m_currentReviveCount"))
+		if(GetEntProp(client, Prop_Send, "m_currentReviveCount") >= FindConVar("survivor_max_incapacitated_count").IntValue)
 		{
 			SetEntProp(client, Prop_Send, "m_currentReviveCount", FindConVar("survivor_max_incapacitated_count").IntValue - 1);
 			SetEntProp(client, Prop_Send, "m_isGoingToDie", 0);
@@ -1011,23 +1028,9 @@ void IncapCheck(int client)
 
 stock void IncapPlayer(int client) 
 {
-	float vPos[3];
-	char sUser[MAX_NAME_LENGTH];
-	GetClientAbsOrigin(client, vPos);
-	FormatEx(sUser, sizeof(sUser), "hurtme%d", client);
-	int iEntity = CreateEntityByName("point_hurt");
-	if(iEntity != -1)
-	{
-		SetEntityHealth(client, 1);
-		DispatchKeyValue(iEntity, "Damage", "6000");
-		DispatchKeyValue(iEntity, "DamageType", "128");
-		DispatchKeyValue(client, "targetname", sUser);
-		DispatchKeyValue(iEntity, "DamageTarget", sUser);
-		DispatchSpawn(iEntity);
-		TeleportEntity(iEntity, vPos, NULL_VECTOR, NULL_VECTOR);
-		AcceptEntityInput(iEntity, "Hurt");
-		RemoveEntity(iEntity);
-	}
+	SetEntityHealth(client, 1);
+	SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 0.0);
+	SDKHooks_TakeDamage(client, 0, 0, 100.0, DMG_GENERIC);
 }
 
 void StripWeapon(int client, int index)
@@ -1507,7 +1510,7 @@ stock bool GetDirectionEndPoint(int client, float vEndPos[3])
 	GetClientEyePosition(client, vPos);
 	GetClientEyeAngles(client, vDir);
 
-	Handle hTrace = TR_TraceRayFilterEx(vPos, vDir, MASK_PLAYERSOLID, RayType_Infinite, bTraceEntityFilterPlayer);
+	Handle hTrace = TR_TraceRayFilterEx(vPos, vDir, MASK_SHOT, RayType_Infinite, bTraceEntityFilterPlayer);
 	if(hTrace != null)
 	{
 		if(TR_DidHit(hTrace))
@@ -1946,34 +1949,6 @@ int HasIdlePlayer(int client)
 	return 0;
 }
 
-void Action_DebugMode(int client)
-{
-	if(g_bDebug == true)
-	{
-		g_hSteamIDs.Clear();
-			
-		g_bDebug = false;
-		ReplyToCommand(client, "调试模式已关闭.");
-	}
-	else
-	{
-		for(int i = 1; i <= MaxClients; i++)
-		{
-			if(IsClientInGame(i) && !IsFakeClient(i))
-			{
-				char sSteamID[64];
-				GetClientAuthId(i, AuthId_Steam2, sSteamID, sizeof(sSteamID));
-				g_hSteamIDs.SetValue(sSteamID, true, true);
-			}
-		}
-		
-		g_bDebug = true;
-		ReplyToCommand(client, "调试模式已开启.");
-	}
-	
-	Rygive(client);
-}
-
 void Action_HandlingAPI(int client, int index)
 {
 	Menu menu = new Menu(MenuHandler_HandlingAPI);
@@ -1999,6 +1974,11 @@ void Action_HandlingAPI(int client, int index)
 	menu.AddItem("2.8", "2.8x");
 	menu.AddItem("2.9", "2.9x");
 	menu.AddItem("3.0", "3.0x");
+	menu.AddItem("3.1", "3.1x");
+	menu.AddItem("3.2", "3.2x");
+	menu.AddItem("3.3", "3.3x");
+	menu.AddItem("3.4", "3.4x");
+	menu.AddItem("3.5", "3.5x");
 	menu.ExitBackButton = true;
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
@@ -2096,6 +2076,34 @@ public int MenuHandler_WeaponSpeedUp(Menu menu, MenuAction action, int client, i
 		case MenuAction_End:
 			delete menu;
 	}
+}
+
+void Action_DebugMode(int client)
+{
+	if(g_bDebug == true)
+	{
+		g_hSteamIDs.Clear();
+			
+		g_bDebug = false;
+		ReplyToCommand(client, "调试模式已关闭.");
+	}
+	else
+	{
+		for(int i = 1; i <= MaxClients; i++)
+		{
+			if(IsClientInGame(i) && !IsFakeClient(i))
+			{
+				char sSteamID[64];
+				GetClientAuthId(i, AuthId_Steam2, sSteamID, sizeof(sSteamID));
+				g_hSteamIDs.SetValue(sSteamID, true, true);
+			}
+		}
+		
+		g_bDebug = true;
+		ReplyToCommand(client, "调试模式已开启.");
+	}
+	
+	Rygive(client);
 }
 
 void ListAliveSurvivor(int client)
@@ -2459,6 +2467,16 @@ public void WH_OnReloadModifier(int client, int weapon, L4D2WeaponType weapontyp
 
 public void WH_OnGetRateOfFire(int client, int weapon, L4D2WeaponType weapontype, float &speedmodifier)
 {
+	switch(weapontype)
+	{
+		case L4D2WeaponType_Rifle, L4D2WeaponType_RifleDesert, L4D2WeaponType_RifleSg552, 
+			L4D2WeaponType_SMG, L4D2WeaponType_RifleAk47, L4D2WeaponType_SMGMp5, 
+			L4D2WeaponType_SMGSilenced, L4D2WeaponType_RifleM60:
+		{
+				return;
+		}
+	}
+
 	speedmodifier = SpeedModifier(client, speedmodifier);
 }
 
