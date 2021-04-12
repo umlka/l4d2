@@ -7,78 +7,6 @@
 
 #define SOUND_COUNTDOWN "buttons/blip1.wav"
 
-enum
-{
-	NavMeshArea_ID = 0,
-	NavMeshArea_Flags,
-	NavMeshArea_PlaceID,
-	NavMeshArea_X1,
-	NavMeshArea_Y1,
-	NavMeshArea_Z1,
-	NavMeshArea_X2,
-	NavMeshArea_Y2,
-	NavMeshArea_Z2,
-	NavMeshArea_CenterX,
-	NavMeshArea_CenterY,
-	NavMeshArea_CenterZ,
-	NavMeshArea_InvDxCorners,
-	NavMeshArea_InvDyCorners,
-	NavMeshArea_NECornerZ,
-	NavMeshArea_SWCornerZ,
-	
-	NavMeshArea_ConnectionsStartIndex,
-	NavMeshArea_ConnectionsEndIndex,
-	
-	NavMeshArea_IncomingConnectionsStartIndex,
-	NavMeshArea_IncomingConnectionsEndIndex,
-
-	NavMeshArea_HidingSpotsStartIndex,
-	NavMeshArea_HidingSpotsEndIndex,
-	
-	NavMeshArea_EncounterPathsStartIndex,
-	NavMeshArea_EncounterPathsEndIndex,
-	
-	NavMeshArea_LadderConnectionsStartIndex,
-	NavMeshArea_LadderConnectionsEndIndex,
-	
-	NavMeshArea_CornerLightIntensityNW,
-	NavMeshArea_CornerLightIntensityNE,
-	NavMeshArea_CornerLightIntensitySE,
-	NavMeshArea_CornerLightIntensitySW,
-	
-	NavMeshArea_VisibleAreasStartIndex,
-	NavMeshArea_VisibleAreasEndIndex,
-	
-	NavMeshArea_InheritVisibilityFrom,
-	NavMeshArea_EarliestOccupyTimeFirstTeam,
-	NavMeshArea_EarliestOccupyTimeSecondTeam,
-	NavMeshArea_Blocked,
-	
-// 	A* pathfinding
-	NavMeshArea_Parent,
-	NavMeshArea_ParentHow,
-	NavMeshArea_CostSoFar,
-	NavMeshArea_TotalCost,
-	NavMeshArea_Marker,
-	NavMeshArea_OpenMarker,
-	NavMeshArea_PrevOpenIndex,
-	NavMeshArea_NextOpenIndex,
-	NavMeshArea_PathLengthSoFar,
-	
-	NavMeshArea_NearSearchMarker,
-	
-	TFNavArea_AttributeFlags,
-
-	CSNavArea_ApproachInfoStartIndex,
-	CSNavArea_ApproachInfoEndIndex,
-
-	TerrorNavArea_SpawnAttributes,
-
-	NavMeshArea_MaxStats
-};
-
-ArrayList g_hNavMeshAreas;
-ArrayList g_hEndNavMeshAreas;
 ArrayList g_hStartNavMeshAreas;
 
 Handle g_hTimer;
@@ -92,13 +20,14 @@ int g_iRoundStart;
 int g_iPlayerSpawn;
 int g_iChangelevel;
 int g_iRescueVehicle;
-//int g_iStartSafeDoor;
+int g_iStartSafeDoor;
 int g_iLastSafeDoor;
 int g_iEndSafeAreaMethod;
 int g_iEndSafeAreaTime;
 
 float g_vMins[3];
 float g_vMaxs[3];
+float g_vEndOrigin[3];
 
 bool g_bHasTriggered;
 bool g_bFinalVehicleReady;
@@ -143,7 +72,6 @@ public void OnPluginStart()
 	RegAdminCmd("sm_finale", CmdFinale, ADMFLAG_RCON, "结局关卡强制过关");
 	//RegAdminCmd("sm_esd", CmdEsd, ADMFLAG_ROOT, "测试");
 	
-	g_hEndNavMeshAreas = new ArrayList(1);
 	g_hStartNavMeshAreas = new ArrayList(1);
 }
 
@@ -155,15 +83,35 @@ public Action CmdWarpStart(int client, int args)
 		return Plugin_Handled;
 	}
 
+	CNavArea area;
+	float vOrigin[3];
 	int iAreaCount = g_hStartNavMeshAreas.Length;
 	if(iAreaCount == 0)
 	{
-		ReplyToCommand(client, "未发现起点Nav区域");
-		return Plugin_Handled;
+		int entity = MaxClients + 1;
+		while((entity = FindEntityByClassname(entity, "info_landmark")) != INVALID_ENT_REFERENCE)
+		{
+			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
+			if(!IsDotInEndArea(vOrigin))
+				break;
+		}
+
+		if(entity == INVALID_ENT_REFERENCE)
+		{
+			ReplyToCommand(client, "未发现info_landmark实体");
+			return Plugin_Handled;
+		}
+
+		area = NavMesh_GetNearestArea(vOrigin);
+		if(area == INVALID_NAV_AREA)
+		{
+			ReplyToCommand(client, "无效Nav区域");
+			return Plugin_Handled;
+		}
 	}
-	
-	int iRandom;
-	float vCenter[3];
+	else
+		area = view_as<CNavArea>(g_hStartNavMeshAreas.Get(GetRandomInt(0, iAreaCount - 1)));
+
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsAliveSurvivor(i))
@@ -172,11 +120,20 @@ public Action CmdWarpStart(int client, int args)
 				SetEntityMoveType(i, MOVETYPE_WALK);
 
 			SetEntProp(i, Prop_Send, "m_fFlags", GetEntProp(i, Prop_Send, "m_fFlags") & ~FL_FROZEN);
-			L4D2_ReviveFromIncap(i);
-			iRandom = GetRandomInt(0, iAreaCount - 1);
-			CNavArea iRandomArea = view_as<CNavArea>(g_hStartNavMeshAreas.Get(iRandom));
-			iRandomArea.GetCenter(vCenter);
-			TeleportEntity(i, vCenter, NULL_VECTOR, NULL_VECTOR);
+			if(IsHanging(i))
+				L4D2_ReviveFromIncap(i);
+			else
+			{
+				int attacker = L4D2_GetInfectedAttacker(i);
+				if(attacker > 0 && IsClientInGame(attacker) && IsPlayerAlive(attacker))
+				{
+					SetEntProp(attacker, Prop_Send, "m_fFlags", GetEntProp(attacker, Prop_Send, "m_fFlags") & ~FL_FROZEN);
+					ForcePlayerSuicide(attacker);
+				}
+			}
+
+			area.GetRandomPoint(vOrigin);
+			TeleportEntity(i, vOrigin, NULL_VECTOR, NULL_VECTOR);
 		}
 	}
 
@@ -191,9 +148,9 @@ public Action CmdWarpEnd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(g_hEndNavMeshAreas.Length == 0)
+	if(!HasEndOrigin())
 	{
-		ReplyToCommand(client, "未发现终点Nav区域");
+		ReplyToCommand(client, "未发现终点区域");
 		return Plugin_Handled;
 	}
 
@@ -265,8 +222,7 @@ public void OnMapEnd()
 	g_iPlayerSpawn = 0;
 	g_bHasTriggered = false;
 	g_bFinalVehicleReady = false;
-
-	g_hEndNavMeshAreas.Clear();
+	
 	g_hStartNavMeshAreas.Clear();
 }
 
@@ -300,54 +256,21 @@ public void Event_FinaleVehicleReady(Event event, const char[] name, bool dontBr
 
 void InitPlugin()
 {
-	g_hNavMeshAreas = view_as<ArrayList>(NavMesh_GetAreas());
 	HookEndAreaEntity();
-	InitSafeAreaArray();
 	FindSafeAreaDoor();
-}
-
-void InitSafeAreaArray()
-{
-	int iAreaCount = g_hNavMeshAreas.Length;
-	for(int iAreaIndex; iAreaIndex < iAreaCount; iAreaIndex++)
-	{
-		if(g_iChangelevel)
-		{
-			if(g_hNavMeshAreas.Get(iAreaIndex, TerrorNavArea_SpawnAttributes) & TERROR_NAV_PLAYER_START)
-				g_hStartNavMeshAreas.Push(iAreaIndex);
-			else if(g_hNavMeshAreas.Get(iAreaIndex, TerrorNavArea_SpawnAttributes) & TERROR_NAV_CHECKPOINT)
-			{
-				if(NavMeshAreaInEndSafeArea(iAreaIndex))
-					g_hEndNavMeshAreas.Push(iAreaIndex);
-				else
-					g_hStartNavMeshAreas.Push(iAreaIndex);
-			}
-		}
-		else
-		{
-			if(g_hNavMeshAreas.Get(iAreaIndex, TerrorNavArea_SpawnAttributes) & TERROR_NAV_CHECKPOINT)
-				g_hStartNavMeshAreas.Push(iAreaIndex);
-			else if(g_hNavMeshAreas.Get(iAreaIndex, TerrorNavArea_SpawnAttributes) & TERROR_NAV_RESCUE_VEHICLE)
-				g_hEndNavMeshAreas.Push(iAreaIndex);
-		}
-	}
-}
-
-bool NavMeshAreaInEndSafeArea(int iAreaIndex)
-{
-	static float vBuffer[3];
-	if(!NavMeshArea_GetCenter(iAreaIndex, vBuffer))
-		return false;
-	
-	return PointInEndSafeArea(vBuffer);
+	FindStartSafeArea();
 }
 
 void HookEndAreaEntity()
 {
 	g_iChangelevel = 0;
 	g_iRescueVehicle = 0;
-	//g_iStartSafeDoor = 0;
+	g_iStartSafeDoor = 0;
 	g_iLastSafeDoor = 0;
+	
+	g_vMins = view_as<float>({0.0, 0.0, 0.0});
+	g_vMaxs = view_as<float>({0.0, 0.0, 0.0});
+	g_vEndOrigin = view_as<float>({0.0, 0.0, 0.0});
 
 	int entity = INVALID_ENT_REFERENCE;
 	if((entity = FindEntityByClassname(MaxClients + 1, "info_changelevel")) == INVALID_ENT_REFERENCE)
@@ -369,16 +292,16 @@ void HookEndAreaEntity()
 			if(GetEntProp(entity, Prop_Data, "m_iEntireTeam") != 2)
 				continue;
 
-			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
 			GetEntPropVector(entity, Prop_Send, "m_vecMins", vMins);
 			GetEntPropVector(entity, Prop_Send, "m_vecMaxs", vMaxs);
+			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
 	
 			vOrigin[0] = vOrigin[0] + (vMins[0] + vMaxs[0]) * 0.5;
 			vOrigin[1] = vOrigin[1] + (vMins[1] + vMaxs[1]) * 0.5;
 			vOrigin[2] = vOrigin[2] + (vMins[2] + vMaxs[2]) * 0.5;
 			
 			CNavArea area = NavMesh_GetNearestArea(vOrigin);
-			if(area != INVALID_NAV_AREA && g_hNavMeshAreas.Get(view_as<int>(area), TerrorNavArea_SpawnAttributes) & TERROR_NAV_RESCUE_VEHICLE)
+			if(area != INVALID_NAV_AREA && view_as<TerrorNavArea>(area).SpawnAttributes & TERROR_NAV_RESCUE_VEHICLE)
 			{
 				GetEndAreaEntityVectors(entity);
 				g_iRescueVehicle = EntIndexToEntRef(entity);
@@ -405,41 +328,61 @@ void HookEndAreaEntity()
 
 void GetEndAreaEntityVectors(int entity)
 {
-	g_vMins = view_as<float>({0.0, 0.0, 0.0});
-	g_vMaxs = view_as<float>({0.0, 0.0, 0.0});
-
 	float vOrigin[3];
-	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
 	GetEntPropVector(entity, Prop_Send, "m_vecMins", g_vMins);
 	GetEntPropVector(entity, Prop_Send, "m_vecMaxs", g_vMaxs);
-
-	g_vMins[0] -= 200.0;
-	g_vMins[1] -= 200.0;
-	g_vMins[2] -= 200.0;
-
-	g_vMaxs[0] += 200.0;
-	g_vMaxs[1] += 200.0;
-	g_vMaxs[2] += 200.0;
-
+	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
+	
+	g_vEndOrigin[0] = vOrigin[0] + (g_vMins[0] + g_vMaxs[0]) * 0.5;
+	g_vEndOrigin[1] = vOrigin[1] + (g_vMins[1] + g_vMaxs[1]) * 0.5;
+	g_vEndOrigin[2] = vOrigin[2] + (g_vMins[2] + g_vMaxs[2]) * 0.5;
+	
 	AddVectors(vOrigin, g_vMins, g_vMins);
 	AddVectors(vOrigin, g_vMaxs, g_vMaxs);
 }
 
+void FindStartSafeArea()
+{
+	ArrayList hNavMeshAreas = view_as<ArrayList>(NavMesh_GetAreas());
+	int iAreaCount = hNavMeshAreas.Length;
+	for(int iAreaIndex; iAreaIndex < iAreaCount; iAreaIndex++)
+		if(hNavMeshAreas.Get(iAreaIndex, 49) & TERROR_NAV_PLAYER_START)
+			g_hStartNavMeshAreas.Push(iAreaIndex);
+}
+
 void FindSafeAreaDoor()
 {
+	AddVectors(g_vMins, view_as<float>({-200.0, -200.0, -200.0}), g_vMins);
+	AddVectors(g_vMaxs, view_as<float>({200.0, 200.0, 200.0}), g_vMaxs);
+
 	float vOrigin[3];
 	int entity = MaxClients + 1;
 	while((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE)
 	{
-		if(GetEntProp(entity, Prop_Data, "m_spawnflags") == 32768)
+		if(!IsValidDoorFlags(entity))
 			continue;
 
 		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vOrigin);
-		if(PointInEndSafeArea(vOrigin))
+
+		if(g_iChangelevel && IsDotInEndArea(vOrigin))
 			g_iLastSafeDoor = EntIndexToEntRef(entity);
-		/*else
-			g_iStartSafeDoor = EntIndexToEntRef(entity);*/
+		else
+			g_iStartSafeDoor = EntIndexToEntRef(entity);
 	}
+	
+	AddVectors(g_vMins, view_as<float>({200.0, 200.0, 200.0}), g_vMins);
+	AddVectors(g_vMaxs, view_as<float>({-200.0, -200.0, -200.0}), g_vMaxs);
+}
+
+bool HasEndOrigin()
+{
+	return g_vEndOrigin[0] != 0.0 && g_vEndOrigin[1] != 0.0 && g_vEndOrigin[2] != 0.0;
+}
+
+bool IsValidDoorFlags(int entity)
+{
+    int flags = GetEntProp(entity, Prop_Data, "m_spawnflags");
+    return (flags & 8192 != 0) && (flags & 32768 == 0);
 }
 
 public Action OnEndTouch(int entity, int other)
@@ -454,6 +397,13 @@ public Action OnStartTouch(int entity, int other)
 {
 	if(other < 1 || other > MaxClients || GetGameTime() < 30.0)
 		return;
+
+	if(g_iRescueVehicle && entity != g_iRescueVehicle)
+	{
+		SDKUnhook(entity, SDKHook_EndTouch, OnEndTouch);
+		SDKUnhook(entity, SDKHook_StartTouch, OnStartTouch);
+		return;
+	}
 
 	g_bIsInEndSafeArea[other] = true;
 
@@ -470,10 +420,12 @@ public Action OnStartTouch(int entity, int other)
 		}
 		else
 		{
+			g_iRescueVehicle = EntIndexToEntRef(entity);
+
 			float vMins[3], vMaxs[3], vOrigin[3];
-			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
 			GetEntPropVector(entity, Prop_Send, "m_vecMins", vMins);
 			GetEntPropVector(entity, Prop_Send, "m_vecMaxs", vMaxs);
+			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
 	
 			vOrigin[0] = vOrigin[0] + (vMins[0] + vMaxs[0]) * 0.5;
 			vOrigin[1] = vOrigin[1] + (vMins[1] + vMaxs[1]) * 0.5;
@@ -481,7 +433,7 @@ public Action OnStartTouch(int entity, int other)
 			
 			CNavArea area = NavMesh_GetNearestArea(vOrigin);
 			if(area != INVALID_NAV_AREA)
-				g_hEndNavMeshAreas.Push(view_as<int>(area));
+				g_vEndOrigin = vOrigin;
 		}
 	}
 
@@ -531,7 +483,6 @@ void TeleportOrSuicide(int iSelect)
 	{
 		case 0:
 		{
-			SuicideInfectedAttacker();
 			CloseAndLockLastSafeDoor();
 			CreateTimer(0.3, Timer_TeleportAllSurvivorsToCheckpoint, _, TIMER_FLAG_NO_MAPCHANGE);
 		}
@@ -555,21 +506,9 @@ void TeleportOrSuicide(int iSelect)
 	}
 }
 
-stock void SuicideInfectedAttacker()
-{
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(!g_bIsInEndSafeArea[i] && IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && L4D2_HasSurvivorVictim(i))
-		{
-			SetEntProp(i, Prop_Send, "m_fFlags", GetEntProp(i, Prop_Send, "m_fFlags") & ~FL_FROZEN);
-			ForcePlayerSuicide(i);
-		}
-	}
-}
-
 stock void CloseAndLockLastSafeDoor()
 {
-	if(!IsValidEntRef(g_iLastSafeDoor))
+	if(!IsValidEntRef(g_iLastSafeDoor) || !IsValidDoorFlags(g_iLastSafeDoor))
 			return;
 
 	SetEntProp(g_iLastSafeDoor, Prop_Data, "m_hasUnlockSequence", 0);
@@ -584,7 +523,7 @@ stock void CloseAndLockLastSafeDoor()
 
 public Action Timer_TeleportAllSurvivorsToCheckpoint(Handle timer)
 {
-	if(IsValidEntRef(g_iLastSafeDoor))
+	if(IsValidEntRef(g_iLastSafeDoor) && IsValidDoorFlags(g_iLastSafeDoor))
 	{
 		SetVariantFloat(200.0); //200 default l4d speed
 		AcceptEntityInput(g_iLastSafeDoor, "SetSpeed");
@@ -601,14 +540,14 @@ void TeleportAllSurvivorsToCheckpoint()
 	if(g_bRemoveAllInfected)
 		RemoveAllInfected();
 
-	SuicideInfectedAttacker();
-
-	int iAreaCount = g_hEndNavMeshAreas.Length;
-	if(iAreaCount == 0)
+	if(!HasEndOrigin())
 		return;
 
-	int iRandom;
-	float vCenter[3];
+	CNavArea area = NavMesh_GetNearestArea(g_vEndOrigin);
+	if(area == INVALID_NAV_AREA)
+		return;
+
+	float vRandom[3];
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsAliveSurvivor(i))
@@ -617,13 +556,64 @@ void TeleportAllSurvivorsToCheckpoint()
 				SetEntityMoveType(i, MOVETYPE_WALK);
 
 			SetEntProp(i, Prop_Send, "m_fFlags", GetEntProp(i, Prop_Send, "m_fFlags") & ~FL_FROZEN);
-			L4D2_ReviveFromIncap(i);
-			iRandom = GetRandomInt(0, iAreaCount - 1);
-			CNavArea iRandomArea = view_as<CNavArea>(g_hEndNavMeshAreas.Get(iRandom));
-			iRandomArea.GetCenter(vCenter);
-			TeleportEntity(i, vCenter, NULL_VECTOR, NULL_VECTOR);
+
+			if(IsHanging(i))
+				L4D2_ReviveFromIncap(i);
+			else
+			{
+				int attacker = L4D2_GetInfectedAttacker(i);
+				if(attacker > 0 && IsClientInGame(attacker) && IsPlayerAlive(attacker))
+				{
+					SetEntProp(attacker, Prop_Send, "m_fFlags", GetEntProp(attacker, Prop_Send, "m_fFlags") & ~FL_FROZEN);
+					ForcePlayerSuicide(attacker);
+				}
+			}
+
+			area.GetRandomPoint(vRandom);
+			TeleportEntity(i, vRandom, NULL_VECTOR, NULL_VECTOR);
 		}
 	}
+}
+
+/**
+ * Returns infected attacker of survivor victim.
+ *
+ * Note: Infected attacker means the infected player that is currently
+ * pinning down the survivor. Such as hunter, smoker, charger and jockey.
+ *
+ * @param client        Survivor client index.
+ * @return              Infected attacker index, -1 if not found.
+ * @error               Invalid client index.
+ */
+stock int L4D2_GetInfectedAttacker(int client)
+{
+    int attacker;
+
+    /* Charger */
+    attacker = GetEntPropEnt(client, Prop_Send, "m_pummelAttacker");
+    if(attacker > 0)
+        return attacker;
+
+    attacker = GetEntPropEnt(client, Prop_Send, "m_carryAttacker");
+    if(attacker > 0)
+        return attacker;
+
+    /* Hunter */
+    attacker = GetEntPropEnt(client, Prop_Send, "m_pounceAttacker");
+    if(attacker > 0)
+        return attacker;
+
+    /* Smoker */
+    attacker = GetEntPropEnt(client, Prop_Send, "m_tongueOwner");
+    if(attacker > 0)
+        return attacker;
+
+    /* Jockey */
+    attacker = GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker");
+    if(attacker > 0)
+        return attacker;
+
+    return -1;
 }
 
 stock void RemoveAllInfected()
@@ -650,31 +640,10 @@ stock void RemoveAllInfected()
 		if(strcmp(sClassName, "infected") == 0 || strcmp(sClassName, "witch") == 0)
 		{
 			GetEntPropVector(i, Prop_Send, "m_vecOrigin", vOrigin);
-			if(PointInEndSafeArea(vOrigin))
+			if(IsDotInEndArea(vOrigin))
 				RemoveEntity(i);
 		}
 	}
-}
-
-stock bool L4D2_HasSurvivorVictim(int client)
-{
-	/* Charger */
-	if(GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0)
-		return true;
-
-	/* Hunter */
-	if(GetEntPropEnt(client, Prop_Send, "m_pounceVictim") > 0)
-		return true;
-
-	/* Smoker */
-	if(GetEntPropEnt(client, Prop_Send, "m_tongueVictim") > 0)
-		return true;
-
-	/* Jockey */
-	if(GetEntPropEnt(client, Prop_Send, "m_jockeyVictim") > 0)
-		return true;
-
-	return false;
 }
 
 stock bool IsAliveSurvivor(int client)
@@ -682,16 +651,15 @@ stock bool IsAliveSurvivor(int client)
 	return IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
 }
 
-stock void L4D2_ReviveFromIncap(int client) 
-{
-	if(IsHanging(client))
-		L4D2_RunScript("GetPlayerFromUserID(%d).ReviveFromIncap()", GetClientUserId(client));
-}
-
 //https://forums.alliedmods.net/showpost.php?p=2681159&postcount=10
 stock bool IsHanging(int client)
 {
 	return GetEntProp(client, Prop_Send, "m_isHangingFromLedge") > 0;
+}
+
+stock void L4D2_ReviveFromIncap(int client) 
+{
+	L4D2_RunScript("GetPlayerFromUserID(%d).ReviveFromIncap()", GetClientUserId(client));
 }
 
 stock void L4D2_RunScript(const char[] sCode, any ...) 
@@ -731,9 +699,9 @@ bool NoPlayerInEndArea()
 }
 
 //https://forums.alliedmods.net/showpost.php?p=2680639&postcount=3
-stock bool PointInEndSafeArea(const float vLoca[3])
+stock bool IsDotInEndArea(const float vDot[3])
 {
-	return g_vMins[0] < vLoca[0] < g_vMaxs[0] && g_vMins[1] < vLoca[1] < g_vMaxs[1] && g_vMins[2] < vLoca[2] < g_vMaxs[2];
+	return g_vMins[0] < vDot[0] < g_vMaxs[0] && g_vMins[1] < vDot[1] < g_vMaxs[1] && g_vMins[2] < vDot[2] < g_vMaxs[2];
 }
 
 stock bool IsValidEntRef(int entity)
