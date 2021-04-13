@@ -215,14 +215,6 @@ void GetCvars()
 	g_bRemoveAllInfected = g_hRemoveAllInfected.BoolValue;
 }
 
-public void OnNavMeshLoaded(bool success)
-{
-	if(success)
-		FindStartSafeArea();
-	else
-		SetFailState("'NavMesh'加载失败!");
-}
-
 public void OnMapStart()
 {
 	PrecacheSound(SOUND_COUNTDOWN);
@@ -253,6 +245,7 @@ public void OnMapEnd()
 		}
 	}
 
+	g_hStartNavMeshAreas.Clear();
 	g_hRescueVehicleEntities.Clear();
 }
 
@@ -293,6 +286,7 @@ public Action Timer_Start(Handle timer) //等待OnNavMeshLoaded
 {
 	HookEndAreaEntity();
 	FindSafeRoomDoors();
+	FindStartSafeArea();
 }
 
 void HookEndAreaEntity()
@@ -386,8 +380,6 @@ void GetEndAreaEntityVectors(int entity)
 
 void FindStartSafeArea()
 {
-	g_hStartNavMeshAreas.Clear();
-
 	ArrayList hNavMeshAreas = view_as<ArrayList>(NavMesh_GetAreas());
 	int iAreaCount = hNavMeshAreas.Length;
 	for(int iAreaIndex; iAreaIndex < iAreaCount; iAreaIndex++)
