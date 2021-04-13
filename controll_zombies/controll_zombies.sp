@@ -326,8 +326,8 @@ public void OnPluginStart()
 	g_hPZRespawnTime = CreateConVar("cz_pz_respawn_time", "15" , "特感玩家自动复活时间(0=插件不会接管特感玩家的复活)", CVAR_FLAGS, true, 0.0);
 	g_hPZPunishTime = CreateConVar("cz_pz_punish_time", "10" , "特感玩家在ghost状态下切换特感类型后下次复活延长的时间(0=插件不会延长复活时间)", CVAR_FLAGS, true, 0.0);
 	g_hPZPunishHealth = CreateConVar("cz_pz_punish_health", "1" , "特感玩家在ghost状态下切换特感类型后血量是否减半(0=插件不会减半血量)", CVAR_FLAGS);
-	g_hAutoDisplayMenu = CreateConVar("cz_atuo_display_menu", "1" , "在感染玩家死亡重生后向其显示更改类型的菜单?(0=不显示,小于0=每次都显示,大于0=每回合总计显示的最大次数)", CVAR_FLAGS);
-	g_hPZTeamLimit = CreateConVar("cz_pz_team_limit", "-1" , "感染玩家数量达到多少后将限制使用sm_team3命令(0=不限制,小于0=感染玩家不能超过生还玩家,大于0=感染玩家不能超过该值)", CVAR_FLAGS);
+	g_hAutoDisplayMenu = CreateConVar("cz_atuo_display_menu", "1" , "在感染玩家死亡重生后向其显示更改类型的菜单?(0=不显示,-1=每次都显示,大于0=每回合总计显示的最大次数)", CVAR_FLAGS, true, -1.0);
+	g_hPZTeamLimit = CreateConVar("cz_pz_team_limit", "-1" , "感染玩家数量达到多少后将限制使用sm_team3命令(-1=感染玩家不能超过生还玩家,大于等于0=感染玩家不能超过该值)", CVAR_FLAGS, true, -1.0);
 	g_hCmdCooldownTime = CreateConVar("cz_cmd_cooldown_time", "60.0" , "sm_team2,sm_team3两个命令的冷却时间(0.0-无冷却)", CVAR_FLAGS, true, 0.0);
 	g_hCmdEnterCooling = CreateConVar("cz_return_enter_cooling", "31" , "什么情况下sm_team2,sm_team3命令会进入冷却(1=使用其中一个命令,2=坦克玩家掉控,4=坦克玩家死亡,8=坦克玩家未及时重生,16=特感玩家杀掉生还者玩家,31=所有)", CVAR_FLAGS);
 	g_hPZChangeTeamTo = CreateConVar("cz_pz_change_team_to", "0" , "换图,过关以及任务失败时是否自动将特感玩家切换到哪个队伍?(0=不切换,1=旁观者,2=生还者)", CVAR_FLAGS, true, 0.0, true, 2.0);
@@ -713,16 +713,12 @@ public Action CmdTeam3(int client, int args)
 			return Plugin_Handled;
 		}
 
-		//总玩家数小于等于2时不限制
-		if(g_iPZTeamLimit != 0 && GetTeamPlayers() > 2)
+		int iTeam3 = GetTeamPlayers(3);
+		int iTeam2 = GetTeamPlayers(2);
+		if((g_iPZTeamLimit >= 0 && iTeam3 >= g_iPZTeamLimit) || (g_iPZTeamLimit == -1 && iTeam3 >= iTeam2))
 		{
-			int iTeam3 = GetTeamPlayers(3);
-			int iTeam2 = GetTeamPlayers(2);
-			if((g_iPZTeamLimit > 0 && iTeam3 >= g_iPZTeamLimit) || (g_iPZTeamLimit < 0 && iTeam3 >= iTeam2))
-			{
-				PrintToChat(client, "已到达感染玩家数量限制");
-				return Plugin_Handled;
-			}
+			PrintToChat(client, "已到达感染玩家数量限制");
+			return Plugin_Handled;
 		}
 	}
 		
@@ -2618,7 +2614,7 @@ void OnNextFrame_EnterGhostState(int client)
 
 void ClassMenuCheck(int client)
 {
-	if((g_iAutoDisplayMenu < 0 || g_iDisplayed[client] < g_iAutoDisplayMenu) && CheckClientAccess(client, 4) == true)
+	if((g_iAutoDisplayMenu == -1 || g_iDisplayed[client] < g_iAutoDisplayMenu) && CheckClientAccess(client, 4) == true)
 	{
 		DisplayClassMenu(client);
 		EmitSoundToClient(client, SOUND_CLASSMENU, SOUND_FROM_PLAYER, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
