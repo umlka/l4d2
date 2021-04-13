@@ -8,6 +8,7 @@
 #define SOUND_COUNTDOWN "buttons/blip1.wav"
 
 ArrayList g_hStartNavMeshAreas;
+ArrayList g_hRescueVehicleEntities;
 
 Handle g_hTimer;
 
@@ -20,8 +21,8 @@ int g_iRoundStart;
 int g_iPlayerSpawn;
 int g_iChangelevel;
 int g_iRescueVehicle;
-int g_iStartSafeDoor;
 int g_iLastSafeDoor;
+//int g_iStartSafeDoor;
 int g_iEndSafeAreaMethod;
 int g_iEndSafeAreaTime;
 
@@ -30,8 +31,8 @@ float g_vMaxs[3];
 float g_vEndOrigin[3];
 
 bool g_bHasTriggered;
-bool g_bFinalVehicleReady;
 bool g_bRemoveAllInfected;
+bool g_bFinaleVehicleReady;
 bool g_bIsInEndSafeArea[MAXPLAYERS + 1];
 
 static const char g_sMethod[][] =
@@ -73,6 +74,9 @@ public void OnPluginStart()
 	//RegAdminCmd("sm_esd", CmdEsd, ADMFLAG_ROOT, "测试");
 	
 	g_hStartNavMeshAreas = new ArrayList(1);
+	g_hRescueVehicleEntities = new ArrayList(1);
+
+	HookEntityOutput("trigger_finale", "FinaleEscapeStarted", EntityOutput_FinaleEscapeStarted);
 }
 
 public Action CmdWarpStart(int client, int args)
@@ -88,15 +92,19 @@ public Action CmdWarpStart(int client, int args)
 	int iAreaCount = g_hStartNavMeshAreas.Length;
 	if(iAreaCount == 0)
 	{
+		int iLandMark;
 		int entity = MaxClients + 1;
 		while((entity = FindEntityByClassname(entity, "info_landmark")) != INVALID_ENT_REFERENCE)
 		{
 			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
 			if(!IsDotInEndArea(vOrigin))
+			{
+				iLandMark = entity;
 				break;
+			}
 		}
 
-		if(entity == INVALID_ENT_REFERENCE)
+		if(iLandMark == 0)
 		{
 			ReplyToCommand(client, "未发现info_landmark实体");
 			return Plugin_Handled;
@@ -167,12 +175,9 @@ public Action CmdFinale(int client, int args)
 		return Plugin_Handled;
 	}
 
-	int iFinaleEntity = FindEntityByClassname(MaxClients + 1, "trigger_finale");
-	if(iFinaleEntity != INVALID_ENT_REFERENCE)
-	{
-		AcceptEntityInput(iFinaleEntity, "FinaleEscapeFinished");
-		return Plugin_Handled;
-	}
+	int iFinale = FindEntityByClassname(MaxClients + 1, "trigger_finale");
+	if(iFinale != INVALID_ENT_REFERENCE)
+		AcceptEntityInput(iFinale, "FinaleEscapeFinished");
 	else
 	{
 		if(IsValidEntRef(g_iRescueVehicle))
@@ -210,6 +215,14 @@ void GetCvars()
 	g_bRemoveAllInfected = g_hRemoveAllInfected.BoolValue;
 }
 
+public void OnNavMeshLoaded(bool success)
+{
+	if(success)
+		FindStartSafeArea();
+	else
+		SetFailState("'NavMesh'加载失败!");
+}
+
 public void OnMapStart()
 {
 	PrecacheSound(SOUND_COUNTDOWN);
@@ -221,9 +234,26 @@ public void OnMapEnd()
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
 	g_bHasTriggered = false;
-	g_bFinalVehicleReady = false;
+	g_bFinaleVehicleReady = false;
 	
-	g_hStartNavMeshAreas.Clear();
+	if(IsValidEntRef(g_iChangelevel))
+	{
+		SDKUnhook(g_iChangelevel, SDKHook_EndTouch, Changelevel_OnEndTouch);
+		SDKUnhook(g_iChangelevel, SDKHook_StartTouch, Changelevel_OnStartTouch);
+	}
+	
+	int iEntRef;
+	int iCount = g_hRescueVehicleEntities.Length;
+	for(int iIndex; iIndex < iCount; iIndex++)
+	{
+		if(IsValidEntRef((iEntRef = g_hRescueVehicleEntities.Get(iIndex))))
+		{
+			SDKUnhook(iEntRef, SDKHook_EndTouch, RescueVehicle_OnEndTouch);
+			SDKUnhook(iEntRef, SDKHook_StartTouch, RescueVehicle_OnStartTouch);
+		}
+	}
+
+	g_hRescueVehicleEntities.Clear();
 }
 
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -234,7 +264,7 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 0 && g_iPlayerSpawn == 1)
-		InitPlugin();
+		CreateTimer(0.1, Timer_Start, _, TIMER_FLAG_NO_MAPCHANGE);
 	g_iRoundStart = 1;
 	
 	delete g_hTimer;
@@ -243,7 +273,7 @@ public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
-		InitPlugin();
+		CreateTimer(0.1, Timer_Start, _, TIMER_FLAG_NO_MAPCHANGE);
 	g_iPlayerSpawn = 1;
 	
 	g_bIsInEndSafeArea[GetClientOfUserId(event.GetInt("userid"))] = false;
@@ -251,23 +281,25 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
 public void Event_FinaleVehicleReady(Event event, const char[] name, bool dontBroadcast)
 {
-	g_bFinalVehicleReady = true;
+	g_bFinaleVehicleReady = true;
 }
 
-void InitPlugin()
+public void EntityOutput_FinaleEscapeStarted(const char[] output, int entity, int other, float delay)
+{
+	g_bFinaleVehicleReady = true;
+}
+
+public Action Timer_Start(Handle timer) //等待OnNavMeshLoaded
 {
 	HookEndAreaEntity();
-	FindSafeAreaDoor();
-	FindStartSafeArea();
+	FindSafeRoomDoors();
 }
 
 void HookEndAreaEntity()
 {
 	g_iChangelevel = 0;
 	g_iRescueVehicle = 0;
-	g_iStartSafeDoor = 0;
-	g_iLastSafeDoor = 0;
-	
+
 	g_vMins = view_as<float>({0.0, 0.0, 0.0});
 	g_vMaxs = view_as<float>({0.0, 0.0, 0.0});
 	g_vEndOrigin = view_as<float>({0.0, 0.0, 0.0});
@@ -280,8 +312,8 @@ void HookEndAreaEntity()
 	{
 		GetEndAreaEntityVectors(entity);
 		g_iChangelevel = EntIndexToEntRef(entity);
-		SDKHook(entity, SDKHook_EndTouch, OnEndTouch);
-		SDKHook(entity, SDKHook_StartTouch, OnStartTouch);
+		SDKHook(entity, SDKHook_EndTouch, Changelevel_OnEndTouch);
+		SDKHook(entity, SDKHook_StartTouch, Changelevel_OnStartTouch);
 	}
 	else
 	{
@@ -299,14 +331,15 @@ void HookEndAreaEntity()
 			vOrigin[0] = vOrigin[0] + (vMins[0] + vMaxs[0]) * 0.5;
 			vOrigin[1] = vOrigin[1] + (vMins[1] + vMaxs[1]) * 0.5;
 			vOrigin[2] = vOrigin[2] + (vMins[2] + vMaxs[2]) * 0.5;
-			
+
 			CNavArea area = NavMesh_GetNearestArea(vOrigin);
 			if(area != INVALID_NAV_AREA && view_as<TerrorNavArea>(area).SpawnAttributes & TERROR_NAV_RESCUE_VEHICLE)
 			{
 				GetEndAreaEntityVectors(entity);
 				g_iRescueVehicle = EntIndexToEntRef(entity);
-				SDKHook(entity, SDKHook_EndTouch, OnEndTouch);
-				SDKHook(entity, SDKHook_StartTouch, OnStartTouch);
+				g_hRescueVehicleEntities.Push(g_iRescueVehicle);
+				SDKHook(entity, SDKHook_EndTouch, RescueVehicle_OnEndTouch);
+				SDKHook(entity, SDKHook_StartTouch, RescueVehicle_OnStartTouch);
 				break;
 			}
 		}
@@ -319,13 +352,15 @@ void HookEndAreaEntity()
 				if(GetEntProp(entity, Prop_Data, "m_iEntireTeam") != 2)
 					continue;
 
-				SDKHook(entity, SDKHook_EndTouch, OnEndTouch);
-				SDKHook(entity, SDKHook_StartTouch, OnStartTouch);
+				g_hRescueVehicleEntities.Push(EntIndexToEntRef(entity));
+				SDKHook(entity, SDKHook_EndTouch, RescueVehicle_OnEndTouch);
+				SDKHook(entity, SDKHook_StartTouch, RescueVehicle_OnStartTouch);
 			}
 		}
 	}
 }
 
+//https://forums.alliedmods.net/showpost.php?p=2680639&postcount=3
 void GetEndAreaEntityVectors(int entity)
 {
 	float vOrigin[3];
@@ -337,12 +372,22 @@ void GetEndAreaEntityVectors(int entity)
 	g_vEndOrigin[1] = vOrigin[1] + (g_vMins[1] + g_vMaxs[1]) * 0.5;
 	g_vEndOrigin[2] = vOrigin[2] + (g_vMins[2] + g_vMaxs[2]) * 0.5;
 	
+	g_vMins[0] -= 100.0;
+	g_vMins[1] -= 100.0;
+	g_vMins[2] -= 100.0;
+	
+	g_vMaxs[0] += 200.0;
+	g_vMaxs[1] += 200.0;
+	g_vMaxs[2] += 200.0;
+	
 	AddVectors(vOrigin, g_vMins, g_vMins);
 	AddVectors(vOrigin, g_vMaxs, g_vMaxs);
 }
 
 void FindStartSafeArea()
 {
+	g_hStartNavMeshAreas.Clear();
+
 	ArrayList hNavMeshAreas = view_as<ArrayList>(NavMesh_GetAreas());
 	int iAreaCount = hNavMeshAreas.Length;
 	for(int iAreaIndex; iAreaIndex < iAreaCount; iAreaIndex++)
@@ -350,11 +395,11 @@ void FindStartSafeArea()
 			g_hStartNavMeshAreas.Push(iAreaIndex);
 }
 
-void FindSafeAreaDoor()
+void FindSafeRoomDoors()
 {
-	AddVectors(g_vMins, view_as<float>({-200.0, -200.0, -200.0}), g_vMins);
-	AddVectors(g_vMaxs, view_as<float>({200.0, 200.0, 200.0}), g_vMaxs);
-
+	g_iLastSafeDoor = 0;
+	//g_iStartSafeDoor = 0;
+	
 	float vOrigin[3];
 	int entity = MaxClients + 1;
 	while((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE)
@@ -366,12 +411,9 @@ void FindSafeAreaDoor()
 
 		if(g_iChangelevel && IsDotInEndArea(vOrigin))
 			g_iLastSafeDoor = EntIndexToEntRef(entity);
-		else
-			g_iStartSafeDoor = EntIndexToEntRef(entity);
+		/*else
+			g_iStartSafeDoor = EntIndexToEntRef(entity);*/
 	}
-	
-	AddVectors(g_vMins, view_as<float>({200.0, 200.0, 200.0}), g_vMins);
-	AddVectors(g_vMaxs, view_as<float>({-200.0, -200.0, -200.0}), g_vMaxs);
 }
 
 bool HasEndOrigin()
@@ -385,7 +427,7 @@ bool IsValidDoorFlags(int entity)
     return (flags & 8192 != 0) && (flags & 32768 == 0);
 }
 
-public Action OnEndTouch(int entity, int other)
+public Action Changelevel_OnEndTouch(int entity, int other)
 {
 	if(other < 1 || other > MaxClients || GetGameTime() < 30.0)
 		return;
@@ -393,50 +435,91 @@ public Action OnEndTouch(int entity, int other)
 	g_bIsInEndSafeArea[other] = false;
 }
 
-public Action OnStartTouch(int entity, int other)
+public Action Changelevel_OnStartTouch(int entity, int other)
 {
 	if(other < 1 || other > MaxClients || GetGameTime() < 30.0)
 		return;
-
-	if(g_iRescueVehicle && entity != g_iRescueVehicle)
-	{
-		SDKUnhook(entity, SDKHook_EndTouch, OnEndTouch);
-		SDKUnhook(entity, SDKHook_StartTouch, OnStartTouch);
-		return;
-	}
 
 	g_bIsInEndSafeArea[other] = true;
 
 	if(g_bHasTriggered || !IsClientInGame(other) || GetClientTeam(other) != 2 || !IsPlayerAlive(other))
 		return;
-	
-	if(!g_iChangelevel && !g_iRescueVehicle)
-	{
-		if(!g_bFinalVehicleReady)
-		{
-			SDKUnhook(entity, SDKHook_EndTouch, OnEndTouch);
-			SDKUnhook(entity, SDKHook_StartTouch, OnStartTouch);
-			return;
-		}
-		else
-		{
-			g_iRescueVehicle = EntIndexToEntRef(entity);
 
-			float vMins[3], vMaxs[3], vOrigin[3];
-			GetEntPropVector(entity, Prop_Send, "m_vecMins", vMins);
-			GetEntPropVector(entity, Prop_Send, "m_vecMaxs", vMaxs);
-			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
+	g_bHasTriggered = true;
+	if(g_iEndSafeAreaTime == 0)
+		return;
+
+	g_iCountdown = g_iEndSafeAreaTime;
+	delete g_hTimer;
+	g_hTimer = CreateTimer(1.0, Timer_NotifySurvivor, _, TIMER_REPEAT);
+}
+
+public Action RescueVehicle_OnEndTouch(int entity, int other)
+{
+	if(other < 1 || other > MaxClients)
+		return;
+
+	g_bIsInEndSafeArea[other] = false;
+}
+
+public Action RescueVehicle_OnStartTouch(int entity, int other)
+{
+	if(other < 1 || other > MaxClients)
+		return;
 	
-			vOrigin[0] = vOrigin[0] + (vMins[0] + vMaxs[0]) * 0.5;
-			vOrigin[1] = vOrigin[1] + (vMins[1] + vMaxs[1]) * 0.5;
-			vOrigin[2] = vOrigin[2] + (vMins[2] + vMaxs[2]) * 0.5;
+	g_bIsInEndSafeArea[other] = true;
+
+	if(!g_iRescueVehicle && !g_bFinaleVehicleReady)
+	{
+		SDKUnhook(entity, SDKHook_EndTouch, RescueVehicle_OnEndTouch);
+		SDKUnhook(entity, SDKHook_StartTouch, RescueVehicle_OnStartTouch);
+		int iIndex = g_hRescueVehicleEntities.FindValue(EntIndexToEntRef(entity));
+		if(iIndex != -1)
+			g_hRescueVehicleEntities.Erase(iIndex);
 			
-			CNavArea area = NavMesh_GetNearestArea(vOrigin);
-			if(area != INVALID_NAV_AREA)
-				g_vEndOrigin = vOrigin;
-		}
+		return;
 	}
 
+	if(g_bHasTriggered || !IsClientInGame(other) || GetClientTeam(other) != 2 || !IsPlayerAlive(other))
+		return;
+
+	int iCount = g_hRescueVehicleEntities.Length;
+	if(iCount > 1)
+	{
+		g_iRescueVehicle = EntIndexToEntRef(entity);
+
+		int iIndex;
+		int iEntRef;
+		for(iIndex = 0; iIndex < iCount; iIndex++)
+		{
+			if((iEntRef = g_hRescueVehicleEntities.Get(iIndex)) != g_iRescueVehicle && IsValidEntRef(iEntRef))
+			{
+				SDKUnhook(iEntRef, SDKHook_EndTouch, RescueVehicle_OnEndTouch);
+				SDKUnhook(iEntRef, SDKHook_StartTouch, RescueVehicle_OnStartTouch);
+			}
+		}
+
+		iCount = g_hRescueVehicleEntities.Length;
+		for(iIndex = 0; iIndex < iCount; iIndex++)
+		{
+			if(g_hRescueVehicleEntities.Get(iIndex) != g_iRescueVehicle)
+				g_hRescueVehicleEntities.Erase(iIndex);
+		}
+
+		float vMins[3], vMaxs[3], vOrigin[3];
+		GetEntPropVector(entity, Prop_Send, "m_vecMins", vMins);
+		GetEntPropVector(entity, Prop_Send, "m_vecMaxs", vMaxs);
+		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
+	
+		vOrigin[0] = vOrigin[0] + (vMins[0] + vMaxs[0]) * 0.5;
+		vOrigin[1] = vOrigin[1] + (vMins[1] + vMaxs[1]) * 0.5;
+		vOrigin[2] = vOrigin[2] + (vMins[2] + vMaxs[2]) * 0.5;
+			
+		CNavArea area = NavMesh_GetNearestArea(vOrigin);
+		if(area != INVALID_NAV_AREA)
+			g_vEndOrigin = vOrigin;
+	}
+	
 	g_bHasTriggered = true;
 	if(g_iEndSafeAreaTime == 0)
 		return;
