@@ -168,23 +168,23 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
-		CreateTimer(1.0, Timer_StratSpawnMelee, _, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(1.0, Timer_StartSpawnMelee, _, TIMER_FLAG_NO_MAPCHANGE);
 	g_iPlayerSpawn = 1;
 }
 
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 0 && g_iPlayerSpawn == 1)
-		CreateTimer(1.0, Timer_StratSpawnMelee, _, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(1.0, Timer_StartSpawnMelee, _, TIMER_FLAG_NO_MAPCHANGE);
 	g_iRoundStart = 1;
 }
 
-public Action Timer_StratSpawnMelee(Handle timer)
+public Action Timer_StartSpawnMelee(Handle timer)
 {
-	StratSpawnMelee();
+	StartSpawnMelee();
 }
 
-void StratSpawnMelee()
+void StartSpawnMelee()
 {
 	if(!g_hEnabled.BoolValue) 
 		return;
