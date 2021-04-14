@@ -217,10 +217,15 @@ public void OnPluginStart()
 	
 	CreateConVar("rygive_version", "1.0.0", "rygive功能插件", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	
+	ConVar hFallenMaxCount = FindConVar("z_fallen_max_count");
+	hFallenMaxCount.SetBounds(ConVarBound_Lower, true, 999999999.0);
+	hFallenMaxCount.SetBounds(ConVarBound_Upper, true, 999999999.0);
+	hFallenMaxCount.SetInt(999999999);
+
 	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 
 	RegAdminCmd("sm_rygive", RygiveMenu, ADMFLAG_ROOT, "rygive");
-	
+
 	g_hSteamIDs = new StringMap();
 }
 
