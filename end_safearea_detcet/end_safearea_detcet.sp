@@ -203,15 +203,18 @@ public Action CmdFinale(int client, int args)
 /*
 public Action CmdEsd(int client, int args)
 {
+	ReplyToCommand(client, "g_iTriggerFinale->%d", g_iTriggerFinale);
+	if(IsValidEntRef(g_iTriggerFinale))
+		ReplyToCommand(client, "m_type->%d", GetEntProp(g_iTriggerFinale, Prop_Data, "m_type"));
 	return Plugin_Handled;
 }
 */
 public void EntityOutput_FinaleStart(const char[] output, int caller, int activator, float delay)
 {
-	if(!g_iTriggerFinale)
+	if(!IsValidEntRef(g_iTriggerFinale)) //c5m5, c13m4
 	{
 		g_iTriggerFinale = EntIndexToEntRef(caller);
-		g_bIsSacrificeFinale = view_as<bool>(GetEntProp(caller, Prop_Data, "m_bIsSacrificeFinale"));
+		g_bIsSacrificeFinale = view_as<bool>(GetEntProp(caller, Prop_Data, "m_bIsSacrificeFinale")); //https://developer.valvesoftware.com/wiki/Trigger_finale 排除牺牲类型的结局
 	}
 
 	if(g_bIsSacrificeFinale)
@@ -349,9 +352,12 @@ void HookEndAreaEntity()
 	}
 	else
 	{
-		g_iTriggerFinale = EntIndexToEntRef(FindEntityByClassname(MaxClients + 1, "trigger_finale"));
+		g_iTriggerFinale = FindEntityByClassname(MaxClients + 1, "trigger_finale");
 		if(g_iTriggerFinale != INVALID_ENT_REFERENCE)
+		{
+			g_iTriggerFinale = EntIndexToEntRef(g_iTriggerFinale);
 			g_bIsSacrificeFinale = view_as<bool>(GetEntProp(g_iTriggerFinale, Prop_Data, "m_bIsSacrificeFinale"));
+		}
 		
 		if(g_bIsSacrificeFinale)
 			return;
