@@ -21,6 +21,7 @@ int g_iRoundStart;
 int g_iPlayerSpawn;
 int g_iChangelevel;
 int g_iRescueVehicle;
+int g_iTriggerFinale;
 int g_iLastSafeDoor;
 //int g_iStartSafeDoor;
 int g_iEndSafeAreaMethod;
@@ -31,6 +32,7 @@ float g_vMaxs[3];
 float g_vEndOrigin[3];
 
 bool g_bHasTriggered;
+bool g_bIsSacrificeFinale;
 bool g_bRemoveAllInfected;
 bool g_bFinaleVehicleReady;
 bool g_bIsInEndSafeArea[MAXPLAYERS + 1];
@@ -76,6 +78,7 @@ public void OnPluginStart()
 	g_hStartNavMeshAreas = new ArrayList(1);
 	g_hRescueVehicleEntities = new ArrayList(1);
 
+	HookEntityOutput("trigger_finale", "FinaleStart", EntityOutput_FinaleStart);
 	HookEntityOutput("trigger_finale", "FinaleEscapeStarted", EntityOutput_FinaleEscapeStarted);
 }
 
@@ -156,6 +159,12 @@ public Action CmdWarpEnd(int client, int args)
 		return Plugin_Handled;
 	}
 
+	if(g_bIsSacrificeFinale)
+	{
+		ReplyToCommand(client, "牺牲类型的结局不支持传送");
+		return Plugin_Handled;
+	}
+
 	if(!HasEndOrigin())
 	{
 		ReplyToCommand(client, "未发现终点区域");
@@ -175,9 +184,8 @@ public Action CmdFinale(int client, int args)
 		return Plugin_Handled;
 	}
 
-	int iFinale = FindEntityByClassname(MaxClients + 1, "trigger_finale");
-	if(iFinale != INVALID_ENT_REFERENCE)
-		AcceptEntityInput(iFinale, "FinaleEscapeFinished");
+	if(IsValidEntRef(g_iTriggerFinale))
+		AcceptEntityInput(g_iTriggerFinale, "FinaleEscapeFinished");
 	else
 	{
 		if(IsValidEntRef(g_iRescueVehicle))
@@ -198,6 +206,39 @@ public Action CmdEsd(int client, int args)
 	return Plugin_Handled;
 }
 */
+public void EntityOutput_FinaleStart(const char[] output, int caller, int activator, float delay)
+{
+	if(!g_iTriggerFinale)
+	{
+		g_iTriggerFinale = EntIndexToEntRef(caller);
+		g_bIsSacrificeFinale = view_as<bool>(GetEntProp(caller, Prop_Data, "m_bIsSacrificeFinale"));
+	}
+
+	if(g_bIsSacrificeFinale)
+	{
+		int iEntRef;
+		int iCount = g_hRescueVehicleEntities.Length;
+		for(int iIndex; iIndex < iCount; iIndex++)
+		{
+			if(IsValidEntRef((iEntRef = g_hRescueVehicleEntities.Get(iIndex))))
+			{
+				SDKUnhook(iEntRef, SDKHook_EndTouch, RescueVehicle_OnEndTouch);
+				SDKUnhook(iEntRef, SDKHook_StartTouch, RescueVehicle_OnStartTouch);
+			}
+		}
+		
+		if(g_hTimer != null)
+			delete g_hTimer;
+
+		g_hRescueVehicleEntities.Clear();
+	}
+}
+
+public void EntityOutput_FinaleEscapeStarted(const char[] output, int caller, int activator, float delay)
+{
+	g_bFinaleVehicleReady = true;
+}
+
 public void OnConfigsExecuted()
 {
 	GetCvars();
@@ -226,6 +267,7 @@ public void OnMapEnd()
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
 	g_bHasTriggered = false;
+	g_bIsSacrificeFinale = false;
 	g_bFinaleVehicleReady = false;
 	
 	if(IsValidEntRef(g_iChangelevel))
@@ -277,11 +319,6 @@ public void Event_FinaleVehicleReady(Event event, const char[] name, bool dontBr
 	g_bFinaleVehicleReady = true;
 }
 
-public void EntityOutput_FinaleEscapeStarted(const char[] output, int entity, int other, float delay)
-{
-	g_bFinaleVehicleReady = true;
-}
-
 public Action Timer_Start(Handle timer) //等待OnNavMeshLoaded
 {
 	HookEndAreaEntity();
@@ -293,6 +330,7 @@ void HookEndAreaEntity()
 {
 	g_iChangelevel = 0;
 	g_iRescueVehicle = 0;
+	g_iTriggerFinale = 0;
 
 	g_vMins = view_as<float>({0.0, 0.0, 0.0});
 	g_vMaxs = view_as<float>({0.0, 0.0, 0.0});
@@ -311,6 +349,13 @@ void HookEndAreaEntity()
 	}
 	else
 	{
+		g_iTriggerFinale = EntIndexToEntRef(FindEntityByClassname(MaxClients + 1, "trigger_finale"));
+		if(g_iTriggerFinale != INVALID_ENT_REFERENCE)
+			g_bIsSacrificeFinale = view_as<bool>(GetEntProp(g_iTriggerFinale, Prop_Data, "m_bIsSacrificeFinale"));
+		
+		if(g_bIsSacrificeFinale)
+			return;
+
 		entity = MaxClients + 1;
 		float vMins[3], vMaxs[3], vOrigin[3];
 		while((entity = FindEntityByClassname(entity, "trigger_multiple")) != INVALID_ENT_REFERENCE)
@@ -456,7 +501,7 @@ public Action RescueVehicle_OnEndTouch(int entity, int other)
 
 public Action RescueVehicle_OnStartTouch(int entity, int other)
 {
-	if(other < 1 || other > MaxClients)
+	if(g_bIsSacrificeFinale || other < 1 || other > MaxClients)
 		return;
 	
 	g_bIsInEndSafeArea[other] = true;
@@ -554,6 +599,9 @@ void PrintHintTextToTeam2(const char[] format, any ...)
 
 void TeleportOrSuicide(int iSelect)
 {
+	if(g_bIsSacrificeFinale)
+		return;
+
 	switch(iSelect)
 	{
 		case 0:
