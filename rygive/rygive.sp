@@ -580,6 +580,7 @@ void Action_Items(int client, int index)
 	menu.AddItem("propanetank", "煤气罐");
 	menu.AddItem("oxygentank", "氧气瓶");
 	menu.AddItem("fireworkcrate", "烟花箱");
+	menu.AddItem("cola_bottles", "可乐瓶");
 	menu.AddItem("gnome", "圣诞老人");
 	menu.AddItem("ammo", "普通弹药");
 	menu.AddItem("incendiary_ammo", "燃烧弹药");
@@ -601,7 +602,7 @@ public int MenuHandler_Items(Menu menu, MenuAction action, int client, int param
 				g_iFunction[client] = 3;
 				g_iCurrentPage[client] = menu.Selection;
 
-				if(param2 < 16)
+				if(param2 < 17)
 					FormatEx(g_sItemName[client], sizeof(g_sItemName), "give %s", sItem);
 				else
 					FormatEx(g_sItemName[client], sizeof(g_sItemName), "upgrade_add %s", sItem);
