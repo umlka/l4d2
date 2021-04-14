@@ -482,20 +482,20 @@ public Action RescueVehicle_OnStartTouch(int entity, int other)
 
 		int iIndex;
 		int iEntRef;
-		for(iIndex = 0; iIndex < iCount; iIndex++)
+		while(iIndex < iCount)
 		{
-			if((iEntRef = g_hRescueVehicleEntities.Get(iIndex)) != g_iRescueVehicle && IsValidEntRef(iEntRef))
+			if((iEntRef = g_hRescueVehicleEntities.Get(iIndex)) != g_iRescueVehicle)
 			{
-				SDKUnhook(iEntRef, SDKHook_EndTouch, RescueVehicle_OnEndTouch);
-				SDKUnhook(iEntRef, SDKHook_StartTouch, RescueVehicle_OnStartTouch);
-			}
-		}
-
-		iCount = g_hRescueVehicleEntities.Length;
-		for(iIndex = 0; iIndex < iCount; iIndex++)
-		{
-			if(g_hRescueVehicleEntities.Get(iIndex) != g_iRescueVehicle)
+				if(IsValidEntRef(iEntRef))
+				{
+					SDKUnhook(iEntRef, SDKHook_EndTouch, RescueVehicle_OnEndTouch);
+					SDKUnhook(iEntRef, SDKHook_StartTouch, RescueVehicle_OnStartTouch);
+				}
 				g_hRescueVehicleEntities.Erase(iIndex);
+				iCount--;
+			}
+			else
+				iIndex++;
 		}
 
 		float vMins[3], vMaxs[3], vOrigin[3];
