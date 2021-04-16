@@ -192,13 +192,13 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 public void OnLibraryAdded(const char[] name)
 {
-	if(strcmp(name, "WeaponHandling") == 0 )
+	if(strcmp(name, "WeaponHandling") == 0)
 		g_bWeaponHandling = true;
 }
 
 public void OnLibraryRemoved(const char[] name)
 {
-	if(strcmp(name, "WeaponHandling") == 0 )
+	if(strcmp(name, "WeaponHandling") == 0)
 		g_bWeaponHandling = false;
 }
 
@@ -217,10 +217,10 @@ public void OnPluginStart()
 	
 	CreateConVar("rygive_version", "1.0.0", "rygive功能插件", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	
-	ConVar hFallenMaxCount = FindConVar("z_fallen_max_count");
+	/*ConVar hFallenMaxCount = FindConVar("z_fallen_max_count");
 	hFallenMaxCount.SetBounds(ConVarBound_Lower, true, 999999999.0);
 	hFallenMaxCount.SetBounds(ConVarBound_Upper, true, 999999999.0);
-	hFallenMaxCount.SetInt(999999999);
+	hFallenMaxCount.SetInt(999999999);*/
 
 	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 
@@ -1260,6 +1260,8 @@ void TeleportToSurvivor(int client)
 		GetClientAbsOrigin(iTarget, vPos);
 		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
 	}
+	
+	CheatCommand(client, "give smg");
 }
 
 int GetTeleportTarget(int client)
@@ -1428,8 +1430,17 @@ public int MenuHandler_TeleportTarget(Menu menu, MenuAction action, int client, 
 				bool bAllowTeleport;
 				float vOrigin[3];
 				ExplodeString(sItem, "|", sInfo, 2, 16);
+				int iVictim = GetClientOfUserId(StringToInt(sInfo[0]));
+				int iTargetTeam;
+				if(strcmp(sInfo[0], "allsurvivor") == 0)
+					iTargetTeam = 2;
+				else if(strcmp(sInfo[0], "allinfected") == 0)
+					iTargetTeam = 3;
+				else if(iVictim && IsClientInGame(iVictim))
+					iTargetTeam = GetClientTeam(iVictim);
+
 				if(strcmp(sInfo[1], "crh") == 0)
-					bAllowTeleport = GetSpawnEndPoint(client, vOrigin);
+					bAllowTeleport = GetSpawnEndPoint(client, iTargetTeam, vOrigin);
 				else
 				{
 					int iTarget = GetClientOfUserId(StringToInt(sInfo[1]));
@@ -1442,32 +1453,41 @@ public int MenuHandler_TeleportTarget(Menu menu, MenuAction action, int client, 
 
 				if(bAllowTeleport == true)
 				{
-					if(strcmp(sInfo[0], "allsurvivor") == 0)
+					if(iVictim)
 					{
-						for(int i = 1; i <= MaxClients; i++)
-						{
-							if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-							{
-								TeleportCheck(i);
-								TeleportEntity(i, vOrigin, NULL_VECTOR, NULL_VECTOR);
-							}
-						}
-					}
-					else if(strcmp(sInfo[0], "allinfected") == 0)
-					{
-						for(int i = 1; i <= MaxClients; i++)
-						{
-							if(IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i))
-								TeleportEntity(i, vOrigin, NULL_VECTOR, NULL_VECTOR);
-						}
+						ForceCrouch(iVictim);
+						TeleportCheck(iVictim);
+						TeleportEntity(iVictim, vOrigin, NULL_VECTOR, NULL_VECTOR);
 					}
 					else
 					{
-						int iVictim = GetClientOfUserId(StringToInt(sInfo[0]));
-						if(iVictim && IsClientInGame(iVictim))
+						switch(iTargetTeam)
 						{
-							TeleportCheck(iVictim);
-							TeleportEntity(iVictim, vOrigin, NULL_VECTOR, NULL_VECTOR);
+							case 2:
+							{
+								for(int i = 1; i <= MaxClients; i++)
+								{
+									if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
+									{
+										ForceCrouch(i);
+										TeleportCheck(i);
+										TeleportEntity(i, vOrigin, NULL_VECTOR, NULL_VECTOR);
+									}
+								}
+							
+							}
+							
+							case 3:
+							{
+								for(int i = 1; i <= MaxClients; i++)
+								{
+									if(IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i))
+									{
+										ForceCrouch(i);
+										TeleportEntity(i, vOrigin, NULL_VECTOR, NULL_VECTOR);
+									}
+								}
+							}
 						}
 					}
 				}
@@ -1487,22 +1507,29 @@ public int MenuHandler_TeleportTarget(Menu menu, MenuAction action, int client, 
 	}
 }
 
+void ForceCrouch(int client)
+{
+	SetEntProp(client, Prop_Send, "m_bDucked", 1); // force crouch pose to allow respawn in transport / duct ...
+	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
+}
+
 //https://forums.alliedmods.net/showthread.php?p=2693455
-bool GetSpawnEndPoint(int client, float vSpawnVec[3])
+bool GetSpawnEndPoint(int client, int team, float vSpawnVec[3]) // Returns the position for respawn which is located at the end of client's eyes view angle direction.
 {
 	float vEnd[3], vEye[3];
 	if(GetDirectionEndPoint(client, vEnd))
 	{
 		GetClientEyePosition(client, vEye);
-		ScaleVectorDirection(vEye, vEnd, 0.1); // to allow collision to be happen
-		if(GetNonCollideEndPoint(client, vEnd, vSpawnVec))
+		ScaleVectorDirection(vEye, vEnd, 0.1); // get a point which is a little deeper to allow next collision to be happen
+		
+		if(GetNonCollideEndPoint(client, team, vEnd, vSpawnVec)) // get position in respect to the player's size
 			return true;
 	}
-
-	return false;
+	GetClientAbsOrigin(client, vSpawnVec); // if ray methods failed for some reason, just use the command issuer location
+	return true;
 }
 
-void ScaleVectorDirection(float vStart[3], float vEnd[3], float fMultiple)
+void ScaleVectorDirection(float vStart[3], float vEnd[3], float fMultiple) // lengthens the line which built from vStart to vEnd in vEnd direction and returns new vEnd position
 {
     float dir[3];
     SubtractVectors(vEnd, vStart, dir);
@@ -1510,14 +1537,14 @@ void ScaleVectorDirection(float vStart[3], float vEnd[3], float fMultiple)
     AddVectors(vEnd, dir, vEnd);
 }
 
-stock bool GetDirectionEndPoint(int client, float vEndPos[3])
+stock bool GetDirectionEndPoint(int client, float vEndPos[3]) // builds simple ray from the client's eyes origin to vEndPos position and returns new vEndPos of non-collide position
 {
 	float vDir[3], vPos[3];
 	GetClientEyePosition(client, vPos);
 	GetClientEyeAngles(client, vDir);
-
-	Handle hTrace = TR_TraceRayFilterEx(vPos, vDir, MASK_SHOT, RayType_Infinite, bTraceEntityFilterPlayer);
-	if(hTrace != null)
+	
+	Handle hTrace = TR_TraceRayFilterEx(vPos, vDir, MASK_PLAYERSOLID, RayType_Infinite, TraceRay_NoPlayers);
+	if(hTrace)
 	{
 		if(TR_DidHit(hTrace))
 		{
@@ -1530,20 +1557,38 @@ stock bool GetDirectionEndPoint(int client, float vEndPos[3])
 	return false;
 }
 
-stock bool GetNonCollideEndPoint(int client, float vEnd[3], float vEndNonCol[3])
+stock bool GetNonCollideEndPoint(int client, int team, float vEnd[3], float vEndNonCol[3], bool bEyeOrigin = true) // similar to GetDirectionEndPoint, but with respect to player size
 {
 	float vMin[3], vMax[3], vStart[3];
-	GetClientEyePosition(client, vStart);
-	GetClientMins(client, vMin);
-	GetClientMaxs(client, vMax);
-	vStart[2] += 20.0; // if nearby area is irregular
-	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMin, vMax, MASK_PLAYERSOLID, bTraceEntityFilterPlayer);
-	if(hTrace != null)
+	if(bEyeOrigin)
+	{
+		GetClientEyePosition(client, vStart);
+		
+		if(IsTeamStuckPos(team, vStart)) // If we attempting to spawn from stucked position, let's start our hull trace from the middle of the ray in hope there are no collision
+		{
+			float vMiddle[3];
+			AddVectors(vStart, vEnd, vMiddle);
+			ScaleVector(vMiddle, 0.5);
+			vStart = vMiddle;
+		}
+	}
+	else
+		GetClientAbsOrigin(client, vStart);
+
+	GetTeamClientSize(team, vMin, vMax);
+	
+	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMin, vMax, MASK_PLAYERSOLID, TraceRay_NoPlayers);
+	if(hTrace != INVALID_HANDLE)
 	{
 		if(TR_DidHit(hTrace))
 		{
 			TR_GetEndPosition(vEndNonCol, hTrace);
 			delete hTrace;
+			if(bEyeOrigin)
+			{
+				if(IsTeamStuckPos(team, vEndNonCol)) // if eyes position doesn't allow to build reliable TraceHull, repeat from the feet (client's origin)
+					GetNonCollideEndPoint(client, team, vEnd, vEndNonCol, false);
+			}
 			return true;
 		}
 		delete hTrace;
@@ -1551,7 +1596,39 @@ stock bool GetNonCollideEndPoint(int client, float vEnd[3], float vEndNonCol[3])
 	return false;
 }
 
-public bool bTraceEntityFilterPlayer(int entity, int contentsMask)
+void GetTeamClientSize(int team, float vMin[3], float vMax[3])
+{
+	if(team == 2) // GetClientMins & GetClientMaxs are not reliable when applied to dead or spectator, so we are using pre-defined values per team
+	{
+		vMin[0] = -16.0; 	vMin[1] = -16.0; 	vMin[2] = 0.0;
+		vMax[0] = 16.0; 	vMax[1] = 16.0; 	vMax[2] = 71.0;
+	}
+	else 
+	{ // GetClientMins & GetClientMaxs return the same values for infected team, even for Tank! (that's very strange O_o)
+		vMin[0] = -16.0; 	vMin[1] = -16.0; 	vMin[2] = 0.0;
+		vMax[0] = 16.0; 	vMax[1] = 16.0; 	vMax[2] = 71.0;
+	}
+}
+
+bool IsTeamStuckPos(int team, float vPos[3], bool bDuck = false) // check if the position applicable to respawn a client of a given size without collision
+{
+	float vMin[3], vMax[3];
+	Handle hTrace;
+	bool bHit;
+	GetTeamClientSize(team, vMin, vMax);
+	if(bDuck)
+		vMax[2] -= 18.0;
+
+	hTrace = TR_TraceHullFilterEx(vPos, vPos, vMin, vMax, MASK_PLAYERSOLID, TraceRay_NoPlayers);
+	if(hTrace)
+	{
+		bHit = TR_DidHit(hTrace);
+		delete hTrace;
+	}
+	return bHit;
+}
+
+public bool TraceRay_NoPlayers(int entity, int contentsMask)
 {
 	return entity > MaxClients;
 }
