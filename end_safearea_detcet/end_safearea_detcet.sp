@@ -7,6 +7,7 @@
 
 #define SOUND_COUNTDOWN "buttons/blip1.wav"
 
+ArrayList g_hEndNavMeshAreas;
 ArrayList g_hStartNavMeshAreas;
 ArrayList g_hRescueVehicleEntities;
 
@@ -29,7 +30,8 @@ int g_iEndSafeAreaTime;
 
 float g_vMins[3];
 float g_vMaxs[3];
-float g_vEndOrigin[3];
+float g_vScaleMins[3];
+float g_vScaleMaxs[3];
 
 bool g_bHasTriggered;
 bool g_bIsSacrificeFinale;
@@ -73,8 +75,9 @@ public void OnPluginStart()
 	RegAdminCmd("sm_warpstart", CmdWarpStart, ADMFLAG_RCON, "传送所有生还者到起点安全区域");
 	RegAdminCmd("sm_warpend", CmdWarpEnd, ADMFLAG_RCON, "传送所有生还者到终点安全区域");
 	RegAdminCmd("sm_finale", CmdFinale, ADMFLAG_RCON, "结局关卡强制过关");
-	//RegAdminCmd("sm_esd", CmdEsd, ADMFLAG_ROOT, "测试");
+	RegAdminCmd("sm_esd", CmdEsd, ADMFLAG_ROOT, "测试");
 	
+	g_hEndNavMeshAreas = new ArrayList(1);
 	g_hStartNavMeshAreas = new ArrayList(1);
 	g_hRescueVehicleEntities = new ArrayList(1);
 
@@ -90,39 +93,14 @@ public Action CmdWarpStart(int client, int args)
 		return Plugin_Handled;
 	}
 
-	CNavArea area;
-	float vOrigin[3];
 	int iAreaCount = g_hStartNavMeshAreas.Length;
 	if(iAreaCount == 0)
 	{
-		int iLandMark;
-		int entity = MaxClients + 1;
-		while((entity = FindEntityByClassname(entity, "info_landmark")) != INVALID_ENT_REFERENCE)
-		{
-			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
-			if(!IsDotInEndArea(vOrigin))
-			{
-				iLandMark = entity;
-				break;
-			}
-		}
-
-		if(iLandMark == 0)
-		{
-			ReplyToCommand(client, "未发现info_landmark实体");
-			return Plugin_Handled;
-		}
-
-		area = NavMesh_GetNearestArea(vOrigin);
-		if(area == INVALID_NAV_AREA)
-		{
-			ReplyToCommand(client, "无效Nav区域");
-			return Plugin_Handled;
-		}
+		ReplyToCommand(client, "未发现起点Nav区域");
+		return Plugin_Handled;
 	}
-	else
-		area = view_as<CNavArea>(g_hStartNavMeshAreas.Get(GetRandomInt(0, iAreaCount - 1)));
 
+	float vRandom[3];
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsAliveSurvivor(i))
@@ -143,8 +121,8 @@ public Action CmdWarpStart(int client, int args)
 				}
 			}
 
-			area.GetRandomPoint(vOrigin);
-			TeleportEntity(i, vOrigin, NULL_VECTOR, NULL_VECTOR);
+			view_as<CNavArea>(g_hStartNavMeshAreas.Get(GetRandomInt(0, iAreaCount - 1))).GetRandomPoint(vRandom);
+			TeleportEntity(i, vRandom, NULL_VECTOR, NULL_VECTOR);
 		}
 	}
 
@@ -165,9 +143,9 @@ public Action CmdWarpEnd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(!HasEndOrigin())
+	if(g_hEndNavMeshAreas.Length == 0)
 	{
-		ReplyToCommand(client, "未发现终点区域");
+		ReplyToCommand(client, "未发现终点Nav区域");
 		return Plugin_Handled;
 	}
 
@@ -200,15 +178,13 @@ public Action CmdFinale(int client, int args)
 
 	return Plugin_Handled;
 }
-/*
+
 public Action CmdEsd(int client, int args)
 {
-	ReplyToCommand(client, "g_iTriggerFinale->%d", g_iTriggerFinale);
-	if(IsValidEntRef(g_iTriggerFinale))
-		ReplyToCommand(client, "m_type->%d", GetEntProp(g_iTriggerFinale, Prop_Data, "m_type"));
+	ReplyToCommand(client, "g_hStartNavMeshAreas.Length->%d g_hEndNavMeshAreas.Length->%d", g_hStartNavMeshAreas.Length, g_hEndNavMeshAreas.Length);
 	return Plugin_Handled;
 }
-*/
+
 public void EntityOutput_FinaleStart(const char[] output, int caller, int activator, float delay)
 {
 	if(!IsValidEntRef(g_iTriggerFinale)) //c5m5, c13m4
@@ -290,6 +266,7 @@ public void OnMapEnd()
 		}
 	}
 
+	g_hEndNavMeshAreas.Clear();
 	g_hStartNavMeshAreas.Clear();
 	g_hRescueVehicleEntities.Clear();
 }
@@ -326,7 +303,6 @@ public Action Timer_Start(Handle timer) //等待OnNavMeshLoaded
 {
 	HookEndAreaEntity();
 	FindSafeRoomDoors();
-	FindStartSafeArea();
 }
 
 void HookEndAreaEntity()
@@ -337,7 +313,8 @@ void HookEndAreaEntity()
 
 	g_vMins = view_as<float>({0.0, 0.0, 0.0});
 	g_vMaxs = view_as<float>({0.0, 0.0, 0.0});
-	g_vEndOrigin = view_as<float>({0.0, 0.0, 0.0});
+	g_vScaleMins = view_as<float>({0.0, 0.0, 0.0});
+	g_vScaleMaxs = view_as<float>({0.0, 0.0, 0.0});
 
 	int entity = INVALID_ENT_REFERENCE;
 	if((entity = FindEntityByClassname(MaxClients + 1, "info_changelevel")) == INVALID_ENT_REFERENCE)
@@ -408,34 +385,32 @@ void HookEndAreaEntity()
 //https://forums.alliedmods.net/showpost.php?p=2680639&postcount=3
 void GetEndAreaEntityVectors(int entity)
 {
-	float vOrigin[3];
-	GetEntPropVector(entity, Prop_Send, "m_vecMins", g_vMins);
-	GetEntPropVector(entity, Prop_Send, "m_vecMaxs", g_vMaxs);
+	float vMins[3], vMaxs[3], vOrigin[3];
+	GetEntPropVector(entity, Prop_Send, "m_vecMins", vMins);
+	GetEntPropVector(entity, Prop_Send, "m_vecMaxs", vMaxs);
 	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
+
+	g_vMins[0] = vMins[0];
+	g_vMins[1] = vMins[1];
+	g_vMins[2] = vMins[2] - 50.0;
 	
-	g_vEndOrigin[0] = vOrigin[0] + (g_vMins[0] + g_vMaxs[0]) * 0.5;
-	g_vEndOrigin[1] = vOrigin[1] + (g_vMins[1] + g_vMaxs[1]) * 0.5;
-	g_vEndOrigin[2] = vOrigin[2] + (g_vMins[2] + g_vMaxs[2]) * 0.5;
-	
-	g_vMins[0] -= 100.0;
-	g_vMins[1] -= 100.0;
-	g_vMins[2] -= 100.0;
-	
-	g_vMaxs[0] += 200.0;
-	g_vMaxs[1] += 200.0;
-	g_vMaxs[2] += 200.0;
-	
+	g_vMaxs[0] = vMaxs[0];
+	g_vMaxs[1] = vMaxs[1];
+	g_vMaxs[2] = vMaxs[2] - 5.0;
+
 	AddVectors(vOrigin, g_vMins, g_vMins);
 	AddVectors(vOrigin, g_vMaxs, g_vMaxs);
-}
-
-void FindStartSafeArea()
-{
-	ArrayList hNavMeshAreas = view_as<ArrayList>(NavMesh_GetAreas());
-	int iAreaCount = hNavMeshAreas.Length;
-	for(int iAreaIndex; iAreaIndex < iAreaCount; iAreaIndex++)
-		if(hNavMeshAreas.Get(iAreaIndex, 49) & TERROR_NAV_PLAYER_START)
-			g_hStartNavMeshAreas.Push(iAreaIndex);
+	
+	g_vScaleMins[0] = vMins[0] - 200.0;
+	g_vScaleMins[1] = vMins[1] - 200.0;
+	g_vScaleMins[2] = vMins[2] - 200.0;
+	
+	g_vScaleMaxs[0] = vMaxs[0] + 200.0;
+	g_vScaleMaxs[1] = vMaxs[1] + 200.0;
+	g_vScaleMaxs[2] = vMaxs[2] + 200.0;
+	
+	AddVectors(vOrigin, g_vScaleMins, g_vScaleMins);
+	AddVectors(vOrigin, g_vScaleMaxs, g_vScaleMaxs);
 }
 
 void FindSafeRoomDoors()
@@ -445,23 +420,91 @@ void FindSafeRoomDoors()
 	
 	float vOrigin[3];
 	int entity = MaxClients + 1;
+	ArrayList hSafeDoorNavMeshAreas = new ArrayList(1);
 	while((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE)
 	{
 		if(!IsValidDoorFlags(entity))
 			continue;
 
 		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vOrigin);
+		CNavArea area = NavMesh_GetNearestArea(vOrigin);
+		if(area != INVALID_NAV_AREA)
+			hSafeDoorNavMeshAreas.Push(view_as<int>(area));
 
-		if(g_iChangelevel && IsDotInEndArea(vOrigin))
+		if(g_iChangelevel && IsDotInScaleEndArea(vOrigin))
 			g_iLastSafeDoor = EntIndexToEntRef(entity);
 		/*else
 			g_iStartSafeDoor = EntIndexToEntRef(entity);*/
 	}
+
+	FindNavMeshAreas(hSafeDoorNavMeshAreas);
 }
 
-bool HasEndOrigin()
+void FindNavMeshAreas(ArrayList hSafeDoorNavMeshAreas)
 {
-	return g_vEndOrigin[0] != 0.0 && g_vEndOrigin[1] != 0.0 && g_vEndOrigin[2] != 0.0;
+	ArrayList hNavMeshAreas = view_as<ArrayList>(NavMesh_GetAreas());
+
+	int iSpawnFlags;
+	float vBuffer[3];
+	int iAreaCount = hNavMeshAreas.Length;
+	for(int iAreaIndex = 0; iAreaIndex < iAreaCount; iAreaIndex++)
+	{
+		if(hSafeDoorNavMeshAreas.FindValue(iAreaIndex) != -1)
+			continue;
+
+		iSpawnFlags = hNavMeshAreas.Get(iAreaIndex, 49);
+		if(iSpawnFlags & TERROR_NAV_PLAYER_START)
+			g_hStartNavMeshAreas.Push(iAreaIndex);
+		else if(iSpawnFlags & TERROR_NAV_RESCUE_VEHICLE)
+			g_hEndNavMeshAreas.Push(iAreaIndex);
+		else if(iSpawnFlags & TERROR_NAV_CHECKPOINT)
+		{
+			vBuffer[0] = view_as<float>(hNavMeshAreas.Get(iAreaIndex, 9));
+			vBuffer[1] = view_as<float>(hNavMeshAreas.Get(iAreaIndex, 10));
+			vBuffer[2] = NavMeshAreaGetZ(iAreaIndex, vBuffer);
+	
+			if(!IsDotInScaleEndArea(vBuffer))
+				g_hStartNavMeshAreas.Push(iAreaIndex);
+			else if(IsDotInNormalEndArea(vBuffer))
+				g_hEndNavMeshAreas.Push(iAreaIndex);
+		}
+	}
+}
+
+stock float NavMeshAreaGetZ(int iAreaIndex, const float flPos[3])
+{
+	float flExtentLow[3], flExtentHigh[3];
+	NavMeshArea_GetExtentLow(iAreaIndex, flExtentLow);
+	NavMeshArea_GetExtentHigh(iAreaIndex, flExtentHigh);
+	
+	float dx = flExtentHigh[0] - flExtentLow[0];
+	float dy = flExtentHigh[1] - flExtentLow[1];
+	
+	float flNEZ = NavMeshArea_GetNECornerZ(iAreaIndex);
+	
+	if(dx == 0.0 || dy == 0.0)
+		return flNEZ;
+
+	float u = (flPos[0] - flExtentLow[0]) / dx;
+	float v = (flPos[1] - flExtentLow[1]) / dy;
+	
+	u = fsel(u, u, 0.0);
+	u = fsel(u - 1.0, 1.0, u);
+	
+	v = fsel(v, v, 0.0);
+	v = fsel(v - 1.0, 1.0, v);
+	
+	float flSWZ = NavMeshArea_GetSWCornerZ(iAreaIndex);
+	
+	float flNorthZ = flExtentLow[2] + u * (flNEZ - flExtentLow[2]);
+	float flSouthZ = flSWZ + u * (flExtentHigh[2] - flSWZ);
+	
+	return flNorthZ + v * (flSouthZ - flNorthZ);
+}
+
+stock float fsel(float a, float b, float c)
+{
+	return a >= 0.0 ? b : c;
 }
 
 bool IsValidDoorFlags(int entity)
@@ -560,7 +603,7 @@ public Action RescueVehicle_OnStartTouch(int entity, int other)
 			
 		CNavArea area = NavMesh_GetNearestArea(vOrigin);
 		if(area != INVALID_NAV_AREA)
-			g_vEndOrigin = vOrigin;
+			g_hEndNavMeshAreas.Push(view_as<int>(area));
 	}
 	
 	g_bHasTriggered = true;
@@ -669,11 +712,9 @@ void TeleportAllSurvivorsToCheckpoint()
 	if(g_bRemoveAllInfected)
 		RemoveAllInfected();
 
-	if(!HasEndOrigin())
-		return;
-
-	CNavArea area = NavMesh_GetNearestArea(g_vEndOrigin);
-	if(area == INVALID_NAV_AREA)
+	int iAreaCount = g_hEndNavMeshAreas.Length;
+	
+	if(iAreaCount == 0)
 		return;
 
 	float vRandom[3];
@@ -698,7 +739,7 @@ void TeleportAllSurvivorsToCheckpoint()
 				}
 			}
 
-			area.GetRandomPoint(vRandom);
+			view_as<CNavArea>(g_hEndNavMeshAreas.Get(GetRandomInt(0, iAreaCount - 1))).GetRandomPoint(vRandom);
 			TeleportEntity(i, vRandom, NULL_VECTOR, NULL_VECTOR);
 		}
 	}
@@ -769,7 +810,7 @@ stock void RemoveAllInfected()
 		if(strcmp(sClassName, "infected") == 0 || strcmp(sClassName, "witch") == 0)
 		{
 			GetEntPropVector(i, Prop_Send, "m_vecOrigin", vOrigin);
-			if(IsDotInEndArea(vOrigin))
+			if(IsDotInScaleEndArea(vOrigin))
 				RemoveEntity(i);
 		}
 	}
@@ -828,9 +869,14 @@ bool NoPlayerInEndArea()
 }
 
 //https://forums.alliedmods.net/showpost.php?p=2680639&postcount=3
-stock bool IsDotInEndArea(const float vDot[3])
+stock bool IsDotInNormalEndArea(const float vDot[3])
 {
 	return g_vMins[0] < vDot[0] < g_vMaxs[0] && g_vMins[1] < vDot[1] < g_vMaxs[1] && g_vMins[2] < vDot[2] < g_vMaxs[2];
+}
+
+stock bool IsDotInScaleEndArea(const float vDot[3])
+{
+	return g_vScaleMins[0] < vDot[0] < g_vScaleMaxs[0] && g_vScaleMins[1] < vDot[1] < g_vScaleMaxs[1] && g_vScaleMins[2] < vDot[2] < g_vScaleMaxs[2];
 }
 
 stock bool IsValidEntRef(int entity)
