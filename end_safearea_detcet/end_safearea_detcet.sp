@@ -57,7 +57,7 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	g_hEndSafeAreaMethod = CreateConVar("end_safearea_method", "0", "如何处理未进入终点安全区域的玩家?(0=传送,1=处死)", _, true, 0.0, true, 1.0);
-	g_hEndSafeAreaTime = CreateConVar("end_safearea_time", "15", "倒计时多久(0=关闭该功能)", _, true, 0.0);
+	g_hEndSafeAreaTime = CreateConVar("end_safearea_time", "60", "倒计时多久(0=关闭该功能)", _, true, 0.0);
 	g_hRemoveAllInfected = CreateConVar("end_safearea_remove", "1", "传送前是否移除终点安全区域内的感染者", _, true, 0.0, true, 1.0);
 	
 	g_hEndSafeAreaMethod.AddChangeHook(ConVarChanged);
