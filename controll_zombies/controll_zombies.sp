@@ -219,6 +219,9 @@ Handle g_hSDK_Call_HasPlayerControlledZombies;
 Handle g_hPZRespawnTimer[MAXPLAYERS + 1];
 Handle g_hPZSuicideTimer[MAXPLAYERS + 1];
 
+Address g_pRespawn;
+Address g_pResetStatCondition;
+
 ConVar g_hGameMode;
 ConVar g_hCoopSphereFix;
 ConVar g_hMaxTankPlayer;
@@ -434,6 +437,8 @@ public void OnPluginEnd()
 	g_hCoopSphereFix.RestoreDefault();
 	for(int i = 1; i <= MaxClients; i++)
 		RemoveSurvivorModelGlow(i);
+		
+	PatchAddress(false);
 }
 
 public void OnConfigsExecuted()
@@ -2430,6 +2435,8 @@ void LoadGameData()
 	if(g_hSDK_Call_RoundRespawn == null)
 		SetFailState("Failed to create SDKCall: RoundRespawn");
 	
+	RoundRespawnPatch(hGameData);
+
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SetHumanSpec") == false)
 		SetFailState("Failed to find signature: SetHumanSpec");
@@ -2457,6 +2464,27 @@ void LoadGameData()
 	SetupDetours(hGameData);
 
 	delete hGameData;
+}
+
+void RoundRespawnPatch(GameData hGameData = null)
+{
+	int iOffset = hGameData.GetOffset("RoundRespawn_Offset");
+	if(iOffset == -1)
+		SetFailState("Failed to find offset: RoundRespawn_Offset");
+
+	int iByteMatch = hGameData.GetOffset("RoundRespawn_Byte");
+	if(iByteMatch == -1)
+		SetFailState("Failed to find byte: RoundRespawn_Byte");
+
+	g_pRespawn = hGameData.GetAddress("RoundRespawn");
+	if(!g_pRespawn)
+		SetFailState("Failed to find address: RoundRespawn");
+	
+	g_pResetStatCondition = g_pRespawn + view_as<Address>(iOffset);
+	
+	int iByteOrigin = LoadFromAddress(g_pResetStatCondition, NumberType_Int8);
+	if(iByteOrigin != iByteMatch)
+		SetFailState("Failed to load, byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
 }
 
 bool IsInStasis(int client)
@@ -2531,7 +2559,25 @@ void TakeOverZombieBot(int client, int iTarget)
 
 void Respawn(int client)
 {
+	PatchAddress(true);
 	SDKCall(g_hSDK_Call_RoundRespawn, client);
+	PatchAddress(false);
+}
+
+//https://forums.alliedmods.net/showthread.php?t=323220
+void PatchAddress(bool bPatch) // Prevents respawn command from reset the player's statistics
+{
+	static bool bPatched;
+	if(!bPatched && bPatch)
+	{
+		bPatched = true;
+		StoreToAddress(g_pResetStatCondition, 0x79, NumberType_Int8); // if (!bool) - 0x75 JNZ => 0x78 JNS (jump short if not sign) - always not jump
+	}
+	else if(bPatched && !bPatch)
+	{
+		bPatched = false;
+		StoreToAddress(g_pResetStatCondition, 0x75, NumberType_Int8);
+	}
 }
 
 void SetHumanIdle(int bot, int client)
