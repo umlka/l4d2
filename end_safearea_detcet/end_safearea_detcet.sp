@@ -57,7 +57,7 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	g_hEndSafeAreaMethod = CreateConVar("end_safearea_method", "0", "如何处理未进入终点安全区域的玩家?(0=传送,1=处死)", _, true, 0.0, true, 1.0);
-	g_hEndSafeAreaTime = CreateConVar("end_safearea_time", "60", "倒计时多久(0=关闭该功能)", _, true, 0.0);
+	g_hEndSafeAreaTime = CreateConVar("end_safearea_time", "30", "倒计时多久(0=关闭该功能)", _, true, 0.0);
 	g_hRemoveAllInfected = CreateConVar("end_safearea_remove", "1", "传送前是否移除终点安全区域内的感染者", _, true, 0.0, true, 1.0);
 	
 	g_hEndSafeAreaMethod.AddChangeHook(ConVarChanged);
@@ -289,6 +289,7 @@ public Action Timer_Start(Handle timer) //等待OnNavMeshLoaded
 {
 	HookEndAreaEntity();
 	FindSafeRoomDoors();
+	FindTargetNavMeshAreas();
 }
 
 void HookEndAreaEntity()
@@ -406,38 +407,29 @@ void FindSafeRoomDoors()
 	
 	float vOrigin[3];
 	int entity = MaxClients + 1;
-	ArrayList hSafeDoorNavMeshAreas = new ArrayList(1);
 	while((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE)
 	{
 		if(!IsValidDoorFlags(entity))
 			continue;
 
 		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vOrigin);
-		CNavArea area = NavMesh_GetNearestArea(vOrigin);
-		if(area != INVALID_NAV_AREA)
-			hSafeDoorNavMeshAreas.Push(view_as<int>(area));
-
 		if(g_iChangelevel && IsDotInScaleEndArea(vOrigin))
 			g_iLastSafeDoor = EntIndexToEntRef(entity);
 		/*else
 			g_iStartSafeDoor = EntIndexToEntRef(entity);*/
 	}
-
-	FindNavMeshAreas(hSafeDoorNavMeshAreas);
 }
 
-void FindNavMeshAreas(ArrayList hSafeDoorNavMeshAreas)
+void FindTargetNavMeshAreas()
 {
 	ArrayList hNavMeshAreas = view_as<ArrayList>(NavMesh_GetAreas());
 
 	int iSpawnFlags;
 	float vBuffer[3];
+
 	int iAreaCount = hNavMeshAreas.Length;
 	for(int iAreaIndex = 0; iAreaIndex < iAreaCount; iAreaIndex++)
 	{
-		if(hSafeDoorNavMeshAreas.FindValue(iAreaIndex) != -1)
-			continue;
-
 		iSpawnFlags = hNavMeshAreas.Get(iAreaIndex, 49);
 		if(iSpawnFlags & TERROR_NAV_PLAYER_START)
 			g_hStartNavMeshAreas.Push(iAreaIndex);
@@ -451,8 +443,26 @@ void FindNavMeshAreas(ArrayList hSafeDoorNavMeshAreas)
 	
 			if(!IsDotInScaleEndArea(vBuffer))
 				g_hStartNavMeshAreas.Push(iAreaIndex);
-			else if(IsDotInNormalEndArea(vBuffer))
+			else
+			{
+				vBuffer[0] = view_as<float>(hNavMeshAreas.Get(iAreaIndex, 3));
+				if(vBuffer[0] < g_vMins[0] || vBuffer[0] > g_vMaxs[0])
+					continue;
+	
+				vBuffer[0] = view_as<float>(hNavMeshAreas.Get(iAreaIndex, 4));
+				if(vBuffer[0] < g_vMins[1] || vBuffer[0] > g_vMaxs[1])
+					continue;
+	
+				vBuffer[0] = view_as<float>(hNavMeshAreas.Get(iAreaIndex, 6));
+				if(vBuffer[0] < g_vMins[0] || vBuffer[0] > g_vMaxs[0])
+					continue;
+
+				vBuffer[0] = view_as<float>(hNavMeshAreas.Get(iAreaIndex, 7));
+				if(vBuffer[0] < g_vMins[1] || vBuffer[0] > g_vMaxs[1])
+					continue;
+
 				g_hEndNavMeshAreas.Push(iAreaIndex);
+			}
 		}
 	}
 }
