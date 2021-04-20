@@ -1592,6 +1592,8 @@ void TeleportToSurvivor(int client)
 	int iTarget = GetTeleportTarget(client);
 	if(iTarget != -1)
 	{
+		ForceCrouch(client);
+
 		float vPos[3];
 		GetClientAbsOrigin(iTarget, vPos);
 		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
@@ -1620,6 +1622,12 @@ int GetTeleportTarget(int client)
 		}
 	}
 	return (iNormal == 0) ? (iIncap == 0 ? (iHanging == 0 ? -1 : iHangingSurvivors[GetRandomInt(0, iHanging - 1)]) : iIncapSurvivors[GetRandomInt(0, iIncap - 1)]) :iNormalSurvivors[GetRandomInt(0, iNormal - 1)];
+}
+
+void ForceCrouch(int client)
+{
+	SetEntProp(client, Prop_Send, "m_bDucked", 1); // force crouch pose to allow respawn in transport / duct ...
+	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
 }
 
 //https://forums.alliedmods.net/showthread.php?t=291562
