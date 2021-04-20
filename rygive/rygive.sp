@@ -30,6 +30,9 @@ Handle g_hSDK_Call_CreateCharger;
 Handle g_hSDK_Call_CreateTank;
 Handle g_hSDK_Call_InfectedAttackSurvivorTeam;
 
+Address g_pRespawn;
+Address g_pResetStatCondition;
+
 int g_iMeleeClassCount;
 int g_iClipSize_RifleM60;
 int g_iClipSize_GrenadeLauncher;
@@ -227,6 +230,11 @@ public void OnPluginStart()
 	RegAdminCmd("sm_rygive", RygiveMenu, ADMFLAG_ROOT, "rygive");
 
 	g_hSteamIDs = new StringMap();
+}
+
+public void OnPluginEnd()
+{
+	PatchAddress(false);
 }
 
 public void OnGetWeaponsInfo(int pThis, const char[] classname)
@@ -1223,7 +1231,9 @@ public int MenuHandler_RespawnSurvivor(Menu menu, MenuAction action, int client,
 					{
 						if(IsClientInGame(i) && GetClientTeam(i) == 2 && !IsPlayerAlive(i))
 						{
+							PatchAddress(true);
 							SDKCall(g_hSDK_Call_RoundRespawn, i);
+							PatchAddress(false);
 							TeleportToSurvivor(i);
 						}
 					}
@@ -1234,7 +1244,9 @@ public int MenuHandler_RespawnSurvivor(Menu menu, MenuAction action, int client,
 					int iTarget = GetClientOfUserId(StringToInt(sItem));
 					if(iTarget && IsClientInGame(iTarget))
 					{
+						PatchAddress(true);
 						SDKCall(g_hSDK_Call_RoundRespawn, iTarget);
+						PatchAddress(false);
 						TeleportToSurvivor(iTarget);
 					}
 					RespawnSurvivor(client, menu.Selection);
@@ -1456,7 +1468,7 @@ public int MenuHandler_TeleportTarget(Menu menu, MenuAction action, int client, 
 					if(iVictim)
 					{
 						ForceCrouch(iVictim);
-						TeleportCheck(iVictim);
+						TeleportFix(iVictim);
 						TeleportEntity(iVictim, vOrigin, NULL_VECTOR, NULL_VECTOR);
 					}
 					else
@@ -1470,7 +1482,7 @@ public int MenuHandler_TeleportTarget(Menu menu, MenuAction action, int client, 
 									if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 									{
 										ForceCrouch(i);
-										TeleportCheck(i);
+										TeleportFix(i);
 										TeleportEntity(i, vOrigin, NULL_VECTOR, NULL_VECTOR);
 									}
 								}
@@ -1633,7 +1645,7 @@ public bool TraceRay_NoPlayers(int entity, int contentsMask)
 	return entity > MaxClients;
 }
 
-stock void TeleportCheck(int client)
+stock void TeleportFix(int client)
 {
 	if(GetClientTeam(client) != 2)
 		return;
@@ -2326,6 +2338,8 @@ void LoadGameData()
 	g_hSDK_Call_RoundRespawn = EndPrepSDKCall();
 	if(g_hSDK_Call_RoundRespawn == null)
 		SetFailState("Failed to create SDKCall: RoundRespawn");
+		
+	RoundRespawnPatch(hGameData);
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SetHumanSpec") == false)
@@ -2373,6 +2387,43 @@ void LoadGameData()
 		SetFailState("Failed to create SDKCall: %s", NAME_InfectedAttackSurvivorTeam);
 
 	delete hGameData;
+}
+
+void RoundRespawnPatch(GameData hGameData = null)
+{
+	int iOffset = hGameData.GetOffset("RoundRespawn_Offset");
+	if(iOffset == -1)
+		SetFailState("Failed to find offset: RoundRespawn_Offset");
+
+	int iByteMatch = hGameData.GetOffset("RoundRespawn_Byte");
+	if(iByteMatch == -1)
+		SetFailState("Failed to find byte: RoundRespawn_Byte");
+
+	g_pRespawn = hGameData.GetAddress("RoundRespawn");
+	if(!g_pRespawn)
+		SetFailState("Failed to find address: RoundRespawn");
+	
+	g_pResetStatCondition = g_pRespawn + view_as<Address>(iOffset);
+	
+	int iByteOrigin = LoadFromAddress(g_pResetStatCondition, NumberType_Int8);
+	if(iByteOrigin != iByteMatch)
+		SetFailState("Failed to load, byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
+}
+
+//https://forums.alliedmods.net/showthread.php?t=323220
+void PatchAddress(bool bPatch) // Prevents respawn command from reset the player's statistics
+{
+	static bool bPatched;
+	if(!bPatched && bPatch)
+	{
+		bPatched = true;
+		StoreToAddress(g_pResetStatCondition, 0x79, NumberType_Int8); // if (!bool) - 0x75 JNZ => 0x78 JNS (jump short if not sign) - always not jump
+	}
+	else if(bPatched && !bPatch)
+	{
+		bPatched = false;
+		StoreToAddress(g_pResetStatCondition, 0x75, NumberType_Int8);
+	}
 }
 
 void LoadStringFromAdddress(Address pAddr, char[] sBuffer, int iMaxlength)
