@@ -105,21 +105,7 @@ public Action CmdWarpStart(int client, int args)
 	{
 		if(IsAliveSurvivor(i))
 		{
-			if(GetEntityMoveType(i) == MOVETYPE_NOCLIP)
-				SetEntityMoveType(i, MOVETYPE_WALK);
-
-			SetEntProp(i, Prop_Send, "m_fFlags", GetEntProp(i, Prop_Send, "m_fFlags") & ~FL_FROZEN);
-			if(IsHanging(i))
-				L4D2_ReviveFromIncap(i);
-			else
-			{
-				int attacker = L4D2_GetInfectedAttacker(i);
-				if(attacker > 0 && IsClientInGame(attacker) && IsPlayerAlive(attacker))
-				{
-					SetEntProp(attacker, Prop_Send, "m_fFlags", GetEntProp(attacker, Prop_Send, "m_fFlags") & ~FL_FROZEN);
-					ForcePlayerSuicide(attacker);
-				}
-			}
+			TeleportFix(i);
 
 			view_as<CNavArea>(g_hStartNavMeshAreas.Get(GetRandomInt(0, iAreaCount - 1))).GetRandomPoint(vRandom);
 			TeleportEntity(i, vRandom, NULL_VECTOR, NULL_VECTOR);
@@ -722,27 +708,40 @@ void TeleportAllSurvivorsToCheckpoint()
 	{
 		if(IsAliveSurvivor(i))
 		{
-			if(GetEntityMoveType(i) == MOVETYPE_NOCLIP)
-				SetEntityMoveType(i, MOVETYPE_WALK);
-
-			SetEntProp(i, Prop_Send, "m_fFlags", GetEntProp(i, Prop_Send, "m_fFlags") & ~FL_FROZEN);
-
-			if(IsHanging(i))
-				L4D2_ReviveFromIncap(i);
-			else
-			{
-				int attacker = L4D2_GetInfectedAttacker(i);
-				if(attacker > 0 && IsClientInGame(attacker) && IsPlayerAlive(attacker))
-				{
-					SetEntProp(attacker, Prop_Send, "m_fFlags", GetEntProp(attacker, Prop_Send, "m_fFlags") & ~FL_FROZEN);
-					ForcePlayerSuicide(attacker);
-				}
-			}
+			TeleportFix(i);
 
 			view_as<CNavArea>(g_hEndNavMeshAreas.Get(GetRandomInt(0, iAreaCount - 1))).GetRandomPoint(vRandom);
 			TeleportEntity(i, vRandom, NULL_VECTOR, NULL_VECTOR);
 		}
 	}
+}
+
+stock void TeleportFix(int client)
+{
+	ForceCrouch(client);
+
+	if(GetEntityMoveType(client) == MOVETYPE_NOCLIP)
+		SetEntityMoveType(client, MOVETYPE_WALK);
+
+	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") & ~FL_FROZEN);
+
+	if(IsHanging(client))
+		L4D2_ReviveFromIncap(client);
+	else
+	{
+		int attacker = L4D2_GetInfectedAttacker(client);
+		if(attacker > 0 && IsClientInGame(attacker) && IsPlayerAlive(attacker))
+		{
+			SetEntProp(attacker, Prop_Send, "m_fFlags", GetEntProp(attacker, Prop_Send, "m_fFlags") & ~FL_FROZEN);
+			ForcePlayerSuicide(attacker);
+		}
+	}
+}
+
+void ForceCrouch(int client)
+{
+	SetEntProp(client, Prop_Send, "m_bDucked", 1); // force crouch pose to allow respawn in transport / duct ...
+	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
 }
 
 /**
