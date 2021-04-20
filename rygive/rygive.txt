@@ -12,14 +12,41 @@
 					"offset"	"7"
 				}
 			}
+			"RoundRespawn"
+			{
+				"windows"
+				{
+					"signature"	"RoundRespawn"			
+				}
+				"linux"
+				{
+					"signature"	"RoundRespawn"
+				}
+			}
 		}
 
 		"Offsets"
 		{
+			"OS"
+			{
+				"windows"	"1"
+				"linux"		"2"
+			}
+
 			"CTerrorPlayer::SetObserverTarget"
 			{
 				"linux"		"403"
 				"windows"	"402"
+			}
+			"RoundRespawn_Offset"
+			{
+				"windows"		"15" // 0xF
+				"linux"			"25" // 0x19
+			}
+			"RoundRespawn_Byte" // JNZ => JNS
+			{
+				"windows"		"117" // 0x75
+				"linux"			"117" // 0x75
 			}
 		}
 
