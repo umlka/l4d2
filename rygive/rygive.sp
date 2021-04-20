@@ -1268,6 +1268,8 @@ void TeleportToSurvivor(int client)
 	int iTarget = GetTeleportTarget(client);
 	if(iTarget != -1)
 	{
+		ForceCrouch(client);
+
 		float vPos[3];
 		GetClientAbsOrigin(iTarget, vPos);
 		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
