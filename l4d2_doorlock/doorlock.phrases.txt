@@ -1,0 +1,48 @@
+"Phrases"
+{
+	//Chat items
+	"DL_Moveout"
+	{
+		"en"			"Move out"
+		"ru"			"Выходите"
+		"chi"			"已解锁，可以开始."
+	}
+	"DL_Locked"
+	{
+		"en"			"Door locked. Please wait: %i"
+		"ru"			"Дверь заблокирована. Пожалуйста, подождите: %i"
+		"chi"			"安全门已锁定，请等待：%i秒."
+	}
+	"DL_Frozen"
+	{
+		"en"			"Please wait: %i"
+		"ru"			"Пожалуйста, подождите: %i"
+		"chi"			"已冻结，请等待：%i秒."
+	}
+
+	//Menu items
+	"DL_Menu_Header"
+	{
+		"en"			"---------Players status---------"
+		"ru"			"---------Статус игроков---------"
+		"chi"			"---------加载状态---------"
+	}
+	"DL_Menu_Connecting"
+	{
+		"en"			"CONNECTING"
+		"ru"			"ПОДКЛЮЧАЮТСЯ"
+		"chi"			"连接中"
+	}
+	"DL_Menu_Ingame"
+	{
+		"en"			"INGAME"
+		"ru"			"В ИГРЕ"
+		"chi"			"游戏中"
+	}
+	"DL_Menu_Fail"
+	{
+		"en"			"FAIL"
+		"ru"			"НЕУДАЧА"
+		"chi"			"失败"
+	}
+}
