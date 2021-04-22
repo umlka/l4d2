@@ -64,8 +64,6 @@ public void OnPluginStart()
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_team", Event_PlayerTeam);
-	HookEvent("player_bot_replace", Event_PlayerBotReplace);
-	HookEvent("bot_player_replace", Event_BotPlayerReplace);
 
 	//AutoExecConfig(true, "l4d2_doorlock");
 }
@@ -112,11 +110,13 @@ public void OnMapEnd()
 
 public Action OnPlayerRunCmd(int client)
 {
-	if(g_bIsFreezeAllowed && (IsCountDownStopped() || IsCountDownStoppedOrRunning()))
-	{
-		if(IsClientInGame(client) && GetClientTeam(client) == 2)
-			SetEntityMoveType(client, MOVETYPE_NONE);
-	}
+	if(!g_bIsFreezeAllowed || !IsCountDownStoppedOrRunning())
+		return Plugin_Continue;
+
+	if(GetClientTeam(client) == 2)
+		SetEntityMoveType(client, MOVETYPE_NONE);
+		
+	return Plugin_Continue;
 }
 
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -149,6 +149,19 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client && IsClientInGame(client) && GetClientTeam(client) == 2)
 		SetEntityMoveType(client, MOVETYPE_NONE);
+}
+
+public void Event_PlayerTeam(Event event, char[] event_name, bool dontBroadcast)
+{
+	if(!IsCountDownStoppedOrRunning())
+		return;
+
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
+		return;
+		
+	g_iClientTimeout[client] = 0;
+	g_bIsClientLoading[client] = false;
 }
 
 public Action Timer_StartSequence01(Handle timer)
@@ -193,42 +206,28 @@ public Action Timer_StartSequence02(Handle timer)
 	}
 }
 
-public void Event_PlayerTeam(Event event, char[] event_name, bool dontBroadcast)
+public Action LoadingTimer(Handle timer)
 {
-	if(!IsCountDownStoppedOrRunning())
-		return;
-
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
-		return;
-		
-	g_iClientTimeout[client] = 0;
-	g_bIsClientLoading[client] = false;
-}
-
-public Action Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast)
-{
-	if(!g_bIsFreezeAllowed || (g_bIsFreezeAllowed && !IsCountDownStoppedOrRunning()))
+	if(IsFinishedLoading())
 	{
-		int client = GetClientOfUserId(event.GetInt("player"));
-		if(IsClientInGame(client)) 
-			SetEntityMoveType(client, MOVETYPE_WALK);
-	}
-}
+		if(!g_bIsFreezeAllowed) 
+			UnFreezePlayers();
 
-public Action Event_PlayerBotReplace(Event event, const char[] name, bool dontBroadcast)
-{
-	if(IsCountDownStoppedOrRunning() || IsCountDownStopped())
-	{
-		int bot = GetClientOfUserId(event.GetInt("bot"));
-		int client = GetClientOfUserId(event.GetInt("player"));
-	
-		if(IsClientInGame(bot)) 
-			SetEntityMoveType(bot, MOVETYPE_NONE);
+		if(!IsCountDownRunning())
+		{
+			if(!g_bIsFreezeAllowed)
+				SurvivorBotsStart();
 
-		if(IsClientInGame(client)) 
-			SetEntityMoveType(client, MOVETYPE_WALK);
+			g_iCountDown = 0;
+			CreateTimer(1.0, StartTimer, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+		}
+
+		return Plugin_Stop;
 	}
+	else 
+		g_iCountDown = -1;
+
+	return Plugin_Continue;
 }
 
 public Action StartTimer(Handle timer)
@@ -263,30 +262,6 @@ public Action StartTimer(Handle timer)
 		PlaySound(SOUND_COUNTDOWN);
 		g_iCountDown++;
 	}
-	return Plugin_Continue;
-}
-
-public Action LoadingTimer(Handle timer)
-{
-	if(IsFinishedLoading())
-	{
-		if(!g_bIsFreezeAllowed) 
-			UnFreezePlayers();
-
-		if(!IsCountDownRunning())
-		{
-			if(!g_bIsFreezeAllowed)
-				SurvivorBotsStart();
-
-			g_iCountDown = 0;
-			CreateTimer(1.0, StartTimer, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
-		}
-
-		return Plugin_Stop;
-	}
-	else 
-		g_iCountDown = -1;
-
 	return Plugin_Continue;
 }
 
@@ -530,6 +505,12 @@ public void OnFirst(const char[] output, int entity, int activator, float delay)
 	vDir[1] = vAng[1] < 270.0 ? 10.0 : -10.0 * dist;
 	vDir[2] = 0.0;
 
+	SetEntityRenderFx(entity, RENDERFX_FADE_FAST);
+	AcceptEntityInput(entity, "DisableCollision");
+	SetEntProp(entity, Prop_Send, "m_noGhostCollision", 1, 1);
+	SetEntProp(entity, Prop_Data, "m_CollisionGroup", 0x0004);
+	SetEntProp(entity, Prop_Data, "m_iEFlags", 0);
+
 	TeleportEntity(door, vPos, vAng, vDir);
 
 	// Stop movement
@@ -539,11 +520,6 @@ public void OnFirst(const char[] output, int entity, int activator, float delay)
 	AcceptEntityInput(door, "FireUser1");
 
 	//AcceptEntityInput(entity, "Kill");
-	SetEntityRenderFx(entity, RENDERFX_FADE_FAST);
-	AcceptEntityInput(entity, "DisableCollision");
-	SetEntProp(entity, Prop_Send, "m_noGhostCollision", 1, 1);
-	SetEntProp(entity, Prop_Data, "m_CollisionGroup", 0x0004);
-	SetEntProp(entity, Prop_Data, "m_iEFlags", 0);
 
 	EmitSoundToAll(GetRandomInt(0, 1) ? SOUND_BREAK1 : SOUND_BREAK2, door);
 }
@@ -556,19 +532,14 @@ public void OnFullyOpened(const char[] output, int entity, int activator, float 
 	DispatchKeyValue(entity, "spawnflags", "585728");
 }
 
-bool IsCountDownStoppedOrRunning()
-{
-	return g_iCountDown != 0;
-}
-
-bool IsCountDownStopped()
-{
-	return g_iCountDown == -1;
-}
-
 bool IsCountDownRunning()
 {
 	return g_iCountDown > 0;
+}
+
+bool IsCountDownStoppedOrRunning()
+{
+	return g_iCountDown != 0;
 }
 
 bool IsAnyClientLoading()
