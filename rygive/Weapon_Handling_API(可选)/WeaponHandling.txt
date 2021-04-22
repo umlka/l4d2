@@ -49,6 +49,16 @@
 				"windows"	"17" //0x74 -> 0xEB
 				"linux"		"23" //0x74 -> 0xEB
 			}
+			"CRifle_Desert::PrimaryAttack"
+			{
+				"windows"	"282"
+				"linux"		"283"
+			}
+			"CRifle_Desert::BurstTimes_StartOffset"
+			{
+				"windows"	"6128"
+				"linux"		"6132"
+			}
 		}
 		"Addresses"
 		{
