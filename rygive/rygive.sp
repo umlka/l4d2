@@ -2600,7 +2600,7 @@ public void WH_OnGetRateOfFire(int client, int weapon, L4D2WeaponType weapontype
 {
 	switch(weapontype)
 	{
-		case L4D2WeaponType_Rifle, L4D2WeaponType_RifleDesert, L4D2WeaponType_RifleSg552, 
+		case L4D2WeaponType_Rifle, L4D2WeaponType_RifleSg552, 
 			L4D2WeaponType_SMG, L4D2WeaponType_RifleAk47, L4D2WeaponType_SMGMp5, 
 			L4D2WeaponType_SMGSilenced, L4D2WeaponType_RifleM60:
 		{
