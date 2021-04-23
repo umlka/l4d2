@@ -430,18 +430,19 @@ void FindStartSafeDoor()
 		GetEntPropVector(entity, Prop_Send, "m_vecMaxs", vMaxs);
 		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
 
-		vMins[0] -= 200.0;
-		vMins[1] -= 200.0;
-		vMins[2] -= 200.0;
+		vMins[0] -= 100.0;
+		vMins[1] -= 100.0;
+		vMins[2] -= 100.0;
 	
-		vMaxs[0] += 200.0;
-		vMaxs[1] += 200.0;
-		vMaxs[2] += 200.0;
+		vMaxs[0] += 100.0;
+		vMaxs[1] += 100.0;
+		vMaxs[2] += 100.0;
 	
 		AddVectors(vOrigin, vMins, vMins);
 		AddVectors(vOrigin, vMaxs, vMaxs);
 	}
 
+	//char sName[128];
 	entity = MaxClients + 1;
 	while((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE)
 	{
@@ -451,9 +452,18 @@ void FindStartSafeDoor()
 		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vOrigin);
 		if(g_iStartSafeDoor == 0 && (iChangelevel == 0 || !IsDotInEndArea(vOrigin, vMins, vMaxs)))
 		{
+			/*GetEntPropString(entity, Prop_Data, "m_iName", sName, sizeof(sName));
+			if(strcmp(sName, "checkpoint_exit") == 0)
+			{
+				g_iStartSafeDoor = EntIndexToEntRef(entity);
+				HookSingleEntityOutput(entity, "OnOpen", OnFirst);
+				HookSingleEntityOutput(entity, "OnFullyOpen", OnFullyOpened, true);
+				break;
+			}*/
 			g_iStartSafeDoor = EntIndexToEntRef(entity);
 			HookSingleEntityOutput(entity, "OnOpen", OnFirst);
 			HookSingleEntityOutput(entity, "OnFullyOpen", OnFullyOpened, true);
+			break;
 		}
 	}
 }
