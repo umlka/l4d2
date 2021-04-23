@@ -49,8 +49,8 @@ public void OnPluginStart()
 
 	CreateConVar("l4d2_dlock_version", PLUGIN_VERSION, "Plugin version", FCVAR_SPONLY|FCVAR_NOTIFY|FCVAR_REPLICATED);
 	g_hCvarFreezeNodoor = CreateConVar("l4d2_dlock_freezenodoor", "1", "Freeze survivors if start saferoom door is absent");
-	g_hCvarPrepareTime1r = CreateConVar("l4d2_dlock_prepare1st", "20", "How many seconds plugin will wait after all clients have loaded before starting first round on a map");
-	g_hCvarPrepareTime2r = CreateConVar("l4d2_dlock_prepare2nd", "10", "How many seconds plugin will wait after all clients have loaded before starting second round on a map");
+	g_hCvarPrepareTime1r = CreateConVar("l4d2_dlock_prepare1st", "7", "How many seconds plugin will wait after all clients have loaded before starting first round on a map");
+	g_hCvarPrepareTime2r = CreateConVar("l4d2_dlock_prepare2nd", "7", "How many seconds plugin will wait after all clients have loaded before starting second round on a map");
 	g_hCvarClientTimeOut = CreateConVar("l4d2_dlock_timeout", "45", "How many seconds plugin will wait after a map starts before giving up on waiting for a client");
 	g_hCvarBreakTheDoor = CreateConVar("l4d2_dlock_weakdoor", "1", "Saferoom door will be breaked, once opened.");
 	g_hCvarDisplayPanel = CreateConVar("l4d2_dlock_displaypanel", "2", "Display players state panel. 0-disabled, 1-hide iFailed, 2-full info");
@@ -133,22 +133,15 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 0 && g_iPlayerSpawn == 1)
-		CreateTimer(0.1, Timer_StartSequence01, _, TIMER_FLAG_NO_MAPCHANGE);
+		InitPlugin();
 	g_iRoundStart = 1;
 }
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
-		CreateTimer(0.1, Timer_StartSequence01, _, TIMER_FLAG_NO_MAPCHANGE);
+		InitPlugin();
 	g_iPlayerSpawn = 1;
-
-	if(!g_bIsFreezeAllowed || !IsCountDownStoppedOrRunning())
-		return;
-
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client && IsClientInGame(client) && GetClientTeam(client) == 2)
-		SetEntityMoveType(client, MOVETYPE_NONE);
 }
 
 public void Event_PlayerTeam(Event event, char[] event_name, bool dontBroadcast)
@@ -164,7 +157,7 @@ public void Event_PlayerTeam(Event event, char[] event_name, bool dontBroadcast)
 	g_bIsClientLoading[client] = false;
 }
 
-public Action Timer_StartSequence01(Handle timer)
+void InitPlugin()
 {
 	if(g_bIsAllowedGameMode)
 	{
@@ -176,13 +169,13 @@ public Action Timer_StartSequence01(Handle timer)
 
 		SurvivorBotsStop();
 		FindStartSafeDoor();
-		CreateTimer(0.2, Timer_StartSequence02, _, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(0.2, Timer_StartSequence, _, TIMER_FLAG_NO_MAPCHANGE);
 	}
 	else 
 		SurvivorBotsStart();
 }
 
-public Action Timer_StartSequence02(Handle timer)
+public Action Timer_StartSequence(Handle timer)
 {
 	g_iCountDown = -1;
 
@@ -442,36 +435,21 @@ void FindStartSafeDoor()
 		AddVectors(vOrigin, vMaxs, vMaxs);
 	}
 
-	//char sName[128];
 	entity = MaxClients + 1;
 	while((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE)
 	{
-		if(!IsValidDoorFlags(entity))
-			continue;
-
-		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vOrigin);
-		if(g_iStartSafeDoor == 0 && (iChangelevel == 0 || !IsDotInEndArea(vOrigin, vMins, vMaxs)))
+		if(g_iStartSafeDoor == 0 && GetEntProp(entity, Prop_Send, "m_bLocked") == 1 && GetEntProp(entity, Prop_Data, "m_eDoorState") == 0)
 		{
-			/*GetEntPropString(entity, Prop_Data, "m_iName", sName, sizeof(sName));
-			if(strcmp(sName, "checkpoint_exit") == 0)
+			GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vOrigin);
+			if(iChangelevel == 0 || !IsDotInEndArea(vOrigin, vMins, vMaxs))
 			{
 				g_iStartSafeDoor = EntIndexToEntRef(entity);
-				HookSingleEntityOutput(entity, "OnOpen", OnFirst);
+				HookSingleEntityOutput(entity, "OnOpen", OnFirst, true);
 				HookSingleEntityOutput(entity, "OnFullyOpen", OnFullyOpened, true);
 				break;
-			}*/
-			g_iStartSafeDoor = EntIndexToEntRef(entity);
-			HookSingleEntityOutput(entity, "OnOpen", OnFirst);
-			HookSingleEntityOutput(entity, "OnFullyOpen", OnFullyOpened, true);
-			break;
+			}
 		}
 	}
-}
-
-bool IsValidDoorFlags(int entity)
-{
-    int flags = GetEntProp(entity, Prop_Data, "m_spawnflags");
-    return (flags & 8192 != 0) && (flags & 32768 == 0);
 }
 
 stock bool IsDotInEndArea(const float vDot[3], const float vMins[3], const float vMaxs[3])
