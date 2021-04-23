@@ -506,8 +506,9 @@ public void OnFirst(const char[] output, int entity, int activator, float delay)
 	vDir[2] = 0.0;
 
 	SetEntityRenderFx(entity, RENDERFX_FADE_FAST);
+	//Lux
 	AcceptEntityInput(entity, "DisableCollision");
-	SetEntProp(entity, Prop_Send, "m_noGhostCollision", 1, 1);
+	SetEntProp(entity, Prop_Send, "m_noGhostCollision", 1);
 	SetEntProp(entity, Prop_Data, "m_CollisionGroup", 0x0004);
 	SetEntProp(entity, Prop_Data, "m_iEFlags", 0);
 
