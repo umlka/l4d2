@@ -388,13 +388,13 @@ void GetEndAreaEntityVectors(int entity)
 	AddVectors(vOrigin, g_vMins, g_vMins);
 	AddVectors(vOrigin, g_vMaxs, g_vMaxs);
 	
-	g_vScaleMins[0] = vMins[0] - 200.0;
-	g_vScaleMins[1] = vMins[1] - 200.0;
-	g_vScaleMins[2] = vMins[2] - 200.0;
+	g_vScaleMins[0] = vMins[0] - 100.0;
+	g_vScaleMins[1] = vMins[1] - 100.0;
+	g_vScaleMins[2] = vMins[2] - 100.0;
 	
-	g_vScaleMaxs[0] = vMaxs[0] + 200.0;
-	g_vScaleMaxs[1] = vMaxs[1] + 200.0;
-	g_vScaleMaxs[2] = vMaxs[2] + 200.0;
+	g_vScaleMaxs[0] = vMaxs[0] + 100.0;
+	g_vScaleMaxs[1] = vMaxs[1] + 100.0;
+	g_vScaleMaxs[2] = vMaxs[2] + 100.0;
 	
 	AddVectors(vOrigin, g_vScaleMins, g_vScaleMins);
 	AddVectors(vOrigin, g_vScaleMaxs, g_vScaleMaxs);
@@ -414,9 +414,15 @@ void FindSafeRoomDoors()
 
 		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vOrigin);
 		if(g_iChangelevel && IsDotInScaleEndArea(vOrigin))
-			g_iLastSafeDoor = EntIndexToEntRef(entity);
+		{
+			if(g_iLastSafeDoor == 0)
+				g_iLastSafeDoor = EntIndexToEntRef(entity);
+		}
 		/*else
-			g_iStartSafeDoor = EntIndexToEntRef(entity);*/
+		{
+			if(g_iStartSafeDoor == 0)
+				g_iStartSafeDoor = EntIndexToEntRef(entity);
+		}*/
 	}
 }
 
