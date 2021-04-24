@@ -254,42 +254,14 @@ stock void SpawnMelee(const char[] sClass, const float vPos[3], const float vAng
 
 stock void GetMeleeClasses()
 {
-	g_iMeleeClassCount = 0;
-
-	int i;
-	for(i = 0; i < 16; i++)
-		g_sMeleeClass[i][0] = 0;
-	
 	int iMeleeStringTable = FindStringTable("MeleeWeapons");
-	int iCount = GetStringTableNumStrings(iMeleeStringTable);
-	
-	char sMeleeClass[16][32];
-	for(i = 0; i < iCount; i++)
+	g_iMeleeClassCount = GetStringTableNumStrings(iMeleeStringTable);
+
+	for(int i; i < g_iMeleeClassCount; i++)
 	{
-		ReadStringTable(iMeleeStringTable, i, sMeleeClass[i], sizeof(sMeleeClass[]));
-		if(IsVaidMelee(sMeleeClass[i]))
-		{
-			g_iMeleeRandomSpawn[g_iMeleeClassCount] = g_iMeleeClassCount;
-			strcopy(g_sMeleeClass[g_iMeleeClassCount], sizeof(g_sMeleeClass[]), sMeleeClass[i]);
-			g_iMeleeClassCount++;
-		}
+		g_iMeleeRandomSpawn[i] = i;
+		ReadStringTable(iMeleeStringTable, i, g_sMeleeClass[i], sizeof(g_sMeleeClass[]));
 	}
-}
-
-stock bool IsVaidMelee(const char[] sWeapon)
-{
-	bool bIsVaid = false;
-	int iEntity = CreateEntityByName("weapon_melee");
-	DispatchKeyValue(iEntity, "melee_script_name", sWeapon);
-	DispatchSpawn(iEntity);
-
-	char sModelName[PLATFORM_MAX_PATH];
-	GetEntPropString(iEntity, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
-	if(StrContains(sModelName, "hunter", false) == -1)
-		bIsVaid  = true;
-
-	RemoveEdict(iEntity);
-	return bIsVaid;
 }
 
 stock void GetScriptName(const char[] sMeleeClass, char[] sScriptName)
