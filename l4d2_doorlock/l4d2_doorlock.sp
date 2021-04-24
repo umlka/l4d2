@@ -9,27 +9,38 @@
 #define SOUND_MOVEOUT 	"ui/survival_teamrec.wav"
 #define SOUND_BREAK1	"physics/metal/metal_box_break1.wav"
 #define SOUND_BREAK2	"physics/metal/metal_box_break2.wav"
+#define CVAR_FLAGS		FCVAR_NOTIFY
 
-ConVar g_hGameMode;
+ConVar g_hCvarAllow;
+ConVar g_hCvarMPGameMode;
+ConVar g_hCvarModes;
+ConVar g_hCvarModesOff;
+ConVar g_hCvarModesTog;
 ConVar g_hCvarFreezeNodoor;
 ConVar g_hCvarDisplayMode;
-ConVar g_hCvarGameModeEnabled;
 ConVar g_hCvarBreakTheDoor;
 ConVar g_hCvarPrepareTime1r;
 ConVar g_hCvarPrepareTime2r;
 ConVar g_hCvarClientTimeOut;
 ConVar g_hCvarDisplayPanel;
 
+bool g_bCvarAllow;
+bool g_bMapStarted;
 bool g_bIsFirstRound;
 bool g_bIsFreezeAllowed;
-bool g_bIsDoorBreakeble;
-bool g_bIsAllowedGameMode;
+bool g_bCvarFreezeNodoor;
 bool g_bIsClientLoading[MAXPLAYERS + 1];
 
 int g_iCountDown;
 int g_iRoundStart;
 int g_iPlayerSpawn;
 int g_iStartSafeDoor;
+int g_iCvarPrepareTime1r;
+int g_iCvarPrepareTime2r;
+int g_iCvarClientTimeOut;
+int g_iCvarBreakTheDoor;
+int g_iCvarDisplayPanel;
+int g_iCvarDisplayMode;
 int g_iClientTimeout[MAXPLAYERS + 1];
 
 public Plugin myinfo =
@@ -45,65 +56,213 @@ public void OnPluginStart()
 {
 	LoadTranslations("doorlock.phrases");
 
-	CreateConVar("l4d2_dlock_version", PLUGIN_VERSION, "Plugin version", FCVAR_SPONLY|FCVAR_NOTIFY|FCVAR_REPLICATED);
+	g_hCvarAllow = CreateConVar("l4d2_dlock_allow", "1", "0=Plugin off, 1=Plugin on.", CVAR_FLAGS);
+	g_hCvarModes = CreateConVar("l4d2_dlock_modes", "", "Turn on the plugin in these game modes, separate by commas (no spaces). (Empty = all).", CVAR_FLAGS);
+	g_hCvarModesOff = CreateConVar("l4d2_dlock_modes_off", "", "Turn off the plugin in these game modes, separate by commas (no spaces). (Empty = none).", CVAR_FLAGS);
+	g_hCvarModesTog = CreateConVar("l4d2_dlock_modes_tog", "0", "Turn on the plugin in these game modes. 0=All, 1=Coop, 2=Survival, 4=Versus, 8=Scavenge. Add numbers together.", CVAR_FLAGS);
 	g_hCvarFreezeNodoor = CreateConVar("l4d2_dlock_freezenodoor", "1", "Freeze survivors if start saferoom door is absent");
-	g_hCvarPrepareTime1r = CreateConVar("l4d2_dlock_prepare1st", "7", "How many seconds plugin will wait after all clients have loaded before starting first round on a map");
-	g_hCvarPrepareTime2r = CreateConVar("l4d2_dlock_prepare2nd", "7", "How many seconds plugin will wait after all clients have loaded before starting second round on a map");
-	g_hCvarClientTimeOut = CreateConVar("l4d2_dlock_timeout", "45", "How many seconds plugin will wait after a map starts before giving up on waiting for a client");
-	g_hCvarBreakTheDoor = CreateConVar("l4d2_dlock_weakdoor", "1", "Saferoom door will be breaked, once opened.");
-	g_hCvarDisplayPanel = CreateConVar("l4d2_dlock_displaypanel", "2", "Display players state panel. 0-disabled, 1-hide iLoadFailed, 2-full info");
-	g_hCvarDisplayMode = CreateConVar("l4d2_dlock_displaymode", "1", "Set the display mode for the countdown. (0-off,1-hint, 2-center, 3-chat. any other value to hide countdown)");
-	g_hCvarGameModeEnabled = CreateConVar("l4d2_dlock_gamemodeactive", "coop,versus", "Set the game mode for which the plugin should be activated");
+	g_hCvarPrepareTime1r = CreateConVar("l4d2_dlock_prepare1st", "7", "How many seconds plugin will wait after all clients have loaded before starting first round on a map", CVAR_FLAGS);
+	g_hCvarPrepareTime2r = CreateConVar("l4d2_dlock_prepare2nd", "7", "How many seconds plugin will wait after all clients have loaded before starting second round on a map", CVAR_FLAGS);
+	g_hCvarClientTimeOut = CreateConVar("l4d2_dlock_timeout", "45", "How many seconds plugin will wait after a map starts before giving up on waiting for a client", CVAR_FLAGS);
+	g_hCvarBreakTheDoor = CreateConVar("l4d2_dlock_weakdoor", "1", "Saferoom door will be breaked, once opened.", CVAR_FLAGS);
+	g_hCvarDisplayPanel = CreateConVar("l4d2_dlock_displaypanel", "2", "Display players state panel. 0-disabled, 1-hide failed, 2-full info", CVAR_FLAGS);
+	g_hCvarDisplayMode = CreateConVar("l4d2_dlock_displaymode", "1", "Set the display mode for the countdown. (0-off,1-hint, 2-center, 3-chat. any other value to hide countdown)", CVAR_FLAGS);
+	CreateConVar("l4d2_dlock_version", PLUGIN_VERSION, "Plugin version", FCVAR_SPONLY|FCVAR_NOTIFY|FCVAR_REPLICATED);
 
-	g_hGameMode = FindConVar("mp_gamemode");
-	g_hGameMode.AddChangeHook(ConVarChanged_GameMode);
+	g_hCvarMPGameMode = FindConVar("mp_gamemode");
+	g_hCvarMPGameMode.AddChangeHook(ConVarChanged_Allow);
+	g_hCvarModes.AddChangeHook(ConVarChanged_Allow);
+	g_hCvarModesOff.AddChangeHook(ConVarChanged_Allow);
+	g_hCvarModesTog.AddChangeHook(ConVarChanged_Allow);
+	g_hCvarAllow.AddChangeHook(ConVarChanged_Allow);
 	
-	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-	HookEvent("player_spawn", Event_PlayerSpawn);
-	HookEvent("player_team", Event_PlayerTeam);
+	g_hCvarFreezeNodoor.AddChangeHook(ConVarChanged_Cvars);
+	g_hCvarPrepareTime1r.AddChangeHook(ConVarChanged_Cvars);
+	g_hCvarPrepareTime2r.AddChangeHook(ConVarChanged_Cvars);
+	g_hCvarClientTimeOut.AddChangeHook(ConVarChanged_Cvars);
+	g_hCvarBreakTheDoor.AddChangeHook(ConVarChanged_Cvars);
+	g_hCvarDisplayPanel.AddChangeHook(ConVarChanged_Cvars);
+	g_hCvarDisplayMode.AddChangeHook(ConVarChanged_Cvars);
 
 	//AutoExecConfig(true, "l4d2_doorlock");
 }
 
 public void OnConfigsExecuted()
 {
-	GetModeCvars();
+	IsAllowed();
 }
 
-public void ConVarChanged_GameMode(ConVar convar, const char[] oldValue, const char[] newValue)
+public void ConVarChanged_Allow(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	GetModeCvars();
+	IsAllowed();
 }
 
-void GetModeCvars()
+public void ConVarChanged_Cvars(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	char sGameMode[64], sEnabledModes[256];
-	g_hGameMode.GetString(sGameMode, sizeof(sGameMode));
-	g_hCvarGameModeEnabled.GetString(sEnabledModes, sizeof(sEnabledModes));
-	g_bIsAllowedGameMode = !!(StrContains(sEnabledModes, sGameMode) != -1);
+	GetCvars();
 }
 
-public void OnClientDisconnect(int client)
+void GetCvars()
 {
-	g_iClientTimeout[client] = 0;
-	g_bIsClientLoading[client] = false;
+	int last = g_iCvarBreakTheDoor;
+
+	g_bCvarFreezeNodoor = g_hCvarFreezeNodoor.BoolValue;
+	g_iCvarPrepareTime1r = g_hCvarPrepareTime1r.IntValue;
+	g_iCvarPrepareTime2r = g_hCvarPrepareTime2r.IntValue;
+	g_iCvarClientTimeOut = g_hCvarClientTimeOut.IntValue;
+	g_iCvarBreakTheDoor = g_hCvarBreakTheDoor.IntValue;
+	g_iCvarDisplayPanel = g_hCvarDisplayPanel.IntValue;
+	g_iCvarDisplayMode = g_hCvarDisplayMode.IntValue;
+
+	if(last != g_iCvarBreakTheDoor)
+	{
+		if(IsValidEntRef(g_iStartSafeDoor))
+		{
+			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnOpen", OnFirst);
+			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnFullyOpen", OnFullyOpened);
+		}
+
+		InitDoor();
+	}
+}
+
+//Silvers
+void IsAllowed()
+{
+	bool bCvarAllow = g_hCvarAllow.BoolValue;
+	bool bAllowMode = IsAllowedGameMode();
+	GetCvars();
+
+	if(g_bCvarAllow == false && bCvarAllow == true && bAllowMode == true)
+	{
+		g_bCvarAllow = true;
+		InitDoor();
+		HookEvents(true);
+	}
+	else if(g_bCvarAllow == true && (bCvarAllow == false || bAllowMode == false))
+	{
+		g_bCvarAllow = false;
+		HookEvents(false);
+
+		if(IsValidEntRef(g_iStartSafeDoor))
+		{
+			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnOpen", OnFirst);
+			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnFullyOpen", OnFullyOpened);
+		}
+	}
+}
+
+int g_iCurrentMode;
+bool IsAllowedGameMode()
+{
+	if(g_hCvarMPGameMode == null)
+		return false;
+
+	int iCvarModesTog = g_hCvarModesTog.IntValue;
+	if(iCvarModesTog != 0)
+	{
+		if(g_bMapStarted == false)
+			return false;
+
+		g_iCurrentMode = 0;
+
+		int entity = CreateEntityByName("info_gamemode");
+		if(IsValidEntity(entity))
+		{
+			DispatchSpawn(entity);
+			HookSingleEntityOutput(entity, "OnCoop", OnGamemode, true);
+			HookSingleEntityOutput(entity, "OnSurvival", OnGamemode, true);
+			HookSingleEntityOutput(entity, "OnVersus", OnGamemode, true);
+			HookSingleEntityOutput(entity, "OnScavenge", OnGamemode, true);
+			ActivateEntity(entity);
+			AcceptEntityInput(entity, "PostSpawnActivate");
+			if(IsValidEntity(entity)) // Because sometimes "PostSpawnActivate" seems to kill the ent.
+				RemoveEdict(entity); // Because multiple plugins creating at once, avoid too many duplicate ents in the same frame
+		}
+
+		if(g_iCurrentMode == 0)
+			return false;
+
+		if(!(iCvarModesTog & g_iCurrentMode))
+			return false;
+	}
+
+	char sGameModes[64], sGameMode[64];
+	g_hCvarMPGameMode.GetString(sGameMode, sizeof(sGameMode));
+	Format(sGameMode, sizeof(sGameMode), ",%s,", sGameMode);
+
+	g_hCvarModes.GetString(sGameModes, sizeof(sGameModes));
+	if(sGameModes[0])
+	{
+		Format(sGameModes, sizeof(sGameModes), ",%s,", sGameModes);
+		if(StrContains(sGameModes, sGameMode, false) == -1)
+			return false;
+	}
+
+	g_hCvarModesOff.GetString(sGameModes, sizeof(sGameModes));
+	if(sGameModes[0])
+	{
+		Format(sGameModes, sizeof(sGameModes), ",%s,", sGameModes);
+		if(StrContains(sGameModes, sGameMode, false) != -1)
+			return false;
+	}
+
+	return true;
+}
+
+public void OnGamemode(const char[] output, int caller, int activator, float delay)
+{
+	if(strcmp(output, "OnCoop") == 0)
+		g_iCurrentMode = 1;
+	else if(strcmp(output, "OnSurvival") == 0)
+		g_iCurrentMode = 2;
+	else if(strcmp(output, "OnVersus") == 0)
+		g_iCurrentMode = 4;
+	else if(strcmp(output, "OnScavenge") == 0)
+		g_iCurrentMode = 8;
+}
+
+void HookEvents(bool bHook)
+{
+	if(bHook)
+	{
+		HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+		HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+		HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_PostNoCopy);
+		HookEvent("player_team", Event_PlayerTeam);
+	}
+	else
+	{
+		UnhookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+		UnhookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+		UnhookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_PostNoCopy);
+		UnhookEvent("player_team", Event_PlayerTeam);
+	}
 }
 
 public void OnMapStart()
 {
+	g_bMapStarted = true;
 	g_bIsFirstRound = true;
-	
+
 	PrecacheSound(SOUND_COUNTDOWN);
 	PrecacheSound(SOUND_MOVEOUT);
+	PrecacheSound(SOUND_BREAK1);
+	PrecacheSound(SOUND_BREAK2);
 }
 
 public void OnMapEnd()
 {
+	Reset();
+
+	g_bMapStarted = false;
+}
+
+void Reset()
+{
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
 	g_bIsFreezeAllowed = false;
-	g_bIsDoorBreakeble = false;
 }
 
 public Action OnPlayerRunCmd(int client)
@@ -117,29 +276,44 @@ public Action OnPlayerRunCmd(int client)
 	return Plugin_Continue;
 }
 
+public void OnClientDisconnect(int client)
+{
+	g_iClientTimeout[client] = 0;
+	g_bIsClientLoading[client] = false;
+}
+
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
-	OnMapEnd();
+	Reset();
 
-	if(g_bIsAllowedGameMode)
-	{
-		if(g_bIsFirstRound) 
-			g_bIsFirstRound = false;
-	}
+	if(g_bIsFirstRound) 
+		g_bIsFirstRound = false;
 }
 
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 0 && g_iPlayerSpawn == 1)
-		InitPlugin();
+		Start();
 	g_iRoundStart = 1;
 }
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
-		InitPlugin();
+		Start();
 	g_iPlayerSpawn = 1;
+}
+
+void Start()
+{
+	for(int i = 1; i <= MaxClients; i++)
+	{
+		g_iClientTimeout[i] = 0;
+		g_bIsClientLoading[i] = true;
+	}
+
+	InitDoor();
+	CreateTimer(1.0, Timer_StartSequence, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void Event_PlayerTeam(Event event, char[] event_name, bool dontBroadcast)
@@ -155,37 +329,17 @@ public void Event_PlayerTeam(Event event, char[] event_name, bool dontBroadcast)
 	g_bIsClientLoading[client] = false;
 }
 
-void InitPlugin()
-{
-	if(g_bIsAllowedGameMode)
-	{
-		for(int i = 1; i <= MaxClients; i++)
-		{
-			g_iClientTimeout[i] = 0;
-			g_bIsClientLoading[i] = true;
-		}
-
-		SurvivorBotsStop();
-		FindStartSafeDoor();
-		CreateTimer(1.0, Timer_StartSequence, _, TIMER_FLAG_NO_MAPCHANGE);
-	}
-	else 
-		SurvivorBotsStart();
-}
-
 public Action Timer_StartSequence(Handle timer)
 {
 	g_iCountDown = -1;
-
-	if(g_hCvarBreakTheDoor.BoolValue && IsValidEntRef(g_iStartSafeDoor))
-		g_bIsDoorBreakeble = true;
+	SurvivorBotsStop();
 
 	if(IsValidEntRef(g_iStartSafeDoor))
 	{
 		LockTheDoor();
 		CreateTimer(1.0, LoadingTimer, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 	}
-	else if(g_hCvarFreezeNodoor.BoolValue)
+	else if(g_bCvarFreezeNodoor)
 	{
 		g_bIsFreezeAllowed = true;
 		CreateTimer(1.0, LoadingTimer, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
@@ -228,7 +382,7 @@ public Action StartTimer(Handle timer)
 		SurvivorBotsStop();
 		return Plugin_Stop;
 	}
-	else if(g_iCountDown >= (g_bIsFirstRound ? g_hCvarPrepareTime1r.IntValue : g_hCvarPrepareTime2r.IntValue))
+	else if(g_iCountDown >= (g_bIsFirstRound ? g_iCvarPrepareTime1r : g_iCvarPrepareTime2r))
 	{
 		g_iCountDown = 0;
 		PrintTextAll("%t", "DL_Moveout");
@@ -246,9 +400,9 @@ public Action StartTimer(Handle timer)
 	else
 	{
 		if(!g_bIsFreezeAllowed)
-			PrintTextAll("%t", "DL_Locked", (g_bIsFirstRound ? g_hCvarPrepareTime1r.IntValue : g_hCvarPrepareTime2r.IntValue) - g_iCountDown);
+			PrintTextAll("%t", "DL_Locked", (g_bIsFirstRound ? g_iCvarPrepareTime1r : g_iCvarPrepareTime2r) - g_iCountDown);
 		else
-			PrintTextAll("%t", "DL_Frozen", (g_bIsFirstRound ? g_hCvarPrepareTime1r.IntValue : g_hCvarPrepareTime2r.IntValue) - g_iCountDown);
+			PrintTextAll("%t", "DL_Frozen", (g_bIsFirstRound ? g_iCvarPrepareTime1r : g_iCvarPrepareTime2r) - g_iCountDown);
 
 		PlaySound(SOUND_COUNTDOWN);
 		g_iCountDown++;
@@ -272,14 +426,13 @@ void ShowStatusPanel()
 	int iLoading;
 	int iConnected;
 	int iLoadFailed;
-	int iTimelimit = g_hCvarClientTimeOut.IntValue;
 	for(i = 1; i <= MaxClients; i++) 
 	{
 		if(IsClientConnected(i) && !IsFakeClient(i)) 
 		{
 			if(g_bIsClientLoading[i]) 
 				iLoading++;
-			else if(g_iClientTimeout[i] >= iTimelimit) 
+			else if(g_iClientTimeout[i] >= g_iCvarClientTimeOut) 
 				iLoadFailed++;
 			else 
 				iConnected++;
@@ -329,7 +482,7 @@ void ShowStatusPanel()
 				{
 					if(IsClientConnected(i) && !IsFakeClient(i))
 					{
-						if(!g_bIsClientLoading[i] && g_iClientTimeout[i] < iTimelimit)
+						if(!g_bIsClientLoading[i] && g_iClientTimeout[i] < g_iCvarClientTimeOut)
 						{
 							iConnected++;
 							FormatEx(sInfo, sizeof(sInfo), "->%d. %N", iConnected, i);
@@ -339,7 +492,7 @@ void ShowStatusPanel()
 				}
 			}
 
-			if(g_hCvarDisplayPanel.IntValue > 1)
+			if(g_iCvarDisplayPanel > 1)
 			{
 				if(iLoadFailed)
 				{
@@ -351,7 +504,7 @@ void ShowStatusPanel()
 					{
 						if(IsClientConnected(i) && !IsFakeClient(i))
 						{
-							if(!g_bIsClientLoading[i] && g_iClientTimeout[i] >= iTimelimit)
+							if(!g_bIsClientLoading[i] && g_iClientTimeout[i] >= g_iCvarClientTimeOut)
 							{
 								iLoadFailed++;
 								FormatEx(sInfo, sizeof(sInfo), "->%d. %N", iLoadFailed, i);
@@ -375,14 +528,12 @@ public int PanelHandler(Menu menu, MenuAction action, int param1, int param2)
 
 void LockTheDoor()
 {
-	if(IsValidEntRef(g_iStartSafeDoor))
-		DispatchKeyValue(g_iStartSafeDoor, "spawnflags", "585728");
+	DispatchKeyValue(g_iStartSafeDoor, "spawnflags", "585728");
 }
 
 void UnlockTheDoor()
 {
-	if(IsValidEntRef(g_iStartSafeDoor))
-		DispatchKeyValue(g_iStartSafeDoor, "spawnflags", "8192");
+	DispatchKeyValue(g_iStartSafeDoor, "spawnflags", "8192");
 }
 
 void UnFreezePlayers()
@@ -397,10 +548,13 @@ void UnFreezePlayers()
 	}
 }
 
-void FindStartSafeDoor()
+void InitDoor()
 {
 	g_iStartSafeDoor = 0;
 	
+	if(g_iCvarBreakTheDoor == 0)
+		return;
+
 	int iChangelevel;
 	int entity = INVALID_ENT_REFERENCE;
 	if((entity = FindEntityByClassname(MaxClients + 1, "info_changelevel")) == INVALID_ENT_REFERENCE)
@@ -452,9 +606,6 @@ stock bool IsDotInEndArea(const float vDot[3], const float vMins[3], const float
 //https://forums.alliedmods.net/showthread.php?p=2700212
 public void OnFirst(const char[] output, int entity, int activator, float delay)
 {
-	if(!g_bIsDoorBreakeble)
-		return;
-
 	char sModel[64];
 	GetEntPropString(entity, Prop_Data, "m_ModelName", sModel, sizeof(sModel));
 
@@ -508,9 +659,6 @@ public void OnFirst(const char[] output, int entity, int activator, float delay)
 
 public void OnFullyOpened(const char[] output, int entity, int activator, float delay)
 {
-	if(!g_bIsDoorBreakeble)
-		return;
-		
 	DispatchKeyValue(entity, "spawnflags", "585728");
 }
 
@@ -549,7 +697,7 @@ bool IsFinishedLoading()
 						g_bIsClientLoading[i] = true;
 				}
 
-				if(g_iClientTimeout[i] == g_hCvarClientTimeOut.IntValue) 
+				if(g_iClientTimeout[i] == g_iCvarClientTimeOut) 
 					g_bIsClientLoading[i] = false;
 			}
 			else 
@@ -559,7 +707,7 @@ bool IsFinishedLoading()
 			g_bIsClientLoading[i] = false;
 	}
 
-	if(g_hCvarDisplayPanel.IntValue > 0 && g_bIsFirstRound)
+	if(g_iCvarDisplayPanel > 0 && g_bIsFirstRound)
 		ShowStatusPanel();
 
 	return !IsAnyClientLoading();
@@ -574,7 +722,7 @@ void PrintTextAll(const char[] format, any ...)
 		{
 			SetGlobalTransTarget(i);
 			VFormat(buffer, sizeof(buffer), format, 2);
-			switch(g_hCvarDisplayMode.IntValue)
+			switch(g_iCvarDisplayMode)
 			{
 				case 1:
 					PrintHintText(i, buffer);
