@@ -628,14 +628,15 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 	int player_userid = event.GetInt("player");
 	int bot = GetClientOfUserId(bot_userid);
 	int player = GetClientOfUserId(player_userid);
-	g_iPlayerBot[player] = bot_userid;
-	g_iBotPlayer[bot] = player_userid;
 
 	if(g_sEntityModels[player][0] == '\0')
 		return;
 
 	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || !IsSurvivor(player))
 		return;
+
+	g_iBotPlayer[bot] = player_userid;
+	g_iPlayerBot[player] = bot_userid;
 
 	SetEntProp(bot, Prop_Send, "m_survivorCharacter", GetEntProp(player, Prop_Send, "m_survivorCharacter"));
 	SetEntityModel(bot, g_sEntityModels[player]);
@@ -1623,38 +1624,11 @@ public void OnMapStart()
 
 stock void GetMeleeClasses()
 {
-	g_iMeleeClassCount = 0;
-	
-	int i;
-	for(i = 0; i < 16; i++)
-		g_sMeleeClass[i][0] = 0;
-	
 	int iMeleeStringTable = FindStringTable("MeleeWeapons");
-	int iCount = GetStringTableNumStrings(iMeleeStringTable);
-	
-	char sMeleeClass[16][32];
-	for(i = 0; i < iCount; i++)
-	{
-		ReadStringTable(iMeleeStringTable, i, sMeleeClass[i], sizeof(sMeleeClass[]));
-		if(IsVaidMelee(sMeleeClass[i]))
-			strcopy(g_sMeleeClass[g_iMeleeClassCount++], sizeof(g_sMeleeClass[]), sMeleeClass[i]);
-	}
-}
+	g_iMeleeClassCount = GetStringTableNumStrings(iMeleeStringTable);
 
-stock bool IsVaidMelee(const char[] sWeapon)
-{
-	bool bIsVaid = false;
-	int iEntity = CreateEntityByName("weapon_melee");
-	DispatchKeyValue(iEntity, "melee_script_name", sWeapon);
-	DispatchSpawn(iEntity);
-
-	char sModelName[PLATFORM_MAX_PATH];
-	GetEntPropString(iEntity, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
-	if(StrContains(sModelName, "hunter", false) == -1)
-		bIsVaid  = true;
-
-	RemoveEdict(iEntity);
-	return bIsVaid;
+	for(int i; i < g_iMeleeClassCount; i++)
+		ReadStringTable(iMeleeStringTable, i, g_sMeleeClass[i], sizeof(g_sMeleeClass[]));
 }
 
 stock void GetScriptName(const char[] sMeleeClass, char[] sScriptName)
