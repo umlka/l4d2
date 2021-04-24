@@ -3,14 +3,12 @@
 #include <sourcemod>
 #include <sdktools>
 
-#define PLUGIN_VERSION "2.6a"
+#define PLUGIN_VERSION 	"2.6a"
 
-#define SOUND_COUNTDOWN 	"buttons/blip1.wav"
-#define SOUND_MOVEOUT 		"ui/survival_teamrec.wav"
-#define SOUND_BREAK1		"physics/metal/metal_box_break1.wav"
-#define SOUND_BREAK2		"physics/metal/metal_box_break2.wav"
-
-Panel g_hStatusPanel;
+#define SOUND_COUNTDOWN "buttons/blip1.wav"
+#define SOUND_MOVEOUT 	"ui/survival_teamrec.wav"
+#define SOUND_BREAK1	"physics/metal/metal_box_break1.wav"
+#define SOUND_BREAK2	"physics/metal/metal_box_break2.wav"
 
 ConVar g_hGameMode;
 ConVar g_hCvarFreezeNodoor;
@@ -53,7 +51,7 @@ public void OnPluginStart()
 	g_hCvarPrepareTime2r = CreateConVar("l4d2_dlock_prepare2nd", "7", "How many seconds plugin will wait after all clients have loaded before starting second round on a map");
 	g_hCvarClientTimeOut = CreateConVar("l4d2_dlock_timeout", "45", "How many seconds plugin will wait after a map starts before giving up on waiting for a client");
 	g_hCvarBreakTheDoor = CreateConVar("l4d2_dlock_weakdoor", "1", "Saferoom door will be breaked, once opened.");
-	g_hCvarDisplayPanel = CreateConVar("l4d2_dlock_displaypanel", "2", "Display players state panel. 0-disabled, 1-hide iFailed, 2-full info");
+	g_hCvarDisplayPanel = CreateConVar("l4d2_dlock_displaypanel", "2", "Display players state panel. 0-disabled, 1-hide iLoadFailed, 2-full info");
 	g_hCvarDisplayMode = CreateConVar("l4d2_dlock_displaymode", "1", "Set the display mode for the countdown. (0-off,1-hint, 2-center, 3-chat. any other value to hide countdown)");
 	g_hCvarGameModeEnabled = CreateConVar("l4d2_dlock_gamemodeactive", "coop,versus", "Set the game mode for which the plugin should be activated");
 
@@ -169,7 +167,7 @@ void InitPlugin()
 
 		SurvivorBotsStop();
 		FindStartSafeDoor();
-		CreateTimer(0.2, Timer_StartSequence, _, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(1.0, Timer_StartSequence, _, TIMER_FLAG_NO_MAPCHANGE);
 	}
 	else 
 		SurvivorBotsStart();
@@ -272,8 +270,8 @@ void ShowStatusPanel()
 {
 	int i;
 	int iLoading;
-	int iFailed;
 	int iConnected;
+	int iLoadFailed;
 	int iTimelimit = g_hCvarClientTimeOut.IntValue;
 	for(i = 1; i <= MaxClients; i++) 
 	{
@@ -282,35 +280,31 @@ void ShowStatusPanel()
 			if(g_bIsClientLoading[i]) 
 				iLoading++;
 			else if(g_iClientTimeout[i] >= iTimelimit) 
-				iFailed++;
+				iLoadFailed++;
 			else 
 				iConnected++;
 		}
 	}
 
-	if(g_hStatusPanel != null) 
-		delete g_hStatusPanel;
+	char sInfo[256];
+	Panel panel;
 
-	g_hStatusPanel = new Panel();
-
-	char sReadyPlayers[256];
 	for(int client = 1; client <= MaxClients; client++)
 	{
 		if(IsClientInGame(client) && !IsFakeClient(client))
 		{
+			panel = new Panel();
 			SetGlobalTransTarget(client);
 
-			char DL_Menu_Header[128];
-			FormatEx(DL_Menu_Header, sizeof(DL_Menu_Header), "%t", "DL_Menu_Header");
-			g_hStatusPanel.DrawText(DL_Menu_Header);
+			FormatEx(sInfo, sizeof(sInfo), "%t", "DL_Menu_Header");
+			panel.DrawText(sInfo);
 
 			if(iLoading)
 			{
-				char DL_Menu_Connecting[128];
-				FormatEx(DL_Menu_Connecting, sizeof(DL_Menu_Connecting), "%t", "DL_Menu_Connecting");
-				g_hStatusPanel.DrawText(DL_Menu_Connecting);
-				iLoading = 0;
+				FormatEx(sInfo, sizeof(sInfo), "%t", "DL_Menu_Connecting");
+				panel.DrawText(sInfo);
 
+				iLoading = 0;
 				for(i = 1; i <= MaxClients; i++) 
 				{
 					if(IsClientConnected(i) && !IsFakeClient(i))
@@ -318,8 +312,8 @@ void ShowStatusPanel()
 						if(g_bIsClientLoading[i])
 						{
 							iLoading++;
-							FormatEx(sReadyPlayers, sizeof(sReadyPlayers), "->%d. %N", iLoading, i);
-							g_hStatusPanel.DrawText(sReadyPlayers);
+							FormatEx(sInfo, sizeof(sInfo), "->%d. %N", iLoading, i);
+							panel.DrawText(sInfo);
 						}
 					}
 				}
@@ -327,11 +321,10 @@ void ShowStatusPanel()
 
 			if(iConnected)
 			{
-				char DL_Menu_Ingame[128];
-				FormatEx(DL_Menu_Ingame, sizeof(DL_Menu_Ingame), "%t", "DL_Menu_Ingame");
-				g_hStatusPanel.DrawText(DL_Menu_Ingame);
-				iConnected = 0;
+				FormatEx(sInfo, sizeof(sInfo), "%t", "DL_Menu_Ingame");
+				panel.DrawText(sInfo);
 
+				iConnected = 0;
 				for(i = 1; i <= MaxClients; i++) 
 				{
 					if(IsClientConnected(i) && !IsFakeClient(i))
@@ -339,8 +332,8 @@ void ShowStatusPanel()
 						if(!g_bIsClientLoading[i] && g_iClientTimeout[i] < iTimelimit)
 						{
 							iConnected++;
-							FormatEx(sReadyPlayers, sizeof(sReadyPlayers), "->%d. %N", iConnected, i);
-							g_hStatusPanel.DrawText(sReadyPlayers);
+							FormatEx(sInfo, sizeof(sInfo), "->%d. %N", iConnected, i);
+							panel.DrawText(sInfo);
 						}
 					}
 				}
@@ -348,35 +341,34 @@ void ShowStatusPanel()
 
 			if(g_hCvarDisplayPanel.IntValue > 1)
 			{
-				if(iFailed)
+				if(iLoadFailed)
 				{
-					char DL_Menu_Fail[128];
-					FormatEx(DL_Menu_Fail, sizeof(DL_Menu_Fail), "%t", "DL_Menu_Fail");
-					g_hStatusPanel.DrawText(DL_Menu_Fail);
-					iFailed = 0;
+					FormatEx(sInfo, sizeof(sInfo), "%t", "DL_Menu_Fail");
+					panel.DrawText(sInfo);
 
+					iLoadFailed = 0;
 					for(i = 1; i <= MaxClients; i++) 
 					{
 						if(IsClientConnected(i) && !IsFakeClient(i))
 						{
 							if(!g_bIsClientLoading[i] && g_iClientTimeout[i] >= iTimelimit)
 							{
-								iFailed++;
-								FormatEx(sReadyPlayers, sizeof(sReadyPlayers), "->%d. %N", iFailed, i);
-								g_hStatusPanel.DrawText(sReadyPlayers);
+								iLoadFailed++;
+								FormatEx(sInfo, sizeof(sInfo), "->%d. %N", iLoadFailed, i);
+								panel.DrawText(sInfo);
 							}
 						}
 					}
 				}
 			}
 
-			g_hStatusPanel.Send(client, blankhandler, 5);
+			panel.Send(client, PanelHandler, 5);
+			delete panel;
 		}
 	}
-	delete g_hStatusPanel;
 }
 
-public int blankhandler(Menu menu, MenuAction action, int param1, int param2)
+public int PanelHandler(Menu menu, MenuAction action, int param1, int param2)
 {
 
 }
