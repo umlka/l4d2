@@ -458,9 +458,12 @@ public void ConVarChanged_GameMode(ConVar convar, const char[] oldValue, const c
 void GetModeCvars()
 {
 	g_hGameMode.GetString(g_sGameMode, sizeof(g_sGameMode));
-	if(g_bHasPlayerControlledZombies != SDKCall(g_hSDK_Call_HasPlayerControlledZombies))
+
+	bool bLast = g_bHasPlayerControlledZombies;
+	g_bHasPlayerControlledZombies = SDKCall(g_hSDK_Call_HasPlayerControlledZombies);
+	if(bLast != g_bHasPlayerControlledZombies)
 	{
-		if(SDKCall(g_hSDK_Call_HasPlayerControlledZombies) == true) //coop->versus
+		if(g_bHasPlayerControlledZombies == true) //coop->versus
 		{
 			for(int i = 1; i <= MaxClients; i++)
 			{
@@ -493,8 +496,6 @@ void GetModeCvars()
 			}
 		}
 	}
-
-	g_bHasPlayerControlledZombies = SDKCall(g_hSDK_Call_HasPlayerControlledZombies);
 }
 
 public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -2638,7 +2639,12 @@ public MRESReturn EnterGhostStatePre(int pThis, DHookReturn hReturn, DHookParam 
 public MRESReturn EnterGhostStatePost(int pThis, DHookReturn hReturn, DHookParam hParams)
 {
 	if(!IsFakeClient(pThis) && g_iPZSpawned[pThis] == 0)
-		RequestFrame(OnNextFrame_EnterGhostState, GetClientUserId(pThis));
+	{
+		if(g_bHasPlayerControlledZombies == false)
+			RequestFrame(OnNextFrame_EnterGhostState, GetClientUserId(pThis));
+		else
+			g_iPZSpawned[pThis]++;
+	}
 	
 	return MRES_Ignored;
 }
