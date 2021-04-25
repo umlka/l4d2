@@ -6,14 +6,11 @@
 #define CHARGER_BOOST 80.0
 
 ConVar g_hChargeProximity;
-ConVar g_hHealthThresholdCharger;
 ConVar g_hAimOffsetSensitivityCharger;
 
 float g_fChargeProximity;
 
-int g_iHealthThresholdCharger;
 int g_iAimOffsetSensitivityCharger;
-int g_bShouldCharge[MAXPLAYERS + 1];
 
 public Plugin myinfo = 
 {
@@ -27,14 +24,11 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	g_hChargeProximity = CreateConVar("ai_charge_proximity", "300", "How close a client will approach before charging");	
-	g_hHealthThresholdCharger = CreateConVar("ai_health_threshold_charger", "400", "Charger will charge if its health drops to this level");
 	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "20", "If the client has a iTarget, it will not straight pounce if the iTarget's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
 	
 	g_hChargeProximity.AddChangeHook(ConVarChanged);
-	g_hHealthThresholdCharger.AddChangeHook(ConVarChanged);
 	g_hAimOffsetSensitivityCharger.AddChangeHook(ConVarChanged);
-	
-	HookEvent("player_spawn", Event_PlayerSpawn);
+
 	HookEvent("charger_charge_start", Event_ChargerChargeStart);
 	HookEvent("charger_charge_end",	Event_ChargerChargeEnd);
 }
@@ -52,15 +46,7 @@ public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] new
 void GetCvars()
 {
 	g_fChargeProximity = g_hChargeProximity.FloatValue;
-	g_iHealthThresholdCharger = g_hHealthThresholdCharger.IntValue;
 	g_iAimOffsetSensitivityCharger = g_hAimOffsetSensitivityCharger.IntValue;
-}
-
-public Action Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) 
-{
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(IsBotCharger(client))
-		g_bShouldCharge[client] = false;
 }
 
 stock bool IsBotCharger(int client) 
@@ -95,20 +81,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			return Plugin_Changed;
 		}
 	}
-
-	static int iHealth;
-	static float vOrigin[3];
-	static int iSurvivorProximity;
-	iHealth = GetEntProp(client, Prop_Send, "m_iHealth");
-	GetClientAbsOrigin(client, vOrigin);
-	iSurvivorProximity = GetSurvivorProximity(vOrigin, iTarget);
-	if(iHealth > g_iHealthThresholdCharger && iSurvivorProximity > g_fChargeProximity)
-	{	
-		if(!g_bShouldCharge[client]) 		
-			BlockCharge(client); 			
-	} 
-	else 
-		g_bShouldCharge[client] = true;
 
 	static float vVelocity[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
@@ -332,13 +304,6 @@ public void Event_ChargerChargeEnd(Event event, const char[] name, bool dontBroa
 		if(entity > MaxClients)
 			SetEntPropFloat(entity, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 1.0);
 	}
-}
-
-void BlockCharge(int client) 
-{
-	int iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
-	if(iAbility > 0)
-		SetEntPropFloat(iAbility, Prop_Send, "m_timestamp", GetGameTime() + 0.1);	
 }
 
 void Charger_OnCharge(int client) 
