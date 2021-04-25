@@ -8,10 +8,7 @@
 #define TANK_ROCK_AIM_TIME    4.0
 #define TANK_ROCK_AIM_DELAY   0.25
 
-ConVar g_hTankBhop;
 ConVar g_hTankAttackRange;
-
-bool g_bTankBhop;
 
 float g_fTankAttackRange;
 float g_fDelay[MAXPLAYERS + 1][3];
@@ -34,10 +31,7 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	g_hTankBhop = CreateConVar("ai_tank_bhop", "1", "Flag to enable bhop facsimile on AI tanks");
 	g_hTankAttackRange = FindConVar("tank_attack_range");
-
-	g_hTankBhop.AddChangeHook(ConVarChanged);
 	g_hTankAttackRange.AddChangeHook(ConVarChanged);
 
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
@@ -55,7 +49,6 @@ public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] new
 
 void GetCvars()
 {
-	g_bTankBhop = g_hTankBhop.BoolValue;
 	g_fTankAttackRange = g_hTankAttackRange.FloatValue;
 }
 
@@ -72,41 +65,38 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 		
-	if(g_bTankBhop) 
+	static float vVelocity[3];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
+	static float fDist;
+	static float fCurrentSpeed;
+	fDist = NearestSurvivorDistance(client, true);
+	fCurrentSpeed = SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0));
+	if(GetEntProp(client, Prop_Send, "m_hasVisibleThreats") && g_fTankAttackRange + 45.0 < fDist < 1000.0 && fCurrentSpeed > 190.0) 
 	{
-		static float vVelocity[3];
-		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		static float fDist;
-		static float fCurrentSpeed;
-		fDist = NearestSurvivorDistance(client, true);
-		fCurrentSpeed = SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0));
-		if(GetEntProp(client, Prop_Send, "m_hasVisibleThreats") && g_fTankAttackRange + 45.0 < fDist < 1000.0 && fCurrentSpeed > 190.0) 
+		if(!(GetEntityFlags(client) & FL_ONGROUND) && !(GetEntityMoveType(client) & MOVETYPE_LADDER) && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2)
 		{
-			if(!(GetEntityFlags(client) & FL_ONGROUND) && !(GetEntityMoveType(client) & MOVETYPE_LADDER) && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2)
+			buttons &= ~IN_JUMP;
+			buttons &= ~IN_DUCK;
+		}
+		else
+		{
+			if(GetEntityFlags(client) & FL_ONGROUND) 
 			{
-				buttons &= ~IN_JUMP;
-				buttons &= ~IN_DUCK;
-			}
-			else
-			{
-				if(GetEntityFlags(client) & FL_ONGROUND) 
-				{
-					buttons &= ~IN_ATTACK2;
-					buttons |= IN_DUCK;
-					buttons |= IN_JUMP;
+				buttons &= ~IN_ATTACK2;
+				buttons |= IN_DUCK;
+				buttons |= IN_JUMP;
 					
-					static float vEyeAngles[3];
-					GetClientEyeAngles(client, vEyeAngles);
-					Client_PushForce(client, buttons, vEyeAngles, vVelocity, TANK_BOOST);
+				static float vEyeAngles[3];
+				GetClientEyeAngles(client, vEyeAngles);
+				Client_PushForce(client, buttons, vEyeAngles, vVelocity, TANK_BOOST);
 
-					if(DelayExpired(client, 0, TANK_MELEE_SCAN_DELAY)) 
+				if(DelayExpired(client, 0, TANK_MELEE_SCAN_DELAY)) 
+				{
+					DelayStart(client, 0);
+					if(NearestSurvivorDistance(client, false) < g_fTankAttackRange * 0.95) 
 					{
-						DelayStart(client, 0);
-						if(NearestSurvivorDistance(client, false) < g_fTankAttackRange * 0.95) 
-						{
-							buttons |= IN_ATTACK;
-							return Plugin_Changed;
-						}
+						buttons |= IN_ATTACK;
+						return Plugin_Changed;
 					}
 				}
 			}
@@ -330,56 +320,6 @@ stock int NearestVisibleNormalSurvivor(int client)
 	iTarget = aTargets.Get(0, 1);
 	delete aTargets;
 	return iTarget;
-}
-
-void MakeNearestAngles(int client, float NearestAngles[3]) 
-{
-	static int iAimTarget;
-	static float vTarget[3];
-	static float vOrigin[3];
-
-	iAimTarget = GetClientAimTarget(client, true);
-	if(!IsSurvivor(iAimTarget)) 
-	{
-		static int i;
-		static int iNum;
-		static int iTargets[MAXPLAYERS + 1];
-	
-		GetClientEyePosition(client, vOrigin);
-		iNum = GetClientsInRange(vOrigin, RangeType_Visibility, iTargets, MAXPLAYERS);
-	
-		if(iNum == 0)
-			return;
-			
-		static int iTarget;
-		static ArrayList aTargets;
-		aTargets = new ArrayList(2);
-	
-		for(i = 0; i < iNum; i++)
-		{
-			iTarget = iTargets[i];
-			if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget))
-			{
-				GetClientAbsOrigin(iTarget, vTarget);
-				aTargets.Set(aTargets.Push(GetVectorDistance(vOrigin, vTarget)), iTarget, 1);
-			}
-		}
-
-		if(aTargets.Length != 0)
-		{
-			SortADTArray(aTargets, Sort_Ascending, Sort_Float);
-			iAimTarget = aTargets.Get(0, 1);
-		}
-		delete aTargets;
-	}
-
-	if(!IsSurvivor(iAimTarget))
-		return;
-
-	GetClientAbsOrigin(client, vOrigin);
-	GetClientAbsOrigin(iAimTarget, vTarget);
-	MakeVectorFromPoints(vOrigin, vTarget, vOrigin);
-	GetVectorAngles(vOrigin, NearestAngles);	
 }
 
 stock bool IsSurvivor(int client) 
