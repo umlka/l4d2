@@ -222,6 +222,8 @@ Handle g_hPZSuicideTimer[MAXPLAYERS + 1];
 Address g_pRespawn;
 Address g_pResetStatCondition;
 
+DynamicDetour g_dDetour;
+
 ConVar g_hGameMode;
 ConVar g_hCoopSphereFix;
 ConVar g_hMaxTankPlayer;
@@ -406,11 +408,11 @@ public void OnPluginStart()
 	g_hCoopSphereFix.SetInt(0);
 
 	//https://wiki.alliedmods.net/Events_(SourceMod_Scripting)#Hooking_Events 防止某些插件在Pre挂钩上面阻止事件广播，导致Post挂钩监听不到事件触发
-	HookEvent("player_left_start_area", Event_PlayerLeftStartArea, EventHookMode_Pre);
-	HookEvent("player_left_checkpoint", Event_PlayerLeftStartArea, EventHookMode_Pre);
-	HookEvent("round_start", Event_RoundStart, EventHookMode_Pre);
-	HookEvent("round_end", Event_RoundEnd, EventHookMode_Pre);
-	HookEvent("map_transition", Event_RoundEnd, EventHookMode_Pre);
+	HookEvent("player_left_start_area", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
+	HookEvent("player_left_checkpoint", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
+	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("player_team", Event_PlayerTeam, EventHookMode_Pre);
 	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
@@ -439,6 +441,8 @@ public void OnPluginEnd()
 		RemoveSurvivorModelGlow(i);
 		
 	PatchAddress(false);
+	if(!g_dDetour.Disable(Hook_Pre, EnterGhostStatePre) || !g_dDetour.Disable(Hook_Post, EnterGhostStatePost))
+		SetFailState("Failed to disable detour: OnEnterGhostState");
 }
 
 public void OnConfigsExecuted()
@@ -1029,7 +1033,7 @@ public void OnClientDisconnect(int client)
 		g_iLastTeamId[client] = GetClientTeam(client);
 }
 
-public void OnClientPostAdminCheck(int client)
+public void OnClientPutInServer(int client)
 {
 	ResetClientData(client);
 	SDKHook(client, SDKHook_PostThinkPost, Hook_PostThinkPost);
@@ -1627,7 +1631,7 @@ int GetTeleportTarget(int client)
 
 void ForceCrouch(int client)
 {
-	SetEntProp(client, Prop_Send, "m_bDucked", 1); // force crouch pose to allow respawn in transport / duct ...
+	SetEntProp(client, Prop_Send, "m_bDucked", 1);
 	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
 }
 
@@ -2613,15 +2617,14 @@ void PrepSDKCall_State_Transition(GameData hGameData = null)
 
 void SetupDetours(GameData hGameData = null)
 {
-	DynamicDetour dDetour;
-	dDetour = DynamicDetour.FromConf(hGameData, "OnEnterGhostState");
-	if(dDetour == null)
+	g_dDetour = DynamicDetour.FromConf(hGameData, "OnEnterGhostState");
+	if(g_dDetour == null)
 		SetFailState("Failed to load signature: OnEnterGhostState");
 		
-	if(!dDetour.Enable(Hook_Pre, EnterGhostStatePre))
+	if(!g_dDetour.Enable(Hook_Pre, EnterGhostStatePre))
 		SetFailState("Failed to detour pre: OnEnterGhostState");
 		
-	if(!dDetour.Enable(Hook_Post, EnterGhostStatePost))
+	if(!g_dDetour.Enable(Hook_Post, EnterGhostStatePost))
 		SetFailState("Failed to detour post: OnEnterGhostState");
 }
 
