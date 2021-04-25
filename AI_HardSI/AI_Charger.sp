@@ -412,7 +412,7 @@ bool MakeNearestAngles(int client, float NearestAngles[3])
 	static float vOrigin[3];
 
 	iAimTarget = GetClientAimTarget(client, true);
-	if(!IsSurvivor(iAimTarget) || IsIncapacitated(iAimTarget) || IsPinned(iAimTarget) || !IsTargetWatchingAttacker(client, g_iAimOffsetSensitivityCharger)) 
+	if(!IsSurvivor(iAimTarget) || IsIncapacitated(iAimTarget) || IsPinned(iAimTarget) || !IsTargetWatchingAttacker(client, g_iAimOffsetSensitivityCharger))
 	{
 		static int i;
 		static int iNum;
