@@ -24,7 +24,6 @@ int g_iChangelevel;
 int g_iRescueVehicle;
 int g_iTriggerFinale;
 int g_iLastSafeDoor;
-//int g_iStartSafeDoor;
 int g_iEndSafeAreaMethod;
 int g_iEndSafeAreaTime;
 
@@ -67,10 +66,12 @@ public void OnPluginStart()
 	//AutoExecConfig(true, "end_safezone_detcet");
 	//想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
-	HookEvent("round_end", Event_RoundEnd, EventHookMode_Pre);
-	HookEvent("round_start", Event_RoundStart, EventHookMode_Pre);
-	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
-	HookEvent("finale_vehicle_ready", Event_FinaleVehicleReady, EventHookMode_Pre);
+	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("finale_vehicle_leaving", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+	HookEvent("player_spawn", Event_PlayerSpawn);
+	HookEvent("finale_vehicle_ready", Event_FinaleVehicleReady, EventHookMode_PostNoCopy);
 	
 	RegAdminCmd("sm_warpstart", CmdWarpStart, ADMFLAG_RCON, "传送所有生还者到起点安全区域");
 	RegAdminCmd("sm_warpend", CmdWarpEnd, ADMFLAG_RCON, "传送所有生还者到终点安全区域");
@@ -403,7 +404,6 @@ void GetEndAreaEntityVectors(int entity)
 void FindSafeRoomDoors()
 {
 	g_iLastSafeDoor = 0;
-	//g_iStartSafeDoor = 0;
 	
 	float vOrigin[3];
 	int entity = MaxClients + 1;
@@ -413,16 +413,11 @@ void FindSafeRoomDoors()
 			continue;
 
 		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vOrigin);
-		if(g_iChangelevel && IsDotInScaleEndArea(vOrigin))
+		if(g_iLastSafeDoor == 0 && g_iChangelevel && IsDotInScaleEndArea(vOrigin))
 		{
-			if(g_iLastSafeDoor == 0)
-				g_iLastSafeDoor = EntIndexToEntRef(entity);
+			g_iLastSafeDoor = EntIndexToEntRef(entity);
+			break;
 		}
-		/*else
-		{
-			if(g_iStartSafeDoor == 0)
-				g_iStartSafeDoor = EntIndexToEntRef(entity);
-		}*/
 	}
 }
 
