@@ -4,7 +4,6 @@
 #include <sdktools>
 
 #define BOOMER_BOOST 100.0
-#define BOMMER_SCAN_DELAY 0.5
 
 ConVar g_hVomitRange;
 
@@ -30,7 +29,6 @@ public void OnPluginStart()
 	FindConVar("boomer_exposed_time_tolerance").SetFloat(10000.0);
 
 	HookEvent("ability_use", Event_AbilityUse);
-	//HookEvent("player_shoved", Event_PlayerShoved);
 }
 
 public void OnPluginEnd() 
@@ -60,19 +58,9 @@ public Action Event_AbilityUse(Event event, const char[] name, bool dontBroadcas
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(IsBotBoomer(client))
-	{
-		SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") & ~FL_FROZEN);
 		Boomer_OnVomit(client);
-	}
 }
-/*
-public Action Event_PlayerShoved(Event event, const char[] name, bool dontBroadcast) 
-{
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(IsBotBoomer(client))
-		ResetInfectedAbility(client, 0.1);
-}
-*/
+
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
 {
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 2 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
@@ -179,16 +167,6 @@ stock bool IsValidClient(int client)
 {
 	return client > 0 && client <= MaxClients && IsClientInGame(client); 
 }
-/*
-stock void ResetInfectedAbility(int client, float time)
-{
-	int ability = GetEntPropEnt(client, Prop_Send, "m_customAbility");
-	if(ability > 0)
-	{
-		SetEntPropFloat(ability, Prop_Send, "m_duration", time);
-		SetEntPropFloat(ability, Prop_Send, "m_timestamp", GetGameTime() + time);
-	}
-}*/
 
 bool MakeNearestAngles(int client, float NearestAngles[3])
 {
