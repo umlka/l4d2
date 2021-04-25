@@ -431,7 +431,7 @@ bool MakeNearestAngles(int client, float NearestAngles[3])
 		for(i = 0; i < iNum; i++)
 		{
 			iTarget = iTargets[i];
-			if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget))
+			if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
 			{
 				GetClientAbsOrigin(iTarget, vTarget);
 				aTargets.Set(aTargets.Push(GetVectorDistance(vOrigin, vTarget)), iTarget, 1);
