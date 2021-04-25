@@ -11,6 +11,7 @@ ConVar g_hAimOffsetSensitivityCharger;
 float g_fChargeProximity;
 
 int g_iAimOffsetSensitivityCharger;
+int g_bShouldCharge[MAXPLAYERS + 1];
 
 public Plugin myinfo = 
 {
@@ -24,11 +25,12 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	g_hChargeProximity = CreateConVar("ai_charge_proximity", "300", "How close a client will approach before charging");	
-	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "20", "If the client has a iTarget, it will not straight pounce if the iTarget's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
+	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "20", "If the client has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
 	
 	g_hChargeProximity.AddChangeHook(ConVarChanged);
 	g_hAimOffsetSensitivityCharger.AddChangeHook(ConVarChanged);
-
+	
+	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("charger_charge_start", Event_ChargerChargeStart);
 	HookEvent("charger_charge_end",	Event_ChargerChargeEnd);
 }
@@ -47,6 +49,13 @@ void GetCvars()
 {
 	g_fChargeProximity = g_hChargeProximity.FloatValue;
 	g_iAimOffsetSensitivityCharger = g_hAimOffsetSensitivityCharger.IntValue;
+}
+
+public Action Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) 
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(IsBotCharger(client))
+		g_bShouldCharge[client] = false;
 }
 
 stock bool IsBotCharger(int client) 
@@ -80,6 +89,22 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			buttons |= IN_ATTACK;
 			return Plugin_Changed;
 		}
+	}
+
+	static float vOrigin[3];
+	static int iSurvivorProximity;
+	GetClientAbsOrigin(client, vOrigin);
+	iSurvivorProximity = GetSurvivorProximity(vOrigin, iTarget);
+	if(iSurvivorProximity > g_fChargeProximity)
+	{	
+		if(!g_bShouldCharge[client]) 
+			BlockCharge(client);
+	} 
+	else
+	{
+		g_bShouldCharge[client] = true;
+		if(buttons & IN_ATTACK)
+			return Plugin_Continue;
 	}
 
 	static float vVelocity[3];
@@ -169,11 +194,11 @@ stock bool TraceFilter(int entity, int contentMask, any data)
 		return false;
 	else
 	{
-		static char sClassName[11];
-		GetEntityClassname(entity, sClassName, sizeof(sClassName));
-		if(strcmp(sClassName, "infected") == 0)
+		static char sClass[9];
+		GetEntityClassname(entity, sClass, sizeof(sClass));
+		if(strcmp(sClass, "infected") == 0)
 			return false;
-		else if(strcmp(sClassName, "witch") == 0)
+		else if(strcmp(sClass, "witch") == 0)
 			return false;
 		return true;
 	}
@@ -278,7 +303,7 @@ stock bool ReadyAbility(int client)
 {
 	static int iAbility;
 	iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
-	if(iAbility > 0 && IsValidEntity(iAbility)) 
+	if(iAbility > 0 && IsValidEdict(iAbility)) 
 		return GetEntPropFloat(iAbility, Prop_Send, "m_timestamp") < GetGameTime();
 
 	return true;
@@ -287,12 +312,15 @@ stock bool ReadyAbility(int client)
 public void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	//SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") & ~FL_FROZEN);
-	int entity = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-	if(entity > MaxClients)
-		SetEntPropFloat(entity, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 999.9);
 
+	int flags = GetEntProp(client, Prop_Send, "m_fFlags");
+	SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_FROZEN);
 	Charger_OnCharge(client);
+	SetEntProp(client, Prop_Send, "m_fFlags", flags);
+	
+	int entity = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+	if(entity != -1)
+		SetEntPropFloat(entity, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 999.9);
 }
 
 public void Event_ChargerChargeEnd(Event event, const char[] name, bool dontBroadcast)
@@ -301,16 +329,28 @@ public void Event_ChargerChargeEnd(Event event, const char[] name, bool dontBroa
 	if(client)
 	{
 		int entity = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-		if(entity > MaxClients)
+		if(entity != -1)
 			SetEntPropFloat(entity, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 1.0);
 	}
+}
+
+void BlockCharge(int client) 
+{
+	int iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
+	if(iAbility != -1)
+		SetEntPropFloat(iAbility, Prop_Send, "m_timestamp", GetGameTime() + 0.1);	
 }
 
 void Charger_OnCharge(int client) 
 {
 	static float NearestAngles[3];
 	if(MakeNearestAngles(client, NearestAngles))
-		TeleportEntity(client, NULL_VECTOR, NearestAngles, NULL_VECTOR);
+	{
+		float vVec[3];
+		GetAngleVectors(NearestAngles, NULL_VECTOR, vVec, NULL_VECTOR);
+		NormalizeVector(vVec, vVec);
+		TeleportEntity(client, NULL_VECTOR, NearestAngles, vVec);
+	}
 }
 
 stock bool IsIncapacitated(int client) 
