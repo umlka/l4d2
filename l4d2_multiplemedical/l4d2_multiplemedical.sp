@@ -6,6 +6,8 @@
 
 #define PLUGIN_VERSION "1.1"
 
+//ArrayList g_ListSpawner;
+
 int g_iRoundStart; 
 int g_iPlayerSpawn;
 int g_iGlobalWeaponRules[view_as<int>(L4D2WeaponId)] = {-1, ...};
@@ -21,14 +23,16 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	HookEvent("round_end", Event_RoundEnd, EventHookMode_Pre);
-	HookEvent("round_start", Event_RoundStart, EventHookMode_Pre);
-	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
+	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_PostNoCopy);
+	//HookEvent("spawner_give_item", Event_SpawnerGiveItem, EventHookMode_Pre);
 
 	RegServerCmd("addweaponmultiple", CmdAddWeaponMultiple);
 	RegServerCmd("resetweaponmultiple", CmdResetWeaponMultiple);
 
 	ResetWeaponRules();
+	//g_ListSpawner = new ArrayList(2);
 }
 
 public Action CmdAddWeaponMultiple(int args)
@@ -72,6 +76,7 @@ public void OnMapEnd()
 {
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
+	//g_ListSpawner.Clear();
 }
 
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -98,7 +103,7 @@ public Action Timer_UpdateCounts(Handle timer)
 	int iEntityCount = GetEntityCount();
 	for(int i = 1; i < iEntityCount; i++)
 	{
-		if(!IsValidEntity(i))
+		if(!IsValidEdict(i))
 			continue;
 
 		L4D2WeaponId source = IdentifyWeapon(i);
@@ -111,7 +116,53 @@ public Action Timer_UpdateCounts(Handle timer)
 		}
 	}
 }
+/*
+public void OnEntityDestroyed(int entity)
+{
+	if(entity <= MaxClients || entity > 2048 || !IsValidEdict(entity))
+		return;
+	
+	L4D2WeaponId source = IdentifyWeapon(entity);
+	if(source > L4D2WeaponId_None && g_iGlobalWeaponRules[source] > 0)
+	{
+		int iIndex = g_ListSpawner.FindValue(EntIndexToEntRef(entity), 0);
+		if(iIndex != -1)
+			g_ListSpawner.Erase(iIndex);
+	}
+}
 
+public void Event_SpawnerGiveItem(Event event, const char[] name, bool dontBroadcast)
+{
+	int entity = event.GetInt("spawner");
+	if(entity <= MaxClients || entity > 2048 || !IsValidEdict(entity))
+		return;
+
+	L4D2WeaponId source = IdentifyWeapon(entity);
+	if(source > L4D2WeaponId_None && g_iGlobalWeaponRules[source] > 0)
+	{
+		if(g_iGlobalWeaponRules[source] == 1)
+			RemoveEntity(entity);
+		else
+		{
+			static int iIndex;
+			iIndex = g_ListSpawner.FindValue(EntIndexToEntRef(entity), 0);
+			if(iIndex == -1)
+			{
+				SetEntProp(entity, Prop_Data, "m_itemCount", g_iGlobalWeaponRules[source]);
+				g_ListSpawner.Set(g_ListSpawner.Push(EntIndexToEntRef(entity)), g_iGlobalWeaponRules[source], 1);
+			}
+			else
+			{
+				static int iCount;
+				if((iCount = g_ListSpawner.Get(iIndex, 1)) <= 1)
+					RemoveEntity(entity);
+				else
+					g_ListSpawner.Set(iIndex, iCount--, 1);
+			}
+		}
+	}
+}
+*/
 stock L4D2WeaponId L4D2_GetWeaponIdByWeaponName2(const char[] classname)
 {
     static char sBuffer[64] = "weapon_";
@@ -130,16 +181,15 @@ stock L4D2WeaponId IdentifyWeapon(int entity)
 	if(!GetEdictClassname(entity, classname, sizeof(classname)))
 		return L4D2WeaponId_None;
 
-	if(strncmp(classname, "weapon_", 7) != 0)
-		return L4D2WeaponId_None;
-
-	int len = strlen(classname);
-	if(strncmp(classname[len - 6], "_spawn", 7) != 0)
-		return L4D2WeaponId_None;
-
-	if(len == 12)
+	if(strcmp(classname, "weapon_spawn") == 0)
 		return view_as<L4D2WeaponId>(GetEntProp(entity,Prop_Send,"m_weaponID"));
 
-	classname[len - 6] = '\0';
+	int len = strlen(classname);
+	if(len - 6 > 0 && strcmp(classname[len - 6], "_spawn") == 0)
+	{
+		classname[len - 6] = '\0';
+		return L4D2_GetWeaponIdByWeaponName(classname);
+	}
+
 	return L4D2_GetWeaponIdByWeaponName(classname);
 }
