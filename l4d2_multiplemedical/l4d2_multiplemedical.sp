@@ -181,15 +181,19 @@ stock L4D2WeaponId IdentifyWeapon(int entity)
 	if(!GetEdictClassname(entity, classname, sizeof(classname)))
 		return L4D2WeaponId_None;
 
-	if(strcmp(classname, "weapon_spawn") == 0)
+	int len = strlen(classname);
+	if(len < 12)
+		return L4D2WeaponId_None;
+
+	if(strncmp(classname, "weapon_", 7) != 0)
+		return L4D2WeaponId_None;
+
+	if(strncmp(classname[len - 6], "_spawn", 7) != 0)
+		return L4D2WeaponId_None;
+	
+	if(len == 12)
 		return view_as<L4D2WeaponId>(GetEntProp(entity,Prop_Send,"m_weaponID"));
 
-	int len = strlen(classname);
-	if(len - 6 > 0 && strcmp(classname[len - 6], "_spawn") == 0)
-	{
-		classname[len - 6] = '\0';
-		return L4D2_GetWeaponIdByWeaponName(classname);
-	}
-
+	classname[len - 6] = '\0';
 	return L4D2_GetWeaponIdByWeaponName(classname);
 }
