@@ -131,7 +131,7 @@ public MRESReturn OnGetMissionInfoPost(DHookReturn hReturn)
 	return MRES_Ignored;
 }
 
-bool ReadMeleeManifest(char sManifest[512])
+void ReadMeleeManifest(char sManifest[512])
 {
 	File file = OpenFile(FILE_PATH, "r");
 	if(file == null)
