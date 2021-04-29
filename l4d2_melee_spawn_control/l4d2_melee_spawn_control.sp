@@ -20,7 +20,8 @@
 #include <sdktools>
 #include <dhooks>
 
-#define FILE_PATH "scripts\\melee\\melee_manifest.txt"
+#define GAMEDATA 	   "l4d2_melee_spawn_control"
+#define FILE_PATH 	   "scripts\\melee\\melee_manifest.txt"
 #define DEFAULT_MELEES "fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;riot_shield;golfclub;shovel;pitchfork"
 
 DynamicDetour g_dDetour;
@@ -45,36 +46,7 @@ public Plugin myinfo=
 
 public void OnPluginStart()
 {
-	GameData hGameData = new GameData("l4d2_melee_spawn_control");
-	if(hGameData == null)
-		SetFailState("Could not find gamedata \"l4d2_melee_spawn_control.txt\"");
-
-	StartPrepSDKCall(SDKCall_Raw);
-	PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::GetString");
-	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
-	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
-	PrepSDKCall_SetReturnInfo(SDKType_String, SDKPass_Pointer);
-	if((g_hSDK_Call_KvGetString = EndPrepSDKCall()) == null)
-		SetFailState("Failed to create SDKCall: KeyValues::GetString");
-
-	StartPrepSDKCall(SDKCall_Raw);
-	PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::SetString");
-	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
-	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
-	if((g_hSDK_Call_KvSetString = EndPrepSDKCall()) == null)
-		SetFailState("Failed to create SDKCall: KeyValues::SetString");
-
-	StartPrepSDKCall(SDKCall_Raw);
-	PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::FindKey");
-	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
-	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Pointer);
-	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	if((g_hSDK_Call_KvFindKey = EndPrepSDKCall()) == null)
-		SetFailState("Failed to create SDKCall: KeyValues::FindKey");
-
-	SetupDetours(hGameData);
-
-	delete hGameData;
+	LoadGameData();
 
 	g_aMapInitMelee = new StringMap();
 
@@ -86,16 +58,6 @@ public void OnPluginEnd()
 {
 	if(!g_dDetour.Disable(Hook_Post, OnGetMissionInfoPost))
 		SetFailState("Failed to disable detour: OnGetMissionInfo");
-}
-
-void SetupDetours(GameData hGameData = null)
-{
-	g_dDetour = DynamicDetour.FromConf(hGameData, "OnGetMissionInfo");
-	if(g_dDetour == null)
-		SetFailState("Failed to find signature: OnGetMissionInfo");
-		
-	if(!g_dDetour.Enable(Hook_Post, OnGetMissionInfoPost))
-		SetFailState("Failed to detour post: OnGetMissionInfo");
 }
 
 public MRESReturn OnGetMissionInfoPost(DHookReturn hReturn)
@@ -211,4 +173,53 @@ stock bool SplitStringRight(const char[] source, const char[] split, char[] part
 	
 	strcopy(part, partLen, source[index]); // copy everything after source[ index ] to part 
 	return true;
+}
+
+void LoadGameData()
+{
+	char sPath[PLATFORM_MAX_PATH];
+	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
+	if(FileExists(sPath) == false) 
+		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
+
+	GameData hGameData = new GameData(GAMEDATA);
+	if(hGameData == null) 
+		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
+
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::GetString");
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	PrepSDKCall_SetReturnInfo(SDKType_String, SDKPass_Pointer);
+	if((g_hSDK_Call_KvGetString = EndPrepSDKCall()) == null)
+		SetFailState("Failed to create SDKCall: KeyValues::GetString");
+
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::SetString");
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	if((g_hSDK_Call_KvSetString = EndPrepSDKCall()) == null)
+		SetFailState("Failed to create SDKCall: KeyValues::SetString");
+
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::FindKey");
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Pointer);
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	if((g_hSDK_Call_KvFindKey = EndPrepSDKCall()) == null)
+		SetFailState("Failed to create SDKCall: KeyValues::FindKey");
+
+	SetupDetours(hGameData);
+
+	delete hGameData;
+}
+
+void SetupDetours(GameData hGameData = null)
+{
+	g_dDetour = DynamicDetour.FromConf(hGameData, "OnGetMissionInfo");
+	if(g_dDetour == null)
+		SetFailState("Failed to find signature: OnGetMissionInfo");
+		
+	if(!g_dDetour.Enable(Hook_Post, OnGetMissionInfoPost))
+		SetFailState("Failed to detour post: OnGetMissionInfo");
 }
