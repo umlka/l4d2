@@ -32,7 +32,7 @@ Handle g_hSDK_Call_KvGetString;
 Handle g_hSDK_Call_KvSetString; 
 Handle g_hSDK_Call_KvFindKey;
 
-ConVar g_hCvarMeleeSpawn; 
+ConVar g_hCvarMeleeSpawn;
 ConVar g_hCvarAddMelee;
 
 public Plugin myinfo=
@@ -69,7 +69,7 @@ public MRESReturn OnGetMissionInfoPost(DHookReturn hReturn)
 	if(pThis == 0)
 		return MRES_Ignored;
 
-	char sMap[64], sBasis[255];
+	char sMap[64], sBasis[512];
 	FindConVar("mp_gamemode").GetString(sMap, sizeof(sMap));
 	SDKCall(g_hSDK_Call_KvGetString, SDKCall(g_hSDK_Call_KvFindKey, SDKCall(g_hSDK_Call_KvFindKey, SDKCall(g_hSDK_Call_KvFindKey, pThis, "modes", false), sMap, false), "1", false), sMap, sizeof(sMap), "Map", "N/A");
 	if(g_aMapInitMelee.GetString(sMap, sBasis, sizeof(sBasis)) == false)
@@ -78,13 +78,13 @@ public MRESReturn OnGetMissionInfoPost(DHookReturn hReturn)
 		{
 			SDKCall(g_hSDK_Call_KvGetString, pThis, sBasis, sizeof(sBasis), "meleeweapons", "");
 			if(sBasis[0] == 0) //darkwood
-				ReadMeleeFile(sBasis);
+				ReadMeleeManifest(sBasis);
 
 			g_aMapInitMelee.SetString(sMap, sBasis, false);
 		}
 	}
 
-	char sTemp1[255], sTemp2[255];
+	char sTemp1[512], sTemp2[512];
 	g_hCvarMeleeSpawn.GetString(sTemp1, sizeof(sTemp1));
 	g_hCvarAddMelee.GetString(sTemp2, sizeof(sTemp2));
 	ReplaceString(sTemp1, sizeof(sTemp1), " ", "");
@@ -119,9 +119,9 @@ public MRESReturn OnGetMissionInfoPost(DHookReturn hReturn)
 				StrCat(sTemp2, sizeof(sTemp2), sBuffer[i][1]);
 		}
 
+		sTemp2[strlen(sTemp2) - 1] = 0;
 		StrCat(sTemp1, sizeof(sTemp1), sTemp2);
 		strcopy(sTemp1, sizeof(sTemp1), sTemp1[1]);
-		sTemp1[strlen(sTemp1) - 1] = 0;
 	}
 
 	if(strcmp(sTemp1, sBasis) == 0)
@@ -131,7 +131,7 @@ public MRESReturn OnGetMissionInfoPost(DHookReturn hReturn)
 	return MRES_Ignored;
 }
 
-bool ReadMeleeFile(char sMelees[255])
+bool ReadMeleeManifest(char sManifest[512])
 {
 	File file = OpenFile(FILE_PATH, "r");
 	if(file == null)
@@ -142,20 +142,22 @@ bool ReadMeleeFile(char sMelees[255])
 
 	while(!file.EndOfFile())
 	{
-		char line[255];
-		if(!file.ReadLine(line, sizeof(line)))
+		char sLine[255];
+		if(!file.ReadLine(sLine, sizeof(sLine)))
 			break;
 
-		ReplaceString(line, sizeof(line), " ", "");
+		ReplaceString(sLine, sizeof(sLine), " ", "");
 
-		int len = strlen(line);
-		if(len < 26)
+		if(strlen(sLine) < 27)
 			continue;
 
-		if(SplitStringRight(line, "scripts/melee/", line, sizeof(line)) && SplitString(line, ".txt", line, sizeof(line)) != -1)
-			Format(sMelees, sizeof(sMelees), "%s;%s", sMelees, line);
+		if(SplitStringRight(sLine, "scripts/melee/", sLine, sizeof(sLine)) && SplitString(sLine, ".txt", sLine, sizeof(sLine)) != -1)
+			Format(sManifest, sizeof(sManifest), "%s;%s", sManifest, sLine);
 	}
 	
+	if(sManifest[0] != 0)
+		strcopy(sManifest, sizeof(sManifest), sManifest[1]);
+
 	file.Close();
 }
 
