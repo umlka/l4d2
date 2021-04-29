@@ -1,0 +1,214 @@
+/*====================================================
+1.3
+	- Fixed the meleeweapons list if some 3rd party map mission do not declare the "meleeweapons".
+	- Save the initial meleeweapons list. After changing the new mission, the "meleeweapons" will be restored and redeclared.
+
+1.2
+	- Fixed didn'sBasis take effect in time if added Cvars to server.cfg. Thanks to "Target_7" for reporting.
+
+1.1
+	- Fixed broken windows signatures.
+	- Not forces map to reload any more.
+	- Thanks to "Silvers" for reporting and help.
+
+1.0
+	- Initial release
+======================================================*/
+#pragma semicolon 1
+#pragma newdecls required
+#include <sourcemod>
+#include <sdktools>
+#include <dhooks>
+
+#define FILE_PATH "scripts\\melee\\melee_manifest.txt"
+#define DEFAULT_MELEES "fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;riot_shield;golfclub;shovel;pitchfork"
+
+DynamicDetour g_dDetour;
+
+StringMap g_aMapInitMelee;
+
+Handle g_hSDK_Call_KvGetString; 
+Handle g_hSDK_Call_KvSetString; 
+Handle g_hSDK_Call_KvFindKey;
+
+ConVar g_hCvarMeleeSpawn; 
+ConVar g_hCvarAddMelee;
+
+public Plugin myinfo=
+{
+	name = "l4d2 melee spawn control",
+	author = "IA/NanaNana",
+	description = "Unlock melee weapons",
+	version = "1.3",
+	url = "http://forums.alliedmods.net/showthread.php?sBasis=327605"
+}
+
+public void OnPluginStart()
+{
+	GameData hGameData = new GameData("l4d2_melee_spawn_control");
+	if(hGameData == null)
+		SetFailState("Could not find gamedata \"l4d2_melee_spawn_control.txt\"");
+
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::GetString");
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	PrepSDKCall_SetReturnInfo(SDKType_String, SDKPass_Pointer);
+	if((g_hSDK_Call_KvGetString = EndPrepSDKCall()) == null)
+		SetFailState("Failed to create SDKCall: KeyValues::GetString");
+
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::SetString");
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	if((g_hSDK_Call_KvSetString = EndPrepSDKCall()) == null)
+		SetFailState("Failed to create SDKCall: KeyValues::SetString");
+
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::FindKey");
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Pointer);
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	if((g_hSDK_Call_KvFindKey = EndPrepSDKCall()) == null)
+		SetFailState("Failed to create SDKCall: KeyValues::FindKey");
+
+	SetupDetours(hGameData);
+
+	delete hGameData;
+
+	g_aMapInitMelee = new StringMap();
+
+	g_hCvarMeleeSpawn = CreateConVar("l4d2_melee_spawn", "", "Melee weapon list for unlock, use ';' to separate between names, e.g: pitchfork,shovel. Empty for no change");
+	g_hCvarAddMelee = CreateConVar("l4d2_add_melee", "", "Add melee weapons to map basis melee spawn or l4d2_melee_spawn, use ';' to separate between names. Empty for don'sBasis add");
+}
+
+public void OnPluginEnd()
+{
+	if(!g_dDetour.Disable(Hook_Post, OnGetMissionInfoPost))
+		SetFailState("Failed to disable detour: OnGetMissionInfo");
+}
+
+void SetupDetours(GameData hGameData = null)
+{
+	g_dDetour = DynamicDetour.FromConf(hGameData, "OnGetMissionInfo");
+	if(g_dDetour == null)
+		SetFailState("Failed to find signature: OnGetMissionInfo");
+		
+	if(!g_dDetour.Enable(Hook_Post, OnGetMissionInfoPost))
+		SetFailState("Failed to detour post: OnGetMissionInfo");
+}
+
+public MRESReturn OnGetMissionInfoPost(DHookReturn hReturn)
+{
+	if(GetGameTime() > 5.0)
+		return MRES_Ignored;
+
+	int pThis = hReturn.Value;
+	if(pThis == 0)
+		return MRES_Ignored;
+
+	char sMap[64], sBasis[255];
+	FindConVar("mp_gamemode").GetString(sMap, sizeof(sMap));
+	SDKCall(g_hSDK_Call_KvGetString, SDKCall(g_hSDK_Call_KvFindKey, SDKCall(g_hSDK_Call_KvFindKey, SDKCall(g_hSDK_Call_KvFindKey, pThis, "modes", false), sMap, false), "1", false), sMap, sizeof(sMap), "Map", "N/A");
+	if(g_aMapInitMelee.GetString(sMap, sBasis, sizeof(sBasis)) == false)
+	{
+		if(strcmp(sMap, "N/A") != 0)
+		{
+			SDKCall(g_hSDK_Call_KvGetString, pThis, sBasis, sizeof(sBasis), "meleeweapons", "");
+			if(sBasis[0] == 0) //darkwood
+				ReadMeleeFile(sBasis);
+
+			g_aMapInitMelee.SetString(sMap, sBasis, false);
+		}
+	}
+
+	char sTemp1[255], sTemp2[255];
+	g_hCvarMeleeSpawn.GetString(sTemp1, sizeof(sTemp1));
+	g_hCvarAddMelee.GetString(sTemp2, sizeof(sTemp2));
+	ReplaceString(sTemp1, sizeof(sTemp1), " ", "");
+	ReplaceString(sTemp2, sizeof(sTemp2), " ", "");
+
+	if(sTemp1[0] == 0)
+	{
+		if(sTemp2[0] == 0)
+		{
+			SDKCall(g_hSDK_Call_KvSetString, pThis, "meleeweapons", sBasis);
+			return MRES_Ignored;
+		}
+
+		sTemp1 = sBasis[0] != 0 ? sBasis : DEFAULT_MELEES;
+	}
+
+	if(sTemp2[0] != 0)
+	{
+		Format(sTemp1, sizeof(sTemp1), ";%s;", sTemp1);
+		int iCount = ReplaceString(sTemp2, sizeof(sTemp2), ";", ";") + 1;
+		char[][] sBuffer = new char[iCount][32];
+		ExplodeString(sTemp2, ";", sBuffer, iCount, 32);
+		sTemp2[0] = 0;
+
+		for(int i; i < iCount; i++)
+		{
+			if(sBuffer[i][0] == 0)
+				continue;
+				
+			Format(sBuffer[i], 32, ";%s;", sBuffer[i]);
+			if(StrContains(sTemp1, sBuffer[i]) == -1)
+				StrCat(sTemp2, sizeof(sTemp2), sBuffer[i][1]);
+		}
+
+		StrCat(sTemp1, sizeof(sTemp1), sTemp2);
+		strcopy(sTemp1, sizeof(sTemp1), sTemp1[1]);
+		sTemp1[strlen(sTemp1) - 1] = 0;
+	}
+
+	if(strcmp(sTemp1, sBasis) == 0)
+		return MRES_Ignored; // If melee spawn setting same as the mission info, then return
+
+	SDKCall(g_hSDK_Call_KvSetString, pThis, "meleeweapons", sTemp1);
+	return MRES_Ignored;
+}
+
+bool ReadMeleeFile(char sMelees[255])
+{
+	File file = OpenFile(FILE_PATH, "r");
+	if(file == null)
+		file = OpenFile(FILE_PATH, "r", true, NULL_STRING);
+		
+	if(file == null)
+		return;
+
+	while(!file.EndOfFile())
+	{
+		char line[255];
+		if(!file.ReadLine(line, sizeof(line)))
+			break;
+
+		ReplaceString(line, sizeof(line), " ", "");
+
+		int len = strlen(line);
+		if(len < 26)
+			continue;
+
+		if(SplitStringRight(line, "scripts/melee/", line, sizeof(line)) && SplitString(line, ".txt", line, sizeof(line)) != -1)
+			Format(sMelees, sizeof(sMelees), "%s;%s", sMelees, line);
+	}
+	
+	file.Close();
+}
+
+stock bool SplitStringRight(const char[] source, const char[] split, char[] part, int partLen)
+{
+	int index = StrContains(source, split); // get start index of split string 
+	
+	if(index == -1) // split string not found.. 
+		return false;
+	
+	index += strlen(split); // get end index of split string
+	
+	if(index == strlen(source) - 1) // no right side exist
+		return false;
+	
+	strcopy(part, partLen, source[index]); // copy everything after source[ index ] to part 
+	return true;
+}
