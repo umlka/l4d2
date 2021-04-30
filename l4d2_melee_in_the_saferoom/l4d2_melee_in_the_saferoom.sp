@@ -20,50 +20,52 @@ char g_sMeleeClass[16][32];
 
 static const char g_sMeleeModels[][] =
 {
-	"models/weapons/melee/v_bat.mdl",
-	"models/weapons/melee/w_bat.mdl",
-	"models/weapons/melee/v_cricket_bat.mdl",
-	"models/weapons/melee/w_cricket_bat.mdl",
-	"models/weapons/melee/v_crowbar.mdl",
-	"models/weapons/melee/w_crowbar.mdl",
-	"models/weapons/melee/v_electric_guitar.mdl",
-	"models/weapons/melee/w_electric_guitar.mdl",
 	"models/weapons/melee/v_fireaxe.mdl",
 	"models/weapons/melee/w_fireaxe.mdl",
 	"models/weapons/melee/v_frying_pan.mdl",
 	"models/weapons/melee/w_frying_pan.mdl",
-	"models/weapons/melee/v_golfclub.mdl",
-	"models/weapons/melee/w_golfclub.mdl",
-	"models/weapons/melee/v_katana.mdl",
-	"models/weapons/melee/w_katana.mdl",
 	"models/weapons/melee/v_machete.mdl",
 	"models/weapons/melee/w_machete.mdl",
+	"models/weapons/melee/v_bat.mdl",
+	"models/weapons/melee/w_bat.mdl",
+	"models/weapons/melee/v_crowbar.mdl",
+	"models/weapons/melee/w_crowbar.mdl",
+	"models/weapons/melee/v_cricket_bat.mdl",
+	"models/weapons/melee/w_cricket_bat.mdl",
 	"models/weapons/melee/v_tonfa.mdl",
 	"models/weapons/melee/w_tonfa.mdl",
-	"models/weapons/melee/v_riotshield.mdl",
-	"models/weapons/melee/w_riotshield.mdl",
+	"models/weapons/melee/v_katana.mdl",
+	"models/weapons/melee/w_katana.mdl",
+	"models/weapons/melee/v_electric_guitar.mdl",
+	"models/weapons/melee/w_electric_guitar.mdl",
+	"models/v_models/v_knife_t.mdl",
+	"models/w_models/weapons/w_knife_t.mdl",
+	"models/weapons/melee/v_golfclub.mdl",
+	"models/weapons/melee/w_golfclub.mdl",
+	"models/weapons/melee/v_shovel.mdl",
+	"models/weapons/melee/w_shovel.mdl",
 	"models/weapons/melee/v_pitchfork.mdl",
 	"models/weapons/melee/w_pitchfork.mdl",
-	"models/weapons/melee/v_shovel.mdl",
-	"models/weapons/melee/w_shovel.mdl"
+	"models/weapons/melee/v_riotshield.mdl",
+	"models/weapons/melee/w_riotshield.mdl"
 };
 
 static const char g_sMeleeName[][] =
 {
-	"knife",			//小刀
-	"cricket_bat",		//球拍
-	"crowbar",			//撬棍
-	"electric_guitar",	//吉他
 	"fireaxe",			//斧头
 	"frying_pan",		//平底锅
-	"golfclub",			//高尔夫球棍
-	"baseball_bat",		//棒球棒
-	"katana",			//武士刀
 	"machete",			//砍刀
+	"baseball_bat",		//棒球棒
+	"crowbar",			//撬棍
+	"cricket_bat",		//球拍
 	"tonfa",			//警棍
-	"riot_shield",		//盾牌
+	"katana",			//武士刀
+	"electric_guitar",	//吉他
+	"knife",			//小刀
+	"golfclub",			//高尔夫球棍
+	"shovel",			//铁铲
 	"pitchfork",		//草叉
-	"shovel"			//铁铲
+	"riotshield",		//盾牌
 };
 
 public Plugin myinfo =
@@ -92,20 +94,20 @@ public void OnPluginStart()
 	g_hRandomAmount	= CreateConVar("l4d2_MITSR_Random_Amount", "4","Number of weapons to spawn if l4d2_MITSR_Spawn_Type is set to 1.", _, true, 0.0, true, 32.0);
 	g_hMapBaseAmount = CreateConVar("l4d2_MITSR_MapBase_Amount", "4", "Number multiple if l4d2_MITSR_Spawn_Type is set to 2.", _, true, 0.0, true, 32.0);
 		
-	g_hMeleeItems[7] = CreateConVar("l4d2_MITSR_Knife", "1", "Number of knifes to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
-	g_hMeleeItems[1] = CreateConVar("l4d2_MITSR_CricketBat", "1", "Number of cricket bats to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
-	g_hMeleeItems[2] = CreateConVar("l4d2_MITSR_Crowbar", "1", "Number of crowbars to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
-	g_hMeleeItems[3] = CreateConVar("l4d2_MITSR_ElecGuitar", "1", "Number of electric guitars to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
-	g_hMeleeItems[4] = CreateConVar("l4d2_MITSR_FireAxe", "1", "Number of fireaxes to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
-	g_hMeleeItems[5] = CreateConVar("l4d2_MITSR_FryingPan", "1", "Number of frying pans to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
-	g_hMeleeItems[6] = CreateConVar("l4d2_MITSR_GolfClub", "1", "Number of golf clubs to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
-	g_hMeleeItems[0] = CreateConVar("l4d2_MITSR_BaseballBat", "1", "Number of baseball bats to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
-	g_hMeleeItems[8] = CreateConVar("l4d2_MITSR_Katana", "1", "Number of katanas to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
-	g_hMeleeItems[9] = CreateConVar("l4d2_MITSR_Machete", "1", "Number of machetes to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
-	g_hMeleeItems[10] = CreateConVar("l4d2_MITSR_Tonfa", "1", "Number of tonfas to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
-	g_hMeleeItems[11] = CreateConVar("l4d2_MITSR_RiotShield", "1", "Number of tonfas to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
+	g_hMeleeItems[0] = CreateConVar("l4d2_MITSR_FireAxe", "1", "Number of fireaxes to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
+	g_hMeleeItems[1] = CreateConVar("l4d2_MITSR_FryingPan", "1", "Number of frying pans to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
+	g_hMeleeItems[2] = CreateConVar("l4d2_MITSR_Machete", "1", "Number of machetes to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
+	g_hMeleeItems[3] = CreateConVar("l4d2_MITSR_BaseballBat", "1", "Number of baseball bats to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
+	g_hMeleeItems[4] = CreateConVar("l4d2_MITSR_Crowbar", "1", "Number of crowbars to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
+	g_hMeleeItems[5] = CreateConVar("l4d2_MITSR_CricketBat", "1", "Number of cricket bats to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
+	g_hMeleeItems[6] = CreateConVar("l4d2_MITSR_Tonfa", "1", "Number of tonfas to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
+	g_hMeleeItems[7] = CreateConVar("l4d2_MITSR_Katana", "1", "Number of katanas to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
+	g_hMeleeItems[8] = CreateConVar("l4d2_MITSR_ElecGuitar", "1", "Number of electric guitars to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
+	g_hMeleeItems[9] = CreateConVar("l4d2_MITSR_Knife", "1", "Number of knifes to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
+	g_hMeleeItems[10] = CreateConVar("l4d2_MITSR_GolfClub", "1", "Number of golf clubs to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
+	g_hMeleeItems[11] = CreateConVar("l4d2_MITSR_Shovel", "1", "Number of shovels to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
 	g_hMeleeItems[12] = CreateConVar("l4d2_MITSR_PitchFork", "1", "Number of pitchforks to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
-	g_hMeleeItems[13] = CreateConVar("l4d2_MITSR_Shovel", "1", "Number of shovels to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
+	g_hMeleeItems[13] = CreateConVar("l4d2_MITSR_RiotShield", "1", "Number of tonfas to spawn (l4d2_MITSR_Spawn_Type must be 0)", _, true, 0.0, true, 10.0);
 	
 	//AutoExecConfig(true, "l4d2_melee_in_the_saferoom");
 	
