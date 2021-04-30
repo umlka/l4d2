@@ -84,7 +84,7 @@ stock int CFormat(char[] sMessage, int maxlength)
 {	
 	int iRandomPlayer = NO_INDEX;
 	
-	for(int i; i < MAX_COLORS; i++)													//	Para otras etiquetas de color se requiere un bucle.
+	for(int i; i < MAX_COLORS; i++)												//	Para otras etiquetas de color se requiere un bucle.
 	{
 		if(StrContains(sMessage, CTag[i]) == -1) 										//	Si no se encuentra la etiqueta, omitir.
 			continue;
@@ -92,7 +92,7 @@ stock int CFormat(char[] sMessage, int maxlength)
 			ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i]); 					//	Si la etiqueta no necesita Saytext2 simplemente reemplazará.
 		else																				//	La etiqueta necesita Saytext2.
 		{	
-			if(iRandomPlayer == NO_INDEX)												//	Si no se especificó un cliente aleatorio para la etiqueta, reemplaca la etiqueta y busca un cliente para la etiqueta.
+			if(iRandomPlayer == NO_INDEX)											//	Si no se especificó un cliente aleatorio para la etiqueta, reemplaca la etiqueta y busca un cliente para la etiqueta.
 			{
 				iRandomPlayer = CFindRandomPlayerByTeam(CProfile_TeamIndex[i]); 			//	Busca un cliente válido para la etiqueta, equipo de infectados oh supervivientes.
 				if(iRandomPlayer == NO_PLAYER) 
@@ -2077,50 +2077,42 @@ void TySaveSlot1(int client, int iSlot1)
 	{
 		GetEntPropString(iSlot1, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
 
-		if(StrContains(sModelName, "v_pistolA.mdl") != -1)	
+		if(StrContains(sModelName, "v_pistolA.mdl") != -1)
 			g_sWeaponInfo[client][Slot1] = "weapon_pistol";
-		else if(StrContains(sModelName, "v_dual_pistolA.mdl") != -1)	
+		else if(StrContains(sModelName, "v_dual_pistolA.mdl") != -1)
 			g_sWeaponInfo[client][Slot1] = "v_dual_pistol";
-		else if(StrContains(sModelName, "v_desert_eagle.mdl") != -1)	
+		else if(StrContains(sModelName, "v_desert_eagle.mdl") != -1)
 			g_sWeaponInfo[client][Slot1] = "weapon_pistol_magnum";
-		else if(StrContains(sModelName, "v_bat.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "baseball_bat";
-		else if(StrContains(sModelName, "v_cricket_bat.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "cricket_bat";
-		else if(StrContains(sModelName, "v_crowbar.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "crowbar";
-		else if(StrContains(sModelName, "v_fireaxe.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "fireaxe";
-		else if(StrContains(sModelName, "v_katana.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "katana";
-		else if(StrContains(sModelName, "v_golfclub.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "golfclub";
-		else if(StrContains(sModelName, "v_machete.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "machete";
-		else if(StrContains(sModelName, "v_tonfa.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "tonfa";
-		else if(StrContains(sModelName, "v_electric_guitar.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "electric_guitar";
-		else if(StrContains(sModelName, "v_frying_pan.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "frying_pan";
-		else if(StrContains(sModelName, "v_knife_t.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "knife";
-		else if(StrContains(sModelName, "v_chainsaw.mdl") != -1)	
+		else if(StrContains(sModelName, "v_chainsaw.mdl") != -1)
 			g_sWeaponInfo[client][Slot1] = "weapon_chainsaw";
-		else if(StrContains(sModelName, "v_riotshield.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "riotshield";
-		else if(StrContains(sModelName, "v_pitchfork.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "pitchfork";
-		else if(StrContains(sModelName, "v_shovel.mdl") != -1)	
+		else if(StrContains(sModelName, "v_fireaxe.mdl") != -1)
+			g_sWeaponInfo[client][Slot1] = "fireaxe";
+		else if(StrContains(sModelName, "v_frying_pan.mdl") != -1)
+			g_sWeaponInfo[client][Slot1] = "frying_pan";
+		else if(StrContains(sModelName, "v_machete.mdl") != -1)
+			g_sWeaponInfo[client][Slot1] = "machete";
+		else if(StrContains(sModelName, "v_bat.mdl") != -1)
+			g_sWeaponInfo[client][Slot1] = "baseball_bat";
+		else if(StrContains(sModelName, "v_crowbar.mdl") != -1)
+			g_sWeaponInfo[client][Slot1] = "crowbar";
+		else if(StrContains(sModelName, "v_cricket_bat.mdl") != -1)
+			g_sWeaponInfo[client][Slot1] = "cricket_bat";
+		else if(StrContains(sModelName, "v_tonfa.mdl") != -1)
+			g_sWeaponInfo[client][Slot1] = "tonfa";
+		else if(StrContains(sModelName, "v_katana.mdl") != -1)
+			g_sWeaponInfo[client][Slot1] = "katana";
+		else if(StrContains(sModelName, "v_electric_guitar.mdl") != -1)
+			g_sWeaponInfo[client][Slot1] = "electric_guitar";
+		else if(StrContains(sModelName, "v_knife_t.mdl") != -1)
+			g_sWeaponInfo[client][Slot1] = "knife";
+		else if(StrContains(sModelName, "v_golfclub.mdl") != -1)
+			g_sWeaponInfo[client][Slot1] = "golfclub";
+		else if(StrContains(sModelName, "v_shovel.mdl") != -1)
 			g_sWeaponInfo[client][Slot1] = "shovel";
-		else if(StrContains(sModelName, "v_foamfinger.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "b_foamfinger";			
-		else if(StrContains(sModelName, "v_fubar.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "fubar";		
-		else if(StrContains(sModelName, "v_paintrain.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "nail_board";
-		else if(StrContains(sModelName, "v_sledgehammer.mdl") != -1)	
-			g_sWeaponInfo[client][Slot1] = "sledgehammer";
+		else if(StrContains(sModelName, "v_pitchfork.mdl") != -1)
+			g_sWeaponInfo[client][Slot1] = "pitchfork";
+		else if(StrContains(sModelName, "v_riotshield.mdl") != -1)
+			g_sWeaponInfo[client][Slot1] = "riotshield";
 	}
 	
 	if(strncmp(g_sWeaponInfo[client][Slot1][7], "pistol", 6) == 0 || strncmp(g_sWeaponInfo[client][Slot1][7], "chainsaw", 8) == 0)
@@ -2280,7 +2272,7 @@ void DeletePlayerSlotAll(int client)
 	for(int i; i < 5; i++)
 	{
 		iSlot = GetPlayerWeaponSlot(client, i);
-		if(iSlot > 0)	
+		if(iSlot > 0)
 			DeletePlayerSlot(client, iSlot);
 	}
 }
