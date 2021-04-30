@@ -22,7 +22,7 @@
 
 #define GAMEDATA 	   "l4d2_melee_spawn_control"
 #define FILE_PATH 	   "scripts\\melee\\melee_manifest.txt"
-#define DEFAULT_MELEES "fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;riot_shield;golfclub;shovel;pitchfork"
+#define DEFAULT_MELEES "fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;golfclub;shovel;pitchfork;riot_shield"
 
 DynamicDetour g_dDetour;
 
@@ -136,7 +136,7 @@ void ReadMeleeManifest(char sManifest[512])
 	File file = OpenFile(FILE_PATH, "r");
 	if(file == null)
 		file = OpenFile(FILE_PATH, "r", true, NULL_STRING);
-		
+
 	if(file == null)
 		return;
 
