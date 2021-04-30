@@ -78,7 +78,7 @@ int GetAnimation(int entity, const char[] sSequence)
 	if(iEntity == -1)
 		return -1;
 
-	static char sModel[PLATFORM_MAX_PATH];
+	char sModel[64];
 	GetClientModel(entity, sModel, sizeof(sModel));
 	SetEntityModel(iEntity, sModel);
 	SetVariantString(sSequence);
