@@ -215,50 +215,52 @@ char g_sMeleeClass[16][32];
 
 static const char g_sMeleeModels[][] =
 {
-	"models/weapons/melee/v_bat.mdl",
-	"models/weapons/melee/w_bat.mdl",
-	"models/weapons/melee/v_cricket_bat.mdl",
-	"models/weapons/melee/w_cricket_bat.mdl",
-	"models/weapons/melee/v_crowbar.mdl",
-	"models/weapons/melee/w_crowbar.mdl",
-	"models/weapons/melee/v_electric_guitar.mdl",
-	"models/weapons/melee/w_electric_guitar.mdl",
 	"models/weapons/melee/v_fireaxe.mdl",
 	"models/weapons/melee/w_fireaxe.mdl",
 	"models/weapons/melee/v_frying_pan.mdl",
 	"models/weapons/melee/w_frying_pan.mdl",
-	"models/weapons/melee/v_golfclub.mdl",
-	"models/weapons/melee/w_golfclub.mdl",
-	"models/weapons/melee/v_katana.mdl",
-	"models/weapons/melee/w_katana.mdl",
 	"models/weapons/melee/v_machete.mdl",
 	"models/weapons/melee/w_machete.mdl",
+	"models/weapons/melee/v_bat.mdl",
+	"models/weapons/melee/w_bat.mdl",
+	"models/weapons/melee/v_crowbar.mdl",
+	"models/weapons/melee/w_crowbar.mdl",
+	"models/weapons/melee/v_cricket_bat.mdl",
+	"models/weapons/melee/w_cricket_bat.mdl",
 	"models/weapons/melee/v_tonfa.mdl",
 	"models/weapons/melee/w_tonfa.mdl",
-	"models/weapons/melee/v_riotshield.mdl",
-	"models/weapons/melee/w_riotshield.mdl",
+	"models/weapons/melee/v_katana.mdl",
+	"models/weapons/melee/w_katana.mdl",
+	"models/weapons/melee/v_electric_guitar.mdl",
+	"models/weapons/melee/w_electric_guitar.mdl",
+	"models/v_models/v_knife_t.mdl",
+	"models/w_models/weapons/w_knife_t.mdl",
+	"models/weapons/melee/v_golfclub.mdl",
+	"models/weapons/melee/w_golfclub.mdl",
+	"models/weapons/melee/v_shovel.mdl",
+	"models/weapons/melee/w_shovel.mdl",
 	"models/weapons/melee/v_pitchfork.mdl",
 	"models/weapons/melee/w_pitchfork.mdl",
-	"models/weapons/melee/v_shovel.mdl",
-	"models/weapons/melee/w_shovel.mdl"
+	"models/weapons/melee/v_riotshield.mdl",
+	"models/weapons/melee/w_riotshield.mdl"
 };
 
 static const char g_sMeleeName[][] =
 {
-	"knife",			//小刀
-	"cricket_bat",		//球拍
-	"crowbar",			//撬棍
-	"electric_guitar",	//吉他
 	"fireaxe",			//斧头
 	"frying_pan",		//平底锅
-	"golfclub",			//高尔夫球棍
-	"baseball_bat",		//棒球棒
-	"katana",			//武士刀
 	"machete",			//砍刀
+	"baseball_bat",		//棒球棒
+	"crowbar",			//撬棍
+	"cricket_bat",		//球拍
 	"tonfa",			//警棍
-	"riotshield",		//盾牌
+	"katana",			//武士刀
+	"electric_guitar",	//吉他
+	"knife",			//小刀
+	"golfclub",			//高尔夫球棍
+	"shovel",			//铁铲
 	"pitchfork",		//草叉
-	"shovel"			//铁铲
+	"riotshield",		//盾牌
 };
 
 void InitPlayerData(int client)
