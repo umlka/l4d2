@@ -4,7 +4,21 @@
     {
 		"Functions"
 		{
-			"OnGetMissionInfo"
+			"CDirectorItemManager::IsMeleeWeaponAllowedToExist"
+			{
+				"signature"		"CDirectorItemManager::IsMeleeWeaponAllowedToExist"
+				"callconv"		"thiscall"
+				"return"		"int"
+				"this"			"ignore"
+				"arguments"
+				{
+					"wscript_name"
+					{
+						"type"	"charptr"
+					}
+				}
+			}
+			"CTerrorGameRules::GetMissionInfo"
 			{
 				"signature"		"CTerrorGameRules::GetMissionInfo"
 				"callconv"		"thiscall"
@@ -15,19 +29,6 @@
 
 		"Signatures"
 		{
-			// =========================
-			// SILVERS SIGS
-			// =========================
-			/* KeyValues::FindKey(const char *keyName, bool bCreate) */
-			"KeyValues::FindKey"
-			{
-				"library"		"server"
-				"linux"			"@_ZN9KeyValues7FindKeyEPKcb"
-				"windows"		"\x55\x8B\x2A\x81\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x8B\x2A\x8A\x2A\x2A\x56"
-				/* 55 8B ? 81 ? ? ? ? ? ? ? ? ? ? 33 ? 89 ? ? 8B ? 8A ? ? 56 */
-				/* Search: "CfgFile" - above is call */
-			}
-
 			/* const char *KeyValues::GetString(const char *keyName, const char *defaultValue) */
 			"KeyValues::GetString"
 			{
@@ -37,7 +38,6 @@
 				/* 55 8B ? 81 ? 44 02 ? ? A1 ? ? ? ? 33 ? 89 ? ? 53 */
 				/* Search: "WrongTeamMsg", call below is our function. */
 			}
-			
 			/* void KeyValues::SetString(const char *keyName, const char *value) */
 			"KeyValues::SetString"
 			{
@@ -47,7 +47,23 @@
 				/* 55 8B ? 8B ? ? 56 6A 01 50 E8 ? ? ? ? 8B ? 85 ? 74 ? 8B ? ? 53 57 51 E8 ? ? ? ? 8B ? ? 52 E8 ? ? ? ? 8B ? ? 83 ? ? C7 ? ? ? ? ? ? 85 ? 75 ? BB ? ? ? ? 53 */
 				/* Search: "victimname" - below is call */
 			}
-			
+			/* KeyValues::FindKey(const char *keyName, bool bCreate) */
+			"KeyValues::FindKey"
+			{
+				"library"		"server"
+				"linux"			"@_ZN9KeyValues7FindKeyEPKcb"
+				"windows"		"\x55\x8B\x2A\x81\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x8B\x2A\x8A\x2A\x2A\x56"
+				/* 55 8B ? 81 ? ? ? ? ? ? ? ? ? ? 33 ? 89 ? ? 8B ? 8A ? ? 56 */
+				/* Search: "CfgFile" - above is call */
+			}
+			"CDirectorItemManager::IsMeleeWeaponAllowedToExist"
+			{
+				"library"		"server"
+				"linux"			"@_ZN20CDirectorItemManager27IsMeleeWeaponAllowedToExistEPKc"
+				"windows"		"\x55\x8B\x2A\x8B\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x2A\x2A\x2A\x2A\x2A\xFF\x2A\x84"
+				/* 55 8B ? 8B ? ? ? ? ? 8B ? 8B ? ? ? ? ? FF ? 84 */
+				/* Updated by Silvers. Search "scripts/melee/%s.txt". Call above. */
+			}
 			"CTerrorGameRules::GetMissionInfo" // Found by V10
 			{
 				"library"		"server"
