@@ -49,32 +49,34 @@ char g_sItemName[MAXPLAYERS + 1][64];
 
 static const char g_sMeleeModels[][] =
 {
-	"models/weapons/melee/v_bat.mdl",
-	"models/weapons/melee/w_bat.mdl",
-	"models/weapons/melee/v_cricket_bat.mdl",
-	"models/weapons/melee/w_cricket_bat.mdl",
-	"models/weapons/melee/v_crowbar.mdl",
-	"models/weapons/melee/w_crowbar.mdl",
-	"models/weapons/melee/v_electric_guitar.mdl",
-	"models/weapons/melee/w_electric_guitar.mdl",
 	"models/weapons/melee/v_fireaxe.mdl",
 	"models/weapons/melee/w_fireaxe.mdl",
 	"models/weapons/melee/v_frying_pan.mdl",
 	"models/weapons/melee/w_frying_pan.mdl",
-	"models/weapons/melee/v_golfclub.mdl",
-	"models/weapons/melee/w_golfclub.mdl",
-	"models/weapons/melee/v_katana.mdl",
-	"models/weapons/melee/w_katana.mdl",
 	"models/weapons/melee/v_machete.mdl",
 	"models/weapons/melee/w_machete.mdl",
+	"models/weapons/melee/v_bat.mdl",
+	"models/weapons/melee/w_bat.mdl",
+	"models/weapons/melee/v_crowbar.mdl",
+	"models/weapons/melee/w_crowbar.mdl",
+	"models/weapons/melee/v_cricket_bat.mdl",
+	"models/weapons/melee/w_cricket_bat.mdl",
 	"models/weapons/melee/v_tonfa.mdl",
 	"models/weapons/melee/w_tonfa.mdl",
-	"models/weapons/melee/v_riotshield.mdl",
-	"models/weapons/melee/w_riotshield.mdl",
+	"models/weapons/melee/v_katana.mdl",
+	"models/weapons/melee/w_katana.mdl",
+	"models/weapons/melee/v_electric_guitar.mdl",
+	"models/weapons/melee/w_electric_guitar.mdl",
+	"models/v_models/v_knife_t.mdl",
+	"models/w_models/weapons/w_knife_t.mdl",
+	"models/weapons/melee/v_golfclub.mdl",
+	"models/weapons/melee/w_golfclub.mdl",
+	"models/weapons/melee/v_shovel.mdl",
+	"models/weapons/melee/w_shovel.mdl",
 	"models/weapons/melee/v_pitchfork.mdl",
 	"models/weapons/melee/w_pitchfork.mdl",
-	"models/weapons/melee/v_shovel.mdl",
-	"models/weapons/melee/w_shovel.mdl"
+	"models/weapons/melee/v_riotshield.mdl",
+	"models/weapons/melee/w_riotshield.mdl"
 };
 
 static const char g_sSpecialsInfectedModels[][] =
@@ -103,38 +105,38 @@ static const char g_sUncommonInfectedModels[][] =
 
 static const char g_sMeleeName[][] =
 {
-	"knife",
-	"cricket_bat",
-	"crowbar",
-	"electric_guitar",
-	"fireaxe",
-	"frying_pan",
-	"golfclub",
-	"baseball_bat",
-	"katana",
-	"machete",
-	"tonfa",
-	"riot_shield",
-	"pitchfork",
-	"shovel"
+	"fireaxe",			//斧头
+	"frying_pan",		//平底锅
+	"machete",			//砍刀
+	"baseball_bat",		//棒球棒
+	"crowbar",			//撬棍
+	"cricket_bat",		//球拍
+	"tonfa",			//警棍
+	"katana",			//武士刀
+	"electric_guitar",	//吉他
+	"knife",			//小刀
+	"golfclub",			//高尔夫球棍
+	"shovel",			//铁铲
+	"pitchfork",		//草叉
+	"riotshield",		//盾牌
 };
 
 static const char g_sMeleeTrans[][] =
 {
-	"小刀",
-	"球拍",
-	"撬棍",
-	"吉他",
 	"斧头",
 	"平底锅",
-	"高尔夫球棍",
-	"棒球棒",
-	"武士刀",
 	"砍刀",
+	"棒球棒",
+	"撬棍",
+	"球拍",
 	"警棍",
-	"盾牌",
+	"武士刀",
+	"吉他",
+	"小刀",
+	"高尔夫球棍",
+	"铁铲",
 	"草叉",
-	"铁铲"
+	"盾牌"
 };
 
 enum L4D2WeaponType 
@@ -1244,6 +1246,10 @@ void TeleportToSurvivor(int client)
 	}
 	
 	CheatCommand(client, "give smg");
+	
+	char sScriptName[32];
+	FormatEx(sScriptName, 32, "give %s", g_sMeleeClass[GetRandomInt(0, g_iMeleeClassCount - 1)]);	
+	CheatCommand(client, sScriptName);
 }
 
 int GetTeleportTarget(int client)
