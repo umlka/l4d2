@@ -66,6 +66,16 @@ public void OnPluginEnd()
 
 public MRESReturn MeleeWeaponAllowedToExistPost(DHookReturn hReturn, DHookParam hParams)
 {
+	/*char sScriptName[32];
+	hParams.GetString(1, sScriptName, sizeof(sScriptName));
+	if(strcmp(sScriptName, "knife") == 0)
+	{
+		hReturn.Value = true;
+		return MRES_Override;
+	}
+	
+	return MRES_Ignored;*/
+
 	hReturn.Value = true;
 	return MRES_Override;
 }
