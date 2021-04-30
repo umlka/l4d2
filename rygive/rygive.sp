@@ -14,7 +14,7 @@
 #define NAME_CreateTank "NextBotCreatePlayerBot<Tank>"
 #define NAME_InfectedAttackSurvivorTeam "Infected::AttackSurvivorTeam"
 
-StringMap g_hSteamIDs;
+StringMap g_aSteamIDs;
 
 Handle g_hSDK_Call_RoundRespawn;
 Handle g_hSDK_Call_SetHumanSpec;
@@ -226,7 +226,7 @@ public void OnPluginStart()
 
 	RegAdminCmd("sm_rygive", RygiveMenu, ADMFLAG_ROOT, "rygive");
 
-	g_hSteamIDs = new StringMap();
+	g_aSteamIDs = new StringMap();
 }
 
 public void OnPluginEnd()
@@ -259,7 +259,7 @@ public void OnClientPostAdminCheck(int client)
 	char sSteamID[64];
 	GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID));
 	bool bAllowed;
-	if(!g_hSteamIDs.GetValue(sSteamID, bAllowed))
+	if(!g_aSteamIDs.GetValue(sSteamID, bAllowed))
 		KickClient(client, "服务器调试中...");
 }
 
@@ -318,7 +318,7 @@ public void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroa
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if((client == 0 || !IsFakeClient(client)) && !RealPlayerExist(client))
 	{
-		g_hSteamIDs.Clear();
+		g_aSteamIDs.Clear();
 		g_bDebug = false;
 	}
 }
@@ -2153,7 +2153,7 @@ void Action_DebugMode(int client)
 {
 	if(g_bDebug == true)
 	{
-		g_hSteamIDs.Clear();
+		g_aSteamIDs.Clear();
 			
 		g_bDebug = false;
 		ReplyToCommand(client, "调试模式已关闭.");
@@ -2166,7 +2166,7 @@ void Action_DebugMode(int client)
 			{
 				char sSteamID[64];
 				GetClientAuthId(i, AuthId_Steam2, sSteamID, sizeof(sSteamID));
-				g_hSteamIDs.SetValue(sSteamID, true, true);
+				g_aSteamIDs.SetValue(sSteamID, true, true);
 			}
 		}
 		
