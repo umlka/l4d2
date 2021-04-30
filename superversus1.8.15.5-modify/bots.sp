@@ -25,6 +25,10 @@ Handle g_hBotsUpdateTimer;
 Address g_pRespawn;
 Address g_pResetStatCondition;
 
+DynamicDetour g_dDetourSetHumanSpec;
+DynamicDetour g_dDetourGoAwayFromKeyboard;
+DynamicDetour g_dDetourPlayerSetModel;
+
 ConVar g_hSurvivorLimit;
 ConVar g_hL4DSurvivorLimit;
 ConVar g_hAutoJoin; 
@@ -307,6 +311,20 @@ public void OnPluginStart()
 	g_hSteamIDs = new StringMap();
 }
 
+public void OnPluginEnd()
+{
+	PatchAddress(false);
+	
+	if(!g_dDetourSetHumanSpec.Disable(Hook_Pre, SetHumanSpecPre))
+		SetFailState("Failed to disable detour: SetHumanSpec");
+	
+	if(!g_dDetourSetHumanSpec.Disable(Hook_Pre, PlayerGoAwayFromKeyboardPre) || !g_dDetourSetHumanSpec.Disable(Hook_Post, PlayerGoAwayFromKeyboardPost))
+		SetFailState("Failed to disable detour: CTerrorPlayer::GoAwayFromKeyboard");
+	
+	if(!g_dDetourSetHumanSpec.Disable(Hook_Pre, PlayerSetModelPre) || !g_dDetourSetHumanSpec.Disable(Hook_Post, PlayerSetModelPost))
+		SetFailState("Failed to disable detour: CBasePlayer::SetModel");
+}
+
 public Action CmdJoinSpectator(int client, int args)
 {
 	if(IsRoundStarted() == false)
@@ -495,11 +513,6 @@ public Action CommandListener_SpecNext(int client, char[] command, int argc)
 	}
 
 	return Plugin_Continue;
-}
-
-public void OnPluginEnd()
-{
-	PatchAddress(false);
 }
 
 public void OnConfigsExecuted()
@@ -1525,29 +1538,28 @@ bool GoAwayFromKeyboard(int client)
 
 void SetupDetours(GameData hGameData = null)
 {
-	DynamicDetour dDetour;
-	dDetour = DynamicDetour.FromConf(hGameData, "SetHumanSpec");
-	if(dDetour == null)
+	g_dDetourSetHumanSpec = DynamicDetour.FromConf(hGameData, "SetHumanSpec");
+	if(g_dDetourSetHumanSpec == null)
 		SetFailState("Failed to find signature: SetHumanSpec");
 		
-	if(!dDetour.Enable(Hook_Pre, SetHumanSpecPre))
+	if(!g_dDetourSetHumanSpec.Enable(Hook_Pre, SetHumanSpecPre))
 		SetFailState("Failed to detour pre: SetHumanSpec");
 
-	dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GoAwayFromKeyboard");
-	if(dDetour == null)
+	g_dDetourGoAwayFromKeyboard = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GoAwayFromKeyboard");
+	if(g_dDetourGoAwayFromKeyboard == null)
 		SetFailState("Failed to find signature: CTerrorPlayer::GoAwayFromKeyboard");
 
-	if(!dDetour.Enable(Hook_Pre, PlayerGoAwayFromKeyboardPre))
+	if(!g_dDetourGoAwayFromKeyboard.Enable(Hook_Pre, PlayerGoAwayFromKeyboardPre))
 		SetFailState("Failed to detour pre: CTerrorPlayer::GoAwayFromKeyboard");
 
-	if(!dDetour.Enable(Hook_Post, PlayerGoAwayFromKeyboardPost))
+	if(!g_dDetourGoAwayFromKeyboard.Enable(Hook_Post, PlayerGoAwayFromKeyboardPost))
 		SetFailState("Failed to detour post: CTerrorPlayer::GoAwayFromKeyboard");
 	
-	dDetour = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_CBaseEntity);
-	dDetour.SetFromConf(hGameData, SDKConf_Signature, "CBasePlayer::SetModel");
-	dDetour.AddParam(HookParamType_CharPtr);
-	dDetour.Enable(Hook_Pre, SetModelPre);
-	dDetour.Enable(Hook_Post, SetModelPost);
+	g_dDetourPlayerSetModel = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_CBaseEntity);
+	g_dDetourPlayerSetModel.SetFromConf(hGameData, SDKConf_Signature, "CBasePlayer::SetModel");
+	g_dDetourPlayerSetModel.AddParam(HookParamType_CharPtr);
+	g_dDetourPlayerSetModel.Enable(Hook_Pre, PlayerSetModelPre);
+	g_dDetourPlayerSetModel.Enable(Hook_Post, PlayerSetModelPost);
 }
 
 //AFK Fix https://forums.alliedmods.net/showthread.php?p=2714236
@@ -1602,12 +1614,12 @@ public MRESReturn PlayerGoAwayFromKeyboardPost(int pThis, DHookReturn hReturn)
 }
 
 //Identity Fix https://forums.alliedmods.net/showpost.php?p=2718792&postcount=36
-public MRESReturn SetModelPre(int pThis, DHookParam hParams)
+public MRESReturn PlayerSetModelPre(int pThis, DHookParam hParams)
 {
 	// We need this pre hook even though it's empty, or else the post hook will crash the game.
 }
 
-public MRESReturn SetModelPost(int pThis, DHookParam hParams)
+public MRESReturn PlayerSetModelPost(int pThis, DHookParam hParams)
 {
 	if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis))
 		return MRES_Ignored;
