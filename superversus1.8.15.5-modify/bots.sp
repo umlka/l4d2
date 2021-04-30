@@ -318,10 +318,10 @@ public void OnPluginEnd()
 	if(!g_dDetourSetHumanSpec.Disable(Hook_Pre, SetHumanSpecPre))
 		SetFailState("Failed to disable detour: SetHumanSpec");
 	
-	if(!g_dDetourSetHumanSpec.Disable(Hook_Pre, PlayerGoAwayFromKeyboardPre) || !g_dDetourSetHumanSpec.Disable(Hook_Post, PlayerGoAwayFromKeyboardPost))
+	if(!g_dDetourGoAwayFromKeyboard.Disable(Hook_Pre, PlayerGoAwayFromKeyboardPre) || !g_dDetourGoAwayFromKeyboard.Disable(Hook_Post, PlayerGoAwayFromKeyboardPost))
 		SetFailState("Failed to disable detour: CTerrorPlayer::GoAwayFromKeyboard");
 	
-	if(!g_dDetourSetHumanSpec.Disable(Hook_Pre, PlayerSetModelPre) || !g_dDetourSetHumanSpec.Disable(Hook_Post, PlayerSetModelPost))
+	if(!g_dDetourPlayerSetModel.Disable(Hook_Pre, PlayerSetModelPre) || !g_dDetourPlayerSetModel.Disable(Hook_Post, PlayerSetModelPost))
 		SetFailState("Failed to disable detour: CBasePlayer::SetModel");
 }
 
