@@ -22,9 +22,10 @@
 
 #define GAMEDATA 	   "l4d2_melee_spawn_control"
 #define FILE_PATH 	   "scripts\\melee\\melee_manifest.txt"
-#define DEFAULT_MELEES "fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;golfclub;shovel;pitchfork;riot_shield"
+#define DEFAULT_MELEES "fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;golfclub;shovel;pitchfork;riotshield"
 
-DynamicDetour g_dDetour;
+DynamicDetour g_dDetourMeleeWeaponAllowedToExist;
+DynamicDetour g_dDetourGameRulesGetMissionInfo;
 
 StringMap g_aMapInitMelee;
 
@@ -56,11 +57,20 @@ public void OnPluginStart()
 
 public void OnPluginEnd()
 {
-	if(!g_dDetour.Disable(Hook_Post, OnGetMissionInfoPost))
-		SetFailState("Failed to disable detour: OnGetMissionInfo");
+	if(!g_dDetourMeleeWeaponAllowedToExist.Disable(Hook_Post, MeleeWeaponAllowedToExistPost))
+		SetFailState("Failed to disable detour: CDirectorItemManager::IsMeleeWeaponAllowedToExist");
+
+	if(!g_dDetourGameRulesGetMissionInfo.Disable(Hook_Post, GameRulesGetMissionInfoPost))
+		SetFailState("Failed to disable detour: CTerrorGameRules::GetMissionInfo");
 }
 
-public MRESReturn OnGetMissionInfoPost(DHookReturn hReturn)
+public MRESReturn MeleeWeaponAllowedToExistPost(DHookReturn hReturn, DHookParam hParams)
+{
+	hReturn.Value = true;
+	return MRES_Override;
+}
+
+public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 {
 	if(GetGameTime() > 5.0)
 		return MRES_Ignored;
@@ -119,9 +129,11 @@ public MRESReturn OnGetMissionInfoPost(DHookReturn hReturn)
 				StrCat(sTemp2, sizeof(sTemp2), sBuffer[i][1]);
 		}
 
-		sTemp2[strlen(sTemp2) - 1] = 0;
-		StrCat(sTemp1, sizeof(sTemp1), sTemp2);
+		if(sTemp2[0] != 0)
+			StrCat(sTemp1, sizeof(sTemp1), sTemp2);
+
 		strcopy(sTemp1, sizeof(sTemp1), sTemp1[1]);
+		sTemp1[strlen(sTemp1) - 1] = 0;
 	}
 
 	if(strcmp(sTemp1, sBasis) == 0)
@@ -218,10 +230,17 @@ void LoadGameData()
 
 void SetupDetours(GameData hGameData = null)
 {
-	g_dDetour = DynamicDetour.FromConf(hGameData, "OnGetMissionInfo");
-	if(g_dDetour == null)
-		SetFailState("Failed to find signature: OnGetMissionInfo");
+	g_dDetourMeleeWeaponAllowedToExist = DynamicDetour.FromConf(hGameData, "CDirectorItemManager::IsMeleeWeaponAllowedToExist");
+	if(g_dDetourMeleeWeaponAllowedToExist == null)
+		SetFailState("Failed to find signature: CDirectorItemManager::IsMeleeWeaponAllowedToExist");
 		
-	if(!g_dDetour.Enable(Hook_Post, OnGetMissionInfoPost))
-		SetFailState("Failed to detour post: OnGetMissionInfo");
+	if(!g_dDetourMeleeWeaponAllowedToExist.Enable(Hook_Post, MeleeWeaponAllowedToExistPost))
+		SetFailState("Failed to detour post: CDirectorItemManager::IsMeleeWeaponAllowedToExist");
+
+	g_dDetourGameRulesGetMissionInfo = DynamicDetour.FromConf(hGameData, "CTerrorGameRules::GetMissionInfo");
+	if(g_dDetourGameRulesGetMissionInfo == null)
+		SetFailState("Failed to find signature: CTerrorGameRules::GetMissionInfo");
+		
+	if(!g_dDetourGameRulesGetMissionInfo.Enable(Hook_Post, GameRulesGetMissionInfoPost))
+		SetFailState("Failed to detour post: CTerrorGameRules::GetMissionInfo");
 }
