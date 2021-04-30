@@ -12,7 +12,7 @@
 #define TEAM_INFECTED   3
 #define TEAM_PASSING    4
 
-StringMap g_hSteamIDs;
+StringMap g_aSteamIDs;
 
 Handle g_hSDK_Call_RoundRespawn;
 Handle g_hSDK_Call_SetHumanSpec;
@@ -308,7 +308,7 @@ public void OnPluginStart()
 
 	AddCommandListener(CommandListener_SpecNext, "spec_next");
 	
-	g_hSteamIDs = new StringMap();
+	g_aSteamIDs = new StringMap();
 }
 
 public void OnPluginEnd()
@@ -683,7 +683,7 @@ void ResetPlugin()
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
 
-	g_hSteamIDs.Clear();
+	g_aSteamIDs.Clear();
 	
 	delete g_hBotsUpdateTimer;
 }
@@ -885,9 +885,9 @@ bool IsFirstTime(int client)
 		return false;
 
 	bool bAllowed;
-	if(!g_hSteamIDs.GetValue(sSteamID, bAllowed))  // If can't find the entry in map
+	if(!g_aSteamIDs.GetValue(sSteamID, bAllowed))  // If can't find the entry in map
 	{
-		g_hSteamIDs.SetValue(sSteamID, true, true);
+		g_aSteamIDs.SetValue(sSteamID, true, true);
 		bAllowed = true;
 	}
 
@@ -898,7 +898,7 @@ void RecordSteamID(int client)
 {
 	char sSteamID[64];
 	if(GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID))) 
-		g_hSteamIDs.SetValue(sSteamID, false, true);
+		g_aSteamIDs.SetValue(sSteamID, false, true);
 }
 
 int GetBotOfIdle(int client)
