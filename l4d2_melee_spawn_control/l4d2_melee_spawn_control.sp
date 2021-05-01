@@ -181,7 +181,6 @@ void ReadMeleeManifest(char sManifest[512])
 		strcopy(sManifest, sizeof(sManifest), sManifest[1]);
 
 	file.Close();
-	delete file;
 }
 
 stock bool SplitStringRight(const char[] source, const char[] split, char[] part, int partLen)
@@ -204,11 +203,11 @@ void LoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false) 
+	if(FileExists(sPath) == false)
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null) 
+	if(hGameData == null)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	StartPrepSDKCall(SDKCall_Raw);
