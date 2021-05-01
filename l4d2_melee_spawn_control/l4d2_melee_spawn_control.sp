@@ -181,6 +181,7 @@ void ReadMeleeManifest(char sManifest[512])
 		strcopy(sManifest, sizeof(sManifest), sManifest[1]);
 
 	file.Close();
+	delete file;
 }
 
 stock bool SplitStringRight(const char[] source, const char[] split, char[] part, int partLen)
