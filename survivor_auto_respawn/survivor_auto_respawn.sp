@@ -262,8 +262,8 @@ static const char g_sWeaponName[5][17][] =
 		""
 	},
 	{//slot 4
-		"adrenaline",				//1 肾上腺素
-		"pain_pills",				//2 止痛药
+		"pain_pills",				//1 止痛药
+		"adrenaline",				//2 肾上腺素
 		"",
 		"",
 		"",
@@ -978,7 +978,7 @@ public MRESReturn DeathModelCreatePre(int pThis)
 public MRESReturn DeathModelCreatePost(int pThis, DHookReturn hReturn)
 {
 	int iDeathModel = hReturn.Value;
-	if(!iDeathModel)
+	if(iDeathModel == 0)
 		return MRES_Ignored;
 
 	g_iDeathModel[g_iTempClient] = EntIndexToEntRef(iDeathModel);
