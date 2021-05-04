@@ -4,7 +4,7 @@
 	- Save the initial meleeweapons list. After changing the new mission, the "meleeweapons" will be restored and redeclared.
 
 1.2
-	- Fixed didn'sBasis take effect in time if added Cvars to server.cfg. Thanks to "Target_7" for reporting.
+	- Fixed didn't take effect in time if added Cvars to server.cfg. Thanks to "Target_7" for reporting.
 
 1.1
 	- Fixed broken windows signatures.
@@ -22,12 +22,13 @@
 
 #define GAMEDATA 	   "l4d2_melee_spawn_control"
 #define FILE_PATH 	   "scripts\\melee\\melee_manifest.txt"
-#define DEFAULT_MELEES "fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;golfclub;shovel;pitchfork;riotshield"
+#define DEFAULT_MELEES "fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;golfclub;shovel;pitchfork"
 
 DynamicDetour g_dDetourMeleeWeaponAllowedToExist;
 DynamicDetour g_dDetourGameRulesGetMissionInfo;
 
-StringMap g_aMapInitMelee;
+StringMap g_aMapSetMelees;
+StringMap g_aMapInitMelees;
 
 Handle g_hSDK_Call_KvGetString; 
 Handle g_hSDK_Call_KvSetString; 
@@ -42,17 +43,18 @@ public Plugin myinfo=
 	author = "IA/NanaNana",
 	description = "Unlock melee weapons",
 	version = "1.3",
-	url = "http://forums.alliedmods.net/showthread.php?sBasis=327605"
+	url = "https://forums.alliedmods.net/showthread.php?p=2719531"
 }
 
 public void OnPluginStart()
 {
 	LoadGameData();
 
-	g_aMapInitMelee = new StringMap();
+	g_aMapSetMelees = new StringMap();
+	g_aMapInitMelees = new StringMap();
 
-	g_hCvarMeleeSpawn = CreateConVar("l4d2_melee_spawn", "", "Melee weapon list for unlock, use ';' to separate between names, e.g: pitchfork,shovel. Empty for no change");
-	g_hCvarAddMelee = CreateConVar("l4d2_add_melee", "", "Add melee weapons to map basis melee spawn or l4d2_melee_spawn, use ';' to separate between names. Empty for don'sBasis add");
+	g_hCvarMeleeSpawn = CreateConVar("l4d2_melee_spawn", "", "Melee weapon list for unlock, use ';' to separate between names, e.g: pitchfork;shovel. Empty for no change");
+	g_hCvarAddMelee = CreateConVar("l4d2_add_melee", "", "Add melee weapons to map basis melee spawn or l4d2_melee_spawn, use ';' to separate between names. Empty for don't add");
 }
 
 public void OnPluginEnd()
@@ -62,6 +64,11 @@ public void OnPluginEnd()
 
 	if(!g_dDetourGameRulesGetMissionInfo.Disable(Hook_Post, GameRulesGetMissionInfoPost))
 		SetFailState("Failed to disable detour: CTerrorGameRules::GetMissionInfo");
+}
+
+public void OnMapEnd()
+{
+	g_aMapSetMelees.Clear();
 }
 
 public MRESReturn MeleeWeaponAllowedToExistPost(DHookReturn hReturn, DHookParam hParams)
@@ -82,52 +89,73 @@ public MRESReturn MeleeWeaponAllowedToExistPost(DHookReturn hReturn, DHookParam 
 
 public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 {
-	if(GetGameTime() > 5.0)
-		return MRES_Ignored;
-
 	int pThis = hReturn.Value;
 	if(pThis == 0)
 		return MRES_Ignored;
+		
+	char sMapCurrentMelees[512];
+	SDKCall(g_hSDK_Call_KvGetString, pThis, sMapCurrentMelees, sizeof(sMapCurrentMelees), "meleeweapons", "");
 
-	char sMap[64], sBasis[512];
+	char sMap[64], sMapBaseMelees[512];
 	FindConVar("mp_gamemode").GetString(sMap, sizeof(sMap));
 	SDKCall(g_hSDK_Call_KvGetString, SDKCall(g_hSDK_Call_KvFindKey, SDKCall(g_hSDK_Call_KvFindKey, SDKCall(g_hSDK_Call_KvFindKey, pThis, "modes", false), sMap, false), "1", false), sMap, sizeof(sMap), "Map", "N/A");
-	if(g_aMapInitMelee.GetString(sMap, sBasis, sizeof(sBasis)) == false)
-	{
-		if(strcmp(sMap, "N/A") != 0)
-		{
-			SDKCall(g_hSDK_Call_KvGetString, pThis, sBasis, sizeof(sBasis), "meleeweapons", "");
-			if(sBasis[0] == 0) //darkwood
-				ReadMeleeManifest(sBasis);
 
-			g_aMapInitMelee.SetString(sMap, sBasis, false);
-		}
+	if(strcmp(sMap, "N/A") == 0)
+		return MRES_Ignored;
+
+	if(g_aMapInitMelees.GetString(sMap, sMapBaseMelees, sizeof(sMapBaseMelees)) == false)
+	{
+		if(sMapCurrentMelees[0] != 0)
+			strcopy(sMapBaseMelees, sizeof(sMapBaseMelees), sMapCurrentMelees);
+		else
+			ReadMeleeManifest(sMapBaseMelees, sizeof(sMapBaseMelees)); //darkwood
+			
+		if(sMapBaseMelees[0] == 0)
+			strcopy(sMapBaseMelees, sizeof(sMapBaseMelees), DEFAULT_MELEES);
+	
+		g_aMapInitMelees.SetString(sMap, sMapBaseMelees, false);
 	}
 
-	char sTemp1[512], sTemp2[512];
-	g_hCvarMeleeSpawn.GetString(sTemp1, sizeof(sTemp1));
-	g_hCvarAddMelee.GetString(sTemp2, sizeof(sTemp2));
-	ReplaceString(sTemp1, sizeof(sTemp1), " ", "");
-	ReplaceString(sTemp2, sizeof(sTemp2), " ", "");
+	char sMapSetMelees[512];
+	if(g_aMapSetMelees.GetString(sMap, sMapSetMelees, sizeof(sMapSetMelees)) == false)
+		GetMapSetMelees(sMap, sMapBaseMelees, sMapSetMelees, sizeof(sMapSetMelees));
 
-	if(sTemp1[0] == 0)
+	if(sMapSetMelees[0] == 0)
+		return MRES_Ignored;
+
+	if(strcmp(sMapSetMelees, sMapCurrentMelees) == 0)
+		return MRES_Ignored;
+
+	SDKCall(g_hSDK_Call_KvSetString, pThis, "meleeweapons", sMapSetMelees);
+	return MRES_Ignored;
+}
+
+void GetMapSetMelees(const char[] sMap, const char[] sMapBaseMelees, char[] sMapSetMelees, int maxlength)
+{
+	char sBaseMelees[512], sExtraMelees[512];
+	g_hCvarMeleeSpawn.GetString(sBaseMelees, sizeof(sBaseMelees));
+	g_hCvarAddMelee.GetString(sExtraMelees, sizeof(sExtraMelees));
+	ReplaceString(sBaseMelees, sizeof(sBaseMelees), " ", "");
+	ReplaceString(sExtraMelees, sizeof(sExtraMelees), " ", "");
+
+	if(sBaseMelees[0] == 0)
 	{
-		if(sTemp2[0] == 0)
+		if(sExtraMelees[0] == 0)
 		{
-			SDKCall(g_hSDK_Call_KvSetString, pThis, "meleeweapons", sBasis);
-			return MRES_Ignored;
+			g_aMapSetMelees.SetString(sMap, "", true);
+			return;
 		}
 
-		sTemp1 = sBasis[0] != 0 ? sBasis : DEFAULT_MELEES;
+		strcopy(sBaseMelees, sizeof(sBaseMelees), sMapBaseMelees);
 	}
 
-	if(sTemp2[0] != 0)
+	if(sExtraMelees[0] != 0)
 	{
-		Format(sTemp1, sizeof(sTemp1), ";%s;", sTemp1);
-		int iCount = ReplaceString(sTemp2, sizeof(sTemp2), ";", ";") + 1;
+		Format(sBaseMelees, sizeof(sBaseMelees), ";%s;", sBaseMelees);
+		int iCount = ReplaceString(sExtraMelees, sizeof(sExtraMelees), ";", ";") + 1;
 		char[][] sBuffer = new char[iCount][32];
-		ExplodeString(sTemp2, ";", sBuffer, iCount, 32);
-		sTemp2[0] = 0;
+		ExplodeString(sExtraMelees, ";", sBuffer, iCount, 32);
+		sExtraMelees[0] = 0;
 
 		for(int i; i < iCount; i++)
 		{
@@ -135,25 +163,46 @@ public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 				continue;
 				
 			Format(sBuffer[i], 32, ";%s;", sBuffer[i]);
-			if(StrContains(sTemp1, sBuffer[i]) == -1)
-				StrCat(sTemp2, sizeof(sTemp2), sBuffer[i][1]);
+			if(StrContains(sBaseMelees, sBuffer[i]) == -1)
+				StrCat(sExtraMelees, sizeof(sExtraMelees), sBuffer[i][1]);
 		}
 
-		if(sTemp2[0] != 0)
-			StrCat(sTemp1, sizeof(sTemp1), sTemp2);
+		if(sExtraMelees[0] != 0)
+			StrCat(sBaseMelees, sizeof(sBaseMelees), sExtraMelees);
 
-		strcopy(sTemp1, sizeof(sTemp1), sTemp1[1]);
-		sTemp1[strlen(sTemp1) - 1] = 0;
+		strcopy(sBaseMelees, sizeof(sBaseMelees), sBaseMelees[1]);
+		
+		sBaseMelees[strlen(sBaseMelees) - 1] = 0;
 	}
-
-	if(strcmp(sTemp1, sBasis) == 0)
-		return MRES_Ignored; // If melee spawn setting same as the mission info, then return
-
-	SDKCall(g_hSDK_Call_KvSetString, pThis, "meleeweapons", sTemp1);
-	return MRES_Ignored;
+	
+	int pos = GetCharPosInString(sBaseMelees , ';', 16);
+	if(pos != -1)
+		sBaseMelees[pos] = 0;
+		
+	strcopy(sMapSetMelees, maxlength, sBaseMelees);
+	g_aMapSetMelees.SetString(sMap, sBaseMelees, true);
 }
 
-void ReadMeleeManifest(char sManifest[512])
+stock int GetCharPosInString(const char[] str, char c, int which)
+{
+	int len = strlen(str);
+	if(which > len)
+		return -1;
+
+	int total;
+	for(int i; i < len; i++)
+	{
+		if(str[i] == c)
+		{
+			total++;
+			if(total == which)
+				return i;
+		}
+	}
+	return -1;
+}
+
+void ReadMeleeManifest(char[] sManifest, int maxlength)
 {
 	File file = OpenFile(FILE_PATH, "r");
 	if(file == null)
@@ -174,13 +223,13 @@ void ReadMeleeManifest(char sManifest[512])
 			continue;
 
 		if(SplitStringRight(sLine, "scripts/melee/", sLine, sizeof(sLine)) && SplitString(sLine, ".txt", sLine, sizeof(sLine)) != -1)
-			Format(sManifest, sizeof(sManifest), "%s;%s", sManifest, sLine);
+			Format(sManifest, maxlength, "%s;%s", sManifest, sLine);
 	}
 	
 	if(sManifest[0] != 0)
-		strcopy(sManifest, sizeof(sManifest), sManifest[1]);
+		strcopy(sManifest, maxlength, sManifest[1]);
 
-	file.Close();
+	delete file;
 }
 
 stock bool SplitStringRight(const char[] source, const char[] split, char[] part, int partLen)
