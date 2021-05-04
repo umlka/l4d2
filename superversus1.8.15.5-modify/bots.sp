@@ -160,8 +160,8 @@ static const char g_sWeaponName[5][17][] =
 		""
 	},
 	{//slot 4
-		"adrenaline",				//1 肾上腺素
-		"pain_pills",				//2 止痛药
+		"pain_pills",				//1 止痛药
+		"adrenaline",				//2 肾上腺素
 		"",
 		"",
 		"",
@@ -622,6 +622,8 @@ void SpawnFakeSurvivorClient()
 	if(!IsPlayerAlive(iBot))
 		Respawn(iBot);
 
+	GiveWeapon(iBot);
+	SetGodMode(iBot, 1.0);
 	TeleportToSurvivor(iBot);
 
 	if(IsClientInGame(iBot) && IsFakeClient(iBot) && GetClientTeam(iBot) == TEAM_SURVIVOR && !GetIdlePlayer(iBot))
@@ -1078,8 +1080,8 @@ void DisplayTeamMenu(int client)
 			if(IsPlayerAlive(i))
 			{
 				if(GetEntProp(i, Prop_Send, "m_isIncapacitated"))
-					Format(sInfo, sizeof(sInfo), "倒地 - %d HP - %s", GetClientRealHealth(i), sInfo);
-				else if(GetEntProp(i, Prop_Send, "m_currentReviveCount") == iIncapacitatedCount)
+					Format(sInfo, sizeof(sInfo), "倒地 - %d HP - %s", GetEntProp(i, Prop_Data, "m_iHealth"), sInfo);
+				else if(GetEntProp(i, Prop_Send, "m_currentReviveCount") >= iIncapacitatedCount)
 					Format(sInfo, sizeof(sInfo), "黑白 - %d HP - %s", GetClientRealHealth(i), sInfo);
 				else
 					Format(sInfo, sizeof(sInfo), "%dHP - %s", GetClientRealHealth(i), sInfo);
