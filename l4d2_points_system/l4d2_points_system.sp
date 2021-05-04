@@ -1539,16 +1539,16 @@ public Action Command_RBuy(int client, int iNumArguments)
 				}
 				else
 				{ // If we are not dealing with a suicide
-					CheatCommand(client, g_esPlayerData[client].sItemName);
-					RemovePoints(client, g_esPlayerData[client].iItemCost);
-					//do additional actions for certain items
-					if(!strcmp(g_esPlayerData[client].sItemName, "z_spawn_old mob", false))
-					{
-						CounterData[iUCommonLeft] += FindConVar("z_common_limit").IntValue;
-					}
-					else if(!strcmp(g_esPlayerData[client].sItemName, "give ammo", false))
-					{
+					if(!strcmp(g_esPlayerData[client].sItemName, "give ammo", false))
 						ReloadAmmo(client, g_esPlayerData[client].iItemCost, g_esPlayerData[client].sItemName);
+					else
+					{
+						RemovePoints(client, g_esPlayerData[client].iItemCost);
+						//do additional actions for certain items
+						if(!strcmp(g_esPlayerData[client].sItemName, "z_spawn_old mob", false))
+							CounterData[iUCommonLeft] += FindConVar("z_common_limit").IntValue;
+						else
+							CheatCommand(client, g_esPlayerData[client].sItemName);
 					}
 					return Plugin_Handled;
 				}
