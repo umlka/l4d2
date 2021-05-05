@@ -7,11 +7,19 @@
 #define PLUGIN_VERSION "2.2.5"
 
 #include <sourcemod>
+#include <sdktools>
 #include <sdkhooks>
-#include <l4d_stocks>
 
 #define CFG_WHITELIST "data/weapon_cleaner_whitelist.cfg"
 #define MAXENTITIES 2048
+
+enum L4D2GlowType
+{
+    L4D2Glow_None		= 0,
+    L4D2Glow_OnUse		= 1,
+    L4D2Glow_OnLookAt	= 2,
+    L4D2Glow_Constant	= 3
+}
 
 char g_sItemNameGun[][] =
 {
@@ -1206,4 +1214,112 @@ void UnHookEvents(){
 	if(g_bIsL4D2){
 		UnhookEvent("weapon_drop", Event_WeaponDrop);
 	}
+}
+
+/**
+ * Set entity glow. This is consider safer and more robust over setting each glow
+ * property on their own because glow offset will be check first.
+ *
+ * @param entity        Entity index.
+ * @parma type          Glow type.
+ * @param range         Glow max range, 0 for unlimited.
+ * @param minRange      Glow min range.
+ * @param colorOverride Glow color, RGB.
+ * @param flashing      Whether the glow will be flashing.
+ * @return              True if glow was set, false if entity does not support
+ *                      glow.
+ */
+stock bool L4D2_SetEntityGlow(int entity, L4D2GlowType type, int range, int minRange, int colorOverride[3], bool flashing)
+{
+    if(!IsValidEntity(entity))
+        return false;
+
+    char netclass[128];
+    GetEntityNetClass(entity, netclass, 128);
+    if(FindSendPropInfo(netclass, "m_iGlowType") < 1)
+        return false;
+
+    L4D2_SetEntityGlow_Type(entity, type);
+    L4D2_SetEntityGlow_Range(entity, range);
+    L4D2_SetEntityGlow_MinRange(entity, minRange);
+    L4D2_SetEntityGlow_Color(entity, colorOverride);
+    L4D2_SetEntityGlow_Flashing(entity, flashing);
+    return true;
+}
+
+/**
+ * Set entity glow type.
+ *
+ * @param entity        Entity index.
+ * @parma type          Glow type.
+ * @noreturn
+ * @error               Invalid entity index or entity does not support glow.
+ */
+stock void L4D2_SetEntityGlow_Type(int entity, L4D2GlowType type)
+{
+    SetEntProp(entity, Prop_Send, "m_iGlowType", view_as<int>(type));
+}
+
+/**
+ * Set entity glow range.
+ *
+ * @param entity        Entity index.
+ * @parma range         Glow range.
+ * @noreturn
+ * @error               Invalid entity index or entity does not support glow.
+ */
+stock void L4D2_SetEntityGlow_Range(int entity, int range)
+{
+    SetEntProp(entity, Prop_Send, "m_nGlowRange", range);
+}
+
+/**
+ * Set entity glow min range.
+ *
+ * @param entity        Entity index.
+ * @parma minRange      Glow min range.
+ * @noreturn
+ * @error               Invalid entity index or entity does not support glow.
+ */
+stock void L4D2_SetEntityGlow_MinRange(int entity, int minRange)
+{
+    SetEntProp(entity, Prop_Send, "m_nGlowRangeMin", minRange);
+}
+
+/**
+ * Set entity glow color.
+ *
+ * @param entity        Entity index.
+ * @parma colorOverride Glow color, RGB.
+ * @noreturn
+ * @error               Invalid entity index or entity does not support glow.
+ */
+stock void L4D2_SetEntityGlow_Color(int entity, int colorOverride[3])
+{
+    SetEntProp(entity, Prop_Send, "m_glowColorOverride", colorOverride[0] + (colorOverride[1] * 256) + (colorOverride[2] * 65536));
+}
+
+/**
+ * Set entity glow flashing state.
+ *
+ * @param entity        Entity index.
+ * @parma flashing      Whether glow will be flashing.
+ * @noreturn
+ * @error               Invalid entity index or entity does not support glow.
+ */
+stock void L4D2_SetEntityGlow_Flashing(int entity, bool flashing)
+{
+    SetEntProp(entity, Prop_Send, "m_bFlashing", view_as<int>(flashing));
+}
+
+/**
+ * Removes entity glow.
+ *
+ * @param entity        Entity index.
+ * @return              True if glow was removed, false if entity does not
+ *                      support glow.
+ */
+stock bool L4D2_RemoveEntityGlow(int entity)
+{
+    return L4D2_SetEntityGlow(entity, L4D2Glow_None, 0, 0, { 0, 0, 0 }, false);
 }
