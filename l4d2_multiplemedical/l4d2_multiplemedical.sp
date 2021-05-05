@@ -4,13 +4,13 @@
 #include <sdktools>
 #include <l4d_weapon_stocks>
 
-#define PLUGIN_VERSION "1.1"
+#define PLUGIN_VERSION 	"1.1"
 
 //ArrayList g_ListSpawner;
 
 int g_iRoundStart; 
 int g_iPlayerSpawn;
-int g_iGlobalWeaponRules[view_as<int>(L4D2WeaponId)] = {-1, ...};
+int g_iGlobalWeaponRules[view_as<int>(L4D2WeaponId_MaxWeapon)];
 
 public Plugin myinfo = 
 {
@@ -68,7 +68,7 @@ public Action CmdResetWeaponMultiple(int args)
 	
 void ResetWeaponRules()
 {
-    for(int i; i < view_as<int>(L4D2WeaponId); i++) 
+    for(int i; i < view_as<int>(L4D2WeaponId_MaxWeapon); i++) 
 		g_iGlobalWeaponRules[i] = -1;
 }
 
@@ -103,7 +103,7 @@ public Action Timer_UpdateCounts(Handle timer)
 	int iEntityCount = GetEntityCount();
 	for(int i = 1; i < iEntityCount; i++)
 	{
-		if(!IsValidEdict(i))
+		if(!IsValidEntity(i))
 			continue;
 
 		L4D2WeaponId source = IdentifyWeapon(i);
