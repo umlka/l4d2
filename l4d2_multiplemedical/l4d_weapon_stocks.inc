@@ -95,7 +95,7 @@ enum L4D2WeaponId
     L4D2WeaponId_TurboPhysics,      // 53
     L4D2WeaponId_Ammo,              // 54
     L4D2WeaponId_UpgradeItem,       // 55
-	L4D2WeaponId_MaxWeapon
+	L4D2WeaponId_Max
 };
 
 char L4D2WeaponName[][] =
@@ -241,7 +241,7 @@ static StringMap g_aWeaponNameTrie;
  */
 stock bool L4D2_IsValidWeaponId(L4D2WeaponId weaponId)
 {
-    return weaponId >= L4D2WeaponId_None && weaponId < L4D2WeaponId_MaxWeapon;
+    return weaponId >= L4D2WeaponId_None && weaponId < L4D2WeaponId_Max;
 }
 
 /**
@@ -373,6 +373,6 @@ stock void L4D2_InitWeaponNameTrie()
         return;
 
     g_aWeaponNameTrie = new StringMap();
-    for(int i; i < view_as<int>(L4D2WeaponId_MaxWeapon); i++)
+    for(int i; i < view_as<int>(L4D2WeaponId_Max); i++)
         g_aWeaponNameTrie.SetValue(L4D2WeaponName[view_as<L4D2WeaponId>(i)], i);
 }
