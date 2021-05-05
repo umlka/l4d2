@@ -94,7 +94,8 @@ enum L4D2WeaponId
     L4D2WeaponId_ThrowingRock,      // 52
     L4D2WeaponId_TurboPhysics,      // 53
     L4D2WeaponId_Ammo,              // 54
-    L4D2WeaponId_UpgradeItem        // 55
+    L4D2WeaponId_UpgradeItem,       // 55
+	L4D2WeaponId_MaxWeapon
 };
 
 char L4D2WeaponName[][] =
@@ -230,7 +231,7 @@ char L4D2WeaponWorldModel[][] =
     ""
 };
 
-static            StringMap    g_hWeaponNameTrie;
+static StringMap g_aWeaponNameTrie;
 
 /**
  * Returns whether weapon id is vaild.
@@ -240,7 +241,7 @@ static            StringMap    g_hWeaponNameTrie;
  */
 stock bool L4D2_IsValidWeaponId(L4D2WeaponId weaponId)
 {
-    return weaponId >= L4D2WeaponId_None && weaponId < L4D2WeaponId;
+    return weaponId >= L4D2WeaponId_None && weaponId < L4D2WeaponId_MaxWeapon;
 }
 
 /**
@@ -318,7 +319,7 @@ stock L4D2WeaponId L4D2_GetWeaponIdByWeaponName(const char[] weaponName)
 {
     L4D2_InitWeaponNameTrie();
     L4D2WeaponId weaponId;
-    return g_hWeaponNameTrie.GetValue(weaponName, weaponId) ? weaponId : L4D2WeaponId_None;
+    return g_aWeaponNameTrie.GetValue(weaponName, weaponId) ? weaponId : L4D2WeaponId_None;
 }
 
 /**
@@ -368,10 +369,10 @@ stock L4D2WeaponId L4D2_GetWeaponId(int weapon)
  */
 stock void L4D2_InitWeaponNameTrie()
 {
-    if(g_hWeaponNameTrie != null)
+    if(g_aWeaponNameTrie != null)
         return;
 
-    g_hWeaponNameTrie = new StringMap();
-    for(int i; i < view_as<int>(L4D2WeaponId); i++)
-        g_hWeaponNameTrie.SetValue(L4D2WeaponName[view_as<L4D2WeaponId>(i)], i);
+    g_aWeaponNameTrie = new StringMap();
+    for(int i; i < view_as<int>(L4D2WeaponId_MaxWeapon); i++)
+        g_aWeaponNameTrie.SetValue(L4D2WeaponName[view_as<L4D2WeaponId>(i)], i);
 }
