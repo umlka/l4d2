@@ -10,7 +10,7 @@
 
 int g_iRoundStart; 
 int g_iPlayerSpawn;
-int g_iGlobalWeaponRules[view_as<int>(L4D2WeaponId_MaxWeapon)];
+int g_iGlobalWeaponRules[view_as<int>(L4D2WeaponId_Max)];
 
 public Plugin myinfo = 
 {
@@ -68,7 +68,7 @@ public Action CmdResetWeaponMultiple(int args)
 	
 void ResetWeaponRules()
 {
-    for(int i; i < view_as<int>(L4D2WeaponId_MaxWeapon); i++) 
+    for(int i; i < view_as<int>(L4D2WeaponId_Max); i++) 
 		g_iGlobalWeaponRules[i] = -1;
 }
 
