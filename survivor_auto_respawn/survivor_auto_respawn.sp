@@ -163,12 +163,14 @@ DynamicDetour g_dDetour;
 ConVar g_hRespawnTime;
 ConVar g_hRespawnLimit;
 ConVar g_hAllowSurvivorBot;
+ConVar g_hAllowSurvivorIdle;
 ConVar g_hGiveType;
 ConVar g_hSlotFlags[5];
 //ConVar g_hSbAllBotGame; 
 //ConVar g_hAllowAllBotSurvivorTeam;
 
 bool g_bAllowSurvivorBot;
+bool g_bAllowSurvivorIdle;
 
 int g_iRoundStart; 
 int g_iPlayerSpawn;
@@ -360,16 +362,17 @@ public void OnPluginStart()
 {
 	LoadGameData();
 
-	g_hRespawnTime = CreateConVar("sar_respawn_time", "15" , "玩家自动复活时间", CVAR_FLAGS, true, 0.0);
+	g_hRespawnTime = CreateConVar("sar_respawn_time", "15" , "玩家自动复活时间(秒)", CVAR_FLAGS, true, 0.0);
 	g_hRespawnLimit = CreateConVar("sar_respawn_limit", "5" , "玩家每回合自动复活次数", CVAR_FLAGS, true, 0.0);
-	g_hAllowSurvivorBot = CreateConVar("sar_respawn_bot", "1" , "是否允许Bot自动复活", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hGiveType = CreateConVar("sar_extra_type", "2" , "根据什么来给玩家装备. \n(0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器))", CVAR_FLAGS, true, 0.0, true, 2.0);
+	g_hAllowSurvivorBot = CreateConVar("sar_respawn_bot", "1" , "是否允许Bot自动复活 \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hAllowSurvivorIdle = CreateConVar("sar_respawn_idle", "1" , "是否允许闲置玩家自动复活 \n0=否,1=是(某些多人插件闲置死亡后会接管BOT)", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hGiveType = CreateConVar("sar_extra_type", "2" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
 
-	g_hSlotFlags[0] = CreateConVar("sar_extra_slot0", "131071" , "主武器给什么 \n(0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier3)", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[1] = CreateConVar("sar_extra_slot1", "131071" , "副武器给什么 \n(0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把)", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[2] = CreateConVar("sar_extra_slot2", "7" , "投掷物给什么 \n(0=不给,7=所有)", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[3] = CreateConVar("sar_extra_slot3", "15" , "槽位3给什么 \n(0=不给,15=所有)", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[4] = CreateConVar("sar_extra_slot4", "3" , "槽位4给什么 \n(0=不给,3=所有)", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[0] = CreateConVar("sar_extra_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier3", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[1] = CreateConVar("sar_extra_slot1", "131071" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[2] = CreateConVar("sar_extra_slot2", "7" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[3] = CreateConVar("sar_extra_slot3", "15" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[4] = CreateConVar("sar_extra_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
 	
 	//g_hSbAllBotGame = FindConVar("sb_all_bot_game");
 	//g_hAllowAllBotSurvivorTeam = FindConVar("allow_all_bot_survivor_team");
@@ -377,9 +380,12 @@ public void OnPluginStart()
 	g_hRespawnTime.AddChangeHook(ConVarChanged);
 	g_hRespawnLimit.AddChangeHook(ConVarChanged);
 	g_hAllowSurvivorBot.AddChangeHook(ConVarChanged);
+	g_hAllowSurvivorIdle.AddChangeHook(ConVarChanged);
 
 	for(int i; i < 5; i++)
 		g_hSlotFlags[i].AddChangeHook(ConVarChanged_Slot);
+		
+	//AutoExecConfig(true, "survivor_auto_respawn");
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
@@ -417,6 +423,7 @@ void GetCvars()
 	g_iRespawnTime = g_hRespawnTime.IntValue;
 	g_iRespawnLimit = g_hRespawnLimit.IntValue;
 	g_bAllowSurvivorBot = g_hAllowSurvivorBot.BoolValue;
+	g_bAllowSurvivorIdle = g_hAllowSurvivorIdle.BoolValue;
 }
 
 void GetSlotCvars()
@@ -514,16 +521,43 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 	if(g_iRespawnTime == 0 || g_iRespawnLimit == 0 || IsRoundStarted() == false)
 		return;
 
-	int userid = event.GetInt("userid");
-	int client = GetClientOfUserId(userid);
-	if(client == 0 || !IsClientInGame(client) || (!g_bAllowSurvivorBot && IsFakeClient(client)) || GetClientTeam(client) != 2)
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2)
 		return;
+
+	if(IsFakeClient(client))
+	{
+		int iIdlePlayer = GetIdlePlayer(client);
+		if(iIdlePlayer == 0)
+		{
+			if(!g_bAllowSurvivorBot)
+				return;
+		}
+		else
+		{
+			if(!g_bAllowSurvivorIdle)
+				return;
+			else
+				client = iIdlePlayer;
+		}
+	}
 
 	if(CalculateRespawnLimit(client))
 	{
 		delete g_hRespawnTimer[client];
-		g_hRespawnTimer[client] = CreateTimer(1.0, Timer_Respawn, userid, TIMER_REPEAT);
+		g_hRespawnTimer[client] = CreateTimer(1.0, Timer_Respawn, GetClientUserId(client), TIMER_REPEAT);
 	}
+}
+
+int GetIdlePlayer(int client)
+{
+	if(HasEntProp(client, Prop_Send, "m_humanSpectatorUserID"))
+	{
+		client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
+		if(client > 0 && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1)
+			return client;
+	}
+	return 0;
 }
 
 bool CalculateRespawnLimit(int client)
@@ -598,6 +632,7 @@ bool CanIdle(int client)
 	return iSurvivor > 0;
 }
 */
+
 void RemoveSurvivorDeathModel(int client)
 {
 	int entity = g_iDeathModel[client];
