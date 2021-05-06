@@ -37,6 +37,8 @@ Handle g_hSDK_Call_KvFindKey;
 ConVar g_hCvarMeleeSpawn;
 ConVar g_hCvarAddMelee;
 
+bool g_bMapStarted;
+
 public Plugin myinfo=
 {
 	name = "l4d2 melee spawn control",
@@ -66,8 +68,14 @@ public void OnPluginEnd()
 		SetFailState("Failed to disable detour: CTerrorGameRules::GetMissionInfo");
 }
 
+public void OnMapStart()
+{
+	g_bMapStarted = true;
+}
+
 public void OnMapEnd()
 {
+	g_bMapStarted = false;
 	g_aMapSetMelees.Clear();
 }
 
@@ -89,10 +97,13 @@ public MRESReturn MeleeWeaponAllowedToExistPost(DHookReturn hReturn, DHookParam 
 
 public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 {
+	if(g_bMapStarted == true)
+		return MRES_Ignored;
+
 	int pThis = hReturn.Value;
 	if(pThis == 0)
 		return MRES_Ignored;
-		
+
 	char sMapCurrentMelees[512];
 	SDKCall(g_hSDK_Call_KvGetString, pThis, sMapCurrentMelees, sizeof(sMapCurrentMelees), "meleeweapons", "");
 
