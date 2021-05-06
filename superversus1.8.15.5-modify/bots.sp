@@ -10,7 +10,7 @@
 #define TEAM_SPECTATOR	1
 #define TEAM_SURVIVOR	2
 #define TEAM_INFECTED   3
-#define TEAM_PASSING    4
+#define TEAM_PASSING	4
 
 StringMap g_aSteamIDs;
 
@@ -247,11 +247,11 @@ static const char g_sWeaponModels[][] =
 
 public Plugin myinfo =
 {
-	name        = "bots(coop)",
-	author      = "DDRKhat, Marcus101RR, Merudo, Lux, Shadowysn, sorallll",
-	description = "coop",
-	version     = PLUGIN_VERSION,
-	url         = "https://forums.alliedmods.net/showthread.php?p=2405322#post2405322"
+	name		= "bots(coop)",
+	author		= "DDRKhat, Marcus101RR, Merudo, Lux, Shadowysn, sorallll",
+	description	= "coop",
+	version		= PLUGIN_VERSION,
+	url			= "https://forums.alliedmods.net/showthread.php?p=2405322#post2405322"
 }
 
 public void OnPluginStart()
@@ -261,16 +261,16 @@ public void OnPluginStart()
 	g_hL4DSurvivorLimit = FindConVar("survivor_limit");
 	g_hSurvivorLimit = CreateConVar("l4d_survivor_limit", "4", "开局Bot的数量", CVAR_FLAGS, true, 1.00, true, 24.00);
 
-	g_hAutoJoin = CreateConVar("l4d_autojoin", "1" , "在玩家连接后,是否自动加入? \n(0=否,1=是)", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hRespawnJoin = CreateConVar("l4d_respawn_on_join", "1" , "超出开局Bot的数量后进服的玩家是否活着? \n(0=否,1=是.防止玩家死亡后切换队伍或者重进游戏刷复活)", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hAutoJoin = CreateConVar("l4d_autojoin", "1" , "在玩家连接后,是否自动加入? \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hRespawnJoin = CreateConVar("l4d_respawn_on_join", "1" , "超出开局Bot的数量后进服的玩家是否活着? \n0=否,1=是.防止玩家死亡后切换队伍或者重进游戏刷复活", CVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hSpecCmdLimit = CreateConVar("l4d_spec_cmd_limit", "2" , "当完全旁观玩家达到多少个时禁止使用sm_spec命令", CVAR_FLAGS, true, 0.0);
-	g_hGiveType = CreateConVar("l4d_extra_type", "2" , "根据什么来给超出开局Bot的数量后进服的玩家装备. \n(0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器))", CVAR_FLAGS, true, 0.0, true, 2.0);
-	g_hGiveRescued = CreateConVar("l4d_give_rescued", "1" , "玩家被从小黑屋救出来后是否给装备 \n(0=不给,1=按照l4d_extra_type的设置给)", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hSlotFlags[0] = CreateConVar("l4d_extra_slot0", "131071" , "超出开局Bot的数量后进服的玩家主武器给什么 \n(0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier3)", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[1] = CreateConVar("l4d_extra_slot1", "131071" , "超出开局Bot的数量后进服的玩家副武器给什么 \n(0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把)", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[2] = CreateConVar("l4d_extra_slot2", "7" , "超出开局Bot的数量后进服的玩家投掷物给什么 \n(0=不给,7=所有)", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[3] = CreateConVar("l4d_extra_slot3", "15" , "超出开局Bot的数量后进服的玩家槽位3给什么 \n(0=不给,15=所有)", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[4] = CreateConVar("l4d_extra_slot4", "3" , "超出开局Bot的数量后进服的玩家槽位4给什么 \n(0=不给,3=所有)", CVAR_FLAGS, true, 0.0);
+	g_hGiveType = CreateConVar("l4d_extra_type", "2" , "根据什么来给超出开局Bot的数量后进服的玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
+	g_hGiveRescued = CreateConVar("l4d_give_rescued", "1" , "玩家被从小黑屋救出来后是否给装备 \n0=不给,1=按照l4d_extra_type的设置给", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hSlotFlags[0] = CreateConVar("l4d_extra_slot0", "131071" , "超出开局Bot的数量后进服的玩家主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[1] = CreateConVar("l4d_extra_slot1", "131071" , "超出开局Bot的数量后进服的玩家副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[2] = CreateConVar("l4d_extra_slot2", "7" , "超出开局Bot的数量后进服的玩家投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[3] = CreateConVar("l4d_extra_slot3", "15" , "超出开局Bot的数量后进服的玩家槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[4] = CreateConVar("l4d_extra_slot4", "3" , "超出开局Bot的数量后进服的玩家槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
 	
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品Flags参考源码g_sWeaponName中的武器名处的数字,多个武器里面随机则数字取和)", CVAR_FLAGS | FCVAR_DONTRECORD);
 	
@@ -575,10 +575,10 @@ void SpawnCheck()
 	if(IsRoundStarted() == false)
 		return;
 
-	int iSurvivor       = GetSurvivorTeam();
-	int iHumanSurvivor  = GetTeamPlayers(TEAM_SURVIVOR, false);
-	int iSurvivorLim    = g_hSurvivorLimit.IntValue;
-	int iSurvivorMax    = iHumanSurvivor > iSurvivorLim ? iHumanSurvivor : iSurvivorLim;
+	int iSurvivor		= GetSurvivorTeam();
+	int iHumanSurvivor	= GetTeamPlayers(TEAM_SURVIVOR, false);
+	int iSurvivorLim	= g_hSurvivorLimit.IntValue;
+	int iSurvivorMax	= iHumanSurvivor > iSurvivorLim ? iHumanSurvivor : iSurvivorLim;
 
 	if(iSurvivor > iSurvivorMax) 
 		PrintToConsoleAll("Kicking %d bot(s)", iSurvivor - iSurvivorMax);
@@ -801,17 +801,17 @@ bool CanIdle(int client)
 
 public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 {
-	int bot_userid = event.GetInt("bot");
 	int player_userid = event.GetInt("player");
-	int bot = GetClientOfUserId(bot_userid);
 	int player = GetClientOfUserId(player_userid);
 
-	if(g_sEntityModels[player][0] == '\0')
+	if(g_sEntityModels[player][0] == 0)
 		return;
 
 	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || !IsSurvivor(player))
 		return;
 
+	int bot_userid = event.GetInt("bot");
+	int bot = GetClientOfUserId(bot_userid);
 	g_iBotPlayer[bot] = player_userid;
 	g_iPlayerBot[player] = bot_userid;
 
@@ -1628,7 +1628,7 @@ public MRESReturn PlayerSetModelPost(int pThis, DHookParam hParams)
 
 	if(!IsSurvivor(pThis))
 	{
-		g_sEntityModels[pThis][0] = '\0';
+		g_sEntityModels[pThis][0] = 0;
 		return MRES_Ignored;
 	}
 	
