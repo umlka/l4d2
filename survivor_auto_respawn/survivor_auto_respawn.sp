@@ -735,7 +735,7 @@ void GiveWeapon(int client)
 
 void GivePresetWeapon(int client)
 {
-	for(int i; i < 5; i++)
+	for(int i = 4; i >= 0; i--)
 	{
 		if(g_iSlotCount[i] == 0)
 			continue;
