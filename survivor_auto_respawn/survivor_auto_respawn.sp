@@ -782,24 +782,16 @@ void GiveAverageWeapon(int client)
 
 	int iAverage = iTotal > 0 ? RoundToNearest(1.0 * iTier / iTotal) : 0;
 
+	GiveSecondaryWeapon(client);
 	DeletePlayerSlotX(client, 0);
+
 	switch(iAverage)
 	{
-		case 0:
-			GiveSecondaryWeapon(client);
-
 		case 1:
-		{
 			CheatCmd_Give(client, g_sWeaponName[0][GetRandomInt(0, 4)]); //随机给一把tier1武器
-			GiveSecondaryWeapon(client);
-		}
 
 		case 2:
-		{
-			CheatCmd_Give(client, g_sWeaponName[0][GetRandomInt(5, 14)]); //随机给一把tier2武器
-			GiveSecondaryWeapon(client);
-		}
-			
+			CheatCmd_Give(client, g_sWeaponName[0][GetRandomInt(5, 14)]); //随机给一把tier2武器	
 	}
 	
 	for(i = 3; i < 5; i++)
