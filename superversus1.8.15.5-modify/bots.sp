@@ -255,6 +255,7 @@ public Plugin myinfo =
 	url			= "https://forums.alliedmods.net/showthread.php?p=2405322#post2405322"
 }
 
+//启用给武器功能后最好在server.cfg里面加上这一行sm_cvar survivor_respawn_with_guns 0
 public void OnPluginStart()
 {
 	LoadGameData();
@@ -723,7 +724,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
 		SetGhostStatus(client, 0);
 
-		if(IsPlayerAlive(client))
+		if(g_hGiveType.BoolValue && IsPlayerAlive(client) && CanGiveWeapon(client))
 		{
 			g_bGivenPlayerWeapon[client] = false;
 			RequestFrame(OnNextFrame_GivePlayerWeapon, GetClientUserId(client));
@@ -757,7 +758,7 @@ bool CanGiveWeapon(int client)
 	iWeaponIndex = GetPlayerWeaponSlot(client, 1);
 	if(iWeaponIndex != -1)
 	{
-		char classname[14];
+		static char classname[14];
 		GetEdictClassname(iWeaponIndex, classname, sizeof(classname));
 		if(strcmp(classname, "weapon_pistol") == 0)
 			return true;
@@ -1299,24 +1300,16 @@ void GiveAverageWeapon(int client)
 
 	int iAverage = iTotal > 0 ? RoundToNearest(1.0 * iTier / iTotal) : 0;
 
+	GiveSecondaryWeapon(client);
 	DeletePlayerSlotX(client, 0);
+
 	switch(iAverage)
 	{
-		case 0:
-			GiveSecondaryWeapon(client);
-
 		case 1:
-		{
 			CheatCmd_Give(client, g_sWeaponName[0][GetRandomInt(0, 4)]); //随机给一把tier1武器
-			GiveSecondaryWeapon(client);
-		}
 
 		case 2:
-		{
-			CheatCmd_Give(client, g_sWeaponName[0][GetRandomInt(5, 14)]); //随机给一把tier2武器
-			GiveSecondaryWeapon(client);
-		}
-			
+			CheatCmd_Give(client, g_sWeaponName[0][GetRandomInt(5, 14)]); //随机给一把tier2武器	
 	}
 	
 	for(i = 3; i < 5; i++)
