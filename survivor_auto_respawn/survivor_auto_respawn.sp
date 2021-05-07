@@ -799,7 +799,7 @@ void GiveAverageWeapon(int client)
 			CheatCmd_Give(client, g_sWeaponName[0][GetRandomInt(5, 14)]); //随机给一把tier2武器	
 	}
 	
-	for(i = 3; i < 5; i++)
+	for(i = 2; i < 5; i++)
 	{
 		if(g_iSlotCount[i] == 0)
 			continue;
