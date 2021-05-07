@@ -271,7 +271,7 @@ public void OnPluginStart()
 	g_hSlotFlags[0] = CreateConVar("l4d_respawn_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[1] = CreateConVar("l4d_respawn_slot1", "131068" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[2] = CreateConVar("l4d_respawn_slot2", "7" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[3] = CreateConVar("l4d_respawn_slot3", "15" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[3] = CreateConVar("l4d_respawn_slot3", "3" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[4] = CreateConVar("l4d_respawn_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
 	
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品Flags参考源码g_sWeaponName中的武器名处的数字,多个武器里面随机则数字取和)", CVAR_FLAGS | FCVAR_DONTRECORD);
