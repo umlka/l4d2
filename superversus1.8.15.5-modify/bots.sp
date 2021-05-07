@@ -53,6 +53,7 @@ int g_iBotPlayer[MAXPLAYERS + 1];
 bool g_bShouldFixAFK;
 bool g_bShouldIgnore;
 bool g_bTeamChangeSpec[MAXPLAYERS + 1];
+bool g_bGivenPlayerWeapon[MAXPLAYERS + 1];
 
 char g_sMeleeClass[16][32];
 char g_sEntityModels[MAXPLAYERS + 1][PLATFORM_MAX_PATH];
@@ -267,7 +268,7 @@ public void OnPluginStart()
 	g_hGiveType = CreateConVar("l4d_extra_type", "2" , "根据什么来给超出开局Bot的数量后进服的玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
 	g_hGiveRescued = CreateConVar("l4d_give_rescued", "1" , "玩家被从小黑屋救出来后是否给装备 \n0=不给,1=按照l4d_extra_type的设置给", CVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hSlotFlags[0] = CreateConVar("l4d_extra_slot0", "131071" , "超出开局Bot的数量后进服的玩家主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[1] = CreateConVar("l4d_extra_slot1", "131071" , "超出开局Bot的数量后进服的玩家副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[1] = CreateConVar("l4d_extra_slot1", "131068" , "超出开局Bot的数量后进服的玩家副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[2] = CreateConVar("l4d_extra_slot2", "7" , "超出开局Bot的数量后进服的玩家投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[3] = CreateConVar("l4d_extra_slot3", "15" , "超出开局Bot的数量后进服的玩家槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[4] = CreateConVar("l4d_extra_slot4", "3" , "超出开局Bot的数量后进服的玩家槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
@@ -304,6 +305,7 @@ public void OnPluginStart()
 	HookEvent("survivor_rescued", Event_SurvivorRescued);
 	HookEvent("player_bot_replace", Event_PlayerBotReplace);
 	HookEvent("bot_player_replace", Event_BotPlayerReplace);
+	HookEvent("player_transitioned", Event_PlayerTransitioned);
 	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving);
 
 	AddCommandListener(CommandListener_SpecNext, "spec_next");
@@ -399,7 +401,7 @@ public Action CmdJoinSurvivor(int client, int args)
 			if(canRespawn && !IsPlayerAlive(client))
 			{
 				Respawn(client);
-				GiveWeapon(client);
+				//GiveWeapon(client);
 				SetGodMode(client, 1.0);
 				TeleportToSurvivor(client);
 			} 
@@ -622,7 +624,7 @@ void SpawnFakeSurvivorClient()
 	if(!IsPlayerAlive(iBot))
 		Respawn(iBot);
 
-	GiveWeapon(iBot);
+	//GiveWeapon(iBot);
 	SetGodMode(iBot, 1.0);
 	TeleportToSurvivor(iBot);
 
@@ -720,7 +722,50 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 			RecordSteamID(client);
 
 		SetGhostStatus(client, 0);
+
+		if(IsPlayerAlive(client))
+		{
+			g_bGivenPlayerWeapon[client] = false;
+			RequestFrame(OnNextFrame_GivePlayerWeapon, GetClientUserId(client));
+		}
 	}
+}
+
+public void OnNextFrame_GivePlayerWeapon(int client)
+{
+	if((client = GetClientOfUserId(client)) && IsClientInGame(client))
+	{
+		if(g_bGivenPlayerWeapon[client] == false && GetClientTeam(client) == 2 && IsPlayerAlive(client) && CanGiveWeapon(client))
+			GiveWeapon(client);
+			
+		g_bGivenPlayerWeapon[client] = true;
+	}
+}
+
+bool CanGiveWeapon(int client)
+{
+	static const int iSlots[4] = {0, 2, 3, 4};
+
+	int iWeaponIndex;
+	for(int i; i < 4; i++)
+	{
+		iWeaponIndex = GetPlayerWeaponSlot(client, iSlots[i]);
+		if(iWeaponIndex != -1)
+			return false;
+	}
+	
+	iWeaponIndex = GetPlayerWeaponSlot(client, 1);
+	if(iWeaponIndex != -1)
+	{
+		char classname[14];
+		GetEdictClassname(iWeaponIndex, classname, sizeof(classname));
+		if(strcmp(classname, "weapon_pistol") == 0)
+			return true;
+	}
+	else
+		return true;
+		
+	return false;
 }
 
 public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
@@ -779,6 +824,8 @@ public void Event_SurvivorRescued(Event event, const char[] name, bool dontBroad
 
 	if(g_hGiveRescued.BoolValue)
 		GiveWeapon(client);
+	
+	g_bGivenPlayerWeapon[client] = true;
 
 	if(!IsFakeClient(client) && CanIdle(client))
 		CmdGoAFK(client, 0); //被从小黑屋救出来后闲置,避免有些玩家挂机
@@ -814,6 +861,8 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 	int bot = GetClientOfUserId(bot_userid);
 	g_iBotPlayer[bot] = player_userid;
 	g_iPlayerBot[player] = bot_userid;
+	g_bGivenPlayerWeapon[bot] = true;
+	g_bGivenPlayerWeapon[player] = true;
 
 	SetEntProp(bot, Prop_Send, "m_survivorCharacter", GetEntProp(player, Prop_Send, "m_survivorCharacter"));
 	SetEntityModel(bot, g_sEntityModels[player]);
@@ -830,8 +879,11 @@ public void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroa
 	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || !IsSurvivor(player))
 		return;
 
-	static char sModel[PLATFORM_MAX_PATH];
 	int bot = GetClientOfUserId(event.GetInt("bot"));
+	g_bGivenPlayerWeapon[bot] = true;
+	g_bGivenPlayerWeapon[player] = true;
+
+	static char sModel[PLATFORM_MAX_PATH];
 	GetClientModel(bot, sModel, sizeof(sModel));
 	SetEntityModel(player, sModel);
 	SetEntProp(player, Prop_Send, "m_survivorCharacter", GetEntProp(bot, Prop_Send, "m_survivorCharacter"));
@@ -842,6 +894,11 @@ bool IsSurvivor(int client)
 	if(GetClientTeam(client) != TEAM_SURVIVOR && GetClientTeam(client) != TEAM_PASSING)
 		return false;
 	return true;
+}
+
+public void Event_PlayerTransitioned(Event event, const char[] name, bool dontBroadcast)
+{
+	g_bGivenPlayerWeapon[GetClientOfUserId(event.GetInt("userid"))] = true;
 }
 
 public void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadcast)
@@ -1181,6 +1238,8 @@ void GiveWeapon(int client)
 	if(!IsClientInGame(client) || GetClientTeam(client) != TEAM_SURVIVOR || !IsPlayerAlive(client)) 
 		return;
 
+	g_bGivenPlayerWeapon[client] = true;
+
 	switch(g_hGiveType.IntValue)
 	{
 		case 1:
@@ -1247,10 +1306,16 @@ void GiveAverageWeapon(int client)
 			GiveSecondaryWeapon(client);
 
 		case 1:
+		{
 			CheatCmd_Give(client, g_sWeaponName[0][GetRandomInt(0, 4)]); //随机给一把tier1武器
+			GiveSecondaryWeapon(client);
+		}
 
-		case 2: 
+		case 2:
+		{
 			CheatCmd_Give(client, g_sWeaponName[0][GetRandomInt(5, 14)]); //随机给一把tier2武器
+			GiveSecondaryWeapon(client);
+		}
 			
 	}
 	
@@ -1346,7 +1411,7 @@ stock void DeletePlayerSlot(int client, int iWeapon)
 stock void DeletePlayerSlotX(int client, int iSlot)
 {
 	iSlot = GetPlayerWeaponSlot(client, iSlot);
-	if(iSlot > 0)
+	if(iSlot != -1)
 	{
 		if(RemovePlayerItem(client, iSlot))
 			RemoveEntity(iSlot);
@@ -1355,12 +1420,12 @@ stock void DeletePlayerSlotX(int client, int iSlot)
 
 stock void DeletePlayerSlotAll(int client)
 {
-	int iSlot;
+	int iWeaponIndex;
 	for(int i; i < 5; i++)
 	{
-		iSlot = GetPlayerWeaponSlot(client, i);
-		if(iSlot > 0)
-			DeletePlayerSlot(client, iSlot);
+		iWeaponIndex = GetPlayerWeaponSlot(client, i);
+		if(iWeaponIndex != -1)
+			DeletePlayerSlot(client, iWeaponIndex);
 	}
 }
 
