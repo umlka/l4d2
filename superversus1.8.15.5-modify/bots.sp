@@ -747,25 +747,24 @@ bool CanGiveWeapon(int client)
 {
 	static const int iSlots[4] = {0, 2, 3, 4};
 
-	int iWeaponIndex;
-	for(int i; i < 4; i++)
+	static int i;
+	static int iWeapon;
+	for(i = 0; i < 4; i++)
 	{
-		iWeaponIndex = GetPlayerWeaponSlot(client, iSlots[i]);
-		if(iWeaponIndex != -1)
+		iWeapon = GetPlayerWeaponSlot(client, iSlots[i]);
+		if(iWeapon != -1)
 			return false;
 	}
 	
-	iWeaponIndex = GetPlayerWeaponSlot(client, 1);
-	if(iWeaponIndex != -1)
-	{
-		static char classname[14];
-		GetEdictClassname(iWeaponIndex, classname, sizeof(classname));
-		if(strcmp(classname, "weapon_pistol") == 0)
-			return true;
-	}
-	else
+	iWeapon = GetPlayerWeaponSlot(client, 1);
+	if(iWeapon == -1)
 		return true;
 		
+	static char classname[14];
+	GetEdictClassname(iWeapon, classname, sizeof(classname));
+	if(strcmp(classname, "weapon_pistol") == 0)
+		return true;
+	
 	return false;
 }
 
@@ -1413,12 +1412,12 @@ stock void DeletePlayerSlotX(int client, int iSlot)
 
 stock void DeletePlayerSlotAll(int client)
 {
-	int iWeaponIndex;
+	int iWeapon;
 	for(int i; i < 5; i++)
 	{
-		iWeaponIndex = GetPlayerWeaponSlot(client, i);
-		if(iWeaponIndex != -1)
-			DeletePlayerSlot(client, iWeaponIndex);
+		iWeapon = GetPlayerWeaponSlot(client, i);
+		if(iWeapon != -1)
+			DeletePlayerSlot(client, iWeapon);
 	}
 }
 
