@@ -366,13 +366,13 @@ public void OnPluginStart()
 	g_hRespawnLimit = CreateConVar("sar_respawn_limit", "5" , "玩家每回合自动复活次数", CVAR_FLAGS, true, 0.0);
 	g_hAllowSurvivorBot = CreateConVar("sar_respawn_bot", "1" , "是否允许Bot自动复活 \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hAllowSurvivorIdle = CreateConVar("sar_respawn_idle", "1" , "是否允许闲置玩家自动复活 \n0=否,1=是(某些多人插件闲置死亡后会接管BOT)", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hGiveType = CreateConVar("sar_extra_type", "0" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
+	g_hGiveType = CreateConVar("sar_respawn_type", "0" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
 
-	g_hSlotFlags[0] = CreateConVar("sar_extra_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[1] = CreateConVar("sar_extra_slot1", "131068" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[2] = CreateConVar("sar_extra_slot2", "7" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[3] = CreateConVar("sar_extra_slot3", "15" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[4] = CreateConVar("sar_extra_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[0] = CreateConVar("sar_respawn_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[1] = CreateConVar("sar_respawn_slot1", "131068" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[2] = CreateConVar("sar_respawn_slot2", "7" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[3] = CreateConVar("sar_respawn_slot3", "15" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[4] = CreateConVar("sar_respawn_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
 	
 	//g_hSbAllBotGame = FindConVar("sb_all_bot_game");
 	//g_hAllowAllBotSurvivorTeam = FindConVar("allow_all_bot_survivor_team");
