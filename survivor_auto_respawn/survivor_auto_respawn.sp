@@ -158,7 +158,7 @@ Handle g_hRespawnTimer[MAXPLAYERS + 1];
 Address g_pRespawn;
 Address g_pResetStatCondition;
 
-DynamicDetour g_dDetour;
+//DynamicDetour g_dDetour;
 
 ConVar g_hRespawnTime;
 ConVar g_hRespawnLimit;
@@ -398,8 +398,8 @@ public void OnPluginStart()
 public void OnPluginEnd()
 {
 	PatchAddress(false);
-	if(!g_dDetour.Disable(Hook_Pre, DeathModelCreatePre) || !g_dDetour.Disable(Hook_Post, DeathModelCreatePost))
-		SetFailState("Failed to disable detour: CSurvivorDeathModel::Create");
+	/*if(!g_dDetour.Disable(Hook_Pre, DeathModelCreatePre) || !g_dDetour.Disable(Hook_Post, DeathModelCreatePost))
+		SetFailState("Failed to disable detour: CSurvivorDeathModel::Create");*/
 }
 
 public void OnConfigsExecuted()
@@ -446,6 +446,11 @@ void GetSlotInfo(int iSlot)
 		if((1 << i) & g_hSlotFlags[iSlot].IntValue)
 			g_iSlotWeapons[iSlot][g_iSlotCount[iSlot]++] = i;
 	}
+}
+
+public Action L4D2_OnSurvivorDeathModelCreated(int client, int iDeathModel)
+{
+	g_iDeathModel[client] = EntIndexToEntRef(iDeathModel);
 }
 
 public void OnClientPutInServer(int client)
@@ -933,8 +938,8 @@ void LoadGameData()
 	g_hSDK_Call_GoAwayFromKeyboard = EndPrepSDKCall();
 	if(g_hSDK_Call_GoAwayFromKeyboard == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard");
-*/
-	SetupDetours(hGameData);
+
+	SetupDetours(hGameData);*/
 	
 	delete hGameData;
 }
@@ -987,7 +992,7 @@ bool GoAwayFromKeyboard(int client)
 {
 	return SDKCall(g_hSDK_Call_GoAwayFromKeyboard, client);
 }
-*/
+
 void SetupDetours(GameData hGameData = null)
 {
 	g_dDetour = DynamicDetour.FromConf(hGameData, "CSurvivorDeathModel::Create");
@@ -1016,4 +1021,4 @@ public MRESReturn DeathModelCreatePost(int pThis, DHookReturn hReturn)
 
 	g_iDeathModel[g_iTempClient] = EntIndexToEntRef(iDeathModel);
 	return MRES_Ignored;
-}
+}*/
