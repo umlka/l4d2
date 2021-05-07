@@ -266,13 +266,13 @@ public void OnPluginStart()
 	g_hAutoJoin = CreateConVar("l4d_autojoin", "1" , "在玩家连接后,是否自动加入? \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hRespawnJoin = CreateConVar("l4d_respawn_on_join", "1" , "超出开局Bot的数量后进服的玩家是否活着? \n0=否,1=是.防止玩家死亡后切换队伍或者重进游戏刷复活", CVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hSpecCmdLimit = CreateConVar("l4d_spec_cmd_limit", "2" , "当完全旁观玩家达到多少个时禁止使用sm_spec命令", CVAR_FLAGS, true, 0.0);
-	g_hGiveType = CreateConVar("l4d_extra_type", "2" , "根据什么来给超出开局Bot的数量后进服的玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
-	g_hGiveRescued = CreateConVar("l4d_give_rescued", "1" , "玩家被从小黑屋救出来后是否给装备 \n0=不给,1=按照l4d_extra_type的设置给", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hSlotFlags[0] = CreateConVar("l4d_extra_slot0", "131071" , "超出开局Bot的数量后进服的玩家主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[1] = CreateConVar("l4d_extra_slot1", "131068" , "超出开局Bot的数量后进服的玩家副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[2] = CreateConVar("l4d_extra_slot2", "7" , "超出开局Bot的数量后进服的玩家投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[3] = CreateConVar("l4d_extra_slot3", "15" , "超出开局Bot的数量后进服的玩家槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[4] = CreateConVar("l4d_extra_slot4", "3" , "超出开局Bot的数量后进服的玩家槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
+	g_hGiveType = CreateConVar("l4d_respawn_type", "2" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
+	g_hGiveRescued = CreateConVar("l4d_give_rescued", "1" , "玩家被从小黑屋救出来后是否给装备 \n0=不给,1=按照l4d_respawn_type的设置给", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hSlotFlags[0] = CreateConVar("l4d_respawn_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[1] = CreateConVar("l4d_respawn_slot1", "131068" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[2] = CreateConVar("l4d_respawn_slot2", "7" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[3] = CreateConVar("l4d_respawn_slot3", "15" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[4] = CreateConVar("l4d_respawn_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
 	
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品Flags参考源码g_sWeaponName中的武器名处的数字,多个武器里面随机则数字取和)", CVAR_FLAGS | FCVAR_DONTRECORD);
 	
