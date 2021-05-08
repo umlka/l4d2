@@ -1,10 +1,8 @@
 #pragma semicolon 1
 #pragma newdecls required
-#include <sourcemod>
-#include <sdktools>
 #include <l4d_weapon_stocks>
 
-#define PLUGIN_VERSION 	"1.1"
+#define PLUGIN_VERSION 	"1.2"
 
 //ArrayList g_ListSpawner;
 
@@ -37,38 +35,36 @@ public void OnPluginStart()
 
 public Action CmdAddWeaponMultiple(int args)
 {
-    if(args < 2)
-    {
-        LogMessage("Usage: addweaponmultiple <match> <multiple>");
-        return Plugin_Handled;
-    }
+	if(args < 2)
+	{
+		LogMessage("Usage: addweaponmultiple <match> <multiple>");
+		return Plugin_Handled;
+	}
 
-    char sBuffer[64];
-    GetCmdArg(1, sBuffer, sizeof(sBuffer));
-    L4D2WeaponId match = L4D2_GetWeaponIdByWeaponName2(sBuffer);
+	char sBuffer[64];
+	GetCmdArg(1, sBuffer, sizeof(sBuffer));
+	L4D2WeaponId match = L4D2_GetWeaponIdByWeaponName2(sBuffer);
+	if(!L4D2_IsValidWeaponId(match))
+		return Plugin_Handled;
 
-    GetCmdArg(2, sBuffer, sizeof(sBuffer));
-    int multiple = StringToInt(sBuffer);
+	GetCmdArg(2, sBuffer, sizeof(sBuffer));
+	int iMultiple = StringToInt(sBuffer);
+	if(iMultiple < 0)
+		return Plugin_Handled;
 
-    AddWeaponMultiple(match, multiple);
-    return Plugin_Handled;
-}
-
-void AddWeaponMultiple(L4D2WeaponId match, int multiple)
-{
-	if(L4D2_IsValidWeaponId(match) && multiple >= 0)
-        g_iGlobalWeaponRules[match] = multiple;
+	g_iGlobalWeaponRules[match] = iMultiple;
+	return Plugin_Handled;
 }
 
 public Action CmdResetWeaponMultiple(int args)
 {
-    ResetWeaponRules();
-    return Plugin_Handled;
+	ResetWeaponRules();
+	return Plugin_Handled;
 }
 	
 void ResetWeaponRules()
 {
-    for(int i; i < view_as<int>(L4D2WeaponId_Max); i++) 
+	for(int i; i < view_as<int>(L4D2WeaponId_Max); i++) 
 		g_iGlobalWeaponRules[i] = -1;
 }
 
@@ -106,13 +102,13 @@ public Action Timer_UpdateCounts(Handle timer)
 		if(!IsValidEntity(i))
 			continue;
 
-		L4D2WeaponId source = IdentifyWeapon(i);
-		if(source > L4D2WeaponId_None && g_iGlobalWeaponRules[source] >= 0)
+		L4D2WeaponId weaponId = IdentifyWeapon(i);
+		if(weaponId > L4D2WeaponId_None && g_iGlobalWeaponRules[weaponId] >= 0)
 		{
-			if(g_iGlobalWeaponRules[source] == 0)
+			if(g_iGlobalWeaponRules[weaponId] == 0)
 				RemoveEntity(i);
 			else
-				SetEntProp(i, Prop_Data, "m_itemCount", g_iGlobalWeaponRules[source]);
+				SetEntProp(i, Prop_Data, "m_itemCount", g_iGlobalWeaponRules[weaponId]);
 		}
 	}
 }
@@ -122,8 +118,8 @@ public void OnEntityDestroyed(int entity)
 	if(entity <= MaxClients || entity > 2048 || !IsValidEdict(entity))
 		return;
 	
-	L4D2WeaponId source = IdentifyWeapon(entity);
-	if(source > L4D2WeaponId_None && g_iGlobalWeaponRules[source] > 0)
+	L4D2WeaponId weaponId = IdentifyWeapon(entity);
+	if(weaponId > L4D2WeaponId_None && g_iGlobalWeaponRules[weaponId] > 0)
 	{
 		int iIndex = g_ListSpawner.FindValue(EntIndexToEntRef(entity), 0);
 		if(iIndex != -1)
@@ -137,10 +133,10 @@ public void Event_SpawnerGiveItem(Event event, const char[] name, bool dontBroad
 	if(entity <= MaxClients || entity > 2048 || !IsValidEdict(entity))
 		return;
 
-	L4D2WeaponId source = IdentifyWeapon(entity);
-	if(source > L4D2WeaponId_None && g_iGlobalWeaponRules[source] > 0)
+	L4D2WeaponId weaponId = IdentifyWeapon(entity);
+	if(weaponId > L4D2WeaponId_None && g_iGlobalWeaponRules[weaponId] > 0)
 	{
-		if(g_iGlobalWeaponRules[source] == 1)
+		if(g_iGlobalWeaponRules[weaponId] == 1)
 			RemoveEntity(entity);
 		else
 		{
@@ -148,8 +144,8 @@ public void Event_SpawnerGiveItem(Event event, const char[] name, bool dontBroad
 			iIndex = g_ListSpawner.FindValue(EntIndexToEntRef(entity), 0);
 			if(iIndex == -1)
 			{
-				SetEntProp(entity, Prop_Data, "m_itemCount", g_iGlobalWeaponRules[source]);
-				g_ListSpawner.Set(g_ListSpawner.Push(EntIndexToEntRef(entity)), g_iGlobalWeaponRules[source], 1);
+				SetEntProp(entity, Prop_Data, "m_itemCount", g_iGlobalWeaponRules[weaponId]);
+				g_ListSpawner.Set(g_ListSpawner.Push(EntIndexToEntRef(entity)), g_iGlobalWeaponRules[weaponId], 1);
 			}
 			else
 			{
@@ -165,14 +161,14 @@ public void Event_SpawnerGiveItem(Event event, const char[] name, bool dontBroad
 */
 stock L4D2WeaponId L4D2_GetWeaponIdByWeaponName2(const char[] classname)
 {
-    static char sBuffer[64] = "weapon_";
-    L4D2WeaponId wepid = L4D2_GetWeaponIdByWeaponName(classname);
-    if(wepid == L4D2WeaponId_None)
-    {
-        strcopy(sBuffer[7], sizeof(sBuffer) - 7, classname);
-        wepid = L4D2_GetWeaponIdByWeaponName(sBuffer);
-    }
-    return view_as<L4D2WeaponId>(wepid);
+	static char sBuffer[64] = "weapon_";
+	L4D2WeaponId weaponId = L4D2_GetWeaponIdByWeaponName(classname);
+	if(weaponId == L4D2WeaponId_None)
+	{
+		strcopy(sBuffer[7], sizeof(sBuffer) - 7, classname);
+		weaponId = L4D2_GetWeaponIdByWeaponName(sBuffer);
+	}
+	return view_as<L4D2WeaponId>(weaponId);
 }
 
 stock L4D2WeaponId IdentifyWeapon(int entity)
