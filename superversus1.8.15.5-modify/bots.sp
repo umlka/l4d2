@@ -261,7 +261,7 @@ public void OnPluginStart()
 	LoadGameData();
 
 	g_hL4DSurvivorLimit = FindConVar("survivor_limit");
-	g_hSurvivorLimit = CreateConVar("l4d_survivor_limit", "4", "开局Bot的数量", CVAR_FLAGS, true, 1.00, true, 24.00);
+	g_hSurvivorLimit = CreateConVar("l4d_survivor_limit", "4", "开局Bot的数量", CVAR_FLAGS, true, 1.00, true, 32.0);
 
 	g_hAutoJoin = CreateConVar("l4d_autojoin", "1" , "在玩家连接后,是否自动加入? \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hRespawnJoin = CreateConVar("l4d_respawn_on_join", "1" , "超出开局Bot的数量后进服的玩家是否活着? \n0=否,1=是.防止玩家死亡后切换队伍或者重进游戏刷复活", CVAR_FLAGS, true, 0.0, true, 1.0);
@@ -273,17 +273,18 @@ public void OnPluginStart()
 	g_hSlotFlags[2] = CreateConVar("l4d_respawn_slot2", "7" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[3] = CreateConVar("l4d_respawn_slot3", "3" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[4] = CreateConVar("l4d_respawn_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
-	
+
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品Flags参考源码g_sWeaponName中的武器名处的数字,多个武器里面随机则数字取和)", CVAR_FLAGS | FCVAR_DONTRECORD);
 	
 	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
 	g_hAllowAllBotSurvivorTeam = FindConVar("allow_all_bot_survivor_team");
 
-	g_hL4DSurvivorLimit.SetBounds(ConVarBound_Upper, true, 24.0);
+	g_hL4DSurvivorLimit.Flags &= ~FCVAR_NOTIFY; //移除ConVar变动提示
+	g_hL4DSurvivorLimit.SetBounds(ConVarBound_Upper, true, 32.0);
 
 	//https://forums.alliedmods.net/showthread.php?t=120275
 	g_hSpawnFlowLimit = FindConVar("z_spawn_flow_limit");
-	g_hSpawnFlowLimit.SetInt(999999999);
+	g_hSpawnFlowLimit.IntValue = 999999999;
 
 	for(int i; i < 5; i++)
 		g_hSlotFlags[i].AddChangeHook(ConVarChanged_Slot);
@@ -300,14 +301,14 @@ public void OnPluginStart()
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-	HookEvent("player_spawn", Event_PlayerSpawn);
-	HookEvent("player_death", Event_PlayerDeath);
-	HookEvent("player_team", Event_PlayerTeam);
-	HookEvent("survivor_rescued", Event_SurvivorRescued);
-	HookEvent("player_bot_replace", Event_PlayerBotReplace);
-	HookEvent("bot_player_replace", Event_BotPlayerReplace);
-	HookEvent("player_transitioned", Event_PlayerTransitioned);
-	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving);
+	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
+	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
+	HookEvent("player_team", Event_PlayerTeam, EventHookMode_Pre);
+	HookEvent("survivor_rescued", Event_SurvivorRescued, EventHookMode_Pre);
+	HookEvent("player_bot_replace", Event_PlayerBotReplace, EventHookMode_Pre);
+	HookEvent("bot_player_replace", Event_BotPlayerReplace, EventHookMode_Pre);
+	HookEvent("player_transitioned", Event_PlayerTransitioned, EventHookMode_Pre);
+	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving, EventHookMode_Pre);
 
 	AddCommandListener(CommandListener_SpecNext, "spec_next");
 	
@@ -487,7 +488,7 @@ public Action CmdBotSet(int client, int args)
 		int iNumber = StringToInt(sNumber);
 		if(1 <= iNumber <= 24)
 		{
-			g_hSurvivorLimit.SetInt(iNumber);
+			g_hSurvivorLimit.IntValue = iNumber;
 
 			delete g_hBotsUpdateTimer;
 			g_hBotsUpdateTimer = CreateTimer(1.0, Timer_BotsUpdate);
@@ -595,7 +596,7 @@ void SpawnCheck()
 	for(; iSurvivor < iSurvivorLim; iSurvivor++)
 		SpawnFakeSurvivorClient();
 		
-	UpdateSurvivorLimitCvar();
+	UpdateSurvivorLimitConVar();
 }
 
 void KickUnusedSurvivorBot()
@@ -633,7 +634,7 @@ void SpawnFakeSurvivorClient()
 		KickClient(iBot, "Kicking Fake Client.");
 }
 
-void UpdateSurvivorLimitCvar()
+void UpdateSurvivorLimitConVar()
 {
 	int iHumanSurvivor = GetTeamPlayers(TEAM_SURVIVOR, false);
 
@@ -714,7 +715,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(GetClientTeam(client) == TEAM_SURVIVOR)
 	{
-		UpdateSurvivorLimitCvar();
+		UpdateSurvivorLimitConVar();
 
 		delete g_hBotsUpdateTimer;
 		g_hBotsUpdateTimer = CreateTimer(2.0, Timer_BotsUpdate);
@@ -1240,35 +1241,53 @@ void GiveWeapon(int client)
 
 	g_bGivenPlayerWeapon[client] = true;
 
-	switch(g_hGiveType.IntValue)
-	{
-		case 1:
-			GivePresetWeapon(client);
-		
-		case 2:
-			GiveAverageWeapon(client);
-	}
-}
-
-void GivePresetWeapon(int client)
-{
-	for(int i = 4; i >= 0; i--)
+	for(int i = 4; i >= 2; i--)
 	{
 		if(g_iSlotCount[i] == 0)
 			continue;
 
 		DeletePlayerSlotX(client, i);
-		int iRandom = g_iSlotWeapons[i][GetRandomInt(0, g_iSlotCount[i] - 1)];
-		if(i == 1 && iRandom > 2)
+		CheatCmd_Give(client, g_sWeaponName[i][g_iSlotWeapons[i][GetRandomInt(0, g_iSlotCount[i] - 1)]]);
+	}
+
+	GiveSecondaryWeapon(client);
+
+	switch(g_hGiveType.IntValue)
+	{
+		case 1:
+			GivePresetPrimaryWeapon(client);
+		
+		case 2:
+			GiveAveragePrimaryWeapon(client);
+	}
+}
+
+void GiveSecondaryWeapon(int client)
+{
+	if(g_iSlotCount[1] != 0)
+	{
+
+		DeletePlayerSlotX(client, 1);
+		int iRandom = g_iSlotWeapons[1][GetRandomInt(0, g_iSlotCount[1] - 1)];
+		if(iRandom > 2)
 			GiveMeleeWeapon(client, g_sWeaponName[1][iRandom]);
 		else
-			CheatCmd_Give(client, g_sWeaponName[i][iRandom]);
+			CheatCmd_Give(client, g_sWeaponName[1][iRandom]);
+	}
+}
+
+void GivePresetPrimaryWeapon(int client)
+{
+	if(g_iSlotCount[0] != 0)
+	{
+		DeletePlayerSlotX(client, 0);
+		CheatCmd_Give(client, g_sWeaponName[0][g_iSlotWeapons[0][GetRandomInt(0, g_iSlotCount[0] - 1)]]);
 	}
 }
 
 bool IsWeaponTier1(int iWeapon)
 {
-	char sWeapon[32];
+	static char sWeapon[32];
 	GetEdictClassname(iWeapon, sWeapon, sizeof(sWeapon));
 	for(int i; i < 5; i++)
 	{
@@ -1278,7 +1297,7 @@ bool IsWeaponTier1(int iWeapon)
 	return false;
 }
 
-void GiveAverageWeapon(int client)
+void GiveAveragePrimaryWeapon(int client)
 {
 	int i, iWeapon, iTier, iTotal;
 	for(i = 1; i <= MaxClients; i++)
@@ -1299,7 +1318,6 @@ void GiveAverageWeapon(int client)
 
 	int iAverage = iTotal > 0 ? RoundToNearest(1.0 * iTier / iTotal) : 0;
 
-	GiveSecondaryWeapon(client);
 	DeletePlayerSlotX(client, 0);
 
 	switch(iAverage)
@@ -1310,28 +1328,6 @@ void GiveAverageWeapon(int client)
 		case 2:
 			CheatCmd_Give(client, g_sWeaponName[0][GetRandomInt(5, 14)]); //随机给一把tier2武器	
 	}
-	
-	for(i = 2; i < 5; i++)
-	{
-		if(g_iSlotCount[i] == 0)
-			continue;
-
-		DeletePlayerSlotX(client, i);
-		CheatCmd_Give(client, g_sWeaponName[i][g_iSlotWeapons[i][GetRandomInt(0, g_iSlotCount[i] - 1)]]);
-	}
-}
-
-void GiveSecondaryWeapon(int client)
-{
-	if(g_iSlotCount[1] == 0)
-		return;
-
-	DeletePlayerSlotX(client, 1);
-	int iRandom = g_iSlotWeapons[1][GetRandomInt(0, g_iSlotCount[1] - 1)];
-	if(iRandom > 2)
-		GiveMeleeWeapon(client, g_sWeaponName[1][iRandom]);
-	else
-		CheatCmd_Give(client, g_sWeaponName[1][iRandom]);
 }
 
 stock void CheatCmd_Give(int client, const char[] args = "")
@@ -1425,7 +1421,7 @@ stock void DeletePlayerSlotAll(int client)
 //https://forums.alliedmods.net/showpost.php?p=2611529&postcount=484
 public void OnMapStart()
 {
-	g_hSpawnFlowLimit.SetInt(999999999);
+	g_hSpawnFlowLimit.IntValue = 999999999;
 
 	int i;
 	int iLen;
