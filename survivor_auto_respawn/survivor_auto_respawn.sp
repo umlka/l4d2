@@ -608,7 +608,9 @@ public Action Timer_Respawn(Handle timer, int client)
 void RespawnSurvivor(int client)
 {
 	Respawn(client);
-	GiveWeapon(client);
+	if(g_hGiveType.BoolValue)
+		GiveWeapon(client);
+
 	SetGodMode(client, 1.0);
 	TeleportToSurvivor(client);
 	Terror_SetAdrenalineTime(client, 15.0);
@@ -724,29 +726,47 @@ void GiveWeapon(int client)
 	if(!IsPlayerAlive(client)) 
 		return;
 
-	switch(g_hGiveType.IntValue)
-	{
-		case 1:
-			GivePresetWeapon(client);
-		
-		case 2:
-			GiveAverageWeapon(client);
-	}
-}
-
-void GivePresetWeapon(int client)
-{
-	for(int i = 4; i >= 0; i--)
+	for(int i = 4; i >= 2; i--)
 	{
 		if(g_iSlotCount[i] == 0)
 			continue;
 
 		DeletePlayerSlotX(client, i);
-		int iRandom = g_iSlotWeapons[i][GetRandomInt(0, g_iSlotCount[i] - 1)];
-		if(i == 1 && iRandom > 2)
+		CheatCmd_Give(client, g_sWeaponName[i][g_iSlotWeapons[i][GetRandomInt(0, g_iSlotCount[i] - 1)]]);
+	}
+
+	GiveSecondaryWeapon(client);
+
+	switch(g_hGiveType.IntValue)
+	{
+		case 1:
+			GivePresetPrimaryWeapon(client);
+		
+		case 2:
+			GiveAveragePrimaryWeapon(client);
+	}
+}
+
+void GiveSecondaryWeapon(int client)
+{
+	if(g_iSlotCount[1] != 0)
+	{
+
+		DeletePlayerSlotX(client, 1);
+		int iRandom = g_iSlotWeapons[1][GetRandomInt(0, g_iSlotCount[1] - 1)];
+		if(iRandom > 2)
 			GiveMeleeWeapon(client, g_sWeaponName[1][iRandom]);
 		else
-			CheatCmd_Give(client, g_sWeaponName[i][iRandom]);
+			CheatCmd_Give(client, g_sWeaponName[1][iRandom]);
+	}
+}
+
+void GivePresetPrimaryWeapon(int client)
+{
+	if(g_iSlotCount[0] != 0)
+	{
+		DeletePlayerSlotX(client, 0);
+		CheatCmd_Give(client, g_sWeaponName[0][g_iSlotWeapons[0][GetRandomInt(0, g_iSlotCount[0] - 1)]]);
 	}
 }
 
@@ -762,7 +782,7 @@ bool IsWeaponTier1(int iWeapon)
 	return false;
 }
 
-void GiveAverageWeapon(int client)
+void GiveAveragePrimaryWeapon(int client)
 {
 	int i, iWeapon, iTier, iTotal;
 	for(i = 1; i <= MaxClients; i++)
@@ -783,7 +803,6 @@ void GiveAverageWeapon(int client)
 
 	int iAverage = iTotal > 0 ? RoundToNearest(1.0 * iTier / iTotal) : 0;
 
-	GiveSecondaryWeapon(client);
 	DeletePlayerSlotX(client, 0);
 
 	switch(iAverage)
@@ -794,28 +813,6 @@ void GiveAverageWeapon(int client)
 		case 2:
 			CheatCmd_Give(client, g_sWeaponName[0][GetRandomInt(5, 14)]); //随机给一把tier2武器	
 	}
-	
-	for(i = 2; i < 5; i++)
-	{
-		if(g_iSlotCount[i] == 0)
-			continue;
-
-		DeletePlayerSlotX(client, i);
-		CheatCmd_Give(client, g_sWeaponName[i][g_iSlotWeapons[i][GetRandomInt(0, g_iSlotCount[i] - 1)]]);
-	}
-}
-
-void GiveSecondaryWeapon(int client)
-{
-	if(g_iSlotCount[1] == 0)
-		return;
-
-	DeletePlayerSlotX(client, 1);
-	int iRandom = g_iSlotWeapons[1][GetRandomInt(0, g_iSlotCount[1] - 1)];
-	if(iRandom > 2)
-		GiveMeleeWeapon(client, g_sWeaponName[1][iRandom]);
-	else
-		CheatCmd_Give(client, g_sWeaponName[1][iRandom]);
 }
 
 void SetGodMode(int client, float fDuration)
