@@ -514,11 +514,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 		InitPlugin();
 	g_iPlayerSpawn = 1;
 
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !IsClientInGame(client))
-		return;
-
-	RemoveSurvivorDeathModel(client);
+	RemoveSurvivorDeathModel(GetClientOfUserId(event.GetInt("userid")));
 }
 
 public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
