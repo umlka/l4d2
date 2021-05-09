@@ -350,7 +350,7 @@ public Action CmdJoinSpectator(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == TEAM_SPECTATOR)
+	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 	
 	if(GetTeamSpectator() >= g_iSpecCmdLimit)
