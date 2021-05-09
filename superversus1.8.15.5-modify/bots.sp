@@ -29,13 +29,13 @@ DynamicDetour g_dDetourSetHumanSpec;
 DynamicDetour g_dDetourGoAwayFromKeyboard;
 DynamicDetour g_dDetourPlayerSetModel;
 
-ConVar g_hSurvivorLimit;
 ConVar g_hL4DSurvivorLimit;
-ConVar g_hAutoJoin; 
+ConVar g_hSurvivorLimit;
+ConVar g_hAutoJoinSurvivor; 
 ConVar g_hRespawnJoin;
 ConVar g_hSpecCmdLimit;
-ConVar g_hGiveType;
-ConVar g_hGiveRescued;
+ConVar g_hGiveWeaponType;
+ConVar g_hAllowRescuedGive;
 ConVar g_hSlotFlags[5];
 ConVar g_hSpawnFlowLimit;
 ConVar g_hSbAllBotGame; 
@@ -44,6 +44,8 @@ ConVar g_hAllowAllBotSurvivorTeam;
 int g_iRoundStart; 
 int g_iPlayerSpawn;
 int g_iSurvivorBot;
+int g_iSurvivorLimit;
+int g_iSpecCmdLimit;
 int g_iSlotCount[5];
 int g_iSlotWeapons[5][20];
 int g_iMeleeClassCount;
@@ -52,7 +54,11 @@ int g_iBotPlayer[MAXPLAYERS + 1];
 
 bool g_bShouldFixAFK;
 bool g_bShouldIgnore;
-bool g_bTeamChangeSpec[MAXPLAYERS + 1];
+bool g_bAutoJoinSurvivor;
+bool g_bRespawnJoin;
+bool g_bGiveWeaponType;
+bool g_bAllowRescuedGive;
+bool g_bSpecNotify[MAXPLAYERS + 1];
 bool g_bGivenPlayerWeapon[MAXPLAYERS + 1];
 
 char g_sMeleeClass[16][32];
@@ -261,18 +267,18 @@ public void OnPluginStart()
 	LoadGameData();
 
 	g_hL4DSurvivorLimit = FindConVar("survivor_limit");
-	g_hSurvivorLimit = CreateConVar("l4d_survivor_limit", "4", "开局Bot的数量", CVAR_FLAGS, true, 1.00, true, 32.0);
+	g_hSurvivorLimit = CreateConVar("bots_survivor_limit", "4", "开局Bot的数量", CVAR_FLAGS, true, 1.00, true, 32.0);
 
-	g_hAutoJoin = CreateConVar("l4d_autojoin", "1" , "在玩家连接后,是否自动加入? \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hRespawnJoin = CreateConVar("l4d_respawn_on_join", "1" , "超出开局Bot的数量后进服的玩家是否活着? \n0=否,1=是.防止玩家死亡后切换队伍或者重进游戏刷复活", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hSpecCmdLimit = CreateConVar("l4d_spec_cmd_limit", "2" , "当完全旁观玩家达到多少个时禁止使用sm_spec命令", CVAR_FLAGS, true, 0.0);
-	g_hGiveType = CreateConVar("l4d_respawn_type", "2" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
-	g_hGiveRescued = CreateConVar("l4d_give_rescued", "1" , "玩家被从小黑屋救出来后是否给装备 \n0=不给,1=按照l4d_respawn_type的设置给", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hSlotFlags[0] = CreateConVar("l4d_respawn_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[1] = CreateConVar("l4d_respawn_slot1", "131068" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[2] = CreateConVar("l4d_respawn_slot2", "7" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[3] = CreateConVar("l4d_respawn_slot3", "3" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[4] = CreateConVar("l4d_respawn_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
+	g_hAutoJoinSurvivor = CreateConVar("bots_auto_join_survivor", "1" , "玩家连接后,是否自动加入生还者? \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hRespawnJoin = CreateConVar("bots_respawn_on_join", "1" , "玩家第一次进服时如果没有存活的Bot可以接管是否复活? \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hSpecCmdLimit = CreateConVar("bots_spec_cmd_limit", "1" , "当完全旁观玩家达到多少个时禁止使用sm_spec命令", CVAR_FLAGS, true, 0.0);
+	g_hGiveWeaponType = CreateConVar("bots_give_type", "2" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
+	g_hAllowRescuedGive = CreateConVar("bots_give_rescued", "1" , "玩家被从小黑屋救出来后是否给装备 \n0=不给,1=按照bots_give_type的设置给", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hSlotFlags[0] = CreateConVar("bots_give_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[1] = CreateConVar("bots_give_slot1", "131068" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[2] = CreateConVar("bots_give_slot2", "7" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[3] = CreateConVar("bots_give_slot3", "3" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[4] = CreateConVar("bots_give_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
 
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品Flags参考源码g_sWeaponName中的武器名处的数字,多个武器里面随机则数字取和)", CVAR_FLAGS | FCVAR_DONTRECORD);
 	
@@ -286,10 +292,17 @@ public void OnPluginStart()
 	g_hSpawnFlowLimit = FindConVar("z_spawn_flow_limit");
 	g_hSpawnFlowLimit.IntValue = 999999999;
 
+	g_hSurvivorLimit.AddChangeHook(ConVarChanged);
+	g_hAutoJoinSurvivor.AddChangeHook(ConVarChanged);
+	g_hRespawnJoin.AddChangeHook(ConVarChanged);
+	g_hSpecCmdLimit.AddChangeHook(ConVarChanged);
+	g_hGiveWeaponType.AddChangeHook(ConVarChanged);
+	g_hAllowRescuedGive.AddChangeHook(ConVarChanged);
+
 	for(int i; i < 5; i++)
 		g_hSlotFlags[i].AddChangeHook(ConVarChanged_Slot);
 
-	//AutoExecConfig(true, "l4d_superversus");
+	//AutoExecConfig(true, "bots");
 
 	RegConsoleCmd("sm_spec", CmdJoinSpectator, "加入旁观者");
 	RegConsoleCmd("sm_join", CmdJoinSurvivor, "加入生还者");
@@ -340,8 +353,11 @@ public Action CmdJoinSpectator(int client, int args)
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == TEAM_SPECTATOR)
 		return Plugin_Handled;
 	
-	if(GetTeamSpectator() >= g_hSpecCmdLimit.IntValue)
+	if(GetTeamSpectator() >= g_iSpecCmdLimit)
 		return Plugin_Handled;
+
+	if(GetBotOfIdle(client))
+		TakeOverBot(client);
 
 	ChangeClientTeam(client, TEAM_SPECTATOR);
 	return Plugin_Handled;
@@ -366,21 +382,8 @@ public Action CmdJoinSurvivor(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(client == 0 || !IsClientInGame(client))
+	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
-
-	int iBot;
-	if((iBot = GetBotOfIdle(client)))
-	{
-		TakeOverBot(client);
-		return Plugin_Handled;
-	}
-	else
-	{
-		iBot = GetClientOfUserId(g_iPlayerBot[client]);
-		if(iBot == 0 || !IsValidAliveSurvivorBot(iBot))
-			iBot = GetAnyValidAliveSurvivorBot();
-	}
 
 	int iTeam = GetClientTeam(client);
 	if(iTeam != TEAM_SURVIVOR)
@@ -389,35 +392,45 @@ public Action CmdJoinSurvivor(int client, int args)
 
 		if(iTeam != TEAM_SPECTATOR)
 			ChangeClientTeam(client, TEAM_SPECTATOR);
+		else if(GetBotOfIdle(client))
+		{
+			TakeOverBot(client);
+			return Plugin_Handled;
+		}
+		
+		int iBot = GetClientOfUserId(g_iPlayerBot[client]);
+		if(iBot == 0 || !IsValidAliveSurvivorBot(iBot))
+			iBot = GetAnyValidAliveSurvivorBot();
 
 		if(iBot)
-		{
 			SetHumanIdle(iBot, client);
-			TakeOverBot(client);
-		}
 		else
 		{
-			bool canRespawn = g_hRespawnJoin.BoolValue && IsFirstTime(client);
+			bool bCanRespawn = g_bRespawnJoin && IsFirstTime(client);
+
 			ChangeClientTeam(client, TEAM_SURVIVOR);
 
-			if(canRespawn && !IsPlayerAlive(client))
+			if(bCanRespawn && !IsPlayerAlive(client))
 			{
 				Respawn(client);
-				//GiveWeapon(client);
+				GiveWeapon(client);
 				SetGodMode(client, 1.0);
 				TeleportToSurvivor(client);
+
+				if(CanIdle(client))
+					CmdGoAFK(client, 0);
 			} 
-			else if(g_hRespawnJoin.BoolValue)
+			else if(g_bRespawnJoin)
 				ReplyToCommand(client, "\x01重复加入默认为\x05死亡状态.");
 		}
 	}
 	else if(!IsPlayerAlive(client))
 	{
+		int iBot = GetAnyValidAliveSurvivorBot();
 		if(iBot)
 		{
 			ChangeClientTeam(client, TEAM_SPECTATOR);
 			SetHumanIdle(iBot, client);
-			TakeOverBot(client);
 		}
 		else
 			ReplyToCommand(client, "\x01你已经\x04死亡\x01. 没有\x05电脑Bot\x01可以接管.");
@@ -509,11 +522,11 @@ public Action CommandListener_SpecNext(int client, char[] command, int argc)
 	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) != TEAM_SPECTATOR || GetBotOfIdle(client))
 		return Plugin_Continue;
 
-	if(g_bTeamChangeSpec[client])
+	if(g_bSpecNotify[client])
 	{
 		PrintToChat(client, "\x01聊天栏输入 \x05!join \x01加入游戏");
 		PrintHintText(client, "聊天栏输入 !join 加入游戏");
-		g_bTeamChangeSpec[client] = false;
+		g_bSpecNotify[client] = false;
 	}
 
 	return Plugin_Continue;
@@ -521,8 +534,24 @@ public Action CommandListener_SpecNext(int client, char[] command, int argc)
 
 public void OnConfigsExecuted()
 {
+	GetCvars();
 	GetSlotCvars();
-	g_hL4DSurvivorLimit.IntValue = g_hSurvivorLimit.IntValue;
+	g_hL4DSurvivorLimit.IntValue = g_iSurvivorLimit;
+}
+
+public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+{
+	GetCvars();
+}
+
+void GetCvars()
+{
+	g_iSurvivorLimit = g_hSurvivorLimit.IntValue;
+	g_bAutoJoinSurvivor = g_hAutoJoinSurvivor.BoolValue;
+	g_bRespawnJoin = g_hRespawnJoin.BoolValue;
+	g_iSpecCmdLimit = g_hSpecCmdLimit.IntValue;
+	g_bGiveWeaponType = g_hGiveWeaponType.BoolValue;
+	g_bAllowRescuedGive = g_hAllowRescuedGive.BoolValue;
 }
 
 public void ConVarChanged_Slot(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -581,7 +610,7 @@ void SpawnCheck()
 
 	int iSurvivor		= GetSurvivorTeam();
 	int iHumanSurvivor	= GetTeamPlayers(TEAM_SURVIVOR, false);
-	int iSurvivorLim	= g_hSurvivorLimit.IntValue;
+	int iSurvivorLim	= g_iSurvivorLimit;
 	int iSurvivorMax	= iHumanSurvivor > iSurvivorLim ? iHumanSurvivor : iSurvivorLim;
 
 	if(iSurvivor > iSurvivorMax) 
@@ -629,9 +658,7 @@ void SpawnFakeSurvivorClient()
 	//GiveWeapon(iBot);
 	SetGodMode(iBot, 1.0);
 	TeleportToSurvivor(iBot);
-
-	if(IsClientInGame(iBot) && IsFakeClient(iBot) && GetClientTeam(iBot) == TEAM_SURVIVOR && !GetIdlePlayer(iBot))
-		KickClient(iBot, "Kicking Fake Client.");
+	KickClient(iBot, "Kicking Fake Client.");
 }
 
 void UpdateSurvivorLimitConVar()
@@ -639,7 +666,7 @@ void UpdateSurvivorLimitConVar()
 	int iHumanSurvivor = GetTeamPlayers(TEAM_SURVIVOR, false);
 
 	//防止真人生还者数量大于survivor_limit时,出现的一些问题(死亡转旁观以及手动设置survivor_limit参数时暴毙)
-	g_hL4DSurvivorLimit.IntValue = iHumanSurvivor > g_hSurvivorLimit.IntValue ? iHumanSurvivor : g_hSurvivorLimit.IntValue; 
+	g_hL4DSurvivorLimit.IntValue = iHumanSurvivor > g_iSurvivorLimit ? iHumanSurvivor : g_iSurvivorLimit;
 }
 
 public void OnMapEnd()
@@ -725,7 +752,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
 		SetGhostStatus(client, 0);
 
-		if(g_hGiveType.BoolValue && IsPlayerAlive(client) && CanGiveWeapon(client))
+		if(g_bGiveWeaponType && IsPlayerAlive(client) && CanGiveWeapon(client))
 		{
 			g_bGivenPlayerWeapon[client] = false;
 			RequestFrame(OnNextFrame_GivePlayerWeapon, GetClientUserId(client));
@@ -777,7 +804,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 void TakeOver(int bot)
 {
 	int iIdlePlayer;
-	if(bot > 0 && IsClientInGame(bot) && IsFakeClient(bot) && GetClientTeam(bot) == TEAM_SURVIVOR && (iIdlePlayer = GetIdlePlayer(bot)))
+	if(bot && IsClientInGame(bot) && IsFakeClient(bot) && GetClientTeam(bot) == TEAM_SURVIVOR && (iIdlePlayer = GetIdlePlayer(bot)))
 	{
 		SetHumanIdle(bot, iIdlePlayer);
 		TakeOverBot(iIdlePlayer);		
@@ -800,21 +827,20 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		SetGhostStatus(client, 0);
 
 	if(team == TEAM_SPECTATOR)
-		g_bTeamChangeSpec[client] = true;
+		g_bSpecNotify[client] = true;
 	else if(oldteam == TEAM_SPECTATOR)
-		g_bTeamChangeSpec[client] = false;
+		g_bSpecNotify[client] = false;
 		
-	if(oldteam == 0 && team == 1)
+	if(g_bAutoJoinSurvivor && oldteam == 0 && team == 1)
 		CreateTimer(0.1, Timer_AutoJoinSurvivorTeam, GetClientUserId(client));
 }
 
 public Action Timer_AutoJoinSurvivorTeam(Handle timer, int client)
 {
-	if(IsRoundStarted() == false || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || GetBotOfIdle(client)) 
+	if(!g_bAutoJoinSurvivor || IsRoundStarted() == false || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || GetBotOfIdle(client)) 
 		return;
 	
-	if(g_hAutoJoin.BoolValue)
-		CmdJoinSurvivor(client, 0);
+	CmdJoinSurvivor(client, 0);
 }
 
 public void Event_SurvivorRescued(Event event, const char[] name, bool dontBroadcast)
@@ -823,10 +849,8 @@ public void Event_SurvivorRescued(Event event, const char[] name, bool dontBroad
 	if(client == 0 || !IsClientInGame(client))
 		return;
 
-	if(g_hGiveRescued.BoolValue)
+	if(g_bAllowRescuedGive)
 		GiveWeapon(client);
-	
-	g_bGivenPlayerWeapon[client] = true;
 
 	if(!IsFakeClient(client) && CanIdle(client))
 		CmdGoAFK(client, 0); //被从小黑屋救出来后闲置,避免有些玩家挂机
@@ -907,16 +931,17 @@ public void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dont
 	int entity = FindEntityByClassname(MaxClients + 1, "info_survivor_position");
 	if(entity != INVALID_ENT_REFERENCE)
 	{
-		int iPlayer;
 		float vOrigin[3];
 		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
+		
+		int iSurvivor;
 		for(int i = 1; i <= MaxClients; i++)
 		{
-			if(iPlayer++ < 4)
-				continue;
-
 			if(IsClientInGame(i) && GetClientTeam(i) == TEAM_SURVIVOR)
 			{
+				if(++iSurvivor < 4)
+					continue;
+
 				entity = CreateEntityByName("info_survivor_position");
 				DispatchSpawn(entity);
 				TeleportEntity(entity, vOrigin, NULL_VECTOR, NULL_VECTOR);
@@ -1023,14 +1048,14 @@ bool IsValidAliveSurvivorBot(int client)
 
 int GetAnyValidSurvivorBot()
 {
-	int iPlayer, iHasPlayer, iNotPlayer;
+	int iSurvivor, iHasPlayer, iNotPlayer;
 	int[] iHasPlayerBots = new int[MaxClients];
 	int[] iNotPlayerBots = new int[MaxClients];
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsValidSurvivorBot(i))
 		{
-			if((iPlayer = GetClientOfUserId(g_iBotPlayer[i])) && IsClientInGame(iPlayer) && !IsFakeClient(iPlayer) && GetClientTeam(iPlayer) != 2)
+			if((iSurvivor = GetClientOfUserId(g_iBotPlayer[i])) && IsClientInGame(iSurvivor) && !IsFakeClient(iSurvivor) && GetClientTeam(iSurvivor) != 2)
 				iHasPlayerBots[iHasPlayer++] = i;
 			else
 				iNotPlayerBots[iNotPlayer++] = i;
@@ -1040,32 +1065,32 @@ int GetAnyValidSurvivorBot()
 	if(iNotPlayer == 0)
 	{
 		if(iHasPlayer == 0)
-			iPlayer = 0;
+			iSurvivor = 0;
 		else
 		{
 			SortIntegers(iHasPlayerBots, iHasPlayer, Sort_Descending);
-			iPlayer = iHasPlayerBots[0];
+			iSurvivor = iHasPlayerBots[0];
 		}
 	}
 	else
 	{
 		SortIntegers(iNotPlayerBots, iNotPlayer, Sort_Descending);
-		iPlayer = iNotPlayerBots[0];
+		iSurvivor = iNotPlayerBots[0];
 	}
 	
-	return iPlayer;
+	return iSurvivor;
 }
 
 int GetAnyValidAliveSurvivorBot()
 {
-	int iPlayer, iHasPlayer, iNotPlayer;
+	int iSurvivor, iHasPlayer, iNotPlayer;
 	int[] iHasPlayerBots = new int[MaxClients];
 	int[] iNotPlayerBots = new int[MaxClients];
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsValidAliveSurvivorBot(i)) 
 		{
-			if((iPlayer = GetClientOfUserId(g_iBotPlayer[i])) && IsClientInGame(iPlayer) && !IsFakeClient(iPlayer) && GetClientTeam(iPlayer) != 2)
+			if((iSurvivor = GetClientOfUserId(g_iBotPlayer[i])) && IsClientInGame(iSurvivor) && !IsFakeClient(iSurvivor) && GetClientTeam(iSurvivor) != 2)
 				iHasPlayerBots[iHasPlayer++] = i;
 			else
 				iNotPlayerBots[iNotPlayer++] = i;
@@ -1124,7 +1149,7 @@ void DisplayTeamMenu(int client)
 		}
 	}
 
-	FormatEx(sInfo, sizeof(sInfo), "生还者 (%d/%d) - %d Bot(s)", GetTeamPlayers(TEAM_SURVIVOR, false), g_hSurvivorLimit.IntValue, CountAvailableSurvivorBots());
+	FormatEx(sInfo, sizeof(sInfo), "生还者 (%d/%d) - %d Bot(s)", GetTeamPlayers(TEAM_SURVIVOR, false), g_iSurvivorLimit, CountAvailableSurvivorBots());
 	TeamPanel.DrawItem(sInfo);
 
 	int iIncapacitatedCount = FindConVar("survivor_max_incapacitated_count").IntValue;
@@ -1252,7 +1277,7 @@ void GiveWeapon(int client)
 
 	GiveSecondaryWeapon(client);
 
-	switch(g_hGiveType.IntValue)
+	switch(g_hGiveWeaponType.IntValue)
 	{
 		case 1:
 			GivePresetPrimaryWeapon(client);
