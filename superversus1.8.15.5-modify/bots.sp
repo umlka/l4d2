@@ -1271,7 +1271,7 @@ void GiveWeapon(int client)
 		if(g_iSlotCount[i] == 0)
 			continue;
 
-		DeletePlayerSlotX(client, i);
+		DeletePlayerSlot(client, i);
 		CheatCmd_Give(client, g_sWeaponName[i][g_iSlotWeapons[i][GetRandomInt(0, g_iSlotCount[i] - 1)]]);
 	}
 
@@ -1292,7 +1292,7 @@ void GiveSecondaryWeapon(int client)
 	if(g_iSlotCount[1] != 0)
 	{
 
-		DeletePlayerSlotX(client, 1);
+		DeletePlayerSlot(client, 1);
 		int iRandom = g_iSlotWeapons[1][GetRandomInt(0, g_iSlotCount[1] - 1)];
 		if(iRandom > 2)
 			GiveMeleeWeapon(client, g_sWeaponName[1][iRandom]);
@@ -1305,7 +1305,7 @@ void GivePresetPrimaryWeapon(int client)
 {
 	if(g_iSlotCount[0] != 0)
 	{
-		DeletePlayerSlotX(client, 0);
+		DeletePlayerSlot(client, 0);
 		CheatCmd_Give(client, g_sWeaponName[0][g_iSlotWeapons[0][GetRandomInt(0, g_iSlotCount[0] - 1)]]);
 	}
 }
@@ -1343,7 +1343,7 @@ void GiveAveragePrimaryWeapon(int client)
 
 	int iAverage = iTotal > 0 ? RoundToNearest(1.0 * iTier / iTotal) : 0;
 
-	DeletePlayerSlotX(client, 0);
+	DeletePlayerSlot(client, 0);
 
 	switch(iAverage)
 	{
@@ -1415,13 +1415,7 @@ void SetGhostStatus(int client, int iGhost)
 		SetEntProp(client, Prop_Send, "m_isGhost", iGhost); 
 }
 
-stock void DeletePlayerSlot(int client, int iWeapon)
-{		
-	if(RemovePlayerItem(client, iWeapon))
-		RemoveEntity(iWeapon);
-}
-
-stock void DeletePlayerSlotX(int client, int iSlot)
+stock void DeletePlayerSlot(int client, int iSlot)
 {
 	iSlot = GetPlayerWeaponSlot(client, iSlot);
 	if(iSlot != -1)
@@ -1433,13 +1427,8 @@ stock void DeletePlayerSlotX(int client, int iSlot)
 
 stock void DeletePlayerSlotAll(int client)
 {
-	int iWeapon;
 	for(int i; i < 5; i++)
-	{
-		iWeapon = GetPlayerWeaponSlot(client, i);
-		if(iWeapon != -1)
-			DeletePlayerSlot(client, iWeapon);
-	}
+		DeletePlayerSlot(client, i);
 }
 
 //给玩家近战
