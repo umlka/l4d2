@@ -1148,7 +1148,7 @@ stock void DeletePlayerSlot(int client, int weapon)
 stock void DeletePlayerSlotX(int client, int iSlot)
 {
 	iSlot = GetPlayerWeaponSlot(client, iSlot);
-	if(iSlot > 0)
+	if(iSlot != -1)
 	{
 		if(RemovePlayerItem(client, iSlot))
 			RemoveEntity(iSlot);
@@ -1157,12 +1157,12 @@ stock void DeletePlayerSlotX(int client, int iSlot)
 
 stock void DeletePlayerSlotAll(int client)
 {
-	int iSlot;
+	int iWeapon;
 	for(int i; i < 5; i++)
 	{
-		iSlot = GetPlayerWeaponSlot(client, i);
-		if(iSlot > 0)
-			DeletePlayerSlot(client, iSlot);
+		iWeapon = GetPlayerWeaponSlot(client, i);
+		if(iWeapon != -1)
+			DeletePlayerSlot(client, iWeapon);
 	}
 }
 
@@ -2283,14 +2283,6 @@ void CheatCommand(int client, const char[] sCommand)
 	if(SplitString(sCommand, " ", sCmd, sizeof(sCmd)) == -1)
 		strcopy(sCmd, sizeof(sCmd), sCommand);
 
-	if(strcmp(sCmd, "give") == 0)
-	{
-		if(strcmp(sCommand[5], "health") == 0)
-			SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 0.0); //防止有虚血时give health会超过100血
-		else if(strcmp(sCommand[5], "ammo") == 0)
-			ReloadAmmo(client); //M60和榴弹发射器加子弹
-	}
-
 	int bits = GetUserFlagBits(client);
 	SetUserFlagBits(client, ADMFLAG_ROOT);
 	int flags = GetCommandFlags(sCmd);
@@ -2298,6 +2290,14 @@ void CheatCommand(int client, const char[] sCommand)
 	FakeClientCommand(client, sCommand);
 	SetCommandFlags(sCmd, flags);
 	SetUserFlagBits(client, bits);
+	
+	if(strcmp(sCmd, "give") == 0)
+	{
+		if(strcmp(sCommand[5], "health") == 0)
+			SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 0.0); //防止有虚血时give health会超过100血
+		else if(strcmp(sCommand[5], "ammo") == 0)
+			ReloadAmmo(client); //M60和榴弹发射器加子弹
+	}
 }
 
 void LoadGameData()
