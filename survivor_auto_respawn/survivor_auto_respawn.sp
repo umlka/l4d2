@@ -163,14 +163,14 @@ Address g_pResetStatCondition;
 ConVar g_hRespawnTime;
 ConVar g_hRespawnLimit;
 ConVar g_hAllowSurvivorBot;
-ConVar g_hAllowSurvivorIdle;
+ConVar g_hAllowSurvivorEvent;
 ConVar g_hGiveType;
 ConVar g_hSlotFlags[5];
 //ConVar g_hSbAllBotGame; 
 //ConVar g_hAllowAllBotSurvivorTeam;
 
 bool g_bAllowSurvivorBot;
-bool g_bAllowSurvivorIdle;
+bool g_bAllowSurvivorEvent;
 
 int g_iRoundStart; 
 int g_iPlayerSpawn;
@@ -365,7 +365,7 @@ public void OnPluginStart()
 	g_hRespawnTime = CreateConVar("sar_respawn_time", "15" , "玩家自动复活时间(秒)", CVAR_FLAGS, true, 0.0);
 	g_hRespawnLimit = CreateConVar("sar_respawn_limit", "5" , "玩家每回合自动复活次数", CVAR_FLAGS, true, 0.0);
 	g_hAllowSurvivorBot = CreateConVar("sar_respawn_bot", "1" , "是否允许Bot自动复活 \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hAllowSurvivorIdle = CreateConVar("sar_respawn_idle", "1" , "是否允许闲置玩家自动复活 \n0=否,1=是(某些多人插件闲置死亡后会接管BOT)", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hAllowSurvivorEvent = CreateConVar("sar_respawn_event", "1" , "是否在player_spawn事件里面检测玩家存活状态 \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hGiveType = CreateConVar("sar_respawn_type", "0" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
 
 	g_hSlotFlags[0] = CreateConVar("sar_respawn_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
@@ -380,7 +380,7 @@ public void OnPluginStart()
 	g_hRespawnTime.AddChangeHook(ConVarChanged);
 	g_hRespawnLimit.AddChangeHook(ConVarChanged);
 	g_hAllowSurvivorBot.AddChangeHook(ConVarChanged);
-	g_hAllowSurvivorIdle.AddChangeHook(ConVarChanged);
+	g_hAllowSurvivorEvent.AddChangeHook(ConVarChanged);
 
 	for(int i; i < 5; i++)
 		g_hSlotFlags[i].AddChangeHook(ConVarChanged_Slot);
@@ -423,7 +423,7 @@ void GetCvars()
 	g_iRespawnTime = g_hRespawnTime.IntValue;
 	g_iRespawnLimit = g_hRespawnLimit.IntValue;
 	g_bAllowSurvivorBot = g_hAllowSurvivorBot.BoolValue;
-	g_bAllowSurvivorIdle = g_hAllowSurvivorIdle.BoolValue;
+	g_bAllowSurvivorEvent = g_hAllowSurvivorEvent.BoolValue;
 }
 
 void GetSlotCvars()
@@ -510,37 +510,31 @@ public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
-	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
+	if(g_iRoundStart == 0)
+		return;
+	
+	if(g_iPlayerSpawn == 0)
 		InitPlugin();
 	g_iPlayerSpawn = 1;
 
-	RemoveSurvivorDeathModel(GetClientOfUserId(event.GetInt("userid")));
-}
-
-public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
-{
-	if(g_iRespawnTime == 0 || g_iRespawnLimit == 0 || IsRoundStarted() == false)
-		return;
-
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2)
+	if(client == 0 || !IsClientInGame(client))
 		return;
 
+	RemoveSurvivorDeathModel(client);
+
+	if(g_hRespawnTimer[client] != null || GetClientTeam(client) != 2 || IsPlayerAlive(client))
+		return;
+		
 	if(IsFakeClient(client))
 	{
-		int iIdlePlayer = GetIdlePlayer(client);
-		if(iIdlePlayer == 0)
-		{
-			if(!g_bAllowSurvivorBot)
-				return;
-		}
-		else
-		{
-			if(!g_bAllowSurvivorIdle)
-				return;
-			else
-				client = iIdlePlayer;
-		}
+		if(!g_bAllowSurvivorBot)
+			return;
+	}
+	else
+	{
+		if(!g_bAllowSurvivorEvent)
+			return;
 	}
 
 	if(CalculateRespawnLimit(client))
@@ -550,15 +544,20 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 	}
 }
 
-int GetIdlePlayer(int client)
+public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
-	if(HasEntProp(client, Prop_Send, "m_humanSpectatorUserID"))
+	if(g_iRespawnTime == 0 || g_iRespawnLimit == 0 || IsRoundStarted() == false)
+		return;
+
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(client == 0 || !IsClientInGame(client) || (!g_bAllowSurvivorBot && IsFakeClient(client)) || GetClientTeam(client) != 2)
+		return;
+
+	if(CalculateRespawnLimit(client))
 	{
-		client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
-		if(client > 0 && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1)
-			return client;
+		delete g_hRespawnTimer[client];
+		g_hRespawnTimer[client] = CreateTimer(1.0, Timer_Respawn, GetClientUserId(client), TIMER_REPEAT);
 	}
-	return 0;
 }
 
 bool CalculateRespawnLimit(int client)
