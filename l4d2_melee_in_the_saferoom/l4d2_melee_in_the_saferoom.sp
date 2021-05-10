@@ -145,7 +145,7 @@ public void OnMapStart()
 	}
 
 	iLen = sizeof(g_sMeleeName);
-	char sBuffer[32];
+	char sBuffer[64];
 	for(i = 0; i < iLen; i++)
 	{
 		FormatEx(sBuffer, sizeof(sBuffer), "scripts/melee/%s.txt", g_sMeleeName[i]);
