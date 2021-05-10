@@ -3,6 +3,7 @@
 #include <sourcemod>
 #include <sdktools>
 #include <dhooks>
+
 /**************************************************************************/
 //颜色
 #define MAX_COLORS 	 6
@@ -454,9 +455,9 @@ void GetSlotInfo(int iSlot)
 	}
 }
 
-public Action L4D2_OnSurvivorDeathModelCreated(int client, int iDeathModel)
+public void L4D2_OnSurvivorDeathModelCreated(int iClient, int iDeathModel)
 {
-	g_iDeathModel[client] = EntIndexToEntRef(iDeathModel);
+	g_iDeathModel[iClient] = EntIndexToEntRef(iDeathModel);
 }
 
 public void OnClientPutInServer(int client)
@@ -746,7 +747,7 @@ int GetTeleportTarget(int client)
 				iNormalSurvivors[iNormal++] = i;
 		}
 	}
-	return (iNormal == 0) ? (iIncap == 0 ? (iHanging == 0 ? -1 : iHangingSurvivors[GetRandomInt(0, iHanging - 1)]) : iIncapSurvivors[GetRandomInt(0, iIncap - 1)]) :iNormalSurvivors[GetRandomInt(0, iNormal - 1)];
+	return (iNormal == 0) ? (iIncap == 0 ? (iHanging == 0 ? -1 : iHangingSurvivors[GetRandomInt(0, iHanging - 1)]) : iIncapSurvivors[GetRandomInt(0, iIncap - 1)]) : iNormalSurvivors[GetRandomInt(0, iNormal - 1)];
 }
 
 void ForceCrouch(int client)
@@ -907,7 +908,7 @@ public void OnMapStart()
 			PrecacheModel(g_sWeaponModels[i], true);
 	}
 
-	char sBuffer[32];
+	char sBuffer[64];
 	for(i = 3; i < 17; i++)
 	{
 		FormatEx(sBuffer, sizeof(sBuffer), "scripts/melee/%s.txt", g_sWeaponName[1][i]);
