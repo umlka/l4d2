@@ -293,7 +293,7 @@ public void OnMapStart()
 	}
 	
 	iLen = sizeof(g_sMeleeName);
-	char sBuffer[32];
+	char sBuffer[64];
 	for(i = 0; i < iLen; i++)
 	{
 		FormatEx(sBuffer, sizeof(sBuffer), "scripts/melee/%s.txt", g_sMeleeName[i]);
@@ -1273,7 +1273,7 @@ int GetTeleportTarget(int client)
 				iNormalSurvivors[iNormal++] = i;
 		}
 	}
-	return (iNormal == 0) ? (iIncap == 0 ? (iHanging == 0 ? -1 : iHangingSurvivors[GetRandomInt(0, iHanging - 1)]) : iIncapSurvivors[GetRandomInt(0, iIncap - 1)]) :iNormalSurvivors[GetRandomInt(0, iNormal - 1)];
+	return (iNormal == 0) ? (iIncap == 0 ? (iHanging == 0 ? -1 : iHangingSurvivors[GetRandomInt(0, iHanging - 1)]) : iIncapSurvivors[GetRandomInt(0, iIncap - 1)]) : iNormalSurvivors[GetRandomInt(0, iNormal - 1)];
 }
 
 void FriendlyFire(int client)
