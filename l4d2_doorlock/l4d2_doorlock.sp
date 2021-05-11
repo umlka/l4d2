@@ -690,15 +690,10 @@ bool IsFinishedLoading()
 		{
 			if(!IsClientInGame(i) && !IsFakeClient(i))
 			{
-				g_iClientTimeout[i]++;
-				if(g_bIsClientLoading[i])
-				{
-					if(g_iClientTimeout[i] == 1) 
-						g_bIsClientLoading[i] = true;
-				}
-
-				if(g_iClientTimeout[i] == g_iCvarClientTimeOut) 
+				if(++g_iClientTimeout[i] >= g_iCvarClientTimeOut) 
 					g_bIsClientLoading[i] = false;
+				else
+					g_bIsClientLoading[i] = true;
 			}
 			else 
 				g_bIsClientLoading[i] = false;
