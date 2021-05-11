@@ -20,9 +20,10 @@
 #include <sdktools>
 #include <dhooks>
 
-#define GAMEDATA 	   "l4d2_melee_spawn_control"
-#define FILE_PATH 	   "scripts\\melee\\melee_manifest.txt"
-#define DEFAULT_MELEES "fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;golfclub;shovel;pitchfork"
+#define FORCE_VALUES	0
+#define GAMEDATA		"l4d2_melee_spawn_control"
+#define MELEE_MANIFEST	"scripts\\melee\\melee_manifest.txt"
+#define DEFAULT_MELEES	"fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;golfclub;shovel;pitchfork"
 
 DynamicDetour g_dDetourMeleeWeaponAllowedToExist;
 DynamicDetour g_dDetourGameRulesGetMissionInfo;
@@ -105,7 +106,7 @@ public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 		return MRES_Ignored;
 
 	char sMapCurrentMelees[512];
-	SDKCall(g_hSDK_Call_KvGetString, pThis, sMapCurrentMelees, sizeof(sMapCurrentMelees), "meleeweapons", "");
+	SDKCall(g_hSDK_Call_KvGetString, pThis, sMapCurrentMelees, sizeof(sMapCurrentMelees), "meleeweapons", "N/A");
 
 	char sMap[64], sMapBaseMelees[512];
 	FindConVar("mp_gamemode").GetString(sMap, sizeof(sMap));
@@ -116,14 +117,14 @@ public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 
 	if(g_aMapInitMelees.GetString(sMap, sMapBaseMelees, sizeof(sMapBaseMelees)) == false)
 	{
-		if(sMapCurrentMelees[0] != 0)
+		if(strcmp(sMapCurrentMelees, "N/A") != 0)
 			strcopy(sMapBaseMelees, sizeof(sMapBaseMelees), sMapCurrentMelees);
 		else
-			ReadMeleeManifest(sMapBaseMelees, sizeof(sMapBaseMelees)); //darkwood
+			ReadMeleeManifest(sMapBaseMelees, sizeof(sMapBaseMelees)); //darkwood, eye
 			
 		if(sMapBaseMelees[0] == 0)
 			strcopy(sMapBaseMelees, sizeof(sMapBaseMelees), DEFAULT_MELEES);
-	
+
 		g_aMapInitMelees.SetString(sMap, sMapBaseMelees, false);
 	}
 
@@ -136,6 +137,12 @@ public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 
 	if(strcmp(sMapSetMelees, sMapCurrentMelees) == 0)
 		return MRES_Ignored;
+		
+	//l4d_info_editor https://forums.alliedmods.net/showthread.php?p=2614626
+	#if FORCE_VALUES
+		if(strcmp(sMapCurrentMelees, "N/A") == 0)
+			SDKCall(g_hSDK_Call_KvFindKey, pThis, "meleeweapons", true);
+	#endif
 
 	SDKCall(g_hSDK_Call_KvSetString, pThis, "meleeweapons", sMapSetMelees);
 	return MRES_Ignored;
@@ -189,7 +196,7 @@ void GetMapSetMelees(const char[] sMap, const char[] sMapBaseMelees, char[] sMap
 	int pos = GetCharPosInString(sBaseMelees , ';', 16);
 	if(pos != -1)
 		sBaseMelees[pos] = 0;
-		
+
 	strcopy(sMapSetMelees, maxlength, sBaseMelees);
 	g_aMapSetMelees.SetString(sMap, sBaseMelees, true);
 }
@@ -205,8 +212,7 @@ stock int GetCharPosInString(const char[] str, char c, int which)
 	{
 		if(str[i] == c)
 		{
-			total++;
-			if(total == which)
+			if(++total == which)
 				return i;
 		}
 	}
@@ -215,17 +221,17 @@ stock int GetCharPosInString(const char[] str, char c, int which)
 
 void ReadMeleeManifest(char[] sManifest, int maxlength)
 {
-	File file = OpenFile(FILE_PATH, "r");
-	if(file == null)
-		file = OpenFile(FILE_PATH, "r", true, NULL_STRING);
+	File hFile = OpenFile(MELEE_MANIFEST, "r");
+	if(hFile == null)
+		hFile = OpenFile(MELEE_MANIFEST, "r", true, NULL_STRING);
 
-	if(file == null)
+	if(hFile == null)
 		return;
 
-	while(!file.EndOfFile())
+	char sLine[255];
+	while(!hFile.EndOfFile())
 	{
-		char sLine[255];
-		if(!file.ReadLine(sLine, sizeof(sLine)))
+		if(!hFile.ReadLine(sLine, sizeof(sLine)))
 			break;
 
 		ReplaceString(sLine, sizeof(sLine), " ", "");
@@ -240,7 +246,7 @@ void ReadMeleeManifest(char[] sManifest, int maxlength)
 	if(sManifest[0] != 0)
 		strcopy(sManifest, maxlength, sManifest[1]);
 
-	delete file;
+	delete hFile;
 }
 
 stock bool SplitStringRight(const char[] source, const char[] split, char[] part, int partLen)
