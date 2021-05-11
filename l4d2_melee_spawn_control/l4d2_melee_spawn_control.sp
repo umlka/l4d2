@@ -35,8 +35,9 @@ Handle g_hSDK_Call_KvGetString;
 Handle g_hSDK_Call_KvSetString; 
 Handle g_hSDK_Call_KvFindKey;
 
-ConVar g_hCvarMeleeSpawn;
-ConVar g_hCvarAddMelee;
+ConVar g_hMPGameMode;
+ConVar g_hBaseMelees;
+ConVar g_hExtraMelees;
 
 bool g_bMapStarted;
 
@@ -56,8 +57,10 @@ public void OnPluginStart()
 	g_aMapSetMelees = new StringMap();
 	g_aMapInitMelees = new StringMap();
 
-	g_hCvarMeleeSpawn = CreateConVar("l4d2_melee_spawn", "", "Melee weapon list for unlock, use ';' to separate between names, e.g: pitchfork;shovel. Empty for no change");
-	g_hCvarAddMelee = CreateConVar("l4d2_add_melee", "", "Add melee weapons to map basis melee spawn or l4d2_melee_spawn, use ';' to separate between names. Empty for don't add");
+	g_hBaseMelees = CreateConVar("l4d2_melee_spawn", "", "Melee weapon list for unlock, use ';' to separate between names, e.g: pitchfork;shovel. Empty for no change");
+	g_hExtraMelees = CreateConVar("l4d2_add_melee", "", "Add melee weapons to map basis melee spawn or l4d2_melee_spawn, use ';' to separate between names. Empty for don't add");
+	
+	g_hMPGameMode = FindConVar("mp_gamemode");
 }
 
 public void OnPluginEnd()
@@ -108,13 +111,14 @@ public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 	char sMapCurrentMelees[512];
 	SDKCall(g_hSDK_Call_KvGetString, pThis, sMapCurrentMelees, sizeof(sMapCurrentMelees), "meleeweapons", "N/A");
 
-	char sMap[64], sMapBaseMelees[512];
-	FindConVar("mp_gamemode").GetString(sMap, sizeof(sMap));
+	char sMap[64];
+	g_hMPGameMode.GetString(sMap, sizeof(sMap));
 	SDKCall(g_hSDK_Call_KvGetString, SDKCall(g_hSDK_Call_KvFindKey, SDKCall(g_hSDK_Call_KvFindKey, SDKCall(g_hSDK_Call_KvFindKey, pThis, "modes", false), sMap, false), "1", false), sMap, sizeof(sMap), "Map", "N/A");
 
 	if(strcmp(sMap, "N/A") == 0)
 		return MRES_Ignored;
 
+	char sMapBaseMelees[512];
 	if(g_aMapInitMelees.GetString(sMap, sMapBaseMelees, sizeof(sMapBaseMelees)) == false)
 	{
 		if(strcmp(sMapCurrentMelees, "N/A") != 0)
@@ -151,8 +155,8 @@ public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 void GetMapSetMelees(const char[] sMap, const char[] sMapBaseMelees, char[] sMapSetMelees, int maxlength)
 {
 	char sBaseMelees[512], sExtraMelees[512];
-	g_hCvarMeleeSpawn.GetString(sBaseMelees, sizeof(sBaseMelees));
-	g_hCvarAddMelee.GetString(sExtraMelees, sizeof(sExtraMelees));
+	g_hBaseMelees.GetString(sBaseMelees, sizeof(sBaseMelees));
+	g_hExtraMelees.GetString(sExtraMelees, sizeof(sExtraMelees));
 	ReplaceString(sBaseMelees, sizeof(sBaseMelees), " ", "");
 	ReplaceString(sExtraMelees, sizeof(sExtraMelees), " ", "");
 
