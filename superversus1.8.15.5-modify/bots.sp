@@ -37,7 +37,6 @@ ConVar g_hSpecCmdLimit;
 ConVar g_hGiveWeaponType;
 ConVar g_hAllowRescuedGive;
 ConVar g_hSlotFlags[5];
-ConVar g_hSpawnFlowLimit;
 ConVar g_hSbAllBotGame; 
 ConVar g_hAllowAllBotSurvivorTeam;
 
@@ -288,9 +287,16 @@ public void OnPluginStart()
 	g_hL4DSurvivorLimit.Flags &= ~FCVAR_NOTIFY; //移除ConVar变动提示
 	g_hL4DSurvivorLimit.SetBounds(ConVarBound_Upper, true, 32.0);
 
+	ConVar hSurvivorRespawnWithGuns = FindConVar("survivor_respawn_with_guns");
+	hSurvivorRespawnWithGuns.SetBounds(ConVarBound_Lower, true, 0.0);
+	hSurvivorRespawnWithGuns.SetBounds(ConVarBound_Upper, true, 0.0);
+	hSurvivorRespawnWithGuns.IntValue = 0;
+
 	//https://forums.alliedmods.net/showthread.php?t=120275
-	g_hSpawnFlowLimit = FindConVar("z_spawn_flow_limit");
-	g_hSpawnFlowLimit.IntValue = 999999999;
+	ConVar hSpawnFlowLimit = FindConVar("z_spawn_flow_limit");
+	hSpawnFlowLimit.SetBounds(ConVarBound_Lower, true, 999999999.0);
+	hSpawnFlowLimit.SetBounds(ConVarBound_Upper, true, 999999999.0);
+	hSpawnFlowLimit.IntValue = 999999999;
 
 	g_hSurvivorLimit.AddChangeHook(ConVarChanged);
 	g_hAutoJoinSurvivor.AddChangeHook(ConVarChanged);
@@ -760,17 +766,6 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	}
 }
 
-public void OnNextFrame_GivePlayerWeapon(int client)
-{
-	if((client = GetClientOfUserId(client)) && IsClientInGame(client))
-	{
-		if(g_bGivenPlayerWeapon[client] == false && GetClientTeam(client) == 2 && IsPlayerAlive(client) && CanGiveWeapon(client))
-			GiveWeapon(client);
-			
-		g_bGivenPlayerWeapon[client] = true;
-	}
-}
-
 bool CanGiveWeapon(int client)
 {
 	static const int iSlots[4] = {0, 2, 3, 4};
@@ -794,6 +789,17 @@ bool CanGiveWeapon(int client)
 		return true;
 	
 	return false;
+}
+
+public void OnNextFrame_GivePlayerWeapon(int client)
+{
+	if((client = GetClientOfUserId(client)) && IsClientInGame(client))
+	{
+		if(g_bGivenPlayerWeapon[client] == false && GetClientTeam(client) == 2 && IsPlayerAlive(client) && CanGiveWeapon(client))
+			GiveWeapon(client);
+			
+		g_bGivenPlayerWeapon[client] = true;
+	}
 }
 
 public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
@@ -875,19 +881,22 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 {
 	int player_userid = event.GetInt("player");
 	int player = GetClientOfUserId(player_userid);
-
 	if(g_sEntityModels[player][0] == 0)
 		return;
 
-	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || !IsSurvivor(player))
+	if(player == 0 || !IsClientInGame(player) || !IsSurvivor(player))
 		return;
 
 	int bot_userid = event.GetInt("bot");
 	int bot = GetClientOfUserId(bot_userid);
+	if(IsFakeClient(player))
+	{
+		g_bGivenPlayerWeapon[bot] = true;
+		return;
+	}
+
 	g_iBotPlayer[bot] = player_userid;
 	g_iPlayerBot[player] = bot_userid;
-	g_bGivenPlayerWeapon[bot] = true;
-	g_bGivenPlayerWeapon[player] = true;
 
 	SetEntProp(bot, Prop_Send, "m_survivorCharacter", GetEntProp(player, Prop_Send, "m_survivorCharacter"));
 	SetEntityModel(bot, g_sEntityModels[player]);
@@ -904,9 +913,9 @@ public void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroa
 	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || !IsSurvivor(player))
 		return;
 
-	int bot = GetClientOfUserId(event.GetInt("bot"));
-	g_bGivenPlayerWeapon[bot] = true;
 	g_bGivenPlayerWeapon[player] = true;
+
+	int bot = GetClientOfUserId(event.GetInt("bot"));
 
 	static char sModel[PLATFORM_MAX_PATH];
 	GetClientModel(bot, sModel, sizeof(sModel));
@@ -1435,8 +1444,6 @@ stock void DeletePlayerSlotAll(int client)
 //https://forums.alliedmods.net/showpost.php?p=2611529&postcount=484
 public void OnMapStart()
 {
-	g_hSpawnFlowLimit.IntValue = 999999999;
-
 	int i;
 	int iLen;
 
