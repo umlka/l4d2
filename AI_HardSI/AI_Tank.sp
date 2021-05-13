@@ -73,31 +73,23 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	fCurrentSpeed = SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0));
 	if(GetEntProp(client, Prop_Send, "m_hasVisibleThreats") && g_fTankAttackRange + 45.0 < fDist < 1000.0 && fCurrentSpeed > 190.0) 
 	{
-		if(!(GetEntityFlags(client) & FL_ONGROUND) && !(GetEntityMoveType(client) & MOVETYPE_LADDER) && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2)
+		if(GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") != -1 && GetEntityMoveType(client) != MOVETYPE_LADDER)
 		{
-			buttons &= ~IN_JUMP;
-			buttons &= ~IN_DUCK;
-		}
-		else
-		{
-			if(GetEntityFlags(client) & FL_ONGROUND) 
-			{
-				buttons &= ~IN_ATTACK2;
-				buttons |= IN_DUCK;
-				buttons |= IN_JUMP;
+			buttons &= ~IN_ATTACK2;
+			buttons |= IN_DUCK;
+			buttons |= IN_JUMP;
 					
-				static float vEyeAngles[3];
-				GetClientEyeAngles(client, vEyeAngles);
-				Client_PushForce(client, buttons, vEyeAngles, vVelocity, TANK_BOOST);
+			static float vEyeAngles[3];
+			GetClientEyeAngles(client, vEyeAngles);
+			Client_PushForce(client, buttons, vEyeAngles, vVelocity, TANK_BOOST);
 
-				if(DelayExpired(client, 0, TANK_MELEE_SCAN_DELAY)) 
+			if(DelayExpired(client, 0, TANK_MELEE_SCAN_DELAY)) 
+			{
+				DelayStart(client, 0);
+				if(NearestSurvivorDistance(client, false) < g_fTankAttackRange * 0.95) 
 				{
-					DelayStart(client, 0);
-					if(NearestSurvivorDistance(client, false) < g_fTankAttackRange * 0.95) 
-					{
-						buttons |= IN_ATTACK;
-						return Plugin_Changed;
-					}
+					buttons |= IN_ATTACK;
+					return Plugin_Changed;
 				}
 			}
 		}
@@ -315,7 +307,7 @@ stock int NearestVisibleNormalSurvivor(int client)
 		return -1;
 	}
 	
-	SortADTArray(aTargets, Sort_Ascending, Sort_Float);
+	aTargets.Sort(Sort_Ascending, Sort_Float);
 	
 	iTarget = aTargets.Get(0, 1);
 	delete aTargets;
