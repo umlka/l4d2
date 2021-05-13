@@ -8,21 +8,11 @@
 			{
 				"linux"
 				{
-					"signature" "CVomit::IsAbilityReadyToFire"
+					"signature"	"CVomit::IsAbilityReadyToFire"
 				}
-			}
-			"CTongue::OnUpdateAttachedToTargetState"
-			{
-				"linux"
+				"windows"
 				{
-					"signature" "CTongue::OnUpdateAttachedToTargetState"
-				}
-			}
-			"CTongue::IsAbilityReadyToFire"
-			{
-				"linux"
-				{
-					"signature" "CTongue::IsAbilityReadyToFire"
+					"signature"	"CVomit::IsAbilityReadyToFire"
 				}
 			}
 			"CCharge::ActivateAbility"
@@ -31,38 +21,27 @@
 				{
 					"signature" "CCharge::ActivateAbility"
 				}
-			}
-			"CTerrorGun::ShouldUnzoom"
-			{
-				"linux"
+				"windows"
 				{
-					"signature" "CTerrorGun::ShouldUnzoom"
+					"signature" "CCharge::ActivateAbility"
 				}
 			}
 		}
+
 		"Offsets"
 		{
 			"boomer_offset"
 			{
 				"linux"		"126"
-			}
-			"smoker_offset"
-			{
-				"linux"		"49"
-			}
-			"smoker_ability_offset"
-			{
-				"linux"		"112"
+				"windows"	"103"
 			}
 			"charger_ability"
 			{
 				"linux"		"451"
-			}
-			"zoom_offset"
-			{
-				"linux"		"55"
+				"windows"	"133"
 			}
 		}
+
 		"Signatures" 
 		{
 			"CVomit::IsAbilityReadyToFire"
@@ -70,35 +49,16 @@
 				// * CVomit::IsAbilityReadyToFire(CVomit *this)
 				
 				"library"	"server"
-				"linux"	"@_ZNK6CVomit20IsAbilityReadyToFireEv"
-			}
-			"CTongue::OnUpdateAttachedToTargetState"
-			{
-				// * CTongue::OnUpdateAttachedToTargetState(CTongue *this)
-				
-				"library"	"server"
-				"linux"	"@_ZN7CTongue29OnUpdateAttachedToTargetStateEv"
-			}
-			"CTongue::IsAbilityReadyToFire"
-			{
-				// * CTongue::IsAbilityReadyToFire(CTongue *this)
-				
-				"library"	"server"
-				"linux"	"@_ZNK7CTongue20IsAbilityReadyToFireEv"
+				"linux"		"@_ZNK6CVomit20IsAbilityReadyToFireEv"
+				"windows"		"\x56\x57\x8B\xF9\x8B\x87\x38\x04\x00\x00\x83\xF8\xFF\x74\x2A\x8B\x15\x2A\x2A\x2A\x2A\x8B\xC8\x81\xE1\xFF\x0F\x00\x00\x03\xC9\x8D\x4C\xCA\x04\xC1\xE8\x0C\x39\x41\x04\x75\x2A\x8B\x31\x85\xF6\x75\x2A\x5F\x32\xC0\x5E\xC3\x8B\x06\x8B\x90\x54\x05\x00\x00\x8B\xCE\xFF\xD2\x84\xC0\x75\x2A\xF7\x86\xD4\x1C\x00\x00\x00\x08\x00\x00"
 			}
 			"CCharge::ActivateAbility"
 			{
 				// * CCharge::ActivateAbility(CCharge *this)
 				
 				"library"	"server"
-				"linux"	"@_ZN7CCharge15ActivateAbilityEv"
-			}
-			"CTerrorGun::ShouldUnzoom"
-			{
-				// * CTerrorGun::ShouldUnzoom(CTerrorGun *this)
-				
-				"library"	"server"
-				"linux"	"@_ZNK10CTerrorGun12ShouldUnzoomEv"
+				"linux"		"@_ZN7CCharge15ActivateAbilityEv"
+				"windows"	"\x57\x8B\xF9\x8B\x07\x8B\x90\x28\x03\x00\x00\xFF\xD2\x84\xC0\x0F\x84\x2A\x2A\x2A\x2A\x8B\x87\x38\x04\x00\x00\x53"
 			}
 		}
 	}
