@@ -6,10 +6,10 @@
 		{
 			"OnEnterGhostState"
 			{
-				"signature"		"OnEnterGhostState"
-				"callconv"		"thiscall"
-				"return"		"int"
-				"this"			"entity"
+				"signature"	"OnEnterGhostState"
+				"callconv"	"thiscall"
+				"return"	"int"
+				"this"		"entity"
 			}
 		}
 
@@ -17,25 +17,19 @@
 		{
 			"RoundRespawn"
 			{
-				"windows"
-				{
-					"signature"	"RoundRespawn"			
-				}
 				"linux"
 				{
 					"signature"	"RoundRespawn"
+				}
+				"windows"
+				{
+					"signature"	"RoundRespawn"			
 				}
 			}
 		}
 
 		"Offsets"
 		{
-			"OS"
-			{
-				"windows"	"1"
-				"linux"		"2"
-			}
-
 			"CBaseEntity::IsInStasis"
 			{
 				"windows"	"39"
@@ -43,13 +37,13 @@
 			}
 			"RoundRespawn_Offset"
 			{
-				"windows"		"15" // 0xF
-				"linux"			"25" // 0x19
+				"linux"		"25" // 0x19
+				"windows"	"15" // 0xF
 			}
 			"RoundRespawn_Byte" // JNZ => JNS
 			{
-				"windows"		"117" // 0x75
-				"linux"			"117" // 0x75
+				"linux"		"117" // 0x75
+				"windows"	"117" // 0x75
 			}
 		}
 
