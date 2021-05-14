@@ -2,49 +2,32 @@
 {
     "left4dead2"
     {
-		"Functions"
-		{
-			"CSurvivorDeathModel::Create"
-			{
-				"signature"		"CSurvivorDeathModel::Create"
-				"callconv"		"thiscall"
-				"return"		"cbaseentity"
-				"this"			"entity"
-			}
-		}
-	
 		"Addresses"
 		{
 			"RoundRespawn"
 			{
-				"windows"
-				{
-					"signature"	"RoundRespawn"			
-				}
 				"linux"
 				{
 					"signature"	"RoundRespawn"
+				}
+				"windows"
+				{
+					"signature"	"RoundRespawn"			
 				}
 			}
 		}
 
 		"Offsets"
 		{
-			"OS"
-			{
-				"windows"	"1"
-				"linux"		"2"
-			}
-
 			"RoundRespawn_Offset"
 			{
-				"windows"		"15" // 0xF
-				"linux"			"25" // 0x19
+				"linux"		"25" // 0x19
+				"windows"	"15" // 0xF
 			}
 			"RoundRespawn_Byte" // JNZ => JNS
 			{
-				"windows"		"117" // 0x75
-				"linux"			"117" // 0x75
+				"linux"		"117" // 0x75
+				"windows"	"117" // 0x75
 			}
 		}
 
@@ -58,20 +41,6 @@
 				"windows"	"\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x84\xC0\x75"
 				/* 56 8B F1 E8 ? ? ? ? E8 ? ? ? ? 84 C0 75	*/
 				/* previous function in vtable has a string */
-			}
-			"CTerrorPlayer::GoAwayFromKeyboard"
-			{
-				"library"	"server"
-				"linux"		"@_ZN13CTerrorPlayer18GoAwayFromKeyboardEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x57\x8B\xF1\x8B\x06\x8B\x90\xC8\x08\x00\x00"
-				/* ? ? ? ? ? ? 53 56 57 8B F1 8B 06 8B 90 C8 08 00 00 */
-			}
-			"CSurvivorDeathModel::Create"
-			{
-				"library"	"server"
-				"linux"		"@_ZN19CSurvivorDeathModel6CreateEP13CTerrorPlayer"
-				"windows"	"\x55\x8B\xEC\x57\x8B\x7D\x08\x85\xFF\x75\x2A\x33\xC0\x5F\x5D\xC3\x8B\x87\x38\x01\x00\x00"
-				/* 55 8B EC 57 8B 7D 08 85 FF 75 ? 33 C0 5F 5D C3 8B 87 38 01 00 00 */
 			}
 		}
     }
