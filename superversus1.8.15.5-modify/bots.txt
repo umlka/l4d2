@@ -6,24 +6,24 @@
 		{
 			"SetHumanSpec"
 			{
-				"signature"  "SetHumanSpec"
-				"callconv"  "thiscall"
-				"return"  "void"
-				"this"  "entity"
+				"signature"	"SetHumanSpec"
+				"callconv"	"thiscall"
+				"return"	"void"
+				"this"		"entity"
 				"arguments"
 				{
 					"AFKPlayer"
 					{
-						"type"    "cbaseentity"
+						"type"	"cbaseentity"
 					}
 				}
 			}
 			"CTerrorPlayer::GoAwayFromKeyboard"
 			{
-				"signature"  "CTerrorPlayer::GoAwayFromKeyboard"
-				"callconv"  "thiscall"
-				"return"  "void"
-				"this"  "entity"
+				"signature"	"CTerrorPlayer::GoAwayFromKeyboard"
+				"callconv"	"thiscall"
+				"return"	"void"
+				"this"		"entity"
 			}
 		}
 		
@@ -31,25 +31,19 @@
 		{
 			"RoundRespawn"
 			{
-				"windows"
-				{
-					"signature"	"RoundRespawn"			
-				}
 				"linux"
 				{
 					"signature"	"RoundRespawn"
+				}
+				"windows"
+				{
+					"signature"	"RoundRespawn"			
 				}
 			}
 		}
 
 		"Offsets"
 		{
-			"OS"
-			{
-				"windows"	"1"
-				"linux"		"2"
-			}
-
 			"CTerrorPlayer::SetObserverTarget"
 			{
 				"linux"		"403"
@@ -57,13 +51,13 @@
 			}
 			"RoundRespawn_Offset"
 			{
-				"windows"		"15" // 0xF
-				"linux"			"25" // 0x19
+				"linux"		"25" // 0x19
+				"windows"	"15" // 0xF
 			}
 			"RoundRespawn_Byte" // JNZ => JNS
 			{
-				"windows"		"117" // 0x75
-				"linux"			"117" // 0x75
+				"linux"		"117" // 0x75
+				"windows"	"117" // 0x75
 			}
 		}
 
