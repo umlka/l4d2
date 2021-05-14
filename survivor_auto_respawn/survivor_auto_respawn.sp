@@ -148,18 +148,15 @@ stock void CSayText2(int client, int author, const char[] sMessage)
 }
 /**************************************************************************/
 
-#define GAMEDATA 		"survivor_auto_respawn"
-#define CVAR_FLAGS 		FCVAR_NOTIFY
+#define GAMEDATA	"survivor_auto_respawn"
+#define CVAR_FLAGS	FCVAR_NOTIFY
 
 Handle g_hSDK_Call_RoundRespawn;
-//Handle g_hSDK_Call_GoAwayFromKeyboard;
 
 Handle g_hRespawnTimer[MAXPLAYERS + 1];
 
 Address g_pRespawn;
 Address g_pResetStatCondition;
-
-//DynamicDetour g_dDetour;
 
 ConVar g_hRespawnTime;
 ConVar g_hRespawnLimit;
@@ -168,8 +165,6 @@ ConVar g_hAllowSurvivorIdle;
 ConVar g_hAllowSurvivorEvent;
 ConVar g_hGiveWeaponType;
 ConVar g_hSlotFlags[5];
-//ConVar g_hSbAllBotGame; 
-//ConVar g_hAllowAllBotSurvivorTeam;
 
 bool g_bAllowSurvivorBot;
 bool g_bAllowSurvivorIdle;
@@ -377,9 +372,6 @@ public void OnPluginStart()
 	g_hSlotFlags[2] = CreateConVar("sar_respawn_slot2", "7" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[3] = CreateConVar("sar_respawn_slot3", "15" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[4] = CreateConVar("sar_respawn_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
-	
-	//g_hSbAllBotGame = FindConVar("sb_all_bot_game");
-	//g_hAllowAllBotSurvivorTeam = FindConVar("allow_all_bot_survivor_team");
 
 	g_hRespawnTime.AddChangeHook(ConVarChanged);
 	g_hRespawnLimit.AddChangeHook(ConVarChanged);
@@ -404,8 +396,6 @@ public void OnPluginStart()
 public void OnPluginEnd()
 {
 	PatchAddress(false);
-	/*if(!g_dDetour.Disable(Hook_Pre, DeathModelCreatePre) || !g_dDetour.Disable(Hook_Post, DeathModelCreatePost))
-		SetFailState("Failed to disable detour: CSurvivorDeathModel::Create");*/
 }
 
 public void OnConfigsExecuted()
@@ -669,22 +659,6 @@ void RespawnSurvivor(int client)
 	if(!IsFakeClient(client))
 		CPrintToChat(client, "{olive}剩余复活次数 {default}-> {blue}%d", g_iRespawnLimit - g_iPlayerRespawned[client]);
 }
-/*
-bool CanIdle(int client)
-{
-	if(g_hSbAllBotGame.BoolValue || g_hAllowAllBotSurvivorTeam.BoolValue)
-		return true;
-
-	int iSurvivor;
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(i != client && IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-			iSurvivor++;
-	}
-
-	return iSurvivor > 0;
-}
-*/
 
 void RemoveSurvivorDeathModel(int client)
 {
@@ -967,17 +941,7 @@ void LoadGameData()
 		SetFailState("Failed to create SDKCall: RoundRespawn");
 
 	RoundRespawnPatch(hGameData);
-/*	
-	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::GoAwayFromKeyboard") == false)
-		SetFailState("Failed to find signature: CTerrorPlayer::GoAwayFromKeyboard");
-	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_Call_GoAwayFromKeyboard = EndPrepSDKCall();
-	if(g_hSDK_Call_GoAwayFromKeyboard == null)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard");
 
-	SetupDetours(hGameData);*/
-	
 	delete hGameData;
 }
 
@@ -1024,38 +988,3 @@ void PatchAddress(bool bPatch) // Prevents respawn command from reset the player
 		StoreToAddress(g_pResetStatCondition, 0x75, NumberType_Int8);
 	}
 }
-/*
-bool GoAwayFromKeyboard(int client)
-{
-	return SDKCall(g_hSDK_Call_GoAwayFromKeyboard, client);
-}
-
-void SetupDetours(GameData hGameData = null)
-{
-	g_dDetour = DynamicDetour.FromConf(hGameData, "CSurvivorDeathModel::Create");
-	if(g_dDetour == null)
-		SetFailState("Failed to load signature: CSurvivorDeathModel::Create");
-		
-	if(!g_dDetour.Enable(Hook_Pre, DeathModelCreatePre))
-		SetFailState("Failed to detour pre: CSurvivorDeathModel::Create");
-		
-	if(!g_dDetour.Enable(Hook_Post, DeathModelCreatePost))
-		SetFailState("Failed to detour post: CSurvivorDeathModel::Create");
-}
-
-//https://github.com/LuxLuma/Left-4-fix/tree/master/left%204%20fix/Defib_Fix
-int g_iTempClient;
-public MRESReturn DeathModelCreatePre(int pThis)
-{
-	g_iTempClient = pThis;
-}
-
-public MRESReturn DeathModelCreatePost(int pThis, DHookReturn hReturn)
-{
-	int iDeathModel = hReturn.Value;
-	if(iDeathModel == 0)
-		return MRES_Ignored;
-
-	g_iDeathModel[g_iTempClient] = EntIndexToEntRef(iDeathModel);
-	return MRES_Ignored;
-}*/
