@@ -731,9 +731,7 @@ stock void TeleportFix(int client)
 {
 	ForceCrouch(client);
 
-	if(GetEntityMoveType(client) == MOVETYPE_NOCLIP)
-		SetEntityMoveType(client, MOVETYPE_WALK);
-
+	SetEntityMoveType(client, MOVETYPE_WALK);
 	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") & ~FL_FROZEN);
 
 	if(IsHanging(client))
