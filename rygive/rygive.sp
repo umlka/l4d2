@@ -20,7 +20,6 @@ Handle g_hSDK_Call_RoundRespawn;
 Handle g_hSDK_Call_SetHumanSpec;
 Handle g_hSDK_Call_TakeOverBot;
 Handle g_hSDK_Call_GoAwayFromKeyboard;
-Handle g_hSDK_Call_SetObserverTarget;
 Handle g_hSDK_Call_CreateSmoker;
 Handle g_hSDK_Call_CreateBoomer;
 Handle g_hSDK_Call_CreateHunter;
@@ -1625,10 +1624,8 @@ stock void TeleportFix(int client)
 {
 	if(GetClientTeam(client) != 2)
 		return;
-	
-	if(GetEntityMoveType(client) == MOVETYPE_NOCLIP)
-		SetEntityMoveType(client, MOVETYPE_WALK);
 
+	SetEntityMoveType(client, MOVETYPE_WALK);
 	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") & ~FL_FROZEN);
 
 	if(IsHanging(client))
@@ -1969,7 +1966,7 @@ void ChangeTeamToSurvivor(int client, int iTeam)
 	if(iBot)
 	{
 		SDKCall(g_hSDK_Call_SetHumanSpec, iBot, client);
-		SDKCall(g_hSDK_Call_SetObserverTarget, client, iBot);
+		SetEntProp(client, Prop_Send, "m_iObserverMode", 5);
 		SDKCall(g_hSDK_Call_TakeOverBot, client, true);
 	}
 	else
@@ -2343,14 +2340,6 @@ void LoadGameData()
 	g_hSDK_Call_GoAwayFromKeyboard = EndPrepSDKCall();
 	if(g_hSDK_Call_GoAwayFromKeyboard == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard");
-
-	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CTerrorPlayer::SetObserverTarget") == false)
-		SetFailState("Failed to find signature: CTerrorPlayer::SetObserverTarget");
-	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
-	g_hSDK_Call_SetObserverTarget = EndPrepSDKCall();
-	if(g_hSDK_Call_SetObserverTarget == null)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::SetObserverTarget");
 
 	Address pReplaceWithBot = hGameData.GetAddress("NextBotCreatePlayerBot.jumptable");
 	if(pReplaceWithBot != Address_Null && LoadFromAddress(pReplaceWithBot, NumberType_Int8) == 0x68)
