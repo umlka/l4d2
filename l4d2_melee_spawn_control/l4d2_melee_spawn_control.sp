@@ -108,15 +108,15 @@ public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 	if(pThis == 0)
 		return MRES_Ignored;
 
-	char sMapCurrentMelees[512];
-	SDKCall(g_hSDK_Call_KvGetString, pThis, sMapCurrentMelees, sizeof(sMapCurrentMelees), "meleeweapons", "N/A");
-
 	char sMap[64];
 	g_hMPGameMode.GetString(sMap, sizeof(sMap));
 	SDKCall(g_hSDK_Call_KvGetString, SDKCall(g_hSDK_Call_KvFindKey, SDKCall(g_hSDK_Call_KvFindKey, SDKCall(g_hSDK_Call_KvFindKey, pThis, "modes", false), sMap, false), "1", false), sMap, sizeof(sMap), "Map", "N/A");
 
 	if(strcmp(sMap, "N/A") == 0)
 		return MRES_Ignored;
+
+	char sMapCurrentMelees[512];
+	SDKCall(g_hSDK_Call_KvGetString, pThis, sMapCurrentMelees, sizeof(sMapCurrentMelees), "meleeweapons", "N/A");
 
 	char sMapBaseMelees[512];
 	if(g_aMapInitMelees.GetString(sMap, sMapBaseMelees, sizeof(sMapBaseMelees)) == false)
