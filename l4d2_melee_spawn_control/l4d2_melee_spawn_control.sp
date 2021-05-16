@@ -205,7 +205,7 @@ void GetMapSetMelees(const char[] sMap, const char[] sMapBaseMelees, char[] sMap
 	g_aMapSetMelees.SetString(sMap, sBaseMelees, true);
 }
 
-stock int GetCharPosInString(const char[] str, char c, int which)
+int GetCharPosInString(const char[] str, char c, int which)
 {
 	int len = strlen(str);
 	if(which > len)
@@ -253,7 +253,7 @@ void ReadMeleeManifest(char[] sManifest, int maxlength)
 	delete hFile;
 }
 
-stock bool SplitStringRight(const char[] source, const char[] split, char[] part, int partLen)
+bool SplitStringRight(const char[] source, const char[] split, char[] part, int partLen)
 {
 	int index = StrContains(source, split); // get start index of split string 
 	
