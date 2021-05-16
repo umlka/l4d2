@@ -35,7 +35,6 @@ ConVar g_hAutoJoinSurvivor;
 ConVar g_hRespawnJoin;
 ConVar g_hSpecCmdLimit;
 ConVar g_hGiveWeaponType;
-ConVar g_hAllowRescuedGive;
 ConVar g_hSlotFlags[5];
 ConVar g_hSbAllBotGame; 
 ConVar g_hAllowAllBotSurvivorTeam;
@@ -56,7 +55,6 @@ bool g_bShouldIgnore;
 bool g_bAutoJoinSurvivor;
 bool g_bRespawnJoin;
 bool g_bGiveWeaponType;
-bool g_bAllowRescuedGive;
 bool g_bSpecNotify[MAXPLAYERS + 1];
 bool g_bGivenPlayerWeapon[MAXPLAYERS + 1];
 
@@ -272,7 +270,6 @@ public void OnPluginStart()
 	g_hRespawnJoin = CreateConVar("bots_respawn_on_join", "1" , "玩家第一次进服时如果没有存活的Bot可以接管是否复活? \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hSpecCmdLimit = CreateConVar("bots_spec_cmd_limit", "1" , "当完全旁观玩家达到多少个时禁止使用sm_spec命令", CVAR_FLAGS, true, 0.0);
 	g_hGiveWeaponType = CreateConVar("bots_give_type", "2" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
-	g_hAllowRescuedGive = CreateConVar("bots_give_rescued", "1" , "玩家被从小黑屋救出来后是否给装备 \n0=不给,1=按照bots_give_type的设置给", CVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hSlotFlags[0] = CreateConVar("bots_give_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[1] = CreateConVar("bots_give_slot1", "131068" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[2] = CreateConVar("bots_give_slot2", "7" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
@@ -303,7 +300,6 @@ public void OnPluginStart()
 	g_hRespawnJoin.AddChangeHook(ConVarChanged);
 	g_hSpecCmdLimit.AddChangeHook(ConVarChanged);
 	g_hGiveWeaponType.AddChangeHook(ConVarChanged);
-	g_hAllowRescuedGive.AddChangeHook(ConVarChanged);
 
 	for(int i; i < 5; i++)
 		g_hSlotFlags[i].AddChangeHook(ConVarChanged_Slot);
@@ -337,7 +333,7 @@ public void OnPluginStart()
 public void OnPluginEnd()
 {
 	PatchAddress(false);
-	
+
 	if(!g_dDetourSetHumanSpec.Disable(Hook_Pre, SetHumanSpecPre))
 		SetFailState("Failed to disable detour: SetHumanSpec");
 	
@@ -557,7 +553,6 @@ void GetCvars()
 	g_bRespawnJoin = g_hRespawnJoin.BoolValue;
 	g_iSpecCmdLimit = g_hSpecCmdLimit.IntValue;
 	g_bGiveWeaponType = g_hGiveWeaponType.BoolValue;
-	g_bAllowRescuedGive = g_hAllowRescuedGive.BoolValue;
 }
 
 public void ConVarChanged_Slot(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -694,7 +689,7 @@ void InitPlugin()
 	delete g_hBotsUpdateTimer;
 }
 
-stock void Bots_Intensity()
+void Bots_Intensity()
 {
 	int flags = GetCommandFlags("sb_force_max_intensity");
 	SetCommandFlags("sb_force_max_intensity", flags & ~FCVAR_CHEAT);
@@ -758,7 +753,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
 		SetGhostStatus(client, 0);
 
-		if(g_bGiveWeaponType && IsPlayerAlive(client) && CanGiveWeapon(client))
+		if(g_bGiveWeaponType == true && IsPlayerAlive(client) && CanGiveWeapon(client))
 		{
 			g_bGivenPlayerWeapon[client] = false;
 			RequestFrame(OnNextFrame_GivePlayerWeapon, GetClientUserId(client));
@@ -787,7 +782,7 @@ bool CanGiveWeapon(int client)
 	GetEdictClassname(iWeapon, classname, sizeof(classname));
 	if(strcmp(classname, "weapon_pistol") == 0)
 		return true;
-	
+ 
 	return false;
 }
 
@@ -855,8 +850,7 @@ public void Event_SurvivorRescued(Event event, const char[] name, bool dontBroad
 	if(client == 0 || !IsClientInGame(client))
 		return;
 
-	if(g_bAllowRescuedGive)
-		GiveWeapon(client);
+	GiveWeapon(client);
 
 	if(!IsFakeClient(client) && CanIdle(client))
 		CmdGoAFK(client, 0); //被从小黑屋救出来后闲置,避免有些玩家挂机
@@ -1060,7 +1054,7 @@ int GetAnyValidSurvivorBot()
 	int iSurvivor, iHasPlayer, iNotPlayer;
 	int[] iHasPlayerBots = new int[MaxClients];
 	int[] iNotPlayerBots = new int[MaxClients];
-	for(int i = 1; i <= MaxClients; i++)
+	for(int i = MaxClients; i >= 1; i--)
 	{
 		if(IsValidSurvivorBot(i))
 		{
@@ -1070,24 +1064,7 @@ int GetAnyValidSurvivorBot()
 				iNotPlayerBots[iNotPlayer++] = i;
 		}
 	}
-
-	if(iNotPlayer == 0)
-	{
-		if(iHasPlayer == 0)
-			iSurvivor = 0;
-		else
-		{
-			SortIntegers(iHasPlayerBots, iHasPlayer, Sort_Descending);
-			iSurvivor = iHasPlayerBots[0];
-		}
-	}
-	else
-	{
-		SortIntegers(iNotPlayerBots, iNotPlayer, Sort_Descending);
-		iSurvivor = iNotPlayerBots[0];
-	}
-	
-	return iSurvivor;
+	return (iNotPlayer == 0) ? (iHasPlayer == 0 ? 0 : iHasPlayerBots[0]) : iNotPlayerBots[0];
 }
 
 int GetAnyValidAliveSurvivorBot()
@@ -1300,7 +1277,6 @@ void GiveSecondaryWeapon(int client)
 {
 	if(g_iSlotCount[1] != 0)
 	{
-
 		DeletePlayerSlot(client, 1);
 		int iRandom = g_iSlotWeapons[1][GetRandomInt(0, g_iSlotCount[1] - 1)];
 		if(iRandom > 2)
@@ -1364,7 +1340,7 @@ void GiveAveragePrimaryWeapon(int client)
 	}
 }
 
-stock void CheatCmd_Give(int client, const char[] args = "")
+void CheatCmd_Give(int client, const char[] args = "")
 {
 	int bits = GetUserFlagBits(client);
 	int flags = GetCommandFlags("give");
@@ -1424,7 +1400,7 @@ void SetGhostStatus(int client, int iGhost)
 		SetEntProp(client, Prop_Send, "m_isGhost", iGhost); 
 }
 
-stock void DeletePlayerSlot(int client, int iSlot)
+void DeletePlayerSlot(int client, int iSlot)
 {
 	iSlot = GetPlayerWeaponSlot(client, iSlot);
 	if(iSlot != -1)
@@ -1434,7 +1410,7 @@ stock void DeletePlayerSlot(int client, int iSlot)
 	}
 }
 
-stock void DeletePlayerSlotAll(int client)
+void DeletePlayerSlotAll(int client)
 {
 	for(int i; i < 5; i++)
 		DeletePlayerSlot(client, i);
@@ -1461,11 +1437,11 @@ public void OnMapStart()
 		if(!IsGenericPrecached(sBuffer))
 			PrecacheGeneric(sBuffer, true);
 	}
-	
+
 	GetMeleeClasses();
 }
 
-stock void GetMeleeClasses()
+void GetMeleeClasses()
 {
 	int iMeleeStringTable = FindStringTable("MeleeWeapons");
 	g_iMeleeClassCount = GetStringTableNumStrings(iMeleeStringTable);
@@ -1474,23 +1450,23 @@ stock void GetMeleeClasses()
 		ReadStringTable(iMeleeStringTable, i, g_sMeleeClass[i], sizeof(g_sMeleeClass[]));
 }
 
-stock void GetScriptName(const char[] sMeleeClass, char[] sScriptName)
+void GetScriptName(const char[] sMeleeClass, char[] sScriptName, int maxlength)
 {
 	for(int i; i < g_iMeleeClassCount; i++)
 	{
 		if(StrContains(g_sMeleeClass[i], sMeleeClass, false) == 0)
 		{
-			FormatEx(sScriptName, 32, "%s", g_sMeleeClass[i]);
+			strcopy(sScriptName, maxlength, g_sMeleeClass[i]);
 			return;
 		}
 	}
-	FormatEx(sScriptName, 32, "%s", g_sMeleeClass[GetRandomInt(0, g_iMeleeClassCount - 1)]);	
+	strcopy(sScriptName, maxlength, g_sMeleeClass[GetRandomInt(0, g_iMeleeClassCount - 1)]);
 }
 
-stock void GiveMeleeWeapon(int client, const char[] sMeleeClass)
+void GiveMeleeWeapon(int client, const char[] sMeleeClass)
 {
 	char sScriptName[32];
-	GetScriptName(sMeleeClass, sScriptName);
+	GetScriptName(sMeleeClass, sScriptName, sizeof(sScriptName));
 	CheatCmd_Give(client, sScriptName);
 }
 
