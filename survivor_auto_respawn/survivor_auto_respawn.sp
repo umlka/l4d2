@@ -668,14 +668,14 @@ void RemoveSurvivorDeathModel(int client)
 		RemoveEntity(entity);
 }
 
-stock bool IsValidEntRef(int entity)
+bool IsValidEntRef(int entity)
 {
 	if(entity && EntRefToEntIndex(entity) != INVALID_ENT_REFERENCE)
 		return true;
 	return false;
 }
 
-stock void CheatCmd_Give(int client, const char[] args = "")
+void CheatCmd_Give(int client, const char[] args = "")
 {
 	int bits = GetUserFlagBits(client);
 	int flags = GetCommandFlags("give");
@@ -730,7 +730,7 @@ void ForceCrouch(int client)
 }
 
 //https://forums.alliedmods.net/showthread.php?t=327928
-stock void Terror_SetAdrenalineTime(int client, float fDuration)
+void Terror_SetAdrenalineTime(int client, float fDuration)
 {
     // Get CountdownTimer address
     static int iTimerAddress = -1;
@@ -774,7 +774,6 @@ void GiveSecondaryWeapon(int client)
 {
 	if(g_iSlotCount[1] != 0)
 	{
-
 		DeletePlayerSlot(client, 1);
 		int iRandom = g_iSlotWeapons[1][GetRandomInt(0, g_iSlotCount[1] - 1)];
 		if(iRandom > 2)
@@ -857,7 +856,7 @@ public Action Timer_Mortal(Handle timer, int client)
 	SetEntProp(client, Prop_Data, "m_takedamage", 2);
 }
 
-stock void DeletePlayerSlot(int client, int iSlot)
+void DeletePlayerSlot(int client, int iSlot)
 {
 	iSlot = GetPlayerWeaponSlot(client, iSlot);
 	if(iSlot != -1)
@@ -892,7 +891,7 @@ public void OnMapStart()
 	GetMeleeClasses();
 }
 
-stock void GetMeleeClasses()
+void GetMeleeClasses()
 {
 	int iMeleeStringTable = FindStringTable("MeleeWeapons");
 	g_iMeleeClassCount = GetStringTableNumStrings(iMeleeStringTable);
@@ -901,23 +900,23 @@ stock void GetMeleeClasses()
 		ReadStringTable(iMeleeStringTable, i, g_sMeleeClass[i], sizeof(g_sMeleeClass[]));
 }
 
-stock void GetScriptName(const char[] sMeleeClass, char[] sScriptName)
+void GetScriptName(const char[] sMeleeClass, char[] sScriptName, int maxlength)
 {
 	for(int i; i < g_iMeleeClassCount; i++)
 	{
 		if(StrContains(g_sMeleeClass[i], sMeleeClass, false) == 0)
 		{
-			FormatEx(sScriptName, 32, "%s", g_sMeleeClass[i]);
+			strcopy(sScriptName, maxlength, g_sMeleeClass[i]);
 			return;
 		}
 	}
-	FormatEx(sScriptName, 32, "%s", g_sMeleeClass[GetRandomInt(0, g_iMeleeClassCount - 1)]);	
+	strcopy(sScriptName, maxlength, g_sMeleeClass[GetRandomInt(0, g_iMeleeClassCount - 1)]);
 }
 
-stock void GiveMeleeWeapon(int client, const char[] sMeleeClass)
+void GiveMeleeWeapon(int client, const char[] sMeleeClass)
 {
 	char sScriptName[32];
-	GetScriptName(sMeleeClass, sScriptName);
+	GetScriptName(sMeleeClass, sScriptName, sizeof(sScriptName));
 	CheatCmd_Give(client, sScriptName);
 }
 
