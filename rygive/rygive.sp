@@ -303,7 +303,7 @@ public void OnMapStart()
 	GetMeleeClasses();
 }
 
-stock void GetMeleeClasses()
+void GetMeleeClasses()
 {
 	int iMeleeStringTable = FindStringTable("MeleeWeapons");
 	g_iMeleeClassCount = GetStringTableNumStrings(iMeleeStringTable);
@@ -509,7 +509,7 @@ void Melee_Menu(int client, int index)
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
 
-stock int GetMeleeTrans(const char[] sMeleeName)
+int GetMeleeTrans(const char[] sMeleeName)
 {
 	for(int i; i < sizeof(g_sMeleeName); i++)
 	{
@@ -989,7 +989,7 @@ public int MenuHandler_IncapSurvivor(Menu menu, MenuAction action, int client, i
 	}
 }
 
-stock bool IsIncapacitated(int client) 
+bool IsIncapacitated(int client) 
 {
 	return GetEntProp(client, Prop_Send, "m_isIncapacitated") > 0;
 }
@@ -1009,7 +1009,7 @@ void IncapCheck(int client)
 	}
 }
 
-stock void IncapPlayer(int client) 
+void IncapPlayer(int client) 
 {
 	SetEntityHealth(client, 1);
 	SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 0.0);
@@ -1122,7 +1122,7 @@ public int MenuHandler_SlotSlect(Menu menu, MenuAction action, int client, int p
 					}
 					else
 					{
-						DeletePlayerSlotX(iTarget, StringToInt(sInfo[1]));
+						DeletePlayerSlot(iTarget, StringToInt(sInfo[1]));
 						SlotSlect(client, iTarget);
 					}
 				}
@@ -1138,13 +1138,7 @@ public int MenuHandler_SlotSlect(Menu menu, MenuAction action, int client, int p
 	}
 }
 
-stock void DeletePlayerSlot(int client, int weapon)
-{		
-	if(RemovePlayerItem(client, weapon))
-		RemoveEntity(weapon);
-}
-
-stock void DeletePlayerSlotX(int client, int iSlot)
+void DeletePlayerSlot(int client, int iSlot)
 {
 	iSlot = GetPlayerWeaponSlot(client, iSlot);
 	if(iSlot != -1)
@@ -1154,15 +1148,10 @@ stock void DeletePlayerSlotX(int client, int iSlot)
 	}
 }
 
-stock void DeletePlayerSlotAll(int client)
+void DeletePlayerSlotAll(int client)
 {
-	int iWeapon;
 	for(int i; i < 5; i++)
-	{
-		iWeapon = GetPlayerWeaponSlot(client, i);
-		if(iWeapon != -1)
-			DeletePlayerSlot(client, iWeapon);
-	}
+		DeletePlayerSlot(client, i);
 }
 
 void RespawnSurvivor(int client, int index)
@@ -1524,7 +1513,7 @@ void ScaleVectorDirection(float vStart[3], float vEnd[3], float fMultiple) // le
     AddVectors(vEnd, dir, vEnd);
 }
 
-stock bool GetDirectionEndPoint(int client, float vEndPos[3]) // builds simple ray from the client's eyes origin to vEndPos position and returns new vEndPos of non-collide position
+bool GetDirectionEndPoint(int client, float vEndPos[3]) // builds simple ray from the client's eyes origin to vEndPos position and returns new vEndPos of non-collide position
 {
 	float vDir[3], vPos[3];
 	GetClientEyePosition(client, vPos);
@@ -1544,7 +1533,7 @@ stock bool GetDirectionEndPoint(int client, float vEndPos[3]) // builds simple r
 	return false;
 }
 
-stock bool GetNonCollideEndPoint(int client, int team, float vEnd[3], float vEndNonCol[3], bool bEyeOrigin = true) // similar to GetDirectionEndPoint, but with respect to player size
+bool GetNonCollideEndPoint(int client, int team, float vEnd[3], float vEndNonCol[3], bool bEyeOrigin = true) // similar to GetDirectionEndPoint, but with respect to player size
 {
 	float vMin[3], vMax[3], vStart[3];
 	if(bEyeOrigin)
@@ -1620,7 +1609,7 @@ public bool TraceRay_NoPlayers(int entity, int contentsMask)
 	return entity > MaxClients;
 }
 
-stock void TeleportFix(int client)
+void TeleportFix(int client)
 {
 	if(GetClientTeam(client) != 2)
 		return;
@@ -1641,18 +1630,18 @@ stock void TeleportFix(int client)
 	}
 }
 
-stock void L4D2_ReviveFromIncap(int client) 
+void L4D2_ReviveFromIncap(int client) 
 {
 	L4D2_RunScript("GetPlayerFromUserID(%d).ReviveFromIncap()", GetClientUserId(client));
 }
 
 //https://forums.alliedmods.net/showpost.php?p=2681159&postcount=10
-stock bool IsHanging(int client)
+bool IsHanging(int client)
 {
 	return GetEntProp(client, Prop_Send, "m_isHangingFromLedge") > 0;
 }
 
-stock void L4D2_RunScript(const char[] sCode, any ...) 
+void L4D2_RunScript(const char[] sCode, any ...) 
 {
 	/**
 	* Run a VScript (Credit to Timocop)
@@ -1687,7 +1676,7 @@ stock void L4D2_RunScript(const char[] sCode, any ...)
  * @return              Infected attacker index, -1 if not found.
  * @error               Invalid client index.
  */
-stock int L4D2_GetInfectedAttacker(int client)
+int L4D2_GetInfectedAttacker(int client)
 {
     int attacker;
 
@@ -1770,7 +1759,7 @@ void WarpAllSurvivorsToCheckpoint()
 		QuickCheat(iCmdClient, "warp_all_survivors_to_checkpoint");
 }
 
-stock int GetAnyClient()
+int GetAnyClient()
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -1780,7 +1769,7 @@ stock int GetAnyClient()
 	return 0;
 }
 
-stock void QuickCheat(int client, const char [] sCmd)
+void QuickCheat(int client, const char [] sCmd)
 {
     int flags = GetCommandFlags(sCmd);
     SetCommandFlags(sCmd, flags & ~FCVAR_CHEAT);
