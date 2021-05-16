@@ -504,7 +504,7 @@ public void OnPluginStart()
 	InitStructures();
 
 	g_hGameMode = FindConVar("mp_gamemode");
-	g_hGameMode.AddChangeHook(ConVarChanged_GameMode);
+	g_hGameMode.AddChangeHook(OnGameModeChanged);
 	
 	if(!g_bDatabaseLoaded)
 	{
@@ -518,7 +518,7 @@ public void OnConfigsExecuted()
 	GetModeCvars();
 }
 
-public void ConVarChanged_GameMode(ConVar convar, const char[] oldValue, const char[] newValue)
+public void OnGameModeChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	GetModeCvars();
 }
@@ -788,9 +788,8 @@ public void OnPluginEnd()
 {
 	SQL_SaveAll();
 
-	Action aResult;
 	Call_StartForward(g_hForward_OnPSUnloaded);
-	Call_Finish(aResult);
+	Call_Finish();
 }
 
 public int Native_PS_IsSystemEnabled(Handle plugin, int numParams)
@@ -1393,20 +1392,20 @@ public void Event_Burn(Event event, const char[] name, bool dontBroadcast)
 
 void EventSpit(int client, int iPoints)
 {
-    if(g_esPlayerData[client].iHurtCount >= 8)
+	if(g_esPlayerData[client].iHurtCount >= 8)
 	{
-        AddPoints(client, iPoints, "Spit Damage");
-        g_esPlayerData[client].iHurtCount -= 8;
-    }
+		AddPoints(client, iPoints, "Spit Damage");
+		g_esPlayerData[client].iHurtCount -= 8;
+	}
 }
 
 void EventDamage(int client, int iPoints)
 {
-    if(g_esPlayerData[client].iHurtCount >= 3)
+	if(g_esPlayerData[client].iHurtCount >= 3)
 	{
-        AddPoints(client, iPoints, "Damage");
-        g_esPlayerData[client].iHurtCount -= 3;
-    }
+		AddPoints(client, iPoints, "Damage");
+		g_esPlayerData[client].iHurtCount -= 3;
+	}
 }
 
 bool IsFireDamage(int iDamageType)
