@@ -1090,7 +1090,8 @@ static const char g_sZombieClass[][] =
 	"Jockey",
 	"Charger",
 	"Witch",
-	"Tank"
+	"Tank",
+	"Survivor"
 };
 
 void DisplayTeamMenu(int client)
@@ -1122,7 +1123,6 @@ void DisplayTeamMenu(int client)
 	FormatEx(sInfo, sizeof(sInfo), "生还者 (%d/%d) - %d Bot(s)", GetTeamPlayers(TEAM_SURVIVOR, false), g_iSurvivorLimit, CountAvailableSurvivorBots());
 	TeamPanel.DrawItem(sInfo);
 
-	int iIncapacitatedCount = FindConVar("survivor_max_incapacitated_count").IntValue;
 	for(i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientInGame(i) && GetClientTeam(i) == TEAM_SURVIVOR)
@@ -1134,7 +1134,7 @@ void DisplayTeamMenu(int client)
 			{
 				if(GetEntProp(i, Prop_Send, "m_isIncapacitated"))
 					Format(sInfo, sizeof(sInfo), "倒地 - %d HP - %s", GetEntProp(i, Prop_Data, "m_iHealth"), sInfo);
-				else if(GetEntProp(i, Prop_Send, "m_currentReviveCount") >= iIncapacitatedCount)
+				else if(GetEntProp(i, Prop_Send, "m_currentReviveCount") >= FindConVar("survivor_max_incapacitated_count").IntValue)
 					Format(sInfo, sizeof(sInfo), "黑白 - %d HP - %s", GetClientRealHealth(i), sInfo);
 				else
 					Format(sInfo, sizeof(sInfo), "%dHP - %s", GetClientRealHealth(i), sInfo);
@@ -1148,7 +1148,6 @@ void DisplayTeamMenu(int client)
 	}
 
 	FormatEx(sInfo, sizeof(sInfo), "感染者 (%d)", GetTeamPlayers(TEAM_INFECTED, false));
-	
 	TeamPanel.DrawItem(sInfo);
 
 	for(i = 1; i <= MaxClients; i++)
@@ -1156,11 +1155,8 @@ void DisplayTeamMenu(int client)
 		if(IsClientInGame(i) && GetClientTeam(i) == TEAM_INFECTED)
 		{
 			int iZombieClass = GetEntProp(i, Prop_Send, "m_zombieClass");
-			if(iZombieClass < 0 || iZombieClass > 8)
-				iZombieClass = 0;
-
-			if(IsFakeClient(i) && iZombieClass != 8) 
-				continue ;
+			if(IsFakeClient(i) && iZombieClass != 8)
+				continue;
 
 			FormatEx(sInfo, sizeof(sInfo), "%N", i);
 			ReplaceString(sInfo, sizeof(sInfo), "[", "");
