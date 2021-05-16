@@ -405,7 +405,10 @@ public Action CmdJoinSurvivor(int client, int args)
 			iBot = GetAnyValidAliveSurvivorBot();
 
 		if(iBot)
+		{
 			SetHumanIdle(iBot, client);
+			TakeOverBot(client);
+		}
 		else
 		{
 			bool bCanRespawn = g_bRespawnJoin && IsFirstTime(client);
@@ -415,12 +418,9 @@ public Action CmdJoinSurvivor(int client, int args)
 			if(bCanRespawn && !IsPlayerAlive(client))
 			{
 				Respawn(client);
-				GiveWeapon(client);
+				//GiveWeapon(client);
 				SetGodMode(client, 1.0);
 				TeleportToSurvivor(client);
-
-				if(CanIdle(client))
-					CmdGoAFK(client, 0);
 			} 
 			else if(g_bRespawnJoin)
 				ReplyToCommand(client, "\x01重复加入默认为\x05死亡状态.");
@@ -433,6 +433,7 @@ public Action CmdJoinSurvivor(int client, int args)
 		{
 			ChangeClientTeam(client, TEAM_SPECTATOR);
 			SetHumanIdle(iBot, client);
+			TakeOverBot(client);
 		}
 		else
 			ReplyToCommand(client, "\x01你已经\x04死亡\x01. 没有\x05电脑Bot\x01可以接管.");
@@ -693,21 +694,7 @@ void Bots_Intensity()
 {
 	int flags = GetCommandFlags("sb_force_max_intensity");
 	SetCommandFlags("sb_force_max_intensity", flags & ~FCVAR_CHEAT);
-	ServerCommand("sb_force_max_intensity Nick");
-	ServerExecute();
-	ServerCommand("sb_force_max_intensity Coach");
-	ServerExecute();
-	ServerCommand("sb_force_max_intensity Ellis");
-	ServerExecute();
-	ServerCommand("sb_force_max_intensity Rochelle");
-	ServerExecute();
-	ServerCommand("sb_force_max_intensity Bill");
-	ServerExecute();
-	ServerCommand("sb_force_max_intensity Zoey");
-	ServerExecute();
-	ServerCommand("sb_force_max_intensity Louis");
-	ServerExecute();
-	ServerCommand("sb_force_max_intensity Francis");
+	ServerCommand("sb_force_max_intensity Nick; sb_force_max_intensity Coach; sb_force_max_intensity Ellis; sb_force_max_intensity Rochelle; sb_force_max_intensity Bill; sb_force_max_intensity Zoey; sb_force_max_intensity Louis; sb_force_max_intensity Francis");
 	ServerExecute();
 	SetCommandFlags("sb_force_max_intensity", flags);
 }
@@ -867,7 +854,6 @@ bool CanIdle(int client)
 		if(i != client && IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == TEAM_SURVIVOR && IsPlayerAlive(i))
 			iSurvivor++;
 	}
-
 	return iSurvivor > 0;
 }
 
@@ -968,23 +954,22 @@ bool IsFirstTime(int client)
 	if(!IsClientInGame(client) || IsFakeClient(client)) 
 		return false;
 	
-	char sSteamID[64];
+	char sSteamID[32];
 	if(!GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID))) 
 		return false;
 
 	bool bAllowed;
-	if(!g_aSteamIDs.GetValue(sSteamID, bAllowed))  // If can't find the entry in map
+	if(!g_aSteamIDs.GetValue(sSteamID, bAllowed))
 	{
 		g_aSteamIDs.SetValue(sSteamID, true, true);
 		bAllowed = true;
 	}
-
 	return bAllowed;
 }
 
 void RecordSteamID(int client)
 {
-	char sSteamID[64];
+	char sSteamID[32];
 	if(GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID))) 
 		g_aSteamIDs.SetValue(sSteamID, false, true);
 }
@@ -1003,7 +988,6 @@ int GetIdlePlayer(int client)
 {
 	if(IsPlayerAlive(client))
 		return HasIdlePlayer(client);
-
 	return 0;
 }
 
