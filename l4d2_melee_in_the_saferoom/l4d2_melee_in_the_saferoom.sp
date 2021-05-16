@@ -222,7 +222,7 @@ void StartSpawnMelee()
 		SpawnCustomList(vOrigin, vAngles);
 }
 
-stock void SpawnCustomList(const float vPos[3], const float vAng[3])
+void SpawnCustomList(const float vPos[3], const float vAng[3])
 {
 	char sScriptName[32];
 	int iLen = sizeof(g_hMeleeItems);
@@ -230,13 +230,13 @@ stock void SpawnCustomList(const float vPos[3], const float vAng[3])
 	{
 		for(int i; i < g_hMeleeItems[x].IntValue; i++)
 		{
-			GetScriptName(g_sMeleeName[x], sScriptName);
+			GetScriptName(g_sMeleeName[x], sScriptName, sizeof(sScriptName));
 			SpawnMelee(sScriptName, vPos, vAng);
 		}
 	}
 }
 
-stock void SpawnMelee(const char[] sClass, const float vPos[3], const float vAng[3])
+void SpawnMelee(const char[] sClass, const float vPos[3], const float vAng[3])
 {
 	float vOrigin[3];
 	float vAngles[3];
@@ -254,7 +254,7 @@ stock void SpawnMelee(const char[] sClass, const float vPos[3], const float vAng
 	TeleportEntity(iMeleeSpawn, vOrigin, vAngles, NULL_VECTOR);
 }
 
-stock void GetMeleeClasses()
+void GetMeleeClasses()
 {
 	int iMeleeStringTable = FindStringTable("MeleeWeapons");
 	g_iMeleeClassCount = GetStringTableNumStrings(iMeleeStringTable);
@@ -266,20 +266,20 @@ stock void GetMeleeClasses()
 	}
 }
 
-stock void GetScriptName(const char[] sMeleeClass, char[] sScriptName)
+void GetScriptName(const char[] sMeleeClass, char[] sScriptName, int maxlength)
 {
 	for(int i; i < g_iMeleeClassCount; i++)
 	{
 		if(StrContains(g_sMeleeClass[i], sMeleeClass, false) == 0)
 		{
-			FormatEx(sScriptName, 32, "%s", g_sMeleeClass[i]);
+			strcopy(sScriptName, maxlength, g_sMeleeClass[i]);
 			return;
 		}
 	}
-	FormatEx(sScriptName, 32, "%s", g_sMeleeClass[GetRandomInt(0, g_iMeleeClassCount - 1)]);	
+	strcopy(sScriptName, maxlength, g_sMeleeClass[GetRandomInt(0, g_iMeleeClassCount - 1)]);
 }
 
-stock int GetInGameClient()
+int GetInGameClient()
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -289,7 +289,7 @@ stock int GetInGameClient()
 	return 0;
 }
 
-stock bool IsGameInFirstHalf()
+bool IsGameInFirstHalf()
 {
 	return GameRules_GetProp("m_bInSecondHalfOfRound") ? false : true;
 }
