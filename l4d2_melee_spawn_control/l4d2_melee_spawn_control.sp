@@ -35,7 +35,6 @@ Handle g_hSDK_Call_KvGetString;
 Handle g_hSDK_Call_KvSetString; 
 Handle g_hSDK_Call_KvFindKey;
 
-ConVar g_hMPGameMode;
 ConVar g_hBaseMelees;
 ConVar g_hExtraMelees;
 
@@ -59,8 +58,6 @@ public void OnPluginStart()
 
 	g_hBaseMelees = CreateConVar("l4d2_melee_spawn", "", "Melee weapon list for unlock, use ';' to separate between names, e.g: pitchfork;shovel. Empty for no change");
 	g_hExtraMelees = CreateConVar("l4d2_add_melee", "", "Add melee weapons to map basis melee spawn or l4d2_melee_spawn, use ';' to separate between names. Empty for don't add");
-	
-	g_hMPGameMode = FindConVar("mp_gamemode");
 }
 
 public void OnPluginEnd()
@@ -108,33 +105,31 @@ public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 	if(pThis == 0)
 		return MRES_Ignored;
 
-	char sMap[64];
-	g_hMPGameMode.GetString(sMap, sizeof(sMap));
-	SDKCall(g_hSDK_Call_KvGetString, SDKCall(g_hSDK_Call_KvFindKey, SDKCall(g_hSDK_Call_KvFindKey, SDKCall(g_hSDK_Call_KvFindKey, pThis, "modes", false), sMap, false), "1", false), sMap, sizeof(sMap), "Map", "N/A");
-
-	if(strcmp(sMap, "N/A") == 0)
+	char sMissionName[64];
+	SDKCall(g_hSDK_Call_KvGetString, pThis, sMissionName, sizeof(sMissionName), "Name", "N/A");
+	if(strcmp(sMissionName, "N/A") == 0)
 		return MRES_Ignored;
 
 	char sMapCurrentMelees[512];
 	SDKCall(g_hSDK_Call_KvGetString, pThis, sMapCurrentMelees, sizeof(sMapCurrentMelees), "meleeweapons", "N/A");
 
-	char sMapBaseMelees[512];
-	if(g_aMapInitMelees.GetString(sMap, sMapBaseMelees, sizeof(sMapBaseMelees)) == false)
+	char sMissionBaseMelees[512];
+	if(g_aMapInitMelees.GetString(sMissionName, sMissionBaseMelees, sizeof(sMissionBaseMelees)) == false)
 	{
 		if(strcmp(sMapCurrentMelees, "N/A") != 0)
-			strcopy(sMapBaseMelees, sizeof(sMapBaseMelees), sMapCurrentMelees);
+			strcopy(sMissionBaseMelees, sizeof(sMissionBaseMelees), sMapCurrentMelees);
 		else
-			ReadMeleeManifest(sMapBaseMelees, sizeof(sMapBaseMelees)); //darkwood, eye
+			ReadMeleeManifest(sMissionBaseMelees, sizeof(sMissionBaseMelees)); //darkwood, eye
 			
-		if(sMapBaseMelees[0] == 0)
-			strcopy(sMapBaseMelees, sizeof(sMapBaseMelees), DEFAULT_MELEES);
+		if(sMissionBaseMelees[0] == 0)
+			strcopy(sMissionBaseMelees, sizeof(sMissionBaseMelees), DEFAULT_MELEES);
 
-		g_aMapInitMelees.SetString(sMap, sMapBaseMelees, false);
+		g_aMapInitMelees.SetString(sMissionName, sMissionBaseMelees, false);
 	}
 
 	char sMapSetMelees[512];
-	if(g_aMapSetMelees.GetString(sMap, sMapSetMelees, sizeof(sMapSetMelees)) == false)
-		GetMapSetMelees(sMap, sMapBaseMelees, sMapSetMelees, sizeof(sMapSetMelees));
+	if(g_aMapSetMelees.GetString(sMissionName, sMapSetMelees, sizeof(sMapSetMelees)) == false)
+		GetMapSetMelees(sMissionName, sMissionBaseMelees, sMapSetMelees, sizeof(sMapSetMelees));
 
 	if(sMapSetMelees[0] == 0)
 		return MRES_Ignored;
@@ -152,7 +147,7 @@ public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 	return MRES_Ignored;
 }
 
-void GetMapSetMelees(const char[] sMap, const char[] sMapBaseMelees, char[] sMapSetMelees, int maxlength)
+void GetMapSetMelees(const char[] sMissionName, const char[] sMissionBaseMelees, char[] sMapSetMelees, int maxlength)
 {
 	char sBaseMelees[512], sExtraMelees[512];
 	g_hBaseMelees.GetString(sBaseMelees, sizeof(sBaseMelees));
@@ -164,11 +159,11 @@ void GetMapSetMelees(const char[] sMap, const char[] sMapBaseMelees, char[] sMap
 	{
 		if(sExtraMelees[0] == 0)
 		{
-			g_aMapSetMelees.SetString(sMap, "", true);
+			g_aMapSetMelees.SetString(sMissionName, "", true);
 			return;
 		}
 
-		strcopy(sBaseMelees, sizeof(sBaseMelees), sMapBaseMelees);
+		strcopy(sBaseMelees, sizeof(sBaseMelees), sMissionBaseMelees);
 	}
 
 	if(sExtraMelees[0] != 0)
@@ -202,7 +197,7 @@ void GetMapSetMelees(const char[] sMap, const char[] sMapBaseMelees, char[] sMap
 		sBaseMelees[pos] = 0;
 
 	strcopy(sMapSetMelees, maxlength, sBaseMelees);
-	g_aMapSetMelees.SetString(sMap, sBaseMelees, true);
+	g_aMapSetMelees.SetString(sMissionName, sBaseMelees, true);
 }
 
 int GetCharPosInString(const char[] str, char c, int which)
