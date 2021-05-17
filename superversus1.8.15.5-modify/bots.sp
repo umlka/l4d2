@@ -678,7 +678,8 @@ public void OnMapEnd()
 
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
-	ResetPlugin();
+	if(strcmp(name, "round_end") == 0)
+		ResetPlugin();
 
 	for(int i = 1; i <= MaxClients; i++)
 		TakeOver(i);
@@ -917,6 +918,9 @@ public void Event_PlayerTransitioned(Event event, const char[] name, bool dontBr
 
 public void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadcast)
 {
+	for(int i = 1; i <= MaxClients; i++)
+		TakeOver(i);
+
 	int entity = FindEntityByClassname(MaxClients + 1, "info_survivor_position");
 	if(entity != INVALID_ENT_REFERENCE)
 	{
