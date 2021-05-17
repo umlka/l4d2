@@ -720,9 +720,9 @@ int CreateInfected(const char[] sZombie, const float[3] vPos, const float[3] vAn
 	if(strcmp(sZombie, "witch", false) == 0 || strcmp(sZombie, "witch_bride", false) == 0)
 	{
 		int witch = CreateEntityByName("witch");
+		TeleportEntity(witch, vPos, vAng, NULL_VECTOR);
 		DispatchSpawn(witch);
 		ActivateEntity(witch);
-		TeleportEntity(witch, vPos, vAng, NULL_VECTOR);
 
 		if(strcmp(sZombie, "witch_bride", false) == 0)
 			SetEntityModel(witch, g_sSpecialsInfectedModels[8]);
@@ -776,9 +776,10 @@ int CreateInfected(const char[] sZombie, const float[3] vPos, const float[3] vAn
 		int infected = CreateEntityByName("infected");
 		if(strcmp(sZombie, "common", false) != 0)
 			SetEntityModel(infected, g_sUncommonInfectedModels[StringToInt(sZombie)]);
+			
+		TeleportEntity(infected, vPos, vAng, NULL_VECTOR);
 		DispatchSpawn(infected);
 		ActivateEntity(infected);
-		TeleportEntity(infected, vPos, vAng, NULL_VECTOR);
 		CreateTimer(0.4, Timer_Chase, infected);
 	
 		return infected;
