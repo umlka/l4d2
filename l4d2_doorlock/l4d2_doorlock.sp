@@ -636,14 +636,6 @@ public void OnFirst(const char[] output, int entity, int activator, float delay)
 	vDir[1] = vAng[1] < 270.0 ? 10.0 : -10.0 * dist;
 	vDir[2] = 0.0;
 
-	//Lux
-	AcceptEntityInput(entity, "DisableCollision");
-	SetEntProp(entity, Prop_Send, "m_noGhostCollision", 1);
-	SetEntProp(entity, Prop_Data, "m_CollisionGroup", 0x0004);
-	SetEntProp(entity, Prop_Data, "m_iEFlags", 0);
-	
-	SetEntProp(entity, Prop_Data, "m_fEffects", 0x020); //don't draw entity
-
 	TeleportEntity(door, vPos, vAng, vDir);
 
 	// Stop movement
@@ -652,7 +644,13 @@ public void OnFirst(const char[] output, int entity, int activator, float delay)
 	AcceptEntityInput(door, "AddOutput");
 	AcceptEntityInput(door, "FireUser1");
 
-	//AcceptEntityInput(entity, "Kill");
+	//Lux
+	AcceptEntityInput(entity, "DisableCollision");
+	SetEntProp(entity, Prop_Send, "m_noGhostCollision", 1);
+	SetEntProp(entity, Prop_Data, "m_CollisionGroup", 0x0004);
+	SetEntProp(entity, Prop_Data, "m_iEFlags", 0);
+	
+	SetEntProp(entity, Prop_Data, "m_fEffects", 0x020); //don't draw entity
 
 	EmitSoundToAll(GetRandomInt(0, 1) ? SOUND_BREAK1 : SOUND_BREAK2, door);
 }
