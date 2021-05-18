@@ -255,7 +255,7 @@ public void OnClientPostAdminCheck(int client)
 	if(g_bDebug == false || IsFakeClient(client))
 		return;
 		
-	char sSteamID[64];
+	char sSteamID[32];
 	GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID));
 	bool bAllowed;
 	if(!g_aSteamIDs.GetValue(sSteamID, bAllowed))
@@ -365,7 +365,7 @@ public Action Rygive(int client)
 
 int GetClientImmunityLevel(int client)
 {
-	static char sSteamID[64];
+	static char sSteamID[32];
 	GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID));
 	AdminId admin = FindAdminByIdentity(AUTHMETHOD_STEAM, sSteamID);
 	if(admin == INVALID_ADMIN_ID)
@@ -2151,7 +2151,7 @@ void Action_DebugMode(int client)
 		{
 			if(IsClientInGame(i) && !IsFakeClient(i))
 			{
-				char sSteamID[64];
+				char sSteamID[32];
 				GetClientAuthId(i, AuthId_Steam2, sSteamID, sizeof(sSteamID));
 				g_aSteamIDs.SetValue(sSteamID, true, true);
 			}
