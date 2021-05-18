@@ -210,7 +210,7 @@ bool g_bInDisconnect[MAXPLAYERS + 1];
 
 char g_sGameMode[64];
 char g_sCurrentMap[64];
-char g_sSteamId[MAXPLAYERS + 1][64];
+char g_sSteamId[MAXPLAYERS + 1][32];
 char g_sMeleeClass[16][32];
 
 static const char g_sMeleeModels[][] =
@@ -537,7 +537,7 @@ void IniSQLite()
 	if((g_hDataBase = SQLite_UseDatabase("PointsSystem", Error, sizeof(Error))) == null)
 		SetFailState("Could not connect to the database \"PointsSystem\" at the following error:\n%s", Error);
 	else
-		SQL_FastQuery(g_hDataBase, "CREATE TABLE IF NOT EXISTS PS_Core(SteamID NVARCHAR(64) NOT NULL DEFAULT '', PlayerName NVARCHAR(128) NOT NULL DEFAULT '', Points INT NOT NULL DEFAULT 0, UnixTime INT NOT NULL DEFAULT 0);");
+		SQL_FastQuery(g_hDataBase, "CREATE TABLE IF NOT EXISTS PS_Core(SteamID NVARCHAR(32) NOT NULL DEFAULT '', PlayerName NVARCHAR(128) NOT NULL DEFAULT '', Points INT NOT NULL DEFAULT 0, UnixTime INT NOT NULL DEFAULT 0);");
 }
 
 int GetAttackerIndex(Event event)
@@ -911,6 +911,7 @@ void ResetClientData(int client)
 	g_esPlayerData[client].bMessageSent = false;
 }
 
+//https://forums.alliedmods.net/showthread.php?t=320247
 public void OnClientAuthorized(int client, const char[] auth)
 {
 	// TODO: validate "auth" arg. instead of GetClientAuthId()
