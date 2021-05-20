@@ -539,7 +539,6 @@ public void OnConfigsExecuted()
 {
 	GetCvars();
 	GetSlotCvars();
-	g_hL4DSurvivorLimit.IntValue = g_iSurvivorLimit;
 }
 
 public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
