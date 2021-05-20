@@ -284,16 +284,16 @@ public void OnPluginStart()
 	g_hL4DSurvivorLimit.Flags &= ~FCVAR_NOTIFY; //移除ConVar变动提示
 	g_hL4DSurvivorLimit.SetBounds(ConVarBound_Upper, true, 32.0);
 
-	ConVar hSurvivorRespawnWithGuns = FindConVar("survivor_respawn_with_guns");
-	hSurvivorRespawnWithGuns.SetBounds(ConVarBound_Lower, true, 0.0);
-	hSurvivorRespawnWithGuns.SetBounds(ConVarBound_Upper, true, 0.0);
-	hSurvivorRespawnWithGuns.IntValue = 0;
-
 	//https://forums.alliedmods.net/showthread.php?t=120275
-	ConVar hSpawnFlowLimit = FindConVar("z_spawn_flow_limit");
-	hSpawnFlowLimit.SetBounds(ConVarBound_Lower, true, 999999999.0);
-	hSpawnFlowLimit.SetBounds(ConVarBound_Upper, true, 999999999.0);
-	hSpawnFlowLimit.IntValue = 999999999;
+	ConVar hConVar = FindConVar("z_spawn_flow_limit");
+	hConVar.SetBounds(ConVarBound_Lower, true, 999999999.0);
+	hConVar.SetBounds(ConVarBound_Upper, true, 999999999.0);
+	hConVar.IntValue = 999999999;
+
+	hConVar = FindConVar("survivor_respawn_with_guns");
+	hConVar.SetBounds(ConVarBound_Lower, true, 0.0);
+	hConVar.SetBounds(ConVarBound_Upper, true, 0.0);
+	hConVar.IntValue = 0;
 
 	g_hSurvivorLimit.AddChangeHook(ConVarChanged);
 	g_hAutoJoinSurvivor.AddChangeHook(ConVarChanged);
