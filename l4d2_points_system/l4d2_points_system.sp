@@ -147,12 +147,12 @@ enum
 	iUCommonLeft
 }
 
-int CounterData[3];
+int g_iCounterData[3];
 
 void InitCounterData()
 {
-	CounterData[iTanksSpawned] = 0;
-	CounterData[iWitchesSpawned] = 0;
+	g_iCounterData[iTanksSpawned] = 0;
+	g_iCounterData[iWitchesSpawned] = 0;
 }
 
 //汉化@夏恋灬花火碎片 
@@ -189,15 +189,15 @@ GlobalForward g_hForward_OnPSUnloaded;
 
 Database g_hDataBase;
 
-ArrayList ModulesArray;
+ArrayList g_aModulesArray;
 
-ConVar PluginSettings[11];
+ConVar g_hPluginSettings[11];
 ConVar g_hCategoriesEnabled[10];
 ConVar g_hPointRewards[25];
 ConVar g_hItemCosts[70];
 ConVar g_hGameMode;
 
-float fVersion;
+float g_fVersion;
 
 int g_iMeleeClassCount;
 int g_iClipSize_RifleM60;
@@ -296,19 +296,19 @@ void InitPluginSprites()
 
 void InitPluginSettings()
 {
-	fVersion = 1.80;
+	g_fVersion = 1.80;
 
-	PluginSettings[hVersion] = CreateConVar("em_points_sys_version", PLUGIN_VERSION, "该服务器上的积分系统版本.", FCVAR_NOTIFY|FCVAR_DONTRECORD|FCVAR_REPLICATED);
-	PluginSettings[hStartPoints] = CreateConVar("l4d2_points_start", "10", "每一关/地图刚开始给多少积分.");
-	PluginSettings[hNotifications] = CreateConVar("l4d2_points_notify", "0", "显示获得点数的信息?");
-	PluginSettings[hEnabled] = CreateConVar("l4d2_points_enable", "1", "启用积分系统?");
-	PluginSettings[hModes] = CreateConVar("l4d2_points_modes", "coop,realism", "哪种游戏模式可以使用积分系统");
-	PluginSettings[hTankLimit] = CreateConVar("l4d2_points_tank_limit", "1", "每个队伍允许产生多少只坦克");
-	PluginSettings[hWitchLimit] = CreateConVar("l4d2_points_witch_limit", "5", "每个队伍允许产生多少只女巫");
-	PluginSettings[hSpawnAttempts] = CreateConVar("l4d2_points_spawn_tries", "2", "购买成为一个特感后允许重生多少次");
-	PluginSettings[hKillSpreeNum] = CreateConVar("l4d2_points_cikills", "15", "你需要杀多少感染者才能获得杀戮赏金");
-	PluginSettings[hHeadShotNum] = CreateConVar("l4d2_points_headshots", "15", "你需要多少次爆头感染者才能获得猎头奖金");
-	PluginSettings[hInfectedPlayerLimit] = CreateConVar("l4d2_points_infectedplayer_limit", "3", "允许同时存在多少个被感染者玩家");
+	g_hPluginSettings[hVersion] = CreateConVar("em_points_sys_version", PLUGIN_VERSION, "该服务器上的积分系统版本.", FCVAR_NOTIFY|FCVAR_DONTRECORD|FCVAR_REPLICATED);
+	g_hPluginSettings[hStartPoints] = CreateConVar("l4d2_points_start", "10", "每一关/地图刚开始给多少积分.");
+	g_hPluginSettings[hNotifications] = CreateConVar("l4d2_points_notify", "0", "显示获得点数的信息?");
+	g_hPluginSettings[hEnabled] = CreateConVar("l4d2_points_enable", "1", "启用积分系统?");
+	g_hPluginSettings[hModes] = CreateConVar("l4d2_points_modes", "coop,realism", "哪种游戏模式可以使用积分系统");
+	g_hPluginSettings[hTankLimit] = CreateConVar("l4d2_points_tank_limit", "1", "每个队伍允许产生多少只坦克");
+	g_hPluginSettings[hWitchLimit] = CreateConVar("l4d2_points_witch_limit", "5", "每个队伍允许产生多少只女巫");
+	g_hPluginSettings[hSpawnAttempts] = CreateConVar("l4d2_points_spawn_tries", "2", "购买成为一个特感后允许重生多少次");
+	g_hPluginSettings[hKillSpreeNum] = CreateConVar("l4d2_points_cikills", "15", "你需要杀多少感染者才能获得杀戮赏金");
+	g_hPluginSettings[hHeadShotNum] = CreateConVar("l4d2_points_headshots", "15", "你需要多少次爆头感染者才能获得猎头奖金");
+	g_hPluginSettings[hInfectedPlayerLimit] = CreateConVar("l4d2_points_infectedplayer_limit", "3", "允许同时存在多少个被感染者玩家");
 }
 
 void InitCategoriesEnabled()
@@ -376,8 +376,8 @@ void InitItemCosts()
 	g_hItemCosts[CostGrenade] = CreateConVar("l4d2_points_grenade", "100", "购买榴弹发射器需要消耗多少积分");
 	g_hItemCosts[CostM60] = CreateConVar("l4d2_points_m60", "100", "购买M60机枪需要消耗多少积分");
 	g_hItemCosts[CostGasCan] = CreateConVar("l4d2_points_gascan", "100", "购买汽油桶需要消耗多少积分");
-	g_hItemCosts[CostOxygen] = CreateConVar("l4d2_points_oxygen", "100", "购买氧气桶需要消耗多少积分");
-	g_hItemCosts[CostPropane] = CreateConVar("l4d2_points_propane", "100", "购买氧气桶需要消耗多少积分");
+	g_hItemCosts[CostOxygen] = CreateConVar("l4d2_points_oxygen", "100", "购买氧气罐需要消耗多少积分");
+	g_hItemCosts[CostPropane] = CreateConVar("l4d2_points_propane", "100", "购买燃气罐需要消耗多少积分");
 	g_hItemCosts[CostGnome] = CreateConVar("l4d2_points_gnome", "15", "购买侏儒人偶需要消耗多少积分");
 	g_hItemCosts[CostCola] = CreateConVar("l4d2_points_cola", "100", "购买可乐瓶需要消耗多少积分");
 	g_hItemCosts[CostFireworks] = CreateConVar("l4d2_points_fireworks", "100", "购买烟花盒需要消耗多少积分");
@@ -488,8 +488,8 @@ void HookEvents()
 
 public void OnPluginStart()
 {
-	ModulesArray = new ArrayList(10); // Reduced from 100 to 10.
-	if(ModulesArray == null)
+	g_aModulesArray = new ArrayList(10); // Reduced from 100 to 10.
+	if(g_aModulesArray == null)
 		SetFailState("Modules Array Failure");
 
 	AddMultiTargetFilter("@s", FilterSurvivors, "all Survivor players", true);
@@ -527,7 +527,7 @@ void GetModeCvars()
 {
 	char sEnabledModes[256];
 	g_hGameMode.GetString(g_sGameMode, sizeof(g_sGameMode));
-	PluginSettings[hModes].GetString(sEnabledModes, sizeof(sEnabledModes));
+	g_hPluginSettings[hModes].GetString(sEnabledModes, sizeof(sEnabledModes));
 	g_bIsAllowedGameMode = !!(StrContains(sEnabledModes, g_sGameMode) != -1);
 }
 
@@ -582,12 +582,12 @@ bool IsInfected(int client)
 
 bool IsModEnabled()
 {
-	return PluginSettings[hEnabled].IntValue == 1 && g_bIsAllowedGameMode;
+	return g_hPluginSettings[hEnabled].IntValue == 1 && g_bIsAllowedGameMode;
 }
 
 void SetStartPoints(int client)
 {
-	g_esPlayerData[client].iPlayerPoints = PluginSettings[hStartPoints].IntValue;
+	g_esPlayerData[client].iPlayerPoints = g_hPluginSettings[hStartPoints].IntValue;
 }
 
 void AddPoints(int client, int iPoints, const char[] sMessage)
@@ -595,7 +595,7 @@ void AddPoints(int client, int iPoints, const char[] sMessage)
 	if(client > 0 && client <= MaxClients && IsClientInGame(client) && !IsFakeClient(client))
 	{
 		g_esPlayerData[client].iPlayerPoints += iPoints;
-		if(PluginSettings[hNotifications].BoolValue)
+		if(g_hPluginSettings[hNotifications].BoolValue)
 			PrintToChat(client, "%s %T", MSGTAG, sMessage, client, iPoints);
 	}
 }
@@ -701,11 +701,11 @@ public Action ListModules(int client, int iNumArguments)
 	{
 		ReplyToCommand(client, "%s %T", MSGTAG, "Modules", client);
 
-		int iNumModules = ModulesArray.Length;
+		int iNumModules = g_aModulesArray.Length;
 		for(int iModule; iModule < iNumModules; iModule++)
 		{
 			char sModuleName[MODULES_SIZE];
-			ModulesArray.GetString(iModule, sModuleName, MODULES_SIZE);
+			g_aModulesArray.GetString(iModule, sModuleName, MODULES_SIZE);
 			if(strlen(sModuleName) > 0)
 				ReplyToCommand(client, sModuleName);
 		}
@@ -804,7 +804,7 @@ public int Native_PS_RemovePoints(Handle plugin, int numParams)
 
 public int Native_PS_RegisterModule(Handle plugin, int numParams)
 {
-	int iNumModules = ModulesArray.Length;
+	int iNumModules = g_aModulesArray.Length;
 
 	char sNewModuleName[MODULES_SIZE];
 	GetNativeString(1, sNewModuleName, MODULES_SIZE);
@@ -813,18 +813,18 @@ public int Native_PS_RegisterModule(Handle plugin, int numParams)
 	for(int iModule; iModule < iNumModules; iModule++)
 	{
 		char sModuleName[MODULES_SIZE];
-		ModulesArray.GetString(iModule, sModuleName, MODULES_SIZE);
+		g_aModulesArray.GetString(iModule, sModuleName, MODULES_SIZE);
 		if(strcmp(sModuleName, sNewModuleName) == 0)
 			return false;
 	}
 
-	ModulesArray.PushString(sNewModuleName);
+	g_aModulesArray.PushString(sNewModuleName);
 	return true;
 }
 
 public int Native_PS_UnregisterModule(Handle plugin, int numParams)
 {
-	int iNumModules = ModulesArray.Length;
+	int iNumModules = g_aModulesArray.Length;
 
 	char sUnloadModuleName[MODULES_SIZE];
 	GetNativeString(1, sUnloadModuleName, MODULES_SIZE);
@@ -832,10 +832,10 @@ public int Native_PS_UnregisterModule(Handle plugin, int numParams)
 	for(int iModule; iModule < iNumModules; iModule++)
 	{
 		char sModuleName[MODULES_SIZE];
-		ModulesArray.GetString(iModule, sModuleName, MODULES_SIZE);
+		g_aModulesArray.GetString(iModule, sModuleName, MODULES_SIZE);
 		if(strcmp(sModuleName, sUnloadModuleName) == 0)
 		{
-			ModulesArray.Erase(iModule);
+			g_aModulesArray.Erase(iModule);
 			return true;
 		}
 	}
@@ -844,7 +844,7 @@ public int Native_PS_UnregisterModule(Handle plugin, int numParams)
 
 public any Native_PS_GetVersion(Handle plugin, int numParams)
 {
-	return fVersion;
+	return g_fVersion;
 }
 
 public int Native_PS_SetPoints(Handle plugin, int numParams)
@@ -874,7 +874,7 @@ public int Native_PS_SetBoughtCost(Handle plugin, int numParams)
 
 public int Native_PS_SetupUMob(Handle plugin, int numParams)
 {
-	CounterData[iUCommonLeft] = GetNativeCell(1);
+	g_iCounterData[iUCommonLeft] = GetNativeCell(1);
 }
 
 public int Native_PS_GetPoints(Handle plugin, int numParams)
@@ -1046,7 +1046,7 @@ void EventHeadShots(int client)
 	int iHeadShotReward = g_hPointRewards[SurvRewardHeadShots].IntValue;
 	if(iHeadShotReward > 0)
 	{
-		int iHeadShotsRequired = PluginSettings[hHeadShotNum].IntValue;
+		int iHeadShotsRequired = g_hPluginSettings[hHeadShotNum].IntValue;
 		g_esPlayerData[client].iHeadShotCount++;
 		if(g_esPlayerData[client].iHeadShotCount >= iHeadShotsRequired)
 		{
@@ -1061,7 +1061,7 @@ void EventKillSpree(int client)
 	int iKillSpreeReward = g_hPointRewards[SurvRewardKillSpree].IntValue;
 	if(iKillSpreeReward > 0)
 	{
-		int iKillSpreeRequired = PluginSettings[hKillSpreeNum].IntValue;
+		int iKillSpreeRequired = g_hPluginSettings[hKillSpreeNum].IntValue;
 		g_esPlayerData[client].iKillCount++;
 		if(g_esPlayerData[client].iKillCount >= iKillSpreeRequired)
 		{
@@ -1546,7 +1546,7 @@ public Action Command_RBuy(int client, int iNumArguments)
 						RemovePoints(client, g_esPlayerData[client].iItemCost);
 						//do additional actions for certain items
 						if(!strcmp(g_esPlayerData[client].sItemName, "z_spawn_old mob", false))
-							CounterData[iUCommonLeft] += FindConVar("z_common_limit").IntValue;
+							g_iCounterData[iUCommonLeft] += FindConVar("z_common_limit").IntValue;
 						else
 							CheatCommand(client, g_esPlayerData[client].sItemName);
 					}
@@ -1946,7 +1946,7 @@ public int MenuHandler_InfectedSlot(Menu menu, MenuAction action, int param1, in
 
 				if(!strcmp(g_esPlayerData[param1].sItemName, "g_InfectedSlot", false))
 				{
-					if(GetPlayerZombie() >= PluginSettings[hInfectedPlayerLimit].IntValue)
+					if(GetPlayerZombie() >= g_hPluginSettings[hInfectedPlayerLimit].IntValue)
 						PrintToChat(param1,  "%T", "Infected Player Limit", param1);
 					else
 						JoinInfected(param1, g_esPlayerData[param1].iItemCost);
@@ -2801,7 +2801,7 @@ public int InfectedMenu(Menu menu, MenuAction action, int client, int iPosition)
 
 public void OnEntityCreated(int entity, const char[] classPlayerName)
 {
-	if(!strcmp(classPlayerName, "infected", false) && CounterData[iUCommonLeft] > 0)
+	if(!strcmp(classPlayerName, "infected", false) && g_iCounterData[iUCommonLeft] > 0)
 	{
 		switch(GetRandomInt(1, 6))
 		{
@@ -2823,7 +2823,7 @@ public void OnEntityCreated(int entity, const char[] classPlayerName)
 			case 6:
 				SetEntityModel(entity, "models/infected/common_male_fallen_survivor.mdl");
 		}
-		CounterData[iUCommonLeft]--;
+		g_iCounterData[iUCommonLeft]--;
 	}
 }
 
@@ -3380,20 +3380,20 @@ public int MenuHandler_ConfirmI(Menu menu, MenuAction action, int param1, int pa
 				if(!strcmp(g_esPlayerData[param1].sItemName, "suicide", false))
 					PerformSuicide(param1, g_esPlayerData[param1].iItemCost);
 				else if(!strcmp(g_esPlayerData[param1].sItemName, "z_spawn_old mob", false))
-					CounterData[iUCommonLeft] += FindConVar("z_common_limit").IntValue;
+					g_iCounterData[iUCommonLeft] += FindConVar("z_common_limit").IntValue;
 				else if(!strcmp(g_esPlayerData[param1].sItemName, "z_spawn_old tank", false))
 				{
-					if(CounterData[iTanksSpawned] == PluginSettings[hTankLimit].IntValue)
+					if(g_iCounterData[iTanksSpawned] == g_hPluginSettings[hTankLimit].IntValue)
 						PrintToChat(param1,  "%T", "Tank Limit", param1);
 					else
-						CounterData[iWitchesSpawned]++;
+						g_iCounterData[iWitchesSpawned]++;
 				}
 				else if(!strcmp(g_esPlayerData[param1].sItemName, "z_spawn_old witch", false) || !strcmp(g_esPlayerData[param1].sItemName, "z_spawn_old witch_bride", false))
 				{
-					if(CounterData[iWitchesSpawned] == PluginSettings[hWitchLimit].IntValue)
+					if(g_iCounterData[iWitchesSpawned] == g_hPluginSettings[hWitchLimit].IntValue)
 						PrintToChat(param1,  "%T", "Witch Limit", param1);
 					else
-						CounterData[iWitchesSpawned]++;
+						g_iCounterData[iWitchesSpawned]++;
 				}
 				else if(StrContains(g_esPlayerData[param1].sItemName, "z_spawn_old", false) != -1 && StrContains(g_esPlayerData[param1].sItemName, "mob", false) == -1)
 				{
@@ -3421,7 +3421,7 @@ public int MenuHandler_ConfirmI(Menu menu, MenuAction action, int param1, int pa
 
 					CheatCommand(param1, g_esPlayerData[param1].sItemName);
 
-					int iMaxRetry = PluginSettings[hSpawnAttempts].IntValue;
+					int iMaxRetry = g_hPluginSettings[hSpawnAttempts].IntValue;
 					for(int i; i < iMaxRetry; i++)
 					{
 						if(!IsPlayerAlive(param1))
