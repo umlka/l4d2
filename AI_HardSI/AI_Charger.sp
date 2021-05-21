@@ -113,7 +113,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	fCurrentSpeed = SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0));
 	if(GetEntProp(client, Prop_Send, "m_hasVisibleThreats") && 0.50 * g_fChargeProximity < fDist < 1000.0 && fCurrentSpeed > 190.0) 
 	{
-		if(GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") != -1 && GetEntityMoveType(client) != MOVETYPE_LADDER)
+		if(GetEntityFlags(client) & FL_ONGROUND != 0 || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1)
 		{
 			buttons |= IN_DUCK;
 			buttons |= IN_JUMP;
