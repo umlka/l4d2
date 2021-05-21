@@ -1876,6 +1876,7 @@ void CreateSurvivorModelGlow(int client)
 	AcceptEntityInput(iEntity, "SetAttached", client);
 
 	SDKHook(iEntity, SDKHook_SetTransmit, Hook_SetTransmit);
+	SDKUnhook(client, SDKHook_PostThinkPost, Hook_PostThinkPost);
 	SDKHook(client, SDKHook_PostThinkPost, Hook_PostThinkPost);
 }
 
@@ -1889,14 +1890,11 @@ public Action Hook_SetTransmit(int entity, int client)
 
 public void Hook_PostThinkPost(int client)
 {
-	if(!IsValidEntRef(g_iModelEntRef[client]))
+	if(GetClientTeam(client) != 2 || !IsPlayerAlive(client) || !IsValidEntRef(g_iModelEntRef[client]))
 	{
 		SDKUnhook(client, SDKHook_PostThinkPost, Hook_PostThinkPost);
 		return;
 	}
-
-	if(g_bHasPlayerControlledZombies == true || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
-		return;
 
 	if(g_iModelIndex[client] && g_iModelIndex[client] != GetEntProp(client, Prop_Data, "m_nModelIndex"))
 	{
