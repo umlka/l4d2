@@ -56,10 +56,9 @@ bool g_bAutoJoinSurvivor;
 bool g_bRespawnJoin;
 bool g_bGiveWeaponType;
 bool g_bSpecNotify[MAXPLAYERS + 1];
-bool g_bGivenPlayerWeapon[MAXPLAYERS + 1];
 
 char g_sMeleeClass[16][32];
-char g_sEntityModels[MAXPLAYERS + 1][PLATFORM_MAX_PATH];
+char g_sPlayerModel[MAXPLAYERS + 1][128];
 
 static const char g_sSurvivorNames[8][] =
 {
@@ -322,7 +321,6 @@ public void OnPluginStart()
 	HookEvent("survivor_rescued", Event_SurvivorRescued, EventHookMode_Pre);
 	HookEvent("player_bot_replace", Event_PlayerBotReplace, EventHookMode_Pre);
 	HookEvent("bot_player_replace", Event_BotPlayerReplace, EventHookMode_Pre);
-	HookEvent("player_transitioned", Event_PlayerTransitioned, EventHookMode_Pre);
 	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving, EventHookMode_Pre);
 
 	AddCommandListener(CommandListener_SpecNext, "spec_next");
@@ -740,48 +738,41 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
 		SetGhostStatus(client, 0);
 
-		if(g_bGiveWeaponType == true && IsPlayerAlive(client) && CanGiveWeapon(client))
+		if(g_bGiveWeaponType == true && IsPlayerAlive(client))
 		{
-			g_bGivenPlayerWeapon[client] = false;
-			RequestFrame(OnNextFrame_GivePlayerWeapon, GetClientUserId(client));
+			int iActiveWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+			if(iActiveWeapon != -1)
+			{
+				DataPack pack = new DataPack();
+				pack.WriteCell(GetClientUserId(client));
+				pack.WriteCell(EntIndexToEntRef(iActiveWeapon));
+				RequestFrame(OnNextFrame_GivePlayerWeapon, pack);
+			}
 		}
 	}
 }
 
-bool CanGiveWeapon(int client)
+public void OnNextFrame_GivePlayerWeapon(DataPack pack)
 {
-	static const int iSlots[4] = {0, 2, 3, 4};
-
-	static int i;
-	static int iWeapon;
-	for(i = 0; i < 4; i++)
+	pack.Reset();
+	int client = pack.ReadCell();
+	if((client = GetClientOfUserId(client)) && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client) && !HasConnectedSpectator(client))
 	{
-		iWeapon = GetPlayerWeaponSlot(client, iSlots[i]);
-		if(iWeapon != -1)
-			return false;
+		int iActiveWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+		if(iActiveWeapon == -1 || EntIndexToEntRef(iActiveWeapon) == pack.ReadCell())
+			GiveWeapon(client);
 	}
-	
-	iWeapon = GetPlayerWeaponSlot(client, 1);
-	if(iWeapon == -1)
-		return true;
-		
-	static char classname[14];
-	GetEdictClassname(iWeapon, classname, sizeof(classname));
-	if(strcmp(classname, "weapon_pistol") == 0)
-		return true;
- 
-	return false;
 }
 
-public void OnNextFrame_GivePlayerWeapon(int client)
+int HasConnectedSpectator(int client)
 {
-	if((client = GetClientOfUserId(client)) && IsClientInGame(client))
+	if(HasEntProp(client, Prop_Send, "m_humanSpectatorUserID"))
 	{
-		if(g_bGivenPlayerWeapon[client] == false && GetClientTeam(client) == 2 && IsPlayerAlive(client) && CanGiveWeapon(client))
-			GiveWeapon(client);
-			
-		g_bGivenPlayerWeapon[client] = true;
+		client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
+		if(client > 0 && IsClientConnected(client) && !IsFakeClient(client))
+			return client;
 	}
+	return 0;
 }
 
 public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
@@ -861,28 +852,19 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 {
 	int player_userid = event.GetInt("player");
 	int player = GetClientOfUserId(player_userid);
-	if(g_sEntityModels[player][0] == 0)
-		return;
-
-	if(player == 0 || !IsClientInGame(player) || !IsSurvivor(player))
+	if(player == 0 || g_sPlayerModel[player][0] == 0 || !IsClientInGame(player) || IsFakeClient(player) || !IsSurvivor(player))
 		return;
 
 	int bot_userid = event.GetInt("bot");
 	int bot = GetClientOfUserId(bot_userid);
-	if(IsFakeClient(player))
-	{
-		g_bGivenPlayerWeapon[bot] = true;
-		return;
-	}
-
 	g_iBotPlayer[bot] = player_userid;
 	g_iPlayerBot[player] = bot_userid;
 
 	SetEntProp(bot, Prop_Send, "m_survivorCharacter", GetEntProp(player, Prop_Send, "m_survivorCharacter"));
-	SetEntityModel(bot, g_sEntityModels[player]);
+	SetEntityModel(bot, g_sPlayerModel[player]);
 	for(int i; i < 8; i++)
 	{
-		if(strcmp(g_sEntityModels[player], g_sSurvivorModels[i]) == 0)
+		if(strcmp(g_sPlayerModel[player], g_sSurvivorModels[i]) == 0)
 			SetClientInfo(bot, "name", g_sSurvivorNames[i]);
 	}
 }
@@ -893,11 +875,9 @@ public void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroa
 	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || !IsSurvivor(player))
 		return;
 
-	g_bGivenPlayerWeapon[player] = true;
-
 	int bot = GetClientOfUserId(event.GetInt("bot"));
 
-	static char sModel[PLATFORM_MAX_PATH];
+	static char sModel[128];
 	GetClientModel(bot, sModel, sizeof(sModel));
 	SetEntityModel(player, sModel);
 	SetEntProp(player, Prop_Send, "m_survivorCharacter", GetEntProp(bot, Prop_Send, "m_survivorCharacter"));
@@ -908,11 +888,6 @@ bool IsSurvivor(int client)
 	if(GetClientTeam(client) != TEAM_SURVIVOR && GetClientTeam(client) != TEAM_PASSING)
 		return false;
 	return true;
-}
-
-public void Event_PlayerTransitioned(Event event, const char[] name, bool dontBroadcast)
-{
-	g_bGivenPlayerWeapon[GetClientOfUserId(event.GetInt("userid"))] = true;
 }
 
 public void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadcast)
@@ -1102,7 +1077,7 @@ void DisplayTeamMenu(int client)
 	Panel TeamPanel = new Panel();
 	TeamPanel.SetTitle("---------★团队信息★---------");
 
-	char sInfo[PLATFORM_MAX_PATH];
+	char sInfo[128];
 	FormatEx(sInfo, sizeof(sInfo), "旁观者 (%d)", GetTeamPlayers(TEAM_SPECTATOR, false));
 	TeamPanel.DrawItem(sInfo);
 
@@ -1232,8 +1207,6 @@ void GiveWeapon(int client)
 {
 	if(!IsClientInGame(client) || GetClientTeam(client) != TEAM_SURVIVOR || !IsPlayerAlive(client)) 
 		return;
-
-	g_bGivenPlayerWeapon[client] = true;
 
 	for(int i = 4; i >= 2; i--)
 	{
@@ -1661,14 +1634,14 @@ public MRESReturn PlayerSetModelPost(int pThis, DHookParam hParams)
 
 	if(!IsSurvivor(pThis))
 	{
-		g_sEntityModels[pThis][0] = 0;
+		g_sPlayerModel[pThis][0] = 0;
 		return MRES_Ignored;
 	}
 	
-	static char sModel[PLATFORM_MAX_PATH];
+	static char sModel[128];
 	hParams.GetString(1, sModel, sizeof(sModel));
 	if(StrContains(sModel, "models/infected", false) == -1)
-		strcopy(g_sEntityModels[pThis], sizeof(g_sEntityModels), sModel);
+		strcopy(g_sPlayerModel[pThis], sizeof(g_sPlayerModel), sModel);
 
 	return MRES_Ignored;
 }
