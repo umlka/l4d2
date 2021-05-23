@@ -828,7 +828,8 @@ public void Event_SurvivorRescued(Event event, const char[] name, bool dontBroad
 	if(client == 0 || !IsClientInGame(client))
 		return;
 
-	GiveWeapon(client);
+	if(g_bGiveWeaponType == true)
+		GiveWeapon(client);
 
 	if(!IsFakeClient(client) && CanIdle(client))
 		CmdGoAFK(client, 0); //被从小黑屋救出来后闲置,避免有些玩家挂机
