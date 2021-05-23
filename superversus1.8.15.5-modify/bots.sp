@@ -756,12 +756,8 @@ public void OnNextFrame_GivePlayerWeapon(DataPack pack)
 {
 	pack.Reset();
 	int client = pack.ReadCell();
-	if((client = GetClientOfUserId(client)) && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client) && !HasConnectedSpectator(client))
-	{
-		int iActiveWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-		if(iActiveWeapon == -1 || EntIndexToEntRef(iActiveWeapon) == pack.ReadCell())
-			GiveWeapon(client);
-	}
+	if((client = GetClientOfUserId(client)) && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client) && !HasConnectedSpectator(client) && IsValidSpawn(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"), pack.ReadCell(), client))
+		GiveWeapon(client);
 }
 
 int HasConnectedSpectator(int client)
@@ -773,6 +769,20 @@ int HasConnectedSpectator(int client)
 			return client;
 	}
 	return 0;
+}
+
+bool IsValidSpawn(int iActiveWeapon, int iEntRef, int client)
+{
+	if(iActiveWeapon == -1)
+		return true;
+		
+	if(EntIndexToEntRef(iActiveWeapon) == iEntRef)
+		return true;
+		
+	if(GetEntProp(client, Prop_Send, "m_iCurrentUseAction") == 5 && HasEntProp(iActiveWeapon, Prop_Data, "m_strMapSetScriptName"))
+		return true;
+	
+	return false;
 }
 
 public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
