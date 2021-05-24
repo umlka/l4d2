@@ -779,7 +779,7 @@ bool IsValidSpawn(int iActiveWeapon, int iEntRef, int client)
 	if(EntIndexToEntRef(iActiveWeapon) == iEntRef)
 		return true;
 		
-	if(GetEntProp(client, Prop_Send, "m_iCurrentUseAction") == 5 && HasEntProp(iActiveWeapon, Prop_Data, "m_strMapSetScriptName"))
+	if(GetEntProp(client, Prop_Send, "m_iCurrentUseAction") == 5)
 		return true;
 	
 	return false;
