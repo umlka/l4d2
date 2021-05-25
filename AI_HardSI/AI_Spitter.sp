@@ -45,25 +45,25 @@ void Bhopx(int client, int &buttons, const float vAng[3])
 	if(buttons & IN_FORWARD)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Pushx(client, vVec, 180.0);
+		Client_Pushx(client, vVec, 120.0);
 	}
 		
 	if(buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Pushx(client, vVec, -90.0);
+		Client_Pushx(client, vVec, -60.0);
 	}
 	
 	if(buttons & IN_MOVELEFT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Pushx(client, vVec, -90.0);
+		Client_Pushx(client, vVec, -60.0);
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Pushx(client, vVec, 90.0);
+		Client_Pushx(client, vVec, 60.0);
 	}
 }
 
@@ -81,24 +81,24 @@ void Client_Pushx(int client, float vVec[3], float fForce)
 void Bhop(int client, int &buttons, float vAng[3])
 {
 	if(buttons & IN_FORWARD)
-		Client_Push(client, vAng, 180.0);
+		Client_Push(client, vAng, 120.0);
 		
 	if(buttons & IN_BACK)
 	{
 		vAng[1] += 180.0;
-		Client_Push(client, vAng, 90.0);
+		Client_Push(client, vAng, 60.0);
 	}
 	
 	if(buttons & IN_MOVELEFT)
 	{
 		vAng[1] += 90.0;
-		Client_Push(client, vAng, 90.0);
+		Client_Push(client, vAng, 60.0);
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		vAng[1] -= 90.0;
-		Client_Push(client, vAng, 90.0);
+		Client_Push(client, vAng, 60.0);
 	}
 }
 
