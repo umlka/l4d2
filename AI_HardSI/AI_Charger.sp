@@ -98,7 +98,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			return Plugin_Continue;
 	}
 
-	if(0.50 * g_fChargeProximity < fDist < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if(0.50 * g_fChargeProximity < fDist < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
@@ -380,13 +380,17 @@ void BlockCharge(int client)
 
 void Charger_OnCharge(int client) 
 {
-	static float NearestAngles[3];
-	if(MakeNearestAngles(client, NearestAngles))
+	static float NearestVectors[3];
+	if(MakeNearestVectors(client, NearestVectors))
 	{
-		float vVec[3];
-		GetAngleVectors(NearestAngles, NULL_VECTOR, vVec, NULL_VECTOR);
-		NormalizeVector(vVec, vVec);
-		TeleportEntity(client, NULL_VECTOR, NearestAngles, vVec);
+		static float vVelocity[3];
+		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
+		NormalizeVector(NearestVectors, NearestVectors);
+		ScaleVector(NearestVectors, GetVectorLength(vVelocity));
+
+		static float NearestAngles[3];
+		GetVectorAngles(NearestVectors, NearestAngles);
+		TeleportEntity(client, NULL_VECTOR, NearestAngles, NearestVectors);
 	}
 }
 
@@ -442,7 +446,7 @@ float GetPlayerAimOffset(int iAttacker, int iTarget)
 	return RadToDeg(ArcCosine(GetVectorDotProduct(vAim, vAttacker)));
 }
 
-bool MakeNearestAngles(int client, float NearestAngles[3])
+bool MakeNearestVectors(int client, float NearestVectors[3])
 {
 	static int iAimTarget;
 	static float vTarget[3];
@@ -487,8 +491,7 @@ bool MakeNearestAngles(int client, float NearestAngles[3])
 		return false;
 
 	GetClientAbsOrigin(client, vOrigin);
-	GetClientAbsOrigin(iAimTarget, vTarget);
-	MakeVectorFromPoints(vOrigin, vTarget, vOrigin);
-	GetVectorAngles(vOrigin, NearestAngles);
+	GetClientEyePosition(iAimTarget, vTarget);
+	MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
 	return true;
 }
