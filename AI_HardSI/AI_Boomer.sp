@@ -62,7 +62,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 2 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
-	if(GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER)
+	if(GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2)
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
@@ -90,25 +90,25 @@ void Bhopx(int client, int &buttons, const float vAng[3])
 	if(buttons & IN_FORWARD)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Pushx(client, vVec, 120.0);
+		Client_Pushx(client, vVec, 180.0);
 	}
 		
 	if(buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Pushx(client, vVec, -60.0);
+		Client_Pushx(client, vVec, -90.0);
 	}
 	
 	if(buttons & IN_MOVELEFT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Pushx(client, vVec, -60.0);
+		Client_Pushx(client, vVec, -90.0);
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Pushx(client, vVec, 60.0);
+		Client_Pushx(client, vVec, 90.0);
 	}
 }
 
@@ -164,9 +164,18 @@ void Boomer_OnVomit(int client)
 {
 	if(IsBotBoomer(client))
 	{
-		static float NearestAngles[3];
-		if(MakeNearestAngles(client, NearestAngles))
-			TeleportEntity(client, NULL_VECTOR, NearestAngles, NULL_VECTOR);
+		static float NearestVectors[3];
+		if(MakeNearestVectors(client, NearestVectors))
+		{
+			static float vVelocity[3];
+			GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
+			NormalizeVector(NearestVectors, NearestVectors);
+			ScaleVector(NearestVectors, GetVectorLength(vVelocity));
+
+			static float NearestAngles[3];
+			GetVectorAngles(NearestVectors, NearestAngles);
+			TeleportEntity(client, NULL_VECTOR, NearestAngles, NearestVectors);
+		}
 	}
 }
 
@@ -213,7 +222,7 @@ bool IsValidClient(int client)
 	return client > 0 && client <= MaxClients && IsClientInGame(client); 
 }
 
-bool MakeNearestAngles(int client, float NearestAngles[3])
+bool MakeNearestVectors(int client, float NearestVectors[3])
 {
 	static int iAimTarget;
 	static float vTarget[3];
@@ -259,8 +268,7 @@ bool MakeNearestAngles(int client, float NearestAngles[3])
 		return false;
 
 	GetClientAbsOrigin(client, vOrigin);
-	GetClientAbsOrigin(iAimTarget, vTarget);
-	MakeVectorFromPoints(vOrigin, vTarget, vOrigin);
-	GetVectorAngles(vOrigin, NearestAngles);
+	GetClientEyePosition(iAimTarget, vTarget);
+	MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
 	return true;
 }
