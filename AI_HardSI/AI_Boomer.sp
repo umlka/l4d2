@@ -52,9 +52,12 @@ void GetCvars()
 	g_fVomitRange = g_hVomitRange.FloatValue;
 }
 
-public Action Event_AbilityUse(Event event, const char[] name, bool dontBroadcast) 
+public void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast) 
 {
-	Boomer_OnVomit(GetClientOfUserId(event.GetInt("userid")));
+	char sAbility[16];
+	event.GetString("ability", sAbility, sizeof(sAbility));
+	if(strcmp(sAbility, "ability_vomit") == 0)
+		Boomer_OnVomit(GetClientOfUserId(event.GetInt("userid")));
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
@@ -92,7 +95,7 @@ void Bhopx(int client, int &buttons, const float vAng[3])
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
 		Client_Pushx(client, vVec, 180.0);
 	}
-		
+
 	if(buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
@@ -168,7 +171,7 @@ void Boomer_OnVomit(int client)
 		if(MakeNearestVectors(client, NearestVectors))
 		{
 			static float vVelocity[3];
-			GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
+			GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
 			NormalizeVector(NearestVectors, NearestVectors);
 			ScaleVector(NearestVectors, GetVectorLength(vVelocity));
 
@@ -209,7 +212,7 @@ float NearestSurvivorDistance(int client)
 
 bool IsBotBoomer(int client) 
 {
-	return IsValidClient(client) && IsFakeClient(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 2;
+	return client && IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 2;
 }
 
 bool IsAliveSurvivor(int client) 
@@ -255,12 +258,14 @@ bool MakeNearestVectors(int client, float NearestVectors[3])
 			}
 		}
 
-		if(aTargets.Length != 0)
+		if(aTargets.Length == 0)
 		{
-			aTargets.Sort(Sort_Ascending, Sort_Float);
-			iAimTarget = aTargets.Get(0, 1);
+			delete aTargets;
+			return false;
 		}
-
+		
+		aTargets.Sort(Sort_Ascending, Sort_Float);
+		iAimTarget = aTargets.Get(0, 1);
 		delete aTargets;
 	}
 
