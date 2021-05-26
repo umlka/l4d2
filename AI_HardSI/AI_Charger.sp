@@ -21,7 +21,7 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	g_hChargeProximity = CreateConVar("ai_charge_proximity", "300", "How close a client will approach before charging");	
+	g_hChargeProximity = CreateConVar("ai_charge_proximity", "300.0", "How close a client will approach before charging");	
 	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "20", "If the client has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
 	
 	g_hChargeProximity.AddChangeHook(ConVarChanged);
@@ -61,11 +61,9 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		return Plugin_Continue;
 	
 	static int iTarget;
-	static float vOrigin[3];
 	static float fSurvivorProximity;
-	GetClientAbsOrigin(client, vOrigin);
 	iTarget = GetClientAimTarget(client, true);
-	fSurvivorProximity = GetSurvivorProximity(vOrigin, iTarget);
+	fSurvivorProximity = GetSurvivorProximity(client, iTarget);
 	if(fSurvivorProximity > g_fChargeProximity)	
 		BlockCharge(client);
 	else if(buttons & IN_ATTACK2)
@@ -216,69 +214,53 @@ bool TraceFilter(int entity, int contentMask, any data)
 	}
 }
 
-float GetSurvivorProximity(const float vPos[3], int iTarget = -1) 
+float GetSurvivorProximity(int client, int iTarget = -1) 
 {
-	if(!IsAliveSurvivor(iTarget)) 
-		iTarget = GetClosestSurvivor(vPos, iTarget);
+	if(IsAliveSurvivor(iTarget))
+	{
+		static float vOrigin[3];
+		static float vTarget[3];
+		GetClientAbsOrigin(client, vOrigin);
+		GetClientAbsOrigin(iTarget, vTarget);
+		return GetVectorDistance(vOrigin, vTarget);
+	}
 
-	if(iTarget == -1)
-		return -1.0;
-
-	static float vTarget[3];
-	GetEntPropVector(iTarget, Prop_Send, "m_vecOrigin", vTarget);
-	return GetVectorDistance(vPos, vTarget);
+	return NearestSurvivorDistance(client, iTarget);
 }
 
-int GetClosestSurvivor(const float vPos[3], int iExcludeSurvivor = -1) 
+float NearestSurvivorDistance(int client, int iTarget)
 {
 	static int i;
 	static int iNum;
-	static int iTargets[MAXPLAYERS + 1];
+	static float vOrigin[3];
+	static float vTarget[3];
+	static float fDists[MAXPLAYERS + 1];
 
 	iNum = 0;
 
+	GetClientAbsOrigin(client, vOrigin);
+
 	for(i = 1; i <= MaxClients; i++)
 	{
-		if(i != iExcludeSurvivor && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-			iTargets[iNum++] = i;
+		if(i != client && i != iTarget && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
+		{
+			GetClientAbsOrigin(i, vTarget);
+			fDists[iNum++] = GetVectorDistance(vOrigin, vTarget);
+		}
 	}
-	
+
 	if(iNum == 0)
-		return -1;
+		return -1.0;
 
-	static ArrayList aTargets;
-	static int iTarget;
-	static float vTarget[3];
-	aTargets = new ArrayList(2);
-	
-	for(i = 0; i < iNum; i++)
-	{
-		iTarget = iTargets[i];
-		GetClientAbsOrigin(iTarget, vTarget);
-		aTargets.Set(aTargets.Push(GetVectorDistance(vPos, vTarget)), iTarget, 1);
-	}
-
-	if(aTargets.Length == 0)
-	{
-		delete aTargets;
-		return -1;
-	}
-		
-	aTargets.Sort(Sort_Ascending, Sort_Float);
-
-	iTarget = aTargets.Get(0, 1);
-	delete aTargets;
-	return iTarget;
+	SortFloats(fDists, iNum, Sort_Ascending);
+	return fDists[0];
 }
 
 bool ReadyAbility(int client)
 {
 	static int iAbility;
 	iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
-	if(iAbility != -1) 
-		return GetEntPropFloat(iAbility, Prop_Send, "m_timestamp") < GetGameTime();
-
-	return false;
+	return iAbility != -1 && GetEntPropFloat(iAbility, Prop_Send, "m_timestamp") < GetGameTime();
 }
 
 void BlockCharge(int client) 
@@ -381,11 +363,6 @@ bool IsTargetWatchingAttacker(int iAttacker, int iOffsetThreshold)
 
 float GetPlayerAimOffset(int iAttacker, int iTarget) 
 {
-	if(!IsClientInGame(iAttacker) || !IsPlayerAlive(iAttacker))
-		ThrowError("Client is not Alive."); 
-	if(!IsClientInGame(iTarget) || !IsPlayerAlive(iTarget))
-		ThrowError("Target is not Alive.");
-		
 	static float vAim[3];
 	static float vTarget[3];
 	static float vAttacker[3];
