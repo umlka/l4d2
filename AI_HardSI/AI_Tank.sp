@@ -91,35 +91,38 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		}
 	}
 
-	if(iNoIncapped != 0)
-		SortFloats(fNoIncappeds, iNoIncapped, Sort_Ascending);
-		
 	if(iNormalAlive != 0)
-		SortFloats(fNormalAlives, iNormalAlive, Sort_Ascending);
-
-	if(iNormalAlive != 0 && g_fTankAttackRange + 45.0 < fNormalAlives[0] < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
-		static float vVelocity[3];
-		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 190.0)
+		SortFloats(fNormalAlives, iNormalAlive, Sort_Ascending);
+		if(g_fTankAttackRange + 45.0 < fNormalAlives[0] < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		{
-			buttons &= ~IN_ATTACK2;
-			buttons |= IN_DUCK;
-			buttons |= IN_JUMP;
+			static float vVelocity[3];
+			GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
+			if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 190.0)
+			{
+				buttons &= ~IN_ATTACK2;
+				buttons |= IN_DUCK;
+				buttons |= IN_JUMP;
 					
-			static float vEyeAngles[3];
-			GetClientEyeAngles(client, vEyeAngles);
-			Bhopx(client, buttons, vEyeAngles);
+				static float vEyeAngles[3];
+				GetClientEyeAngles(client, vEyeAngles);
+				Bhopx(client, buttons, vEyeAngles);
+				return Plugin_Changed;
+			}
 		}
 	}
 
-	if(DelayExpired(client, 0, TANK_MELEE_SCAN_DELAY)) 
+	if(DelayExpired(client, 0, TANK_MELEE_SCAN_DELAY))
 	{
 		DelayStart(client, 0);
-		if(iNoIncapped != 0 && fNoIncappeds[0] < g_fTankAttackRange * 0.95) 
+		if(iNoIncapped != 0)
 		{
-			buttons |= IN_ATTACK;
-			return Plugin_Changed;
+			SortFloats(fNoIncappeds, iNoIncapped, Sort_Ascending);
+			if(-1.0 < fNoIncappeds[0] < g_fTankAttackRange * 0.95) 
+			{
+				buttons |= IN_ATTACK;
+				return Plugin_Changed;
+			}
 		}
 	}
 
