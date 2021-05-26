@@ -9,7 +9,6 @@ ConVar g_hAimOffsetSensitivityCharger;
 float g_fChargeProximity;
 
 int g_iAimOffsetSensitivityCharger;
-int g_bShouldCharge[MAXPLAYERS + 1];
 
 public Plugin myinfo = 
 {
@@ -27,10 +26,8 @@ public void OnPluginStart()
 	
 	g_hChargeProximity.AddChangeHook(ConVarChanged);
 	g_hAimOffsetSensitivityCharger.AddChangeHook(ConVarChanged);
-	
-	HookEvent("player_spawn", Event_PlayerSpawn);
+
 	HookEvent("charger_charge_start", Event_ChargerChargeStart);
-	HookEvent("charger_charge_end",	Event_ChargerChargeEnd);
 }
 
 public void OnConfigsExecuted()
@@ -49,19 +46,13 @@ void GetCvars()
 	g_iAimOffsetSensitivityCharger = g_hAimOffsetSensitivityCharger.IntValue;
 }
 
-public Action Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) 
+public void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast)
 {
-	g_bShouldCharge[GetClientOfUserId(event.GetInt("userid"))] = false;
-}
-
-bool IsAliveSurvivor(int client) 
-{
-	return IsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
-}
-
-bool IsValidClient(int client) 
-{
-	return client > 0 && client <= MaxClients && IsClientInGame(client); 
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	int flags = GetEntProp(client, Prop_Send, "m_fFlags");
+	SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_FROZEN);
+	Charger_OnCharge(client);
+	SetEntProp(client, Prop_Send, "m_fFlags", flags);
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
@@ -69,42 +60,28 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 	
-	static float fDist;
 	static int iTarget;
-	fDist = NearestSurvivorDistance(client);
+	static float vOrigin[3];
+	static float fSurvivorProximity;
+	GetClientAbsOrigin(client, vOrigin);
 	iTarget = GetClientAimTarget(client, true);
-	if((buttons & IN_ATTACK2) && fDist < 100.0 && ReadyAbility(client))
+	fSurvivorProximity = GetSurvivorProximity(vOrigin, iTarget);
+	if(fSurvivorProximity > g_fChargeProximity)	
+		BlockCharge(client);
+	else if(buttons & IN_ATTACK2)
 	{
-		if(IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget) && IsVisibleTo(client, iTarget))
+		if(-1.0 < fSurvivorProximity < 100.0 && ReadyAbility(client) && IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget) && IsVisibleTo(client, iTarget))
 		{
 			buttons |= IN_ATTACK;
 			return Plugin_Changed;
 		}
 	}
 
-	static float vOrigin[3];
-	static int iSurvivorProximity;
-	GetClientAbsOrigin(client, vOrigin);
-	iSurvivorProximity = GetSurvivorProximity(vOrigin, iTarget);
-	if(iSurvivorProximity > g_fChargeProximity)
-	{	
-		if(!g_bShouldCharge[client]) 
-			BlockCharge(client);
-	} 
-	else
-	{
-		g_bShouldCharge[client] = true;
-		if(buttons & IN_ATTACK)
-			return Plugin_Continue;
-	}
-
-	if(0.50 * g_fChargeProximity < fDist < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if(0.50 * g_fChargeProximity < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		static float fCurrentSpeed;
-		fCurrentSpeed = SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0));
-		if(fCurrentSpeed > 190.0)
+		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 190.0)
 		{
 			buttons |= IN_DUCK;
 			buttons |= IN_JUMP;
@@ -112,6 +89,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			static float vEyeAngles[3];
 			GetClientEyeAngles(client, vEyeAngles);
 			Bhopx(client, buttons, vEyeAngles);
+			return Plugin_Changed;
 		}
 	}
 
@@ -238,11 +216,24 @@ bool TraceFilter(int entity, int contentMask, any data)
 	}
 }
 
+float GetSurvivorProximity(const float vPos[3], int iTarget = -1) 
+{
+	if(!IsAliveSurvivor(iTarget)) 
+		iTarget = GetClosestSurvivor(vPos, iTarget);
+
+	if(iTarget == -1)
+		return -1.0;
+
+	static float vTarget[3];
+	GetEntPropVector(iTarget, Prop_Send, "m_vecOrigin", vTarget);
+	return GetVectorDistance(vPos, vTarget);
+}
+
 int GetClosestSurvivor(const float vPos[3], int iExcludeSurvivor = -1) 
 {
 	static int i;
 	static int iNum;
-	int[] iTargets = new int[MaxClients];
+	static int iTargets[MAXPLAYERS + 1];
 
 	iNum = 0;
 
@@ -280,95 +271,14 @@ int GetClosestSurvivor(const float vPos[3], int iExcludeSurvivor = -1)
 	return iTarget;
 }
 
-int GetSurvivorProximity(const float vPos[3], int iTarget = -1) 
-{
-	if(!IsAliveSurvivor(iTarget)) 
-		iTarget = GetClosestSurvivor(vPos);
-
-	if(iTarget == -1)
-		return -1;
-
-	static float vTarget[3];
-	GetEntPropVector(iTarget, Prop_Send, "m_vecOrigin", vTarget);
-	return RoundToNearest(GetVectorDistance(vPos, vTarget));
-}
-
-bool IsPinned(int client) 
-{
-	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)	   // charger pound
-		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)		// charger carry
-		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)	   // hunter
-		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)	   //jockey
-		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)		  //smoker
-		return true;
-	return false;
-}
-
-float NearestSurvivorDistance(int client)
-{
-	static int i;
-	static int iNum;
-	static float vOrigin[3];
-	static float vTarget[3];
-	static float fDists[MAXPLAYERS + 1];
-	
-	iNum = 0;
-
-	GetClientAbsOrigin(client, vOrigin);
-
-	for(i = 1; i <= MaxClients; i++)
-	{
-		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-		{
-			GetClientAbsOrigin(i, vTarget);
-			fDists[iNum++] = GetVectorDistance(vOrigin, vTarget);
-		}
-	}
-
-	if(iNum == 0)
-		return -1.0;
-
-	SortFloats(fDists, iNum, Sort_Ascending);
-	return fDists[0];
-}
-
 bool ReadyAbility(int client)
 {
 	static int iAbility;
 	iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
-	if(iAbility != -1 && IsValidEdict(iAbility)) 
+	if(iAbility != -1) 
 		return GetEntPropFloat(iAbility, Prop_Send, "m_timestamp") < GetGameTime();
 
 	return false;
-}
-
-public void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast)
-{
-	int client = GetClientOfUserId(event.GetInt("userid"));
-
-	int flags = GetEntProp(client, Prop_Send, "m_fFlags");
-	SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_FROZEN);
-	Charger_OnCharge(client);
-	SetEntProp(client, Prop_Send, "m_fFlags", flags);
-	
-	int entity = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-	if(entity != -1)
-		SetEntPropFloat(entity, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 999.9);
-}
-
-public void Event_ChargerChargeEnd(Event event, const char[] name, bool dontBroadcast)
-{
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client)
-	{
-		int entity = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-		if(entity != -1)
-			SetEntPropFloat(entity, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 1.0);
-	}
 }
 
 void BlockCharge(int client) 
@@ -384,7 +294,7 @@ void Charger_OnCharge(int client)
 	if(MakeNearestVectors(client, NearestVectors))
 	{
 		static float vVelocity[3];
-		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
 		NormalizeVector(NearestVectors, NearestVectors);
 		ScaleVector(NearestVectors, GetVectorLength(vVelocity));
 
@@ -394,9 +304,57 @@ void Charger_OnCharge(int client)
 	}
 }
 
-bool IsIncapacitated(int client) 
+bool MakeNearestVectors(int client, float NearestVectors[3])
 {
-	return !!GetEntProp(client, Prop_Send, "m_isIncapacitated");
+	static int iAimTarget;
+	static float vTarget[3];
+	static float vOrigin[3];
+
+	iAimTarget = GetClientAimTarget(client, true);
+	if(!IsAliveSurvivor(iAimTarget) || IsIncapacitated(iAimTarget) || IsPinned(iAimTarget) || !IsTargetWatchingAttacker(client, g_iAimOffsetSensitivityCharger))
+	{
+		static int i;
+		static int iNum;
+		static int iTargets[MAXPLAYERS + 1];
+	
+		GetClientEyePosition(client, vOrigin);
+		iNum = GetClientsInRange(vOrigin, RangeType_Visibility, iTargets, MAXPLAYERS);
+	
+		if(iNum == 0)
+			return false;
+			
+		static int iTarget;
+		static ArrayList aTargets;
+		aTargets = new ArrayList(2);
+	
+		for(i = 0; i < iNum; i++)
+		{
+			iTarget = iTargets[i];
+			if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
+			{
+				GetClientAbsOrigin(iTarget, vTarget);
+				aTargets.Set(aTargets.Push(GetVectorDistance(vOrigin, vTarget)), iTarget, 1);
+			}
+		}
+
+		if(aTargets.Length == 0)
+		{
+			delete aTargets;
+			return false;
+		}
+		
+		aTargets.Sort(Sort_Ascending, Sort_Float);
+		iAimTarget = aTargets.Get(0, 1);
+		delete aTargets;
+	}
+
+	if(!IsAliveSurvivor(iAimTarget))
+		return false;
+
+	GetClientAbsOrigin(client, vOrigin);
+	GetClientEyePosition(iAimTarget, vTarget);
+	MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
+	return true;
 }
 
 bool IsTargetWatchingAttacker(int iAttacker, int iOffsetThreshold) 
@@ -446,52 +404,32 @@ float GetPlayerAimOffset(int iAttacker, int iTarget)
 	return RadToDeg(ArcCosine(GetVectorDotProduct(vAim, vAttacker)));
 }
 
-bool MakeNearestVectors(int client, float NearestVectors[3])
+bool IsAliveSurvivor(int client) 
 {
-	static int iAimTarget;
-	static float vTarget[3];
-	static float vOrigin[3];
+	return IsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
+}
 
-	iAimTarget = GetClientAimTarget(client, true);
-	if(!IsAliveSurvivor(iAimTarget) || IsIncapacitated(iAimTarget) || IsPinned(iAimTarget) || !IsTargetWatchingAttacker(client, g_iAimOffsetSensitivityCharger))
-	{
-		static int i;
-		static int iNum;
-		static int iTargets[MAXPLAYERS + 1];
-	
-		GetClientEyePosition(client, vOrigin);
-		iNum = GetClientsInRange(vOrigin, RangeType_Visibility, iTargets, MAXPLAYERS);
-	
-		if(iNum == 0)
-			return false;
-			
-		static int iTarget;
-		static ArrayList aTargets;
-		aTargets = new ArrayList(2);
-	
-		for(i = 0; i < iNum; i++)
-		{
-			iTarget = iTargets[i];
-			if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
-			{
-				GetClientAbsOrigin(iTarget, vTarget);
-				aTargets.Set(aTargets.Push(GetVectorDistance(vOrigin, vTarget)), iTarget, 1);
-			}
-		}
+bool IsValidClient(int client) 
+{
+	return client > 0 && client <= MaxClients && IsClientInGame(client); 
+}
 
-		if(aTargets.Length != 0)
-		{
-			aTargets.Sort(Sort_Ascending, Sort_Float);
-			iAimTarget = aTargets.Get(0, 1);
-		}
-		delete aTargets;
-	}
+bool IsIncapacitated(int client) 
+{
+	return !!GetEntProp(client, Prop_Send, "m_isIncapacitated");
+}
 
-	if(!IsAliveSurvivor(iAimTarget))
-		return false;
-
-	GetClientAbsOrigin(client, vOrigin);
-	GetClientEyePosition(iAimTarget, vTarget);
-	MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
-	return true;
+bool IsPinned(int client) 
+{
+	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)	   // charger pound
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)		// charger carry
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)	   // hunter
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)	   //jockey
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)		  //smoker
+		return true;
+	return false;
 }
