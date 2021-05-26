@@ -16,7 +16,7 @@ public Plugin myinfo =
 	url = "github.com/breezyplease"
 };
 
-public void OnPluginStart() 
+public void OnPluginStart()
 {
 	g_hVomitRange = FindConVar("z_vomit_range");
 	g_hVomitRange.AddChangeHook(ConVarChanged);
@@ -29,7 +29,7 @@ public void OnPluginStart()
 	HookEvent("ability_use", Event_AbilityUse);
 }
 
-public void OnPluginEnd() 
+public void OnPluginEnd()
 {
 	FindConVar("z_vomit_fatigue").RestoreDefault();
 	FindConVar("z_boomer_near_dist").RestoreDefault();
@@ -52,7 +52,7 @@ void GetCvars()
 	g_fVomitRange = g_hVomitRange.FloatValue;
 }
 
-public void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast) 
+public void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
 {
 	char sAbility[16];
 	event.GetString("ability", sAbility, sizeof(sAbility));
@@ -163,7 +163,7 @@ void Client_Push(int client, const float vAng[3], float fForce)
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 }
 */
-void Boomer_OnVomit(int client) 
+void Boomer_OnVomit(int client)
 {
 	if(IsBotBoomer(client))
 	{
@@ -210,17 +210,17 @@ float NearestSurvivorDistance(int client)
 	return fDists[0];
 }
 
-bool IsBotBoomer(int client) 
+bool IsBotBoomer(int client)
 {
 	return client && IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 2;
 }
 
-bool IsAliveSurvivor(int client) 
+bool IsAliveSurvivor(int client)
 {
 	return IsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
 }
 
-bool IsValidClient(int client) 
+bool IsValidClient(int client)
 {
 	return client > 0 && client <= MaxClients && IsClientInGame(client); 
 }
@@ -228,46 +228,12 @@ bool IsValidClient(int client)
 bool MakeNearestVectors(int client, float NearestVectors[3])
 {
 	static int iAimTarget;
-	static float vTarget[3];
 	static float vOrigin[3];
+	static float vTarget[3];
 
 	iAimTarget = GetClientAimTarget(client, true);
-	if(!IsAliveSurvivor(iAimTarget)) 
-	{
-		static int i;
-		static int iNum;
-		static int iTargets[MAXPLAYERS + 1];
-	
-		GetClientEyePosition(client, vOrigin);
-		iNum = GetClientsInRange(vOrigin, RangeType_Visibility, iTargets, MAXPLAYERS);
-	
-		if(iNum == 0)
-			return false;
-			
-		static int iTarget;
-		static ArrayList aTargets;
-		aTargets = new ArrayList(2);
-	
-		for(i = 0; i < iNum; i++)
-		{
-			iTarget = iTargets[i];
-			if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget))
-			{
-				GetClientAbsOrigin(iTarget, vTarget);
-				aTargets.Set(aTargets.Push(GetVectorDistance(vOrigin, vTarget)), iTarget, 1);
-			}
-		}
-
-		if(aTargets.Length == 0)
-		{
-			delete aTargets;
-			return false;
-		}
-		
-		aTargets.Sort(Sort_Ascending, Sort_Float);
-		iAimTarget = aTargets.Get(0, 1);
-		delete aTargets;
-	}
+	if(!IsAliveSurvivor(iAimTarget))
+		iAimTarget = GetClosestSurvivor(client, iAimTarget);
 
 	if(!IsAliveSurvivor(iAimTarget))
 		return false;
@@ -276,4 +242,44 @@ bool MakeNearestVectors(int client, float NearestVectors[3])
 	GetClientEyePosition(iAimTarget, vTarget);
 	MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
 	return true;
+}
+
+int GetClosestSurvivor(int client, int iAimTarget = -1)
+{
+	static int i;
+	static int iNum;
+	static float vOrigin[3];
+	static float vTarget[3];
+	static int iTargets[MAXPLAYERS + 1];
+	
+	GetClientEyePosition(client, vOrigin);
+	iNum = GetClientsInRange(vOrigin, RangeType_Visibility, iTargets, MAXPLAYERS);
+
+	if(iNum == 0)
+		return -1;
+			
+	static int iTarget;
+	static ArrayList aTargets;
+	aTargets = new ArrayList(2);
+	
+	for(i = 0; i < iNum; i++)
+	{
+		iTarget = iTargets[i];
+		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget))
+		{
+			GetClientAbsOrigin(iTarget, vTarget);
+			aTargets.Set(aTargets.Push(GetVectorDistance(vOrigin, vTarget)), iTarget, 1);
+		}
+	}
+
+	if(aTargets.Length == 0)
+	{
+		delete aTargets;
+		return -1;
+	}
+
+	aTargets.Sort(Sort_Ascending, Sort_Float);
+	iAimTarget = aTargets.Get(0, 1);
+	delete aTargets;
+	return iAimTarget;
 }
