@@ -21,7 +21,7 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 190.0)
+		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 170.0)
 		{
 			if(150.0 < NearestSurvivorDistance(client) < 1000.0)
 			{
