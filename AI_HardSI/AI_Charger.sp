@@ -76,7 +76,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		if(GetEntProp(client, Prop_Send, "m_iHealth") > g_iHealthThresholdCharger)
 			BlockCharge(client);
 	}
-	else if(bHasSight && -1.0 < fSurvivorProximity < 50.0 && ReadyAbility(client) && !IsChargeSurvivor(client) && IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
+	else if(((bHasSight && -1.0 < fSurvivorProximity < 50.0) || (buttons & IN_ATTACK2))&& ReadyAbility(client) && !IsChargeSurvivor(client) && IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
 	{
 		buttons |= IN_ATTACK;
 		return Plugin_Changed;
