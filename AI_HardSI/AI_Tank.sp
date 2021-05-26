@@ -100,7 +100,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
 			if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 190.0)
 			{
-				buttons &= ~IN_ATTACK2;
+				//buttons &= ~IN_ATTACK2;
 				buttons |= IN_DUCK;
 				buttons |= IN_JUMP;
 					
@@ -131,17 +131,17 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 	if(DelayExpired(client, 1, TANK_ROCK_AIM_DELAY) && !DelayExpired(client, 1, TANK_ROCK_AIM_TIME))
 	{
-		static int iTarget;
-		iTarget = GetClientAimTarget(client, true);
-		if(iTarget == -1 || IsIncapacitated(iTarget) || IsPinned(iTarget) || !IsVisibleTo(client, iTarget)) 
+		static int iAimTarget;
+		iAimTarget = GetClientAimTarget(client, true);
+		if(!IsAliveSurvivor(iAimTarget) || IsIncapacitated(iAimTarget) || IsPinned(iAimTarget) || !IsVisibleTo(client, iAimTarget)) 
 		{
-			iTarget = NearestVisibleNormalSurvivor(client);
-			if(iTarget > 0) 
+			iAimTarget = GetClosestSurvivor(client, iAimTarget);
+			if(iAimTarget != -1) 
 			{
 				if(angles[2] == 0.0) 
 				{
 					static float vAimAngles[3];
-					ComputeAimAngles(client, iTarget, vAimAngles, AimTarget_Chest);
+					ComputeAimAngles(client, iAimTarget, vAimAngles, AimTarget_Chest);
 					vAimAngles[2] = 0.0;
 					TeleportEntity(client, NULL_VECTOR, vAimAngles, NULL_VECTOR);
 					return Plugin_Changed;
@@ -255,17 +255,27 @@ bool IsIncapacitated(int client)
 	return !!GetEntProp(client, Prop_Send, "m_isIncapacitated");
 }
 
+bool IsAliveSurvivor(int client)
+{
+	return IsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
+}
+
+bool IsValidClient(int client)
+{
+	return client > 0 && client <= MaxClients && IsClientInGame(client); 
+}
+
 bool IsPinned(int client) 
 {
-	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)	   // charger pound
+	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
 		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)		// charger carry
+	if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
 		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)	   // hunter
+	if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
 		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)	   //jockey
+	if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
 		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)		  //smoker
+	if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
 		return true;
 	return false;
 }
@@ -324,31 +334,31 @@ void ComputeAimAngles(int client, int iTarget, float vAngles[3], AimTarget iType
 	GetVectorAngles(vLookAt, vAngles);
 }
 
-int NearestVisibleNormalSurvivor(int client)
+int GetClosestSurvivor(int client, int iAimTarget = -1)
 {
 	static int i;
 	static int iNum;
-	static int iTarget;
-	static float vEyePos[3];
+	static float vOrigin[3];
 	static float vTarget[3];
-	static ArrayList aTargets;
 	static int iTargets[MAXPLAYERS + 1];
-
-	GetClientEyePosition(client, vEyePos);
-	iNum = GetClientsInRange(vEyePos, RangeType_Visibility, iTargets, MAXPLAYERS);
-
+	
+	GetClientEyePosition(client, vOrigin);
+	iNum = GetClientsInRange(vOrigin, RangeType_Visibility, iTargets, MAXPLAYERS);
+	
 	if(iNum == 0)
 		return -1;
-
+			
+	static int iTarget;
+	static ArrayList aTargets;
 	aTargets = new ArrayList(2);
-
+	
 	for(i = 0; i < iNum; i++)
 	{
 		iTarget = iTargets[i];
-		if(iTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
+		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
 		{
 			GetClientAbsOrigin(iTarget, vTarget);
-			aTargets.Set(aTargets.Push(GetVectorDistance(vEyePos, vTarget)), iTarget, 1);
+			aTargets.Set(aTargets.Push(GetVectorDistance(vOrigin, vTarget)), iTarget, 1);
 		}
 	}
 
@@ -357,10 +367,9 @@ int NearestVisibleNormalSurvivor(int client)
 		delete aTargets;
 		return -1;
 	}
-	
+		
 	aTargets.Sort(Sort_Ascending, Sort_Float);
-	
-	iTarget = aTargets.Get(0, 1);
+	iAimTarget = aTargets.Get(0, 1);
 	delete aTargets;
-	return iTarget;
+	return iAimTarget;
 }
