@@ -222,7 +222,7 @@ float NearestSurvivorDistance(int client, int iTarget)
 
 bool IsChargeSurvivor(int client)
 {
-	return GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 && GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0;
+	return GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0;
 }
 
 bool ReadyAbility(int client)
