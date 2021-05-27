@@ -169,8 +169,6 @@ bool g_bAllowSurvivorBot;
 bool g_bAllowSurvivorIdle;
 bool g_bAllowSurvivorEvent;
 
-int g_iRoundStart; 
-int g_iPlayerSpawn;
 int g_iRespawnTime;
 int g_iRespawnLimit;
 int g_iSlotCount[5];
@@ -454,6 +452,11 @@ public void OnClientPutInServer(int client)
 	ResetClientData(client);
 }
 
+void ResetClientData(int client)
+{
+	g_iPlayerRespawned[client] = 0;
+}
+
 public void OnClientDisconnect(int client)
 {
 	delete g_hRespawnTimer[client];
@@ -461,30 +464,6 @@ public void OnClientDisconnect(int client)
 
 public void OnMapEnd()
 {
-	ResetPlugin();
-}
-
-public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
-{
-	ResetPlugin();
-}
-
-void ResetClientData(int client)
-{
-	g_iPlayerRespawned[client] = 0;
-}
-
-void InitPlugin()
-{
-	for(int i = 1; i <= MaxClients; i++)
-		delete g_hRespawnTimer[i];
-}
-
-void ResetPlugin()
-{
-	g_iRoundStart = 0;
-	g_iPlayerSpawn = 0;
-
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		ResetClientData(i);
@@ -492,34 +471,30 @@ void ResetPlugin()
 	}
 }
 
-bool IsRoundStarted()
+public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
-	return g_iRoundStart && g_iPlayerSpawn;
+	OnMapEnd();
 }
 
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
-	if(g_iRoundStart == 0 && g_iPlayerSpawn == 1)
-		InitPlugin();
-	g_iRoundStart = 1;
+	for(int i = 1; i <= MaxClients; i++)
+		delete g_hRespawnTimer[i];
 }
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
-	if(g_iRoundStart == 0)
-		return;
-	
-	if(g_iPlayerSpawn == 0)
-		InitPlugin();
-	g_iPlayerSpawn = 1;
-
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client == 0 || !IsClientInGame(client))
 		return;
 
-	RemoveSurvivorDeathModel(client);
+	if(IsPlayerAlive(client))
+	{
+		RemoveSurvivorDeathModel(client);
+		return;
+	}
 
-	if(g_hRespawnTimer[client] != null || GetClientTeam(client) != 2 || IsPlayerAlive(client))
+	if(g_hRespawnTimer[client] != null || GetClientTeam(client) != 2)
 		return;
 		
 	if(IsFakeClient(client))
@@ -542,7 +517,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
 public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
-	if(g_iRespawnTime == 0 || g_iRespawnLimit == 0 || IsRoundStarted() == false)
+	if(g_iRespawnTime == 0 || g_iRespawnLimit == 0)
 		return;
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
