@@ -738,7 +738,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
 		SetGhostStatus(client, 0);
 
-		if(g_bGiveWeaponType == true && IsPlayerAlive(client))
+		if(g_bGiveWeaponType == true && g_iRoundStart == 1 && IsPlayerAlive(client))
 		{
 			int iActiveWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
 			if(iActiveWeapon != -1)
@@ -756,21 +756,10 @@ public void OnNextFrame_GivePlayerWeapon(DataPack pack)
 {
 	pack.Reset();
 	int client = pack.ReadCell();
-	if((client = GetClientOfUserId(client)) && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client)/* && !HasConnectedSpectator(client)*/ && IsValidSpawn(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"), pack.ReadCell(), client))
+	if((client = GetClientOfUserId(client)) && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client) && IsValidSpawn(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"), pack.ReadCell(), client))
 		GiveWeapon(client);
 }
-/*
-int HasConnectedSpectator(int client)
-{
-	if(HasEntProp(client, Prop_Send, "m_humanSpectatorUserID"))
-	{
-		client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
-		if(client > 0 && IsClientConnected(client) && !IsFakeClient(client))
-			return client;
-	}
-	return 0;
-}
-*/
+
 bool IsValidSpawn(int iActiveWeapon, int iEntRef, int client)
 {
 	if(iActiveWeapon == -1)
@@ -802,9 +791,6 @@ void TakeOver(int bot)
 
 public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
-	if(IsRoundStarted() == false)
-		return;
-
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return;
