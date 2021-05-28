@@ -103,8 +103,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		
 	if(g_bShouldCharge[client] && !g_bIsCharging[client] && -1.0 < fSurvivorProximity < 100.0 && ReadyAbility(client) && !IsChargeSurvivor(client) && IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
 	{
-			buttons |= IN_ATTACK;
-			return Plugin_Changed;
+		buttons |= IN_ATTACK;
+		return Plugin_Changed;
 	}
 
 	if(0.50 * g_fChargeProximity < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
