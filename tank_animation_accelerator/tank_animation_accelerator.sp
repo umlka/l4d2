@@ -90,17 +90,15 @@ public MRESReturn SelectWeightedSequencePost(int pThis, DHookReturn hReturn, DHo
 	if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis) || GetClientTeam(pThis) != 3 || !IsPlayerAlive(pThis) || GetEntProp(pThis, Prop_Send, "m_zombieClass") != 8 || GetEntProp(pThis, Prop_Send, "m_isGhost") == 1)
 		return MRES_Ignored;
 
+	
 	switch(hReturn.Value)
 	{
-		case 54, 55, 56, 57, 58, 59, 60:
+		case 1, 10:
+			SetEntPropFloat(pThis, Prop_Send, "m_flCycle", 10.0);
+
+		case 54, 55, 56, 57, 58 ,59, 60:
 		{
 			hReturn.Value = GetAnimation(pThis, "ACT_HULK_ATTACK_LOW");
-			SetEntPropFloat(pThis, Prop_Send, "m_flCycle", 10.0);
-			return MRES_Override;
-		}
-
-		case 1, 10:
-		{
 			SetEntPropFloat(pThis, Prop_Send, "m_flCycle", 10.0);
 			return MRES_Override;
 		}
@@ -153,14 +151,8 @@ public void Hook_PostThinkPost(int client)
 	if(!IsPlayerAlive(client) || GetClientTeam(client) != 3 || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
 		return;
 
-	switch(GetEntProp(client, Prop_Send, "m_nSequence"))
-	{
-		case 17: //爬比较矮的障碍,设置的值过大会有几率导致坦克飞出去
-			SetEntPropFloat(client, Prop_Send, "m_flPlaybackRate", 2.0);
-
-		case 18, 19, 20, 21, 22, 23: //爬围栏/障碍
-			SetEntPropFloat(client, Prop_Send, "m_flPlaybackRate", 10.0); //不能设置太高否则无法爬上去
-	}
+	if(17 <= GetEntProp(client, Prop_Send, "m_nSequence") <= 23) //爬围栏/障碍
+		SetEntPropFloat(client, Prop_Send, "m_flPlaybackRate", 10.0); //不能设置太高否则无法爬上去
 }
 
 void LoadGameData()
