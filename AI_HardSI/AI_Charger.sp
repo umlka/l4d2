@@ -12,6 +12,9 @@ float g_fChargeProximity;
 int g_iHealthThresholdCharger;
 int g_iAimOffsetSensitivityCharger;
 
+bool g_bIsCharging[MAXPLAYERS + 1];
+bool g_bShouldCharge[MAXPLAYERS + 1];
+
 public Plugin myinfo = 
 {
 	name = "AI CHARGER",
@@ -23,15 +26,17 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	g_hChargeProximity = CreateConVar("ai_charge_proximity", "250.0", "How close a client will approach before charging");
-	g_hHealthThresholdCharger = CreateConVar("ai_health_threshold_charger", "250", "Charger will charge if its health drops to this level");
-	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "35", "If the client has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
+	g_hChargeProximity = CreateConVar("ai_charge_proximity", "300.0", "How close a client will approach before charging");
+	g_hHealthThresholdCharger = CreateConVar("ai_health_threshold_charger", "300", "Charger will charge if its health drops to this level");
+	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "30", "If the client has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
 	
 	g_hChargeProximity.AddChangeHook(ConVarChanged);
 	g_hHealthThresholdCharger.AddChangeHook(ConVarChanged);
 	g_hAimOffsetSensitivityCharger.AddChangeHook(ConVarChanged);
 
+	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("charger_charge_start", Event_ChargerChargeStart);
+	HookEvent("charger_charge_end", Event_ChargerChargeEnd);
 }
 
 public void OnConfigsExecuted()
@@ -51,13 +56,32 @@ void GetCvars()
 	g_iAimOffsetSensitivityCharger = g_hAimOffsetSensitivityCharger.IntValue;
 }
 
+public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	g_bIsCharging[client] = false;
+	g_bShouldCharge[client] = false;
+}
+
 public void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
+	g_bIsCharging[client] = true;
+
 	int flags = GetEntProp(client, Prop_Send, "m_fFlags");
 	SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_FROZEN);
 	Charger_OnCharge(client);
 	SetEntProp(client, Prop_Send, "m_fFlags", flags);
+}
+
+public void Event_ChargerChargeEnd(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(client)
+	{
+		g_bIsCharging[client] = false;
+		g_bShouldCharge[client] = true;
+	}
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
@@ -66,27 +90,28 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		return Plugin_Continue;
 	
 	static int iTarget;
-	static bool bHasSight;
 	static float fSurvivorProximity;
 	iTarget = GetClientAimTarget(client, true);
-	bHasSight = !!GetEntProp(client, Prop_Send, "m_hasVisibleThreats");
 	fSurvivorProximity = GetSurvivorProximity(client, iTarget);
-	if(fSurvivorProximity > g_fChargeProximity)
+	if(fSurvivorProximity > g_fChargeProximity && GetEntProp(client, Prop_Send, "m_iHealth") > g_iHealthThresholdCharger)
 	{
-		if(GetEntProp(client, Prop_Send, "m_iHealth") > g_iHealthThresholdCharger)
+		if(!g_bShouldCharge[client])
 			BlockCharge(client);
 	}
-	else if(((bHasSight && -1.0 < fSurvivorProximity < 50.0) || (buttons & IN_ATTACK2 != 0 && -1.0 < fSurvivorProximity < 100.0)) && ReadyAbility(client) && !IsChargeSurvivor(client) && IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
+	else
+		g_bShouldCharge[client] = true;
+		
+	if(g_bShouldCharge[client] && !g_bIsCharging[client] && -1.0 < fSurvivorProximity < 100.0 && ReadyAbility(client) && !IsChargeSurvivor(client) && IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
 	{
-		buttons |= IN_ATTACK;
-		return Plugin_Changed;
+			buttons |= IN_ATTACK;
+			return Plugin_Changed;
 	}
 
-	if(bHasSight && 0.50 * g_fChargeProximity < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2)
+	if(0.50 * g_fChargeProximity < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 190.0)
+		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 150.0)
 		{
 			buttons |= IN_DUCK;
 			buttons |= IN_JUMP;
@@ -107,25 +132,25 @@ void Bhopx(int client, int &buttons, const float vAng[3])
 	if(buttons & IN_FORWARD)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Pushx(client, vVec, 120.0);
+		Client_Pushx(client, vVec, 160.0);
 	}
 		
 	if(buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Pushx(client, vVec, -60.0);
+		Client_Pushx(client, vVec, -80.0);
 	}
 	
 	if(buttons & IN_MOVELEFT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Pushx(client, vVec, -60.0);
+		Client_Pushx(client, vVec, -80.0);
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Pushx(client, vVec, 60.0);
+		Client_Pushx(client, vVec, 80.0);
 	}
 }
 
@@ -234,7 +259,8 @@ bool ReadyAbility(int client)
 
 void BlockCharge(int client) 
 {
-	int iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
+	static int iAbility;
+	iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 	if(iAbility != -1)
 		SetEntPropFloat(iAbility, Prop_Send, "m_timestamp", GetGameTime() + 0.1);	
 }
