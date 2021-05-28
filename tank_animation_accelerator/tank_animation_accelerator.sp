@@ -40,7 +40,7 @@ public void OnPluginStart()
 	LoadGameData();
 
 	HookEvent("round_end", Event_RoundEnd);
-	HookEvent("player_spawn", Event_PlayerSpawn);
+	HookEvent("tank_spawn", Event_TankSpawn);
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("player_team", Event_PlayerTeam);
 }
@@ -49,44 +49,6 @@ public void OnPluginEnd()
 {
 	if(!g_dDetour.Disable(Hook_Pre, SelectWeightedSequencePre) || !g_dDetour.Disable(Hook_Post, SelectWeightedSequencePost))
 		SetFailState("Failed to disable detour: CTerrorPlayer::SelectWeightedSequence");
-}
-
-public MRESReturn SelectWeightedSequencePre(int pThis, DHookReturn hReturn, DHookParam hParams)
-{
-    /*Nothing*/
-}
-
-public MRESReturn SelectWeightedSequencePost(int pThis, DHookReturn hReturn, DHookParam hParams)
-{
-    if(pThis <= 0 || pThis > MaxClients || !IsClientInGame(pThis) || GetClientTeam(pThis) != 3 || !IsPlayerAlive(pThis) || GetEntProp(pThis, Prop_Send, "m_zombieClass") != 8 || GetEntProp(pThis, Prop_Send, "m_isGhost") == 1)
-        return MRES_Ignored;
-
-    if(54 <= hReturn.Value <= 60) //https://forums.alliedmods.net/showpost.php?p=2669064&postcount=2
-    {
-		hReturn.Value = GetAnimation(pThis, "ACT_HULK_ATTACK_LOW");
-		SetEntPropFloat(pThis, Prop_Send, "m_flCycle", 15.0);
-		return MRES_Override;
-    }
-
-    return MRES_Ignored;
-} 
-
-//https://forums.alliedmods.net/showpost.php?p=2673097&postcount=18
-int GetAnimation(int entity, const char[] sSequence)
-{
-	int iEntity = CreateEntityByName("prop_dynamic");
-	if(iEntity == -1)
-		return -1;
-
-	char sModel[64];
-	GetClientModel(entity, sModel, sizeof(sModel));
-	SetEntityModel(iEntity, sModel);
-	SetVariantString(sSequence);
-	AcceptEntityInput(iEntity, "SetAnimation");
-	int iResult = GetEntProp(iEntity, Prop_Send, "m_nSequence");
-	RemoveEdict(iEntity);
-
-	return iResult;
 }
 
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -98,13 +60,14 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 	}
 }
 
-public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+public void Event_TankSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	Unhook(client);
-
-	if(client && IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 8)
+	if(client && IsClientInGame(client) && IsFakeClient(client))
+	{
+		Unhook(client);
 		Hook(client);
+	}
 }
 
 public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
@@ -115,6 +78,56 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
 	Unhook(GetClientOfUserId(event.GetInt("userid")));
+}
+
+public MRESReturn SelectWeightedSequencePre(int pThis, DHookReturn hReturn, DHookParam hParams)
+{
+	/*Nothing*/
+}
+
+public MRESReturn SelectWeightedSequencePost(int pThis, DHookReturn hReturn, DHookParam hParams)
+{
+	if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis) || GetClientTeam(pThis) != 3 || !IsPlayerAlive(pThis) || GetEntProp(pThis, Prop_Send, "m_zombieClass") != 8 || GetEntProp(pThis, Prop_Send, "m_isGhost") == 1)
+		return MRES_Ignored;
+
+	switch(hReturn.Value)
+	{
+		case 54, 55, 56, 57, 58, 59, 60:
+		{
+			hReturn.Value = GetAnimation(pThis, "ACT_HULK_ATTACK_LOW");
+			SetEntPropFloat(pThis, Prop_Send, "m_flCycle", 10.0);
+			return MRES_Override;
+		}
+
+		case 1, 10:
+		{
+			SetEntPropFloat(pThis, Prop_Send, "m_flCycle", 10.0);
+			return MRES_Override;
+		}
+	}
+
+	return MRES_Ignored;
+} 
+
+//https://forums.alliedmods.net/showpost.php?p=2673097&postcount=18
+static int GetAnimation(int entity, const char[] sSequence)
+{
+	static int iEntity;
+	iEntity = CreateEntityByName("prop_dynamic");
+	if(iEntity == -1)
+		return -1;
+
+	static char sModel[128];
+	GetClientModel(entity, sModel, sizeof(sModel));
+	SetEntityModel(iEntity, sModel);
+	SetVariantString(sSequence);
+	AcceptEntityInput(iEntity, "SetAnimation");
+
+	static int iResult;
+	iResult = GetEntProp(iEntity, Prop_Send, "m_nSequence");
+	RemoveEdict(iEntity);
+
+	return iResult;
 }
 
 void Hook(int client)
@@ -137,7 +150,7 @@ void Unhook(int client)
 
 public void Hook_PostThinkPost(int client)
 {
-	if(!IsPlayerAlive(client))
+	if(!IsPlayerAlive(client) || GetClientTeam(client) != 3 || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
 		return;
 
 	switch(GetEntProp(client, Prop_Send, "m_nSequence"))
@@ -154,11 +167,11 @@ void LoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false) 
+	if(FileExists(sPath) == false)
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null) 
+	if(hGameData == null)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	SetupDetours(hGameData);
