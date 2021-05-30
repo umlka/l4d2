@@ -609,8 +609,8 @@ void Action_Infected(int client, int index)
 	menu.AddItem("Smoker", "Smoker");
 	menu.AddItem("Boomer", "Boomer");
 	menu.AddItem("Hunter", "Hunter");
-	menu.AddItem("Jockey", "Jockey");
 	menu.AddItem("Spitter", "Spitter");
+	menu.AddItem("Jockey", "Jockey");
 	menu.AddItem("Charger", "Charger");
 	menu.AddItem("Tank", "Tank");
 	menu.AddItem("Witch", "Witch");
