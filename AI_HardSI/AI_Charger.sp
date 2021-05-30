@@ -107,7 +107,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		return Plugin_Changed;
 	}
 
-	if(0.50 * g_fChargeProximity < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if(!g_bIsCharging[client] && 0.50 * g_fChargeProximity < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
@@ -257,7 +257,7 @@ bool ReadyAbility(int client)
 	return iAbility != -1 && GetEntPropFloat(iAbility, Prop_Send, "m_timestamp") < GetGameTime();
 }
 
-void BlockCharge(int client) 
+void BlockCharge(int client)
 {
 	static int iAbility;
 	iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
@@ -300,7 +300,7 @@ bool MakeNearestVectors(int client, float NearestVectors[3])
 	return true;
 }
 
-bool IsTargetWatchingAttacker(int iAttacker, int iOffsetThreshold) 
+bool IsTargetWatchingAttacker(int iAttacker, int iOffsetThreshold)
 {
 	static int iTarget;
 	static bool bIsWatching;
@@ -330,7 +330,7 @@ float GetPlayerAimOffset(int iAttacker, int iTarget)
 	GetAngleVectors(vAim, vAim, NULL_VECTOR, NULL_VECTOR);
 	NormalizeVector(vAim, vAim);
 	
-	GetClientAbsOrigin(iTarget, vTarget); 
+	GetClientAbsOrigin(iTarget, vTarget);
 	GetClientAbsOrigin(iAttacker, vAttacker);
 	vAttacker[2] = vTarget[2] = 0.0;
 	MakeVectorFromPoints(vAttacker, vTarget, vAttacker);
@@ -386,7 +386,7 @@ bool IsAliveSurvivor(int client)
 
 bool IsValidClient(int client)
 {
-	return client > 0 && client <= MaxClients && IsClientInGame(client); 
+	return client > 0 && client <= MaxClients && IsClientInGame(client);
 }
 
 bool IsIncapacitated(int client)
