@@ -54,8 +54,8 @@ void GetCvars()
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	float fTime = GetGameTime();
-	for(int i; i <= MaxClients; i++) 
-		for(int j; j < 2; j++) 
+	for(int i; i <= MaxClients; i++)
+		for(int j; j < 2; j++)
 			g_fDelay[i][j] = fTime;
 }
 
@@ -118,7 +118,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		if(iNoIncapped != 0)
 		{
 			SortFloats(fNoIncappeds, iNoIncapped, Sort_Ascending);
-			if(-1.0 < fNoIncappeds[0] < g_fTankAttackRange * 0.95) 
+			if(-1.0 < fNoIncappeds[0] < g_fTankAttackRange * 0.95)
 			{
 				buttons |= IN_ATTACK;
 				return Plugin_Changed;
@@ -133,12 +133,12 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		static int iAimTarget;
 		iAimTarget = GetClientAimTarget(client, true);
-		if(!IsAliveSurvivor(iAimTarget) || IsIncapacitated(iAimTarget) || IsPinned(iAimTarget) || !IsVisibleTo(client, iAimTarget)) 
+		if(!IsAliveSurvivor(iAimTarget) || IsIncapacitated(iAimTarget) || IsPinned(iAimTarget) || !IsVisibleTo(client, iAimTarget))
 		{
 			iAimTarget = GetClosestSurvivor(client, iAimTarget);
-			if(iAimTarget != -1) 
+			if(iAimTarget != -1)
 			{
-				if(angles[2] == 0.0) 
+				if(angles[2] == 0.0)
 				{
 					static float vAimAngles[3];
 					ComputeAimAngles(client, iAimTarget, vAimAngles, AimTarget_Chest);
@@ -229,7 +229,7 @@ void Client_Push(int client, const float vAng[3], float fForce)
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 }
 */
-public Action L4D2_OnSelectTankAttack(int client, int &sequence) 
+public Action L4D2_OnSelectTankAttack(int client, int &sequence)
 {
 	if(IsFakeClient(client) && sequence == 50)
 	{
@@ -250,7 +250,7 @@ bool DelayExpired(int client, int index, float fDelay)
 	return GetGameTime() - g_fDelay[client][index] > fDelay;
 }
 
-bool IsIncapacitated(int client) 
+bool IsIncapacitated(int client)
 {
 	return !!GetEntProp(client, Prop_Send, "m_isIncapacitated");
 }
@@ -262,10 +262,10 @@ bool IsAliveSurvivor(int client)
 
 bool IsValidClient(int client)
 {
-	return client > 0 && client <= MaxClients && IsClientInGame(client); 
+	return client > 0 && client <= MaxClients && IsClientInGame(client);
 }
 
-bool IsPinned(int client) 
+bool IsPinned(int client)
 {
 	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
 		return true;
@@ -292,17 +292,17 @@ bool IsVisibleTo(int client, int iTarget)
 	hTrace = TR_TraceRayFilterEx(vEyePos, vAngles, MASK_SOLID, RayType_Infinite, TraceFilter, client);
 	if(hTrace != null)
 	{
-		if(TR_DidHit(hTrace)) 
+		if(TR_DidHit(hTrace))
 		{
 			delete hTrace;
-			return TR_GetEntityIndex(hTrace) == iTarget; 
+			return TR_GetEntityIndex(hTrace) == iTarget;
 		}
 		delete hTrace;
 	}
 	return false;
 }
 
-bool TraceFilter(int entity, int contentMask, any data) 
+bool TraceFilter(int entity, int contentMask, any data)
 {
 	return entity != data;
 }
@@ -315,7 +315,7 @@ void ComputeAimAngles(int client, int iTarget, float vAngles[3], AimTarget iType
 
 	GetClientEyePosition(client, vEyePos);
 
-	switch(iType) 
+	switch(iType)
 	{
 		case AimTarget_Eye:
 			GetClientEyePosition(iTarget, vTarget);
@@ -326,7 +326,7 @@ void ComputeAimAngles(int client, int iTarget, float vAngles[3], AimTarget iType
 		case AimTarget_Chest:
 		{
 			GetClientAbsOrigin(iTarget, vTarget);
-			vTarget[2] += 45.0; // このくらい
+			vTarget[2] += 45.0;
 		}
 	}
 
