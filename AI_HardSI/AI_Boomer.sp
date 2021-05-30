@@ -222,7 +222,7 @@ bool IsAliveSurvivor(int client)
 
 bool IsValidClient(int client)
 {
-	return client > 0 && client <= MaxClients && IsClientInGame(client); 
+	return client > 0 && client <= MaxClients && IsClientInGame(client);
 }
 
 bool MakeNearestVectors(int client, float NearestVectors[3])
