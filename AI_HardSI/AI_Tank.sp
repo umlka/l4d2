@@ -94,11 +94,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if(iNormalAlive != 0)
 	{
 		SortFloats(fNormalAlives, iNormalAlive, Sort_Ascending);
-		if(g_fTankAttackRange + 45.0 < fNormalAlives[0] < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+		if(g_fTankAttackRange + 100.0 < fNormalAlives[0] < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		{
 			static float vVelocity[3];
 			GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-			if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 190.0)
+			if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 200.0)
 			{
 				//buttons &= ~IN_ATTACK2;
 				buttons |= IN_DUCK;
@@ -106,7 +106,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 					
 				static float vEyeAngles[3];
 				GetClientEyeAngles(client, vEyeAngles);
-				Bhopx(client, buttons, vEyeAngles);
+				Bhop(client, buttons, vEyeAngles);
 				return Plugin_Changed;
 			}
 		}
@@ -153,35 +153,35 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return Plugin_Continue;
 }
 
-void Bhopx(int client, int &buttons, const float vAng[3])
+void Bhop(int client, int &buttons, const float vAng[3])
 {
 	static float vVec[3];
 	if(buttons & IN_FORWARD)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Pushx(client, vVec, 80.0);
+		Client_Push(client, vVec, 80.0);
 	}
 		
 	if(buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Pushx(client, vVec, -80.0);
+		Client_Push(client, vVec, -40.0);
 	}
 	
 	if(buttons & IN_MOVELEFT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Pushx(client, vVec, -80.0);
+		Client_Push(client, vVec, -80.0);
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Pushx(client, vVec, 80.0);
+		Client_Push(client, vVec, 80.0);
 	}
 }
 
-void Client_Pushx(int client, float vVec[3], float fForce)
+void Client_Push(int client, float vVec[3], float fForce)
 {
 	NormalizeVector(vVec, vVec);
 	ScaleVector(vVec, fForce);
