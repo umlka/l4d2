@@ -94,20 +94,27 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if(iNormalAlive != 0)
 	{
 		SortFloats(fNormalAlives, iNormalAlive, Sort_Ascending);
-		if(g_fTankAttackRange + 100.0 < fNormalAlives[0] < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+		if(g_fTankAttackRange + 45.0 < fNormalAlives[0] < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		{
 			static float vVelocity[3];
 			GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
 			if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 200.0)
 			{
-				//buttons &= ~IN_ATTACK2;
-				buttons |= IN_DUCK;
-				buttons |= IN_JUMP;
+				static int entity;
+				static char classname[18];
+				entity = GetClientAimTarget(client, false);
+				GetEdictClassname(entity, classname, sizeof(classname));
+				if(strcmp(classname, "func_simpleladder") == 0)
+				{
+					//buttons &= ~IN_ATTACK2;
+					buttons |= IN_DUCK;
+					buttons |= IN_JUMP;
 					
-				static float vEyeAngles[3];
-				GetClientEyeAngles(client, vEyeAngles);
-				Bhop(client, buttons, vEyeAngles);
-				return Plugin_Changed;
+					static float vEyeAngles[3];
+					GetClientEyeAngles(client, vEyeAngles);
+					Bhop(client, buttons, vEyeAngles);
+					return Plugin_Changed;
+				}
 			}
 		}
 	}
