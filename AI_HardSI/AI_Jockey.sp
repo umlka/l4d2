@@ -15,6 +15,15 @@ float g_fHopActivationProximity;
 bool g_bCanLeap[MAXPLAYERS + 1];
 bool g_bDoNormalJump[MAXPLAYERS + 1];
 
+public Plugin myinfo = 
+{
+	name = "AI JOCKEY",
+	author = "Breezy",
+	description = "Improves the AI behaviour of special infected",
+	version = "1.0",
+	url = "github.com/breezyplease"
+};
+
 public void OnPluginStart()
 {
 	FindConVar("z_jockey_leap_range").SetFloat(1000.0);
