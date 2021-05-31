@@ -23,15 +23,22 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
 		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 170.0)
 		{
-			if(150.0 < NearestSurvivorDistance(client) < 1000.0)
+			static int entity;
+			static char classname[18];
+			entity = GetClientAimTarget(client, false);
+			GetEdictClassname(entity, classname, sizeof(classname));
+			if(strcmp(classname, "func_simpleladder") == 0)
 			{
-				buttons |= IN_DUCK;
-				buttons |= IN_JUMP;
+				if(150.0 < NearestSurvivorDistance(client) < 1000.0)
+				{
+					buttons |= IN_DUCK;
+					buttons |= IN_JUMP;
 				
-				static float vEyeAngles[3];
-				GetClientEyeAngles(client, vEyeAngles);
-				Bhop(client, buttons, vEyeAngles);
-				return Plugin_Changed;
+					static float vEyeAngles[3];
+					GetClientEyeAngles(client, vEyeAngles);
+					Bhop(client, buttons, vEyeAngles);
+					return Plugin_Changed;
+				}
 			}
 		}
 	}
