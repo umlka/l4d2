@@ -69,29 +69,37 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 160.0)
+		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 160.0 && !IsWatchingLadder(client))
 		{
-			static int entity;
-			static char classname[18];
-			entity = GetClientAimTarget(client, false);
-			GetEdictClassname(entity, classname, sizeof(classname));
-			if(strcmp(classname, "func_simpleladder") == 0)
+			if(0.50 * g_fVomitRange < NearestSurvivorDistance(client) < 1000.0)
 			{
-				if(0.50 * g_fVomitRange < NearestSurvivorDistance(client) < 1000.0)
-				{
-					buttons |= IN_DUCK;
-					buttons |= IN_JUMP;
+				buttons |= IN_DUCK;
+				buttons |= IN_JUMP;
 				
-					static float vEyeAngles[3];
-					GetClientEyeAngles(client, vEyeAngles);
-					Bhop(client, buttons, vEyeAngles);
-					return Plugin_Changed;
-				}
+				static float vEyeAngles[3];
+				GetClientEyeAngles(client, vEyeAngles);
+				Bhop(client, buttons, vEyeAngles);
+				return Plugin_Changed;
 			}
 		}
 	}
 
 	return Plugin_Continue;
+}
+
+bool IsWatchingLadder(int client)
+{
+	static int entity;
+	static char classname[18];
+	entity = GetClientAimTarget(client, false);
+	if(entity == -1 || !IsValidEntity(entity))
+		return false;
+
+	GetEdictClassname(entity, classname, sizeof(classname));
+	if(classname[0] == 'f' && strcmp(classname, "func_simpleladder") == 0)
+		return true;
+		
+	return false;
 }
 
 void Bhop(int client, int &buttons, const float vAng[3])
