@@ -90,16 +90,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 bool IsWatchingLadder(int client)
 {
 	static int entity;
-	static char classname[18];
 	entity = GetClientAimTarget(client, false);
 	if(entity == -1 || !IsValidEntity(entity))
 		return false;
 
-	GetEdictClassname(entity, classname, sizeof(classname));
-	if(classname[0] == 'f' && strcmp(classname, "func_simpleladder") == 0)
-		return true;
-		
-	return false;
+	return HasEntProp(entity, Prop_Data, "m_climbableNormal");
 }
 
 void Bhop(int client, int &buttons, const float vAng[3])
@@ -108,25 +103,23 @@ void Bhop(int client, int &buttons, const float vAng[3])
 	if(buttons & IN_FORWARD)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, 180.0);
+		Client_Push(client, vVec, 160.0);
 	}
 
-	if(buttons & IN_BACK)
+	if(buttons & IN_BACK == IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, -90.0);
+		Client_Push(client, vVec, -80.0);
 	}
-	
-	if(buttons & IN_MOVELEFT)
+	else if(buttons & IN_MOVELEFT == IN_MOVELEFT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, -180.0);
+		Client_Push(client, vVec, -160.0);
 	}
-
-	if(buttons & IN_MOVERIGHT)
+	else if(buttons & IN_MOVERIGHT == IN_MOVERIGHT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, 180.0);
+		Client_Push(client, vVec, 160.0);
 	}
 }
 
