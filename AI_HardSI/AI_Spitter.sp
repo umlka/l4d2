@@ -55,25 +55,25 @@ void Bhop(int client, int &buttons, const float vAng[3])
 	if(buttons & IN_FORWARD)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, 160.0);
+		Client_Push(client, vVec, 120.0);
 	}
 
 	if(buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, -80.0);
+		Client_Push(client, vVec, -60.0);
 	}
 
 	if(buttons & IN_MOVELEFT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, -160.0);
+		Client_Push(client, vVec, -60.0);
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, 160.0);
+		Client_Push(client, vVec, 60.0);
 	}
 }
 
