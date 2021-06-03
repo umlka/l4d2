@@ -17,7 +17,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 4 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
-	if(GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2)
+	if(GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
@@ -48,7 +48,7 @@ bool IsWatchingLadder(int client)
 
 	return HasEntProp(entity, Prop_Data, "m_climbableNormal");
 }
-
+/*
 void Bhop(int client, int &buttons, const float vAng[3])
 {
 	static float vVec[3];
@@ -79,6 +79,43 @@ void Bhop(int client, int &buttons, const float vAng[3])
 
 void Client_Push(int client, float vVec[3], float fForce)
 {
+	NormalizeVector(vVec, vVec);
+	ScaleVector(vVec, fForce);
+
+	static float vVel[3];
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
+	AddVectors(vVel, vVec, vVel);
+	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+}
+*/
+void Bhop(int client, int &buttons, float vAng[3])
+{
+	if(buttons & IN_FORWARD)
+		Client_Push(client, vAng, 120.0);
+		
+	if(buttons & IN_BACK)
+	{
+		vAng[1] += 180.0;
+		Client_Push(client, vAng, 60.0);
+	}
+	
+	if(buttons & IN_MOVELEFT)
+	{
+		vAng[1] += 90.0;
+		Client_Push(client, vAng, 60.0);
+	}
+
+	if(buttons & IN_MOVERIGHT)
+	{
+		vAng[1] -= 90.0;
+		Client_Push(client, vAng, 60.0);
+	}
+}
+
+void Client_Push(int client, const float vAng[3], float fForce)
+{
+	static float vVec[3];
+	GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
 	NormalizeVector(vVec, vVec);
 	ScaleVector(vVec, fForce);
 
