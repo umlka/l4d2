@@ -162,7 +162,7 @@ bool IsWatchingLadder(int client)
 
 	return HasEntProp(entity, Prop_Data, "m_climbableNormal");
 }
-
+/*
 void Bhop(int client, int &buttons, const float vAng[3])
 {
 	static float vVec[3];
@@ -175,7 +175,7 @@ void Bhop(int client, int &buttons, const float vAng[3])
 	if(buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, -40.0);
+		Client_Push(client, vVec, -80.0);
 	}
 
 	if(buttons & IN_MOVELEFT)
@@ -201,7 +201,7 @@ void Client_Push(int client, float vVec[3], float fForce)
 	AddVectors(vVel, vVec, vVel);
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 }
-/*
+*/
 void Bhop(int client, int &buttons, float vAng[3])
 {
 	if(buttons & IN_FORWARD)
@@ -238,7 +238,7 @@ void Client_Push(int client, const float vAng[3], float fForce)
 	AddVectors(vVel, vVec, vVel);
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 }
-*/
+
 public Action L4D2_OnSelectTankAttack(int client, int &sequence)
 {
 	if(IsFakeClient(client) && sequence == 50)
