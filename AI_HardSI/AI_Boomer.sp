@@ -109,19 +109,19 @@ void Bhop(int client, int &buttons, const float vAng[3])
 	if(buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, -80.0);
+		Client_Push(client, vVec, -90.0);
 	}
 
 	if(buttons & IN_MOVELEFT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, -180.0);
+		Client_Push(client, vVec, -90.0);
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, 180.0);
+		Client_Push(client, vVec, 90.0);
 	}
 }
 
@@ -146,7 +146,10 @@ void Boomer_OnVomit(int client)
 			static float vVelocity[3];
 			GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
 			NormalizeVector(NearestVectors, NearestVectors);
-			ScaleVector(NearestVectors, GetVectorLength(vVelocity));
+			
+			static float vLenght;
+			vLenght = GetVectorLength(vVelocity);
+			ScaleVector(NearestVectors, vLenght < 250.0 ? 250.0 : vLenght);
 
 			static float NearestAngles[3];
 			GetVectorAngles(NearestVectors, NearestAngles);
