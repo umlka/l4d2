@@ -113,7 +113,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
 		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 150.0 && !IsWatchingLadder(client))
 		{
-			buttons |= IN_DUCK;
+			//buttons |= IN_DUCK;
 			buttons |= IN_JUMP;
 
 			static float vEyeAngles[3];
@@ -135,37 +135,74 @@ bool IsWatchingLadder(int client)
 
 	return HasEntProp(entity, Prop_Data, "m_climbableNormal");
 }
-
+/*
 void Bhop(int client, int &buttons, const float vAng[3])
 {
 	static float vVec[3];
 	if(buttons & IN_FORWARD)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, 160.0);
+		Client_Push(client, vVec, 180.0);
 	}
 
 	if(buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, -80.0);
+		Client_Push(client, vVec, -90.0);
 	}
 	
 	if(buttons & IN_MOVELEFT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, -160.0);
+		Client_Push(client, vVec, -90.0);
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, 160.0);
+		Client_Push(client, vVec, 90.0);
 	}
 }
 
 void Client_Push(int client, float vVec[3], float fForce)
 {
+	NormalizeVector(vVec, vVec);
+	ScaleVector(vVec, fForce);
+
+	static float vVel[3];
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
+	AddVectors(vVel, vVec, vVel);
+	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+}
+*/
+void Bhop(int client, int &buttons, float vAng[3])
+{
+	if(buttons & IN_FORWARD)
+		Client_Push(client, vAng, 180.0);
+		
+	if(buttons & IN_BACK)
+	{
+		vAng[1] += 180.0;
+		Client_Push(client, vAng, 90.0);
+	}
+	
+	if(buttons & IN_MOVELEFT)
+	{
+		vAng[1] += 90.0;
+		Client_Push(client, vAng, 90.0);
+	}
+
+	if(buttons & IN_MOVERIGHT)
+	{
+		vAng[1] -= 90.0;
+		Client_Push(client, vAng, 90.0);
+	}
+}
+
+void Client_Push(int client, const float vAng[3], float fForce)
+{
+	static float vVec[3];
+	GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
 	NormalizeVector(vVec, vVec);
 	ScaleVector(vVec, fForce);
 
@@ -245,7 +282,10 @@ void Charger_OnCharge(int client)
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
 		NormalizeVector(NearestVectors, NearestVectors);
-		ScaleVector(NearestVectors, GetVectorLength(vVelocity));
+		
+		static float vLenght;
+		vLenght = GetVectorLength(vVelocity);
+		ScaleVector(NearestVectors, vLenght < 500.0 ? 500.0 : vLenght);
 
 		static float NearestAngles[3];
 		GetVectorAngles(NearestVectors, NearestAngles);
