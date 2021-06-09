@@ -69,16 +69,13 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0 && !IsWatchingLadder(client))
+		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
 		{
 			if(0.50 * g_fVomitRange < NearestSurvivorDistance(client) < 1000.0)
 			{
-				buttons |= IN_DUCK;
-				buttons |= IN_JUMP;
-				
 				static float vEyeAngles[3];
 				GetClientEyeAngles(client, vEyeAngles);
-				Bhop(client, buttons, vEyeAngles);
+				if(Bhop(client, buttons, vEyeAngles))
 				return Plugin_Changed;
 			}
 		}
@@ -87,45 +84,44 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return Plugin_Continue;
 }
 
-bool IsWatchingLadder(int client)
+bool Bhop(int client, int &buttons, const float vAng[3])
 {
-	static int entity;
-	entity = GetClientAimTarget(client, false);
-	if(entity == -1 || !IsValidEntity(entity))
-		return false;
-
-	return HasEntProp(entity, Prop_Data, "m_climbableNormal");
-}
-
-void Bhop(int client, int &buttons, const float vAng[3])
-{
+	static bool bJumped;
+	bJumped = false;
+	
 	static float vVec[3];
 	if(buttons & IN_FORWARD)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, 180.0);
+		if(Client_Push(client, buttons, vVec, 180.0))
+			bJumped = true;
 	}
 
 	if(buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, -90.0);
+		if(Client_Push(client, buttons, vVec, -90.0))
+			bJumped = true;
 	}
 
 	if(buttons & IN_MOVELEFT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, -90.0);
+		if(Client_Push(client, buttons, vVec, -90.0))
+			bJumped = true;
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, 90.0);
+		if(Client_Push(client, buttons, vVec, 90.0))
+			bJumped = true;
 	}
+	
+	return bJumped;
 }
 
-void Client_Push(int client, float vVec[3], float fForce)
+bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 {
 	NormalizeVector(vVec, vVec);
 	ScaleVector(vVec, fForce);
@@ -133,7 +129,102 @@ void Client_Push(int client, float vVec[3], float fForce)
 	static float vVel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
-	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+
+	if(WontFall(client, vVel))
+	{
+		buttons |= IN_DUCK;
+		buttons |= IN_JUMP;
+		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+		return true;
+	}
+	
+	SetEntPropFloat(client, Prop_Send, "m_flStamina", 0.0);
+	return false;
+}
+
+bool WontFall(int client, float vVel[3])
+{
+	static float vStart[3];
+	static float vEnd[3];
+	GetClientEyePosition(client, vStart);
+	AddVectors(vVel, vStart, vEnd);
+
+	static float vMin[3];
+	static float vMax[3];
+	GetClientMins(client, vMin);
+	GetClientMaxs(client, vMax);
+
+	static Handle hTrace;
+	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+
+	static bool bDidHit;
+	bDidHit = false;
+	
+	static float fDistance;
+	fDistance = 0.0;
+
+	static float vEndNonCol[3];
+
+	if(hTrace != null)
+	{
+		if(TR_DidHit(hTrace))
+		{
+			bDidHit = true;
+			TR_GetEndPosition(vEndNonCol, hTrace);
+			fDistance = GetVectorDistance(vStart, vEndNonCol);
+		}
+		delete hTrace;
+	}
+	
+	if(bDidHit)
+	{
+		if(fDistance < GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
+			return false;
+	}
+	else
+		vEndNonCol = vEnd;
+		
+	static float vDown[3];
+	vDown[0] = vEndNonCol[0];
+	vDown[1] = vEndNonCol[1];
+	vDown[2] = vEndNonCol[2] - 100000.0;
+
+	hTrace = TR_TraceHullFilterEx(vEndNonCol, vDown, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	if(hTrace != null)
+	{
+		if(TR_DidHit(hTrace))
+		{
+			TR_GetEndPosition(vEnd, hTrace);
+			if(GetVectorDistance(vEndNonCol, vEnd) > 180.0)
+			{
+				delete hTrace;
+				return false;
+			}
+			delete hTrace;
+			return true;
+		}
+		delete hTrace;
+		return false;
+	}
+	return false;
+}
+
+public bool TraceEntityFilter(int entity, int contentsMask)
+{
+	if(!entity || entity <= MaxClients)
+		return false;
+	else
+	{
+		static char sClassName[9];
+		GetEntityClassname(entity, sClassName, sizeof(sClassName));
+		if(sClassName[0] == 'i' || sClassName[0] == 'w')
+		{
+			if(strcmp(sClassName, "infected") == 0 || strcmp(sClassName, "witch") == 0)
+				return false;
+		}
+	}
+
+	return true;
 }
 
 void Boomer_OnVomit(int client)
