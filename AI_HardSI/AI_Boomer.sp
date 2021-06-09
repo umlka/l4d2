@@ -76,7 +76,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				static float vEyeAngles[3];
 				GetClientEyeAngles(client, vEyeAngles);
 				if(Bhop(client, buttons, vEyeAngles))
-				return Plugin_Changed;
+					return Plugin_Changed;
 			}
 		}
 	}
