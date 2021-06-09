@@ -108,12 +108,8 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 	static float vVel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
-	
-	static float vPos[3];
-	static float vEnd[3];
-	GetClientAbsOrigin(client, vPos);
-	AddVectors(vVel, vPos, vEnd);
-	if(AllowBhop(client, vPos, vEnd))
+
+	if(WontFall(client, vVel))
 	{
 		buttons |= IN_DUCK;
 		buttons |= IN_JUMP;
@@ -124,17 +120,20 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 	return false;
 }
 
-bool AllowBhop(int client, float vStart[3], float vEnd[3])
+bool WontFall(int client, float vVel[3])
 {
+	static float vStart[3];
+	static float vEnd[3];
+	GetClientEyePosition(client, vStart);
+	AddVectors(vVel, vStart, vEnd);
+
 	static float vMin[3];
 	static float vMax[3];
 	GetClientMins(client, vMin);
 	GetClientMaxs(client, vMax);
 
-	vStart[2] += 45.0;
 	static Handle hTrace;
 	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
-	vStart[2] -= 45.0;
 
 	static bool bDidHit;
 	bDidHit = false;
