@@ -28,7 +28,7 @@ public void OnPluginStart()
 {
 	g_hChargeProximity = CreateConVar("ai_charge_proximity", "300.0", "How close a client will approach before charging");
 	g_hHealthThresholdCharger = CreateConVar("ai_health_threshold_charger", "300", "Charger will charge if its health drops to this level");
-	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "30", "If the client has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
+	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "20", "If the client has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
 	
 	g_hChargeProximity.AddChangeHook(ConVarChanged);
 	g_hHealthThresholdCharger.AddChangeHook(ConVarChanged);
@@ -89,10 +89,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
-	static int iTarget;
 	static float fSurvivorProximity;
-	iTarget = GetClientAimTarget(client, true);
-	fSurvivorProximity = GetSurvivorProximity(client, iTarget);
+	fSurvivorProximity = NearestSurvivorDistance(client);
 	if(fSurvivorProximity > g_fChargeProximity && GetEntProp(client, Prop_Send, "m_iHealth") > g_iHealthThresholdCharger)
 	{
 		if(!g_bShouldCharge[client])
@@ -101,6 +99,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	else
 		g_bShouldCharge[client] = true;
 		
+	static int iTarget;
+	iTarget = GetClientAimTarget(client, true);
 	if(g_bShouldCharge[client] && !g_bIsCharging[client] && -1.0 < fSurvivorProximity < 100.0 && ReadyAbility(client) && !IsChargeSurvivor(client) && IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
 	{
 		buttons |= IN_ATTACK;
@@ -111,30 +111,21 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 150.0 && !IsWatchingLadder(client))
+		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
 		{
 			//buttons |= IN_DUCK;
-			buttons |= IN_JUMP;
+			//buttons |= IN_JUMP;
 
 			static float vEyeAngles[3];
 			GetClientEyeAngles(client, vEyeAngles);
-			Bhop(client, buttons, vEyeAngles);
-			return Plugin_Changed;
+			if(Bhop(client, buttons, vEyeAngles))
+				return Plugin_Changed;
 		}
 	}
 
 	return Plugin_Continue;
 }
 
-bool IsWatchingLadder(int client)
-{
-	static int entity;
-	entity = GetClientAimTarget(client, false);
-	if(entity == -1 || !IsValidEntity(entity))
-		return false;
-
-	return HasEntProp(entity, Prop_Data, "m_climbableNormal");
-}
 /*
 void Bhop(int client, int &buttons, const float vAng[3])
 {
@@ -175,31 +166,42 @@ void Client_Push(int client, float vVec[3], float fForce)
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 }
 */
-void Bhop(int client, int &buttons, float vAng[3])
+bool Bhop(int client, int &buttons, float vAng[3])
 {
+	static bool bJumped;
+	bJumped = false;
+
 	if(buttons & IN_FORWARD)
-		Client_Push(client, vAng, 180.0);
+	{
+		if(Client_Push(client, buttons, vAng, 180.0))
+			bJumped = true;
+	}
 		
 	if(buttons & IN_BACK)
 	{
 		vAng[1] += 180.0;
-		Client_Push(client, vAng, 90.0);
+		if(Client_Push(client, buttons, vAng, 90.0))
+			bJumped = true;
 	}
 	
 	if(buttons & IN_MOVELEFT)
 	{
 		vAng[1] += 90.0;
-		Client_Push(client, vAng, 90.0);
+		if(Client_Push(client, buttons, vAng, 90.0))
+			bJumped = true;
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		vAng[1] -= 90.0;
-		Client_Push(client, vAng, 90.0);
+		if(Client_Push(client, buttons, vAng, 90.0))
+			bJumped = true;
 	}
+	
+	return bJumped;
 }
 
-void Client_Push(int client, const float vAng[3], float fForce)
+bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 {
 	static float vVec[3];
 	GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
@@ -209,38 +211,119 @@ void Client_Push(int client, const float vAng[3], float fForce)
 	static float vVel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
-	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
-}
-
-float GetSurvivorProximity(int client, int iTarget = -1)
-{
-	if(IsAliveSurvivor(iTarget))
+	
+	static float vPos[3];
+	static float vEnd[3];
+	GetClientAbsOrigin(client, vPos);
+	AddVectors(vVel, vPos, vEnd);
+	if(AllowBhop(client, vPos, vEnd))
 	{
-		static float vOrigin[3];
-		static float vTarget[3];
-		GetClientAbsOrigin(client, vOrigin);
-		GetClientAbsOrigin(iTarget, vTarget);
-		return GetVectorDistance(vOrigin, vTarget);
+		buttons |= IN_DUCK;
+		buttons |= IN_JUMP;
+		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+		return true;
 	}
 
-	return NearestSurvivorDistance(client, iTarget);
+	return false;
 }
 
-float NearestSurvivorDistance(int client, int iTarget)
+bool AllowBhop(int client, float vStart[3], float vEnd[3])
+{
+	static float vMin[3];
+	static float vMax[3];
+	GetClientMins(client, vMin);
+	GetClientMaxs(client, vMax);
+
+	vStart[2] += 45.0;
+	static Handle hTrace;
+	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	vStart[2] -= 45.0;
+
+	static bool bDidHit;
+	bDidHit = false;
+	
+	static float fDistance;
+	fDistance = 0.0;
+
+	static float vEndNonCol[3];
+
+	if(hTrace != null)
+	{
+		if(TR_DidHit(hTrace))
+		{
+			bDidHit = true;
+			TR_GetEndPosition(vEndNonCol, hTrace);
+			fDistance = GetVectorDistance(vStart, vEndNonCol);
+		}
+		delete hTrace;
+	}
+	
+	if(bDidHit)
+	{
+		if(fDistance < GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
+			return false;
+	}
+	else
+		vEndNonCol = vEnd;
+		
+	static float vDown[3];
+	vDown[0] = vEndNonCol[0];
+	vDown[1] = vEndNonCol[1];
+	vDown[2] = vEndNonCol[2] - 100000.0;
+
+	hTrace = TR_TraceHullFilterEx(vEndNonCol, vDown, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	if(hTrace != null)
+	{
+		if(TR_DidHit(hTrace))
+		{
+			TR_GetEndPosition(vEnd, hTrace);
+			if(GetVectorDistance(vEndNonCol, vEnd) > 180.0)
+			{
+				delete hTrace;
+				return false;
+			}
+			delete hTrace;
+			return true;
+		}
+		delete hTrace;
+		return false;
+	}
+	return false;
+}
+
+public bool TraceEntityFilter(int entity, int contentsMask)
+{
+	if(!entity || entity <= MaxClients)
+		return false;
+	else
+	{
+		static char sClassName[9];
+		GetEntityClassname(entity, sClassName, sizeof(sClassName));
+		if(sClassName[0] == 'i' || sClassName[0] == 'w')
+		{
+			if(strcmp(sClassName, "infected") == 0 || strcmp(sClassName, "witch") == 0)
+				return false;
+		}
+	}
+
+	return true;
+}
+
+float NearestSurvivorDistance(int client)
 {
 	static int i;
 	static int iNum;
 	static float vOrigin[3];
 	static float vTarget[3];
 	static float fDists[MAXPLAYERS + 1];
-
+	
 	iNum = 0;
 
 	GetClientAbsOrigin(client, vOrigin);
 
 	for(i = 1; i <= MaxClients; i++)
 	{
-		if(i != client && i != iTarget && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
+		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 		{
 			GetClientAbsOrigin(i, vTarget);
 			fDists[iNum++] = GetVectorDistance(vOrigin, vTarget);
