@@ -48,7 +48,7 @@ public void OnPluginStart()
 	g_hPounceAngleMean = CreateConVar("ai_pounce_angle_mean", "10.0", "Mean angle produced by Gaussian RNG");
 	g_hPounceAngleStd = CreateConVar("ai_pounce_angle_std", "20.0", "One standard deviation from mean as produced by Gaussian RNG");
 	g_hStraightPounceProximity = CreateConVar("ai_straight_pounce_proximity", "350.0", "Distance to nearest survivor at which hunter will consider pouncing straight");
-	g_hAimOffsetSensitivityHunter = CreateConVar("ai_aim_offset_sensitivity_hunter", "361", "If the hunter has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
+	g_hAimOffsetSensitivityHunter = CreateConVar("ai_aim_offset_sensitivity_hunter", "179", "If the hunter has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
 	g_hWallDetectionDistance = CreateConVar("ai_wall_detection_distance", "-1.0", "How far in front of himself infected bot will check for a wall. Use '-1' to disable feature");
 
 	g_hLungeInterval.AddChangeHook(ConVarChanged);
@@ -188,13 +188,9 @@ void Hunter_OnPounce(int client)
 	iLunge = GetEntPropEnt(client, Prop_Send, "m_customAbility");			
 
 	static float vPos[3];
-	static float vAngles[3];
+	
 	GetClientAbsOrigin(client, vPos);
-	GetClientEyeAngles(client, vAngles);
-	TR_TraceRayFilter(vPos, vAngles, MASK_PLAYERSOLID, RayType_Infinite, TracerayFilter, client);
-	static float vEnd[3];
-	TR_GetEndPosition(vEnd);
-	if(GetVectorDistance(vPos, vEnd) < g_fWallDetectionDistance)
+	if(g_fWallDetectionDistance > 0.0 && HitSolid(client, vPos))
 	{
 		if(GetRandomInt(0, 1))
 			AngleLunge(iLunge, 45.0);
@@ -213,9 +209,51 @@ void Hunter_OnPounce(int client)
 	}
 }
 
-public bool TracerayFilter(int entity, int contentMask, any data)
+bool HitSolid(int client, float vStart[3])
 {
-	return entity != data;
+	static float vEyeDir[3];
+	GetClientEyeAngles(client, vEyeDir);
+	GetAngleVectors(vEyeDir, vEyeDir, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vEyeDir, vEyeDir);
+	ScaleVector(vEyeDir, g_fWallDetectionDistance);
+	AddVectors(vStart, vEyeDir, vEyeDir);
+
+	static float vMin[3];
+	static float vMax[3];
+	GetClientMins(client, vMin);
+	GetClientMaxs(client, vMax);
+
+	static Handle hTrace;
+	hTrace = TR_TraceHullFilterEx(vStart, vEyeDir, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+
+	static bool bDidHit;
+	bDidHit = false;
+
+	if(hTrace != null)
+	{
+		bDidHit = TR_DidHit(hTrace);
+		delete hTrace;
+	}
+	
+	return bDidHit;
+}
+
+public bool TraceEntityFilter(int entity, int contentsMask)
+{
+	if(!entity || entity <= MaxClients)
+		return false;
+	else
+	{
+		static char sClassName[9];
+		GetEntityClassname(entity, sClassName, sizeof(sClassName));
+		if(sClassName[0] == 'i' || sClassName[0] == 'w')
+		{
+			if(strcmp(sClassName, "infected") == 0 || strcmp(sClassName, "witch") == 0)
+				return false;
+		}
+	}
+
+	return true;
 }
 
 bool IsTargetWatchingAttacker(int iAttacker, int iOffsetThreshold)
