@@ -29,8 +29,8 @@ public void OnPluginStart()
 	FindConVar("z_jockey_leap_range").SetFloat(1000.0);
 	g_hJockeyLeapAgain = FindConVar("z_jockey_leap_again_timer");
 
-	g_hJockeyStumbleRadius = CreateConVar("ai_jockey_stumble_radius", "50", "Stumble radius of a client landing a ride");
-	g_hHopActivationProximity = CreateConVar("ai_hop_activation_proximity", "500", "How close a client will approach before it starts hopping");
+	g_hJockeyStumbleRadius = CreateConVar("ai_jockey_stumble_radius", "100.0", "Stumble radius of a client landing a ride");
+	g_hHopActivationProximity = CreateConVar("ai_hop_activation_proximity", "500.0", "How close a client will approach before it starts hopping");
 
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("jockey_ride", Event_JockeyRide, EventHookMode_Pre);
