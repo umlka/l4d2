@@ -151,7 +151,7 @@ public void Hook_PostThinkPost(int client)
 	if(!IsPlayerAlive(client) || GetClientTeam(client) != 3 || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
 		return;
 
-	if(17 <= GetEntProp(client, Prop_Send, "m_nSequence") <= 23) //爬围栏/障碍
+	if(15 <= GetEntProp(client, Prop_Send, "m_nSequence") <= 23) //爬围栏/障碍
 		SetEntPropFloat(client, Prop_Send, "m_flPlaybackRate", 10.0); //不能设置太高否则无法爬上去
 }
 
