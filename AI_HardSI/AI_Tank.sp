@@ -3,6 +3,7 @@
 #include <sourcemod>
 #include <sdktools>
 
+#define BoostForward 80.0
 #define TANK_MELEE_SCAN_DELAY 0.25
 #define TANK_ROCK_AIM_TIME    4.0
 #define TANK_ROCK_AIM_DELAY   0.25
@@ -63,7 +64,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 {
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
-		
+
 	static int i;
 	static float fDist;
 	static int iNoIncapped;
@@ -91,41 +92,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		}
 	}
 
-	if(iNormalAlive != 0)
-	{
-		SortFloats(fNormalAlives, iNormalAlive, Sort_Ascending);
-		if(g_fTankAttackRange + 45.0 < fNormalAlives[0] < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
-		{
-			static float vVelocity[3];
-			GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-			if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > 200.0 && !IsWatchingLadder(client))
-			{
-				//buttons &= ~IN_ATTACK2;
-				buttons |= IN_DUCK;
-				buttons |= IN_JUMP;
-					
-				static float vEyeAngles[3];
-				GetClientEyeAngles(client, vEyeAngles);
-				Bhop(client, buttons, vEyeAngles);
-				return Plugin_Changed;
-			}
-		}
-	}
-
-	if(DelayExpired(client, 0, TANK_MELEE_SCAN_DELAY))
-	{
-		DelayStart(client, 0);
-		if(iNoIncapped != 0)
-		{
-			SortFloats(fNoIncappeds, iNoIncapped, Sort_Ascending);
-			if(-1.0 < fNoIncappeds[0] < g_fTankAttackRange * 0.95)
-			{
-				buttons |= IN_ATTACK;
-				return Plugin_Changed;
-			}
-		}
-	}
-
 	if(buttons & IN_ATTACK2)
 		DelayStart(client, 1);
 
@@ -150,18 +116,44 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		}
 	}
 
+	if(iNormalAlive != 0)
+	{
+		SortFloats(fNormalAlives, iNormalAlive, Sort_Ascending);
+		if(g_fTankAttackRange + 45.0 < fNormalAlives[0] < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+		{
+			static float vVelocity[3];
+			GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
+			if(GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0 < SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) < 770.0)
+			{
+				//buttons &= ~IN_ATTACK2;
+				//buttons |= IN_DUCK;
+				//buttons |= IN_JUMP;
+
+				static float vEyeAngles[3];
+				GetClientEyeAngles(client, vEyeAngles);
+				if(Bhop(client, buttons, vEyeAngles))
+					return Plugin_Changed;
+			}
+		}
+	}
+	
+	if(DelayExpired(client, 0, TANK_MELEE_SCAN_DELAY))
+	{
+		DelayStart(client, 0);
+		if(iNoIncapped != 0)
+		{
+			SortFloats(fNoIncappeds, iNoIncapped, Sort_Ascending);
+			if(-1.0 < fNoIncappeds[0] < g_fTankAttackRange * 0.9)
+			{
+				buttons |= IN_ATTACK;
+				return Plugin_Changed;
+			}
+		}
+	}
+
 	return Plugin_Continue;
 }
 
-bool IsWatchingLadder(int client)
-{
-	static int entity;
-	entity = GetClientAimTarget(client, false);
-	if(entity == -1 || !IsValidEntity(entity))
-		return false;
-
-	return HasEntProp(entity, Prop_Data, "m_climbableNormal");
-}
 /*
 void Bhop(int client, int &buttons, const float vAng[3])
 {
@@ -169,25 +161,25 @@ void Bhop(int client, int &buttons, const float vAng[3])
 	if(buttons & IN_FORWARD)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, 80.0);
+		Client_Push(client, vVec, BoostForward);
 	}
 
 	if(buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, -80.0);
+		Client_Push(client, vVec, -BoostForward);
 	}
 
 	if(buttons & IN_MOVELEFT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, -80.0);
+		Client_Push(client, vVec, -BoostForward);
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, 80.0);
+		Client_Push(client, vVec, BoostForward);
 	}
 }
 
@@ -202,31 +194,42 @@ void Client_Push(int client, float vVec[3], float fForce)
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 }
 */
-void Bhop(int client, int &buttons, float vAng[3])
+bool Bhop(int client, int &buttons, float vAng[3])
 {
+	static bool bJumped;
+	bJumped = false;
+
 	if(buttons & IN_FORWARD)
-		Client_Push(client, vAng, 80.0);
+	{
+		if(Client_Push(client, buttons, vAng, BoostForward))
+			bJumped = true;
+	}
 		
 	if(buttons & IN_BACK)
 	{
 		vAng[1] += 180.0;
-		Client_Push(client, vAng, 80.0);
+		if(Client_Push(client, buttons, vAng, BoostForward))
+			bJumped = true;
 	}
 	
 	if(buttons & IN_MOVELEFT)
 	{
 		vAng[1] += 90.0;
-		Client_Push(client, vAng, 80.0);
+		if(Client_Push(client, buttons, vAng, BoostForward))
+			bJumped = true;
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		vAng[1] -= 90.0;
-		Client_Push(client, vAng, 80.0);
+		if(Client_Push(client, buttons, vAng, BoostForward))
+			bJumped = true;
 	}
+	
+	return bJumped;
 }
 
-void Client_Push(int client, const float vAng[3], float fForce)
+bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 {
 	static float vVec[3];
 	GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
@@ -236,7 +239,102 @@ void Client_Push(int client, const float vAng[3], float fForce)
 	static float vVel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
-	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+	
+	static float vPos[3];
+	static float vEnd[3];
+	GetClientAbsOrigin(client, vPos);
+	AddVectors(vVel, vPos, vEnd);
+	if(AllowBhop(client, vPos, vEnd))
+	{
+		buttons |= IN_DUCK;
+		buttons |= IN_JUMP;
+		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+		return true;
+	}
+
+	return false;
+}
+
+bool AllowBhop(int client, float vStart[3], float vEnd[3])
+{
+	static float vMin[3];
+	static float vMax[3];
+	GetClientMins(client, vMin);
+	GetClientMaxs(client, vMax);
+
+	vStart[2] += 45.0;
+	static Handle hTrace;
+	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	vStart[2] -= 45.0;
+
+	static bool bDidHit;
+	bDidHit = false;
+	
+	static float fDistance;
+	fDistance = 0.0;
+
+	static float vEndNonCol[3];
+
+	if(hTrace != null)
+	{
+		if(TR_DidHit(hTrace))
+		{
+			bDidHit = true;
+			TR_GetEndPosition(vEndNonCol, hTrace);
+			fDistance = GetVectorDistance(vStart, vEndNonCol);
+		}
+		delete hTrace;
+	}
+	
+	if(bDidHit)
+	{
+		if(fDistance < GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
+			return false;
+	}
+	else
+		vEndNonCol = vEnd;
+		
+	static float vDown[3];
+	vDown[0] = vEndNonCol[0];
+	vDown[1] = vEndNonCol[1];
+	vDown[2] = vEndNonCol[2] - 100000.0;
+
+	hTrace = TR_TraceHullFilterEx(vEndNonCol, vDown, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	if(hTrace != null)
+	{
+		if(TR_DidHit(hTrace))
+		{
+			TR_GetEndPosition(vEnd, hTrace);
+			if(GetVectorDistance(vEndNonCol, vEnd) > 180.0)
+			{
+				delete hTrace;
+				return false;
+			}
+			delete hTrace;
+			return true;
+		}
+		delete hTrace;
+		return false;
+	}
+	return false;
+}
+
+public bool TraceEntityFilter(int entity, int contentsMask)
+{
+	if(!entity || entity <= MaxClients)
+		return false;
+	else
+	{
+		static char sClassName[9];
+		GetEntityClassname(entity, sClassName, sizeof(sClassName));
+		if(sClassName[0] == 'i' || sClassName[0] == 'w')
+		{
+			if(strcmp(sClassName, "infected") == 0 || strcmp(sClassName, "witch") == 0)
+				return false;
+		}
+	}
+
+	return true;
 }
 
 public Action L4D2_OnSelectTankAttack(int client, int &sequence)
