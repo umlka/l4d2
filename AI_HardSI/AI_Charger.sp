@@ -113,9 +113,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
 		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
 		{
-			//buttons |= IN_DUCK;
-			//buttons |= IN_JUMP;
-
 			static float vEyeAngles[3];
 			GetClientEyeAngles(client, vEyeAngles);
 			if(Bhop(client, buttons, vEyeAngles))
