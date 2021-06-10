@@ -240,7 +240,7 @@ void Boomer_OnVomit(int client)
 			
 			static float vLenght;
 			vLenght = GetVectorLength(vVelocity);
-			ScaleVector(NearestVectors, vLenght < 250.0 ? 250.0 : vLenght);
+			ScaleVector(NearestVectors, vLenght < 500.0 ? 500.0 : vLenght);
 
 			static float NearestAngles[3];
 			GetVectorAngles(NearestVectors, NearestAngles);
