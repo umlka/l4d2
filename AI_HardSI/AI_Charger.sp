@@ -167,7 +167,7 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 	ScaleVector(vVec, fForce);
 
 	static float vVel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
 
 	if(WontFall(client, vVel))
@@ -321,7 +321,7 @@ void Charger_OnCharge(int client)
 	if(MakeNearestVectors(client, NearestVectors))
 	{
 		static float vVelocity[3];
-		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
 		NormalizeVector(NearestVectors, NearestVectors);
 		
 		static float vLenght;
