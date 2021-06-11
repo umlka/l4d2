@@ -100,10 +100,10 @@ bool Bhop(int client, int &buttons, const float vAng[3])
 	
 	static float vVec[3];
 
-	if(buttons & IN_FORWARD || buttons & IN_BACK)
+	if(buttons & IN_FORWARD)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if(Client_Push(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
+		if(Client_Push(client, buttons, vVec, 180.0))
 			bJumped = true;
 	}
 
