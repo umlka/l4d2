@@ -48,67 +48,28 @@ bool IsWatchingLadder(int client)
 
 	return HasEntProp(entity, Prop_Data, "m_climbableNormal");
 }
-/*
-void Bhop(int client, int &buttons, const float vAng[3])
-{
-	static float vVec[3];
-	if(buttons & IN_FORWARD)
-	{
-		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, 120.0);
-	}
 
-	if(buttons & IN_BACK)
-	{
-		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		Client_Push(client, vVec, -60.0);
-	}
-
-	if(buttons & IN_MOVELEFT)
-	{
-		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, -60.0);
-	}
-
-	if(buttons & IN_MOVERIGHT)
-	{
-		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		Client_Push(client, vVec, 60.0);
-	}
-}
-
-void Client_Push(int client, float vVec[3], float fForce)
-{
-	NormalizeVector(vVec, vVec);
-	ScaleVector(vVec, fForce);
-
-	static float vVel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
-	AddVectors(vVel, vVec, vVel);
-	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
-}
-*/
 void Bhop(int client, int &buttons, float vAng[3])
 {
 	if(buttons & IN_FORWARD)
-		Client_Push(client, vAng, 120.0);
+		Client_Push(client, vAng, 180.0);
 		
 	if(buttons & IN_BACK)
 	{
 		vAng[1] += 180.0;
-		Client_Push(client, vAng, 60.0);
+		Client_Push(client, vAng, 90.0);
 	}
 	
 	if(buttons & IN_MOVELEFT)
 	{
 		vAng[1] += 90.0;
-		Client_Push(client, vAng, 60.0);
+		Client_Push(client, vAng, 90.0);
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		vAng[1] -= 90.0;
-		Client_Push(client, vAng, 60.0);
+		Client_Push(client, vAng, 90.0);
 	}
 }
 
@@ -120,7 +81,7 @@ void Client_Push(int client, const float vAng[3], float fForce)
 	ScaleVector(vVec, fForce);
 
 	static float vVel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 }
