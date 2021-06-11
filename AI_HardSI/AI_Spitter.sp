@@ -81,7 +81,7 @@ void Client_Push(int client, const float vAng[3], float fForce)
 	ScaleVector(vVec, fForce);
 
 	static float vVel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 }
