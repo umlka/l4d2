@@ -93,45 +93,45 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return Plugin_Continue;
 }
 
-bool Bhop(int client, int &buttons, const float vAng[3])
+bool Bhop(int client, int &buttons, float vAng[3])
 {
 	static bool bJumped;
 	bJumped = false;
-	
-	static float vVec[3];
+
 	if(buttons & IN_FORWARD)
 	{
-		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if(Client_Push(client, buttons, vVec, 180.0))
+		if(Client_Push(client, buttons, vAng, 180.0))
 			bJumped = true;
 	}
-
+		
 	if(buttons & IN_BACK)
 	{
-		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if(Client_Push(client, buttons, vVec, -90.0))
+		vAng[1] += 180.0;
+		if(Client_Push(client, buttons, vAng, 90.0))
 			bJumped = true;
 	}
-
+	
 	if(buttons & IN_MOVELEFT)
 	{
-		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		if(Client_Push(client, buttons, vVec, -90.0))
+		vAng[1] += 90.0;
+		if(Client_Push(client, buttons, vAng, 90.0))
 			bJumped = true;
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
-		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		if(Client_Push(client, buttons, vVec, 90.0))
+		vAng[1] -= 90.0;
+		if(Client_Push(client, buttons, vAng, 90.0))
 			bJumped = true;
 	}
 	
 	return bJumped;
 }
 
-bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
+bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 {
+	static float vVec[3];
+	GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
 	NormalizeVector(vVec, vVec);
 	ScaleVector(vVec, fForce);
 
@@ -146,8 +146,7 @@ bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 		return true;
 	}
-	
-	SetEntPropFloat(client, Prop_Send, "m_flStamina", 0.0);
+
 	return false;
 }
 
