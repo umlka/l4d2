@@ -70,6 +70,7 @@ public void Event_ChargerChargeStart(Event event, const char[] name, bool dontBr
 
 	int flags = GetEntProp(client, Prop_Send, "m_fFlags");
 	SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_FROZEN);
+	SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_ONGROUND);
 	Charger_OnCharge(client);
 	SetEntProp(client, Prop_Send, "m_fFlags", flags);
 }
@@ -166,7 +167,7 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 	ScaleVector(vVec, fForce);
 
 	static float vVel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
 
 	if(WontFall(client, vVel))
@@ -176,31 +177,33 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 		return true;
 	}
-	
-	SetEntPropFloat(client, Prop_Send, "m_flStamina", 0.0);
+
 	return false;
 }
 
+#define JUMP_HEIGHT 56.0
 bool WontFall(int client, float vVel[3])
 {
 	static float vStart[3];
 	static float vEnd[3];
-	GetClientEyePosition(client, vStart);
+	GetClientAbsOrigin(client, vStart);
 	AddVectors(vVel, vStart, vEnd);
 
-	static float vMin[3];
-	static float vMax[3];
-	GetClientMins(client, vMin);
-	GetClientMaxs(client, vMax);
+	static float vMins[3];
+	static float vMaxs[3];
+	GetClientMins(client, vMins);
+	GetClientMaxs(client, vMaxs);
 
+	vStart[2] += 20.0;
+
+	vVel[2] = vVel[2] > 0.0 ? vVel[2] : JUMP_HEIGHT;
+	vEnd[2] += vVel[2];
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	vEnd[2] -= vVel[2];
 
 	static bool bDidHit;
 	bDidHit = false;
-	
-	static float fDistance;
-	fDistance = 0.0;
 
 	static float vEndNonCol[3];
 
@@ -210,31 +213,30 @@ bool WontFall(int client, float vVel[3])
 		{
 			bDidHit = true;
 			TR_GetEndPosition(vEndNonCol, hTrace);
-			fDistance = GetVectorDistance(vStart, vEndNonCol);
+			if(GetVectorDistance(vStart, vEndNonCol) < GetEntPropFloat(client, Prop_Data, "m_flMaxspeed"))
+			{
+				delete hTrace;
+				return false;
+			}
 		}
 		delete hTrace;
 	}
 	
-	if(bDidHit)
-	{
-		if(fDistance < GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
-			return false;
-	}
-	else
+	if(!bDidHit)
 		vEndNonCol = vEnd;
-		
+
 	static float vDown[3];
 	vDown[0] = vEndNonCol[0];
 	vDown[1] = vEndNonCol[1];
 	vDown[2] = vEndNonCol[2] - 100000.0;
 
-	hTrace = TR_TraceHullFilterEx(vEndNonCol, vDown, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vEndNonCol, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
 	if(hTrace != null)
 	{
 		if(TR_DidHit(hTrace))
 		{
 			TR_GetEndPosition(vEnd, hTrace);
-			if(GetVectorDistance(vEndNonCol, vEnd) > 180.0)
+			if(GetVectorDistance(vEndNonCol, vEnd) > 124.0)
 			{
 				delete hTrace;
 				return false;
@@ -243,7 +245,6 @@ bool WontFall(int client, float vVel[3])
 			return true;
 		}
 		delete hTrace;
-		return false;
 	}
 	return false;
 }
@@ -320,7 +321,7 @@ void Charger_OnCharge(int client)
 	if(MakeNearestVectors(client, NearestVectors))
 	{
 		static float vVelocity[3];
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
+		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
 		NormalizeVector(NearestVectors, NearestVectors);
 		
 		static float vLenght;
