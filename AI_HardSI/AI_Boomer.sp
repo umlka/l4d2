@@ -93,50 +93,37 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return Plugin_Continue;
 }
 
-bool Bhop(int client, int &buttons, float vAng[3])
+bool Bhop(int client, int &buttons, const float vAng[3])
 {
 	static bool bJumped;
 	bJumped = false;
-
-	if(buttons & IN_FORWARD)
-	{
-		if(Client_Push(client, buttons, vAng, 180.0))
-			bJumped = true;
-	}
-		
-	if(buttons & IN_BACK)
-	{
-		vAng[1] += 180.0;
-		if(Client_Push(client, buttons, vAng, 90.0))
-			bJumped = true;
-	}
 	
-	if(buttons & IN_MOVELEFT)
+	static float vVec[3];
+
+	if(buttons & IN_FORWARD || buttons & IN_BACK)
 	{
-		vAng[1] += 90.0;
-		if(Client_Push(client, buttons, vAng, 90.0))
+		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
+		if(Client_Push(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
 			bJumped = true;
 	}
 
-	if(buttons & IN_MOVERIGHT)
+	if(buttons & IN_MOVELEFT || buttons & IN_MOVERIGHT)
 	{
-		vAng[1] -= 90.0;
-		if(Client_Push(client, buttons, vAng, 90.0))
+		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
+		if(Client_Push(client, buttons, vVec, buttons & IN_MOVELEFT ? -90.0 : 90.0))
 			bJumped = true;
 	}
-	
+
 	return bJumped;
 }
 
-bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
+bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 {
-	static float vVec[3];
-	GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
 	NormalizeVector(vVec, vVec);
 	ScaleVector(vVec, fForce);
 
 	static float vVel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
 
 	if(WontFall(client, vVel))
@@ -182,7 +169,7 @@ bool WontFall(int client, float vVel[3])
 		{
 			bDidHit = true;
 			TR_GetEndPosition(vEndNonCol, hTrace);
-			if(GetVectorDistance(vStart, vEndNonCol) < GetEntPropFloat(client, Prop_Data, "m_flMaxspeed"))
+			if(GetVectorDistance(vStart, vEndNonCol) < 64.0)
 			{
 				delete hTrace;
 				return false;
@@ -242,7 +229,7 @@ void Boomer_OnVomit(int client)
 	if(MakeNearestVectors(client, NearestVectors))
 	{
 		static float vVelocity[3];
-		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
 		NormalizeVector(NearestVectors, NearestVectors);
 			
 		static float vLenght;
