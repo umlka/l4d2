@@ -21,7 +21,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0 && !IsWatchingLadder(client))
+		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
 		{
 			if(150.0 < NearestSurvivorDistance(client) < 1000.0)
 			{
@@ -37,16 +37,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 
 	return Plugin_Continue;
-}
-
-bool IsWatchingLadder(int client)
-{
-	static int entity;
-	entity = GetClientAimTarget(client, false);
-	if(entity == -1 || !IsValidEntity(entity))
-		return false;
-
-	return HasEntProp(entity, Prop_Data, "m_climbableNormal");
 }
 
 void Bhop(int client, int &buttons, float vAng[3])
