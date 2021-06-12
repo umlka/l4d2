@@ -78,7 +78,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
+		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0 && !IsWatchingLadder(client))
 		{
 			if(0.50 * g_fVomitRange < NearestSurvivorDistance(client) < 1000.0)
 			{
@@ -93,6 +93,19 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return Plugin_Continue;
 }
 
+bool IsWatchingLadder(int client)
+{
+	static int entity;
+	entity = GetClientAimTarget(client, false);
+	if(entity == -1 || !HasEntProp(entity, Prop_Data, "m_climbableNormal"))
+		return false;
+		
+	static float vPos[3], vLadder[3];
+	GetClientAbsOrigin(client, vPos);
+	GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vLadder);
+	return GetVectorDistance(vPos, vLadder) < 100.0;
+}
+
 bool Bhop(int client, int &buttons, const float vAng[3])
 {
 	static bool bJumped;
@@ -100,10 +113,10 @@ bool Bhop(int client, int &buttons, const float vAng[3])
 	
 	static float vVec[3];
 
-	if(buttons & IN_FORWARD)
+	if(buttons & IN_FORWARD || buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if(Client_Push(client, buttons, vVec, 180.0))
+		if(Client_Push(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
 			bJumped = true;
 	}
 
