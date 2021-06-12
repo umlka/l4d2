@@ -74,11 +74,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 2 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
-	if(GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2)
+	if(GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && (GetEntProp(client, Prop_Send, "m_hasVisibleThreats") || TargetSurvivor(client)))
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0 && !IsWatchingLadder(client))
+		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
 		{
 			if(0.50 * g_fVomitRange < NearestSurvivorDistance(client) < 1000.0)
 			{
@@ -92,7 +92,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 	return Plugin_Continue;
 }
-
+/*
 bool IsWatchingLadder(int client)
 {
 	static int entity;
@@ -105,12 +105,20 @@ bool IsWatchingLadder(int client)
 	GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vLadder);
 	return GetVectorDistance(vPos, vLadder) < 100.0;
 }
+*/
+
+bool TargetSurvivor(int client)
+{
+	static int iTarget;
+	iTarget = GetClientAimTarget(client, true);
+	return IsAliveSurvivor(iTarget);
+}
 
 bool Bhop(int client, int &buttons, const float vAng[3])
 {
 	static bool bJumped;
 	bJumped = false;
-	
+
 	static float vVec[3];
 
 	if(buttons & IN_FORWARD || buttons & IN_BACK)
