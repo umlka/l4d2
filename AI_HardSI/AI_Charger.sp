@@ -63,6 +63,8 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 public void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(!IsFakeClient(client))
+		return;
 
 	int flags = GetEntProp(client, Prop_Send, "m_fFlags");
 	SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_FROZEN);
