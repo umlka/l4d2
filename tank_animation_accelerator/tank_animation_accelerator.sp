@@ -11,7 +11,7 @@ DynamicDetour g_dDetour;
 bool g_bLateLoad;
 bool g_bHookedThinkPost[MAXPLAYERS + 1];
 
-public Plugin myinfo = 
+public Plugin myinfo =
 {
 	name = "Tank Animation Accelerator", 
 	author = "Lux, sorallll", 
@@ -148,11 +148,14 @@ void Unhook(int client)
 
 public void Hook_PostThinkPost(int client)
 {
-	if(!IsPlayerAlive(client) || GetClientTeam(client) != 3 || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
+	if(!IsPlayerAlive(client) || GetClientTeam(client) != 3 || GetEntProp(client, Prop_Send, "m_zombieClass") != 8 || GetEntityFlags(client) & FL_ONGROUND || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1)
 		return;
-
-	if(15 <= GetEntProp(client, Prop_Send, "m_nSequence") <= 23) //爬围栏/障碍
-		SetEntPropFloat(client, Prop_Send, "m_flPlaybackRate", 10.0); //不能设置太高否则无法爬上去
+	
+	switch(GetEntProp(client, Prop_Send, "m_nSequence"))
+	{
+		case 15, 16, 17, 18, 19, 20, 21, 22, 23:
+			SetEntPropFloat(client, Prop_Send, "m_flPlaybackRate", 10.0);
+	}
 }
 
 void LoadGameData()
