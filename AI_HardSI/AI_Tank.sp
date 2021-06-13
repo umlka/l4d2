@@ -121,7 +121,7 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 }
 
 #define JUMP_HEIGHT 56.0
-bool WontFall(int client, float vVel[3])
+bool WontFall(int client, const float vVel[3])
 {
 	static float vStart[3];
 	static float vEnd[3];
@@ -135,11 +135,13 @@ bool WontFall(int client, float vVel[3])
 
 	vStart[2] += 20.0;
 
-	vVel[2] = vVel[2] > 0.0 ? vVel[2] : JUMP_HEIGHT;
-	vEnd[2] += vVel[2];
+	static float fHeight;
+	fHeight = vVel[2] > 0.0 ? vVel[2] : JUMP_HEIGHT;
+
+	vEnd[2] += fHeight;
 	static Handle hTrace;
 	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
-	vEnd[2] -= vVel[2];
+	vEnd[2] -= fHeight;
 
 	static bool bDidHit;
 	bDidHit = false;
@@ -152,7 +154,7 @@ bool WontFall(int client, float vVel[3])
 		{
 			bDidHit = true;
 			TR_GetEndPosition(vEndNonCol, hTrace);
-			if(GetVectorDistance(vStart, vEndNonCol) < GetEntPropFloat(client, Prop_Data, "m_flMaxspeed"))
+			if(GetVectorDistance(vStart, vEndNonCol) < 64.0)
 			{
 				delete hTrace;
 				return false;
@@ -190,7 +192,7 @@ bool WontFall(int client, float vVel[3])
 
 public bool TraceEntityFilter(int entity, int contentsMask)
 {
-	if(!entity || entity <= MaxClients)
+	if(entity <= MaxClients)
 		return false;
 	else
 	{
