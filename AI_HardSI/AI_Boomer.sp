@@ -4,8 +4,10 @@
 #include <sdktools>
 
 ConVar g_hVomitRange;
+ConVar g_hSurvivorSpeed;
 
 float g_fVomitRange;
+float g_fSurvivorSpeed;
 
 public Plugin myinfo = 
 {
@@ -19,7 +21,10 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	g_hVomitRange = FindConVar("z_vomit_range");
+	g_hSurvivorSpeed = FindConVar("survivor_speed");
 	g_hVomitRange.AddChangeHook(ConVarChanged);
+	g_hSurvivorSpeed.AddChangeHook(ConVarChanged);
+	
 
 	FindConVar("z_vomit_fatigue").SetInt(1500);
 	FindConVar("z_boomer_near_dist").SetInt(1);
@@ -50,6 +55,7 @@ public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] new
 void GetCvars()
 {
 	g_fVomitRange = g_hVomitRange.FloatValue;
+	g_fSurvivorSpeed = g_hSurvivorSpeed.FloatValue;
 }
 
 public void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
@@ -61,12 +67,7 @@ public void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
 	char sAbility[16];
 	event.GetString("ability", sAbility, sizeof(sAbility));
 	if(strcmp(sAbility, "ability_vomit") == 0)
-	{
-		int flags = GetEntProp(client, Prop_Send, "m_fFlags");
-		SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_FROZEN);
-		SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_ONGROUND);
 		Boomer_OnVomit(client);
-	}
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
@@ -107,11 +108,11 @@ bool IsWatchingLadder(int client)
 }
 */
 
-bool TargetSurvivor(int client)
+int TargetSurvivor(int client)
 {
 	static int iTarget;
 	iTarget = GetClientAimTarget(client, true);
-	return IsAliveSurvivor(iTarget);
+	return IsAliveSurvivor(iTarget) ? iTarget : 0;
 }
 
 bool Bhop(int client, int &buttons, const float vAng[3])
@@ -159,12 +160,12 @@ bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 }
 
 #define JUMP_HEIGHT 56.0
-bool WontFall(int client, float vVel[3])
+bool WontFall(int client, const float vVel[3])
 {
 	static float vStart[3];
 	static float vEnd[3];
 	GetClientAbsOrigin(client, vStart);
-	AddVectors(vVel, vStart, vEnd);
+	AddVectors(vStart, vVel, vEnd);
 
 	static float vMins[3];
 	static float vMaxs[3];
@@ -173,11 +174,13 @@ bool WontFall(int client, float vVel[3])
 
 	vStart[2] += 20.0;
 
-	vVel[2] = vVel[2] > 0.0 ? vVel[2] : JUMP_HEIGHT;
-	vEnd[2] += vVel[2];
+	static float fHeight;
+	fHeight = vVel[2] > 0.0 ? vVel[2] : JUMP_HEIGHT;
+
+	vEnd[2] += fHeight;
 	static Handle hTrace;
 	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
-	vEnd[2] -= vVel[2];
+	vEnd[2] -= fHeight;
 
 	static bool bDidHit;
 	bDidHit = false;
@@ -228,7 +231,7 @@ bool WontFall(int client, float vVel[3])
 
 public bool TraceEntityFilter(int entity, int contentsMask)
 {
-	if(!entity || entity <= MaxClients)
+	if(entity <= MaxClients)
 		return false;
 	else
 	{
@@ -249,13 +252,19 @@ void Boomer_OnVomit(int client)
 	static float NearestVectors[3];
 	if(MakeNearestVectors(client, NearestVectors))
 	{
-		static float vVelocity[3];
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
+		static float vLength;
+		vLength = GetVectorLength(NearestVectors);
+		vLength = vLength < g_fVomitRange ? g_fVomitRange : vLength;
+
+		static int iTarget;
+		iTarget = TargetSurvivor(client);
+		if(iTarget)
+			vLength += GetEntPropFloat(iTarget, Prop_Data, "m_flMaxspeed");
+		else
+			vLength += g_fSurvivorSpeed;
+
 		NormalizeVector(NearestVectors, NearestVectors);
-			
-		static float vLenght;
-		vLenght = GetVectorLength(vVelocity);
-		ScaleVector(NearestVectors, vLenght < 500.0 ? 500.0 : vLenght);
+		ScaleVector(NearestVectors, vLength);
 
 		static float NearestAngles[3];
 		GetVectorAngles(NearestVectors, NearestAngles);
@@ -301,6 +310,7 @@ bool IsValidClient(int client)
 	return client > 0 && client <= MaxClients && IsClientInGame(client);
 }
 
+#define CROUCHING_HEIGHT 56.0
 bool MakeNearestVectors(int client, float NearestVectors[3])
 {
 	static int iAimTarget;
@@ -315,7 +325,9 @@ bool MakeNearestVectors(int client, float NearestVectors[3])
 		return false;
 
 	GetClientAbsOrigin(client, vOrigin);
-	GetClientEyePosition(iAimTarget, vTarget);
+	GetClientAbsOrigin(iAimTarget, vTarget);
+	
+	vTarget[2] += CROUCHING_HEIGHT;
 	MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
 	return true;
 }
