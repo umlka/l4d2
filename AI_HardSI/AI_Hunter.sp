@@ -240,7 +240,7 @@ bool HitSolid(int client, float vStart[3])
 
 public bool TraceEntityFilter(int entity, int contentsMask)
 {
-	if(!entity || entity <= MaxClients)
+	if(entity <= MaxClients)
 		return false;
 	else
 	{
