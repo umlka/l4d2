@@ -95,7 +95,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		return Plugin_Changed;
 	}
 
-	if(0.50 * g_fChargeProximity < fSurvivorProximity < 1500.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && (GetEntProp(client, Prop_Send, "m_hasVisibleThreats") || TargetSurvivor(client)))
+	if(0.50 * g_fChargeProximity < fSurvivorProximity < 1500.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
@@ -111,13 +111,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return Plugin_Continue;
 }
 
-int TargetSurvivor(int client)
-{
-	static int iTarget;
-	iTarget = GetClientAimTarget(client, true);
-	return IsAliveSurvivor(iTarget) ? iTarget : 0;
-}
-/*
 bool Bhop(int client, int &buttons, float vAng[3])
 {
 	static bool bJumped;
@@ -174,7 +167,7 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 
 	return false;
 }
-*/
+/*
 bool Bhop(int client, int &buttons, const float vAng[3])
 {
 	static bool bJumped;
@@ -185,14 +178,14 @@ bool Bhop(int client, int &buttons, const float vAng[3])
 	if(buttons & IN_FORWARD || buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if(Client_Push(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -60.0))
+		if(Client_Push(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
 			bJumped = true;
 	}
 
 	if(buttons & IN_MOVELEFT || buttons & IN_MOVERIGHT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		if(Client_Push(client, buttons, vVec, buttons & IN_MOVELEFT ? -60.0 : 60.0))
+		if(Client_Push(client, buttons, vVec, buttons & IN_MOVELEFT ? -90.0 : 90.0))
 			bJumped = true;
 	}
 
@@ -218,7 +211,7 @@ bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 
 	return false;
 }
-
+*/
 #define JUMP_HEIGHT 56.0
 bool WontFall(int client, const float vVel[3])
 {
