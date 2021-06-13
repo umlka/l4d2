@@ -272,7 +272,7 @@ bool WontFall(int client, const float vVel[3])
 		if(TR_DidHit(hTrace))
 		{
 			TR_GetEndPosition(vEnd, hTrace);
-			if(GetVectorDistance(vEndNonCol, vEnd) > 124.0)
+			if(vEndNonCol[2] - vEnd[2] > 124.0)
 			{
 				delete hTrace;
 				return false;
@@ -373,14 +373,24 @@ bool MakeNearestVectors(int client, float NearestVectors[3])
 	static float vOrigin[3];
 	static float vTarget[3];
 
+	GetClientAbsOrigin(client, vOrigin);
+
 	iAimTarget = GetClientAimTarget(client, true);
 	if(!IsAliveSurvivor(iAimTarget))
-		iAimTarget = GetClosestSurvivor(client, iAimTarget);
+	{
+		static int iNewTarget;
+		iNewTarget = GetClosestSurvivor(client, iAimTarget);
+		if(iNewTarget != -1)
+		{
+			GetClientAbsOrigin(iNewTarget, vTarget);
+			if(GetVectorDistance(vOrigin, vTarget) < g_fVomitRange)
+				iAimTarget = iNewTarget;
+		}
+	}
 
 	if(!IsAliveSurvivor(iAimTarget))
 		return false;
 
-	GetClientAbsOrigin(client, vOrigin);
 	GetClientAbsOrigin(iAimTarget, vTarget);
 	
 	vTarget[2] += CROUCHING_HEIGHT;
