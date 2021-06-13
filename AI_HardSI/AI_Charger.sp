@@ -12,7 +12,6 @@ float g_fChargeProximity;
 int g_iHealthThresholdCharger;
 int g_iAimOffsetSensitivityCharger;
 
-bool g_bIsCharging[MAXPLAYERS + 1];
 bool g_bShouldCharge[MAXPLAYERS + 1];
 
 public Plugin myinfo = 
@@ -36,7 +35,6 @@ public void OnPluginStart()
 
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("charger_charge_start", Event_ChargerChargeStart);
-	HookEvent("charger_charge_end", Event_ChargerChargeEnd);
 }
 
 public void OnConfigsExecuted()
@@ -59,30 +57,17 @@ void GetCvars()
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	g_bIsCharging[client] = false;
 	g_bShouldCharge[client] = false;
 }
 
 public void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	g_bIsCharging[client] = true;
 
 	int flags = GetEntProp(client, Prop_Send, "m_fFlags");
 	SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_FROZEN);
-	SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_ONGROUND);
 	Charger_OnCharge(client);
 	SetEntProp(client, Prop_Send, "m_fFlags", flags);
-}
-
-public void Event_ChargerChargeEnd(Event event, const char[] name, bool dontBroadcast)
-{
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client)
-	{
-		g_bIsCharging[client] = false;
-		g_bShouldCharge[client] = true;
-	}
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
@@ -102,13 +87,13 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		
 	static int iTarget;
 	iTarget = GetClientAimTarget(client, true);
-	if(g_bShouldCharge[client] && !g_bIsCharging[client] && -1.0 < fSurvivorProximity < 100.0 && ReadyAbility(client) && !IsChargeSurvivor(client) && IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
+	if(g_bShouldCharge[client] && -1.0 < fSurvivorProximity < 100.0 && ReadyAbility(client) && !IsChargeSurvivor(client) && IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget))
 	{
 		buttons |= IN_ATTACK;
 		return Plugin_Changed;
 	}
 
-	if(!g_bIsCharging[client] && 0.50 * g_fChargeProximity < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if(0.50 * g_fChargeProximity < fSurvivorProximity < 1500.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && (GetEntProp(client, Prop_Send, "m_hasVisibleThreats") || TargetSurvivor(client)))
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
@@ -124,45 +109,39 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return Plugin_Continue;
 }
 
-bool Bhop(int client, int &buttons, float vAng[3])
+int TargetSurvivor(int client)
+{
+	static int iTarget;
+	iTarget = GetClientAimTarget(client, true);
+	return IsAliveSurvivor(iTarget) ? iTarget : 0;
+}
+
+bool Bhop(int client, int &buttons, const float vAng[3])
 {
 	static bool bJumped;
 	bJumped = false;
 
-	if(buttons & IN_FORWARD)
+	static float vVec[3];
+
+	if(buttons & IN_FORWARD || buttons & IN_BACK)
 	{
-		if(Client_Push(client, buttons, vAng, 180.0))
-			bJumped = true;
-	}
-		
-	if(buttons & IN_BACK)
-	{
-		vAng[1] += 180.0;
-		if(Client_Push(client, buttons, vAng, 90.0))
-			bJumped = true;
-	}
-	
-	if(buttons & IN_MOVELEFT)
-	{
-		vAng[1] += 90.0;
-		if(Client_Push(client, buttons, vAng, 90.0))
+		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
+		if(Client_Push(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
 			bJumped = true;
 	}
 
-	if(buttons & IN_MOVERIGHT)
+	if(buttons & IN_MOVELEFT || buttons & IN_MOVERIGHT)
 	{
-		vAng[1] -= 90.0;
-		if(Client_Push(client, buttons, vAng, 90.0))
+		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
+		if(Client_Push(client, buttons, vVec, buttons & IN_MOVELEFT ? -90.0 : 90.0))
 			bJumped = true;
 	}
-	
+
 	return bJumped;
 }
 
-bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
+bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 {
-	static float vVec[3];
-	GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
 	NormalizeVector(vVec, vVec);
 	ScaleVector(vVec, fForce);
 
@@ -182,7 +161,7 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 }
 
 #define JUMP_HEIGHT 56.0
-bool WontFall(int client, float vVel[3])
+bool WontFall(int client, const float vVel[3])
 {
 	static float vStart[3];
 	static float vEnd[3];
@@ -196,11 +175,13 @@ bool WontFall(int client, float vVel[3])
 
 	vStart[2] += 20.0;
 
-	vVel[2] = vVel[2] > 0.0 ? vVel[2] : JUMP_HEIGHT;
-	vEnd[2] += vVel[2];
+	static float fHeight;
+	fHeight = vVel[2] > 0.0 ? vVel[2] : JUMP_HEIGHT;
+
+	vEnd[2] += fHeight;
 	static Handle hTrace;
 	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
-	vEnd[2] -= vVel[2];
+	vEnd[2] -= fHeight;
 
 	static bool bDidHit;
 	bDidHit = false;
@@ -213,7 +194,7 @@ bool WontFall(int client, float vVel[3])
 		{
 			bDidHit = true;
 			TR_GetEndPosition(vEndNonCol, hTrace);
-			if(GetVectorDistance(vStart, vEndNonCol) < GetEntPropFloat(client, Prop_Data, "m_flMaxspeed"))
+			if(GetVectorDistance(vStart, vEndNonCol) < 64.0)
 			{
 				delete hTrace;
 				return false;
@@ -251,7 +232,7 @@ bool WontFall(int client, float vVel[3])
 
 public bool TraceEntityFilter(int entity, int contentsMask)
 {
-	if(!entity || entity <= MaxClients)
+	if(entity <= MaxClients)
 		return false;
 	else
 	{
@@ -334,6 +315,7 @@ void Charger_OnCharge(int client)
 	}
 }
 
+#define CROUCHING_HEIGHT 56.0
 bool MakeNearestVectors(int client, float NearestVectors[3])
 {
 	static int iAimTarget;
@@ -348,7 +330,9 @@ bool MakeNearestVectors(int client, float NearestVectors[3])
 		return false;
 
 	GetClientAbsOrigin(client, vOrigin);
-	GetClientEyePosition(iAimTarget, vTarget);
+	GetClientAbsOrigin(iAimTarget, vTarget);
+	
+	vTarget[2] += CROUCHING_HEIGHT;
 	MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
 	return true;
 }
@@ -413,7 +397,7 @@ int GetClosestSurvivor(int client, int iAimTarget = -1)
 	for(i = 0; i < iNum; i++)
 	{
 		iTarget = iTargets[i];
-		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
+		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget))
 		{
 			GetClientAbsOrigin(iTarget, vTarget);
 			aTargets.Set(aTargets.Push(GetVectorDistance(vOrigin, vTarget)), iTarget, 1);
