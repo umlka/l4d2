@@ -177,7 +177,7 @@ bool WontFall(int client, const float vVel[3])
 		if(TR_DidHit(hTrace))
 		{
 			TR_GetEndPosition(vEnd, hTrace);
-			if(GetVectorDistance(vEndNonCol, vEnd) > 124.0)
+			if(vEndNonCol[2] - vEnd[2] > 124.0)
 			{
 				delete hTrace;
 				return false;
