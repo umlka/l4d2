@@ -95,7 +95,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		return Plugin_Changed;
 	}
 
-	if(0.50 * g_fChargeProximity < fSurvivorProximity < 1500.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if(200.0 < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
@@ -269,7 +269,7 @@ bool WontFall(int client, const float vVel[3])
 		if(TR_DidHit(hTrace))
 		{
 			TR_GetEndPosition(vEnd, hTrace);
-			if(GetVectorDistance(vEndNonCol, vEnd) > 124.0)
+			if(vEndNonCol[2] - vEnd[2] > 124.0)
 			{
 				delete hTrace;
 				return false;
@@ -374,16 +374,26 @@ bool MakeNearestVectors(int client, float NearestVectors[3])
 	static float vOrigin[3];
 	static float vTarget[3];
 
+	GetClientAbsOrigin(client, vOrigin);
+
 	iAimTarget = GetClientAimTarget(client, true);
-	if(!IsAliveSurvivor(iAimTarget) || IsIncapacitated(iAimTarget) || IsPinned(iAimTarget) || IsTargetWatchingAttacker(client, g_iAimOffsetSensitivityCharger))
-		iAimTarget = GetClosestSurvivor(client, iAimTarget);
+	if(!IsAliveSurvivor(iAimTarget) || IsTargetWatchingAttacker(client, g_iAimOffsetSensitivityCharger))
+	{
+		static int iNewTarget;
+		iNewTarget = GetClosestSurvivor(client, iAimTarget);
+		if(iNewTarget != -1)
+		{
+			GetClientAbsOrigin(iNewTarget, vTarget);
+			if(GetVectorDistance(vOrigin, vTarget) < g_fChargeProximity)
+				iAimTarget = iNewTarget;
+		}
+	}
 
 	if(!IsAliveSurvivor(iAimTarget))
 		return false;
 
-	GetClientAbsOrigin(client, vOrigin);
 	GetClientAbsOrigin(iAimTarget, vTarget);
-	
+
 	vTarget[2] += CROUCHING_HEIGHT;
 	MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
 	return true;
@@ -481,19 +491,4 @@ bool IsValidClient(int client)
 bool IsIncapacitated(int client)
 {
 	return !!GetEntProp(client, Prop_Send, "m_isIncapacitated");
-}
-
-bool IsPinned(int client)
-{
-	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
-		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
-		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
-		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
-		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
-		return true;
-	return false;
 }
