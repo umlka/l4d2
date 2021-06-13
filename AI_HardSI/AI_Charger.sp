@@ -377,7 +377,7 @@ bool MakeNearestVectors(int client, float NearestVectors[3])
 	GetClientAbsOrigin(client, vOrigin);
 
 	iAimTarget = GetClientAimTarget(client, true);
-	if(!IsAliveSurvivor(iAimTarget) || IsTargetWatchingAttacker(client, g_iAimOffsetSensitivityCharger))
+	if(!IsAliveSurvivor(iAimTarget) || IsIncapacitated(iAimTarget) || IsPinned(iAimTarget) || IsTargetWatchingAttacker(client, g_iAimOffsetSensitivityCharger))
 	{
 		static int iNewTarget;
 		iNewTarget = GetClosestSurvivor(client, iAimTarget);
@@ -459,7 +459,7 @@ int GetClosestSurvivor(int client, int iAimTarget = -1)
 	for(i = 0; i < iNum; i++)
 	{
 		iTarget = iTargets[i];
-		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget))
+		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
 		{
 			GetClientAbsOrigin(iTarget, vTarget);
 			aTargets.Set(aTargets.Push(GetVectorDistance(vOrigin, vTarget)), iTarget, 1);
@@ -491,4 +491,19 @@ bool IsValidClient(int client)
 bool IsIncapacitated(int client)
 {
 	return !!GetEntProp(client, Prop_Send, "m_isIncapacitated");
+}
+
+bool IsPinned(int client)
+{
+	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
+		return true;
+	return false;
 }
