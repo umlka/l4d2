@@ -26,7 +26,7 @@ public void OnPluginStart()
 	g_hSurvivorSpeed.AddChangeHook(ConVarChanged);
 	
 
-	FindConVar("z_vomit_fatigue").SetInt(1500);
+	FindConVar("z_vomit_fatigue").SetInt(0);
 	FindConVar("z_boomer_near_dist").SetInt(1);
 	FindConVar("boomer_vomit_delay").SetFloat(0.01);
 	FindConVar("boomer_exposed_time_tolerance").SetFloat(10000.0);
@@ -113,7 +113,7 @@ int TargetSurvivor(int client)
 	iTarget = GetClientAimTarget(client, true);
 	return IsAliveSurvivor(iTarget) ? iTarget : 0;
 }
-/*
+
 bool Bhop(int client, int &buttons, float vAng[3])
 {
 	static bool bJumped;
@@ -170,7 +170,7 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 
 	return false;
 }
-*/
+/*
 bool Bhop(int client, int &buttons, const float vAng[3])
 {
 	static bool bJumped;
@@ -181,14 +181,14 @@ bool Bhop(int client, int &buttons, const float vAng[3])
 	if(buttons & IN_FORWARD || buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if(Client_Push(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -60.0))
+		if(Client_Push(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
 			bJumped = true;
 	}
 
 	if(buttons & IN_MOVELEFT || buttons & IN_MOVERIGHT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		if(Client_Push(client, buttons, vVec, buttons & IN_MOVELEFT ? -60.0 : 60.0))
+		if(Client_Push(client, buttons, vVec, buttons & IN_MOVELEFT ? -90.0 : 90.0))
 			bJumped = true;
 	}
 
@@ -214,7 +214,7 @@ bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 
 	return false;
 }
-
+*/
 #define JUMP_HEIGHT 56.0
 bool WontFall(int client, const float vVel[3])
 {
