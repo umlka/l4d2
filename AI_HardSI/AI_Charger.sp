@@ -116,6 +116,63 @@ int TargetSurvivor(int client)
 	return IsAliveSurvivor(iTarget) ? iTarget : 0;
 }
 
+bool Bhop(int client, int &buttons, float vAng[3])
+{
+	static bool bJumped;
+	bJumped = false;
+
+	if(buttons & IN_FORWARD)
+	{
+		if(Client_Push(client, buttons, vAng, 180.0))
+			bJumped = true;
+	}
+		
+	if(buttons & IN_BACK)
+	{
+		vAng[1] += 180.0;
+		if(Client_Push(client, buttons, vAng, 90.0))
+			bJumped = true;
+	}
+	
+	if(buttons & IN_MOVELEFT)
+	{
+		vAng[1] += 90.0;
+		if(Client_Push(client, buttons, vAng, 90.0))
+			bJumped = true;
+	}
+
+	if(buttons & IN_MOVERIGHT)
+	{
+		vAng[1] -= 90.0;
+		if(Client_Push(client, buttons, vAng, 90.0))
+			bJumped = true;
+	}
+	
+	return bJumped;
+}
+
+bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
+{
+	static float vVec[3];
+	GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vVec, vVec);
+	ScaleVector(vVec, fForce);
+
+	static float vVel[3];
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
+	AddVectors(vVel, vVec, vVel);
+
+	if(WontFall(client, vVel))
+	{
+		buttons |= IN_DUCK;
+		buttons |= IN_JUMP;
+		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+		return true;
+	}
+
+	return false;
+}
+/*
 bool Bhop(int client, int &buttons, const float vAng[3])
 {
 	static bool bJumped;
@@ -159,7 +216,7 @@ bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 
 	return false;
 }
-
+*/
 #define JUMP_HEIGHT 56.0
 bool WontFall(int client, const float vVel[3])
 {
