@@ -354,43 +354,8 @@ void BlockCharge(int client)
 		SetEntPropFloat(iAbility, Prop_Send, "m_timestamp", GetGameTime() + 0.1);	
 }
 
-void Charger_OnCharge(int client)
-{
-	static float NearestVectors[3];
-	if(MakeNearestVectors(client, NearestVectors))
-	{
-		static float vVelocity[3];
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
-
-		static float vLength;
-		vLength = GetVectorLength(vVelocity);
-		vLength = vLength < g_fChargeStartSpeed ? g_fChargeStartSpeed : vLength;
-
-		static int iTarget;
-		iTarget = TargetSurvivor(client);
-		if(iTarget)
-			vLength += GetEntPropFloat(iTarget, Prop_Data, "m_flMaxspeed");
-		else
-			vLength += 220.0;
-
-		NormalizeVector(NearestVectors, NearestVectors);
-		ScaleVector(NearestVectors, vLength);
-
-		static float NearestAngles[3];
-		GetVectorAngles(NearestVectors, NearestAngles);
-		TeleportEntity(client, NULL_VECTOR, NearestAngles, NearestVectors);
-	}
-}
-
-int TargetSurvivor(int client)
-{
-	static int iTarget;
-	iTarget = GetClientAimTarget(client, true);
-	return IsAliveSurvivor(iTarget) ? iTarget : 0;
-}
-
 #define CROUCHING_HEIGHT 56.0
-bool MakeNearestVectors(int client, float NearestVectors[3])
+void Charger_OnCharge(int client)
 {
 	static int iAimTarget;
 	static float vOrigin[3];
@@ -411,14 +376,59 @@ bool MakeNearestVectors(int client, float NearestVectors[3])
 		}
 	}
 
-	if(!IsAliveSurvivor(iAimTarget))
-		return false;
+	if(IsAliveSurvivor(iAimTarget))
+	{
+		GetClientAbsOrigin(iAimTarget, vTarget);
 
-	GetClientAbsOrigin(iAimTarget, vTarget);
+		vTarget[2] += CROUCHING_HEIGHT;
+		
+		static float NearestVectors[3];
+		MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
+		
+		static float vVelocity[3];
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
 
-	vTarget[2] += CROUCHING_HEIGHT;
-	MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
-	return true;
+		static float vLength;
+		vLength = GetVectorLength(vVelocity);
+		vLength = (vLength < g_fChargeStartSpeed ? g_fChargeStartSpeed : vLength) + GetEntPropFloat(iAimTarget, Prop_Data, "m_flMaxspeed");
+
+		NormalizeVector(NearestVectors, NearestVectors);
+		ScaleVector(NearestVectors, vLength);
+
+		static float NearestAngles[3];
+		GetVectorAngles(NearestVectors, NearestAngles);
+		TeleportEntity(client, NULL_VECTOR, NearestAngles, NearestVectors);
+	}
+}
+
+bool IsAliveSurvivor(int client)
+{
+	return IsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
+}
+
+bool IsValidClient(int client)
+{
+	return client > 0 && client <= MaxClients && IsClientInGame(client);
+}
+
+bool IsIncapacitated(int client)
+{
+	return !!GetEntProp(client, Prop_Send, "m_isIncapacitated");
+}
+
+bool IsPinned(int client)
+{
+	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
+		return true;
+	return false;
 }
 
 bool IsTargetWatchingAttacker(int iAttacker, int iOffsetThreshold)
@@ -498,34 +508,4 @@ int GetClosestSurvivor(int client, int iAimTarget = -1)
 	iAimTarget = aTargets.Get(0, 1);
 	delete aTargets;
 	return iAimTarget;
-}
-
-bool IsAliveSurvivor(int client)
-{
-	return IsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
-}
-
-bool IsValidClient(int client)
-{
-	return client > 0 && client <= MaxClients && IsClientInGame(client);
-}
-
-bool IsIncapacitated(int client)
-{
-	return !!GetEntProp(client, Prop_Send, "m_isIncapacitated");
-}
-
-bool IsPinned(int client)
-{
-	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
-		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
-		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
-		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
-		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
-		return true;
-	return false;
 }
