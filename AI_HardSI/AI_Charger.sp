@@ -361,10 +361,10 @@ bool HitWall(int client, int iTarget)
 	vMins[2] += 3.0;
 	vMaxs[0] -= 3.0;
 	vMaxs[1] -= 3.0;
-	vMaxs[2] -= 15.0;
+	vMaxs[2] -= 32.5;
 
-	vPos[2] += 10.0;
-	vTarget[2] += 10.0;
+	vPos[2] += 20.0;
+	vTarget[2] += 20.0;
 
 	static Handle hTrace;
 	hTrace = TR_TraceHullFilterEx(vPos, vTarget, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
@@ -376,15 +376,16 @@ bool HitWall(int client, int iTarget)
 		if(TR_DidHit(hTrace))
 		{
 			TR_GetEndPosition(vEndNonCol, hTrace);
-			if(GetVectorDistance(vTarget, vEndNonCol) < 32.0)
+			if(GetVectorDistance(vEndNonCol, vTarget) < 32.0)
 			{
 				delete hTrace;
-				return true;
+				return false;
 			}
 			delete hTrace;
-			return false;
+			return true;
 		}
 		delete hTrace;
+		return false;
 	}
 
 	return true;
@@ -556,7 +557,7 @@ int GetClosestSurvivor(int client, int iAimTarget = -1, float fDistance)
 	for(i = 0; i < iNum; i++)
 	{
 		iTarget = iTargets[i];
-		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget)/* && !HitWall(client, iTarget)*/)
+		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget) && !HitWall(client, iTarget))
 		{
 			GetClientAbsOrigin(iTarget, vTarget);
 			fDist = GetVectorDistance(vOrigin, vTarget);
