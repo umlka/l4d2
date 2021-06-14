@@ -556,7 +556,7 @@ int GetClosestSurvivor(int client, int iAimTarget = -1, float fDistance)
 	for(i = 0; i < iNum; i++)
 	{
 		iTarget = iTargets[i];
-		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget) && !HitWall(client, iTarget))
+		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget)/* && !HitWall(client, iTarget)*/)
 		{
 			GetClientAbsOrigin(iTarget, vTarget);
 			fDist = GetVectorDistance(vOrigin, vTarget);
@@ -573,7 +573,7 @@ int GetClosestSurvivor(int client, int iAimTarget = -1, float fDistance)
 		
 		for(i = 1; i <= MaxClients; i++)
 		{
-			if(i != iAimTarget && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !IsIncapacitated(i) && !IsPinned(i) && !HitWall(client, i))
+			if(i != iAimTarget && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !IsIncapacitated(i) && !IsPinned(i)/* && !HitWall(client, i)*/)
 			{
 				GetClientAbsOrigin(i, vTarget);
 				fDist = GetVectorDistance(vOrigin, vTarget);
