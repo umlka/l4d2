@@ -5,11 +5,14 @@
 
 #define BoostForward 80.0
 
+ConVar g_hTankBhop;
 ConVar g_hTankAttackRange;
+
+bool g_bTankBhop;
 
 float g_fTankAttackRange;
 
-public Plugin myinfo = 
+public Plugin myinfo =
 {
 	name = "AI TANK",
 	author = "Breezy",
@@ -20,7 +23,11 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
+	g_hTankBhop = CreateConVar("ai_tank_bhop", "1", "Flag to enable bhop facsimile on AI tanks");
+
 	g_hTankAttackRange = FindConVar("tank_attack_range");
+	
+	g_hTankBhop.AddChangeHook(ConVarChanged);
 	g_hTankAttackRange.AddChangeHook(ConVarChanged);
 }
 
@@ -36,6 +43,7 @@ public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] new
 
 void GetCvars()
 {
+	g_bTankBhop = g_hTankBhop.BoolValue;
 	g_fTankAttackRange = g_hTankAttackRange.FloatValue;
 }
 
@@ -44,7 +52,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
-	if(GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if(g_bTankBhop && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
