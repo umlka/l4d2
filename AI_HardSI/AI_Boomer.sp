@@ -3,11 +3,14 @@
 #include <sourcemod>
 #include <sdktools>
 
+ConVar g_hBoomerBhop;
 ConVar g_hVomitRange;
+
+bool g_bBoomerBhop;
 
 float g_fVomitRange;
 
-public Plugin myinfo = 
+public Plugin myinfo =
 {
 	name = "AI BOOMER",
 	author = "Breezy",
@@ -18,7 +21,11 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
+	g_hBoomerBhop = CreateConVar("ai_boomer_bhop", "1", "Flag to enable bhop facsimile on AI boomers");
+
 	g_hVomitRange = FindConVar("z_vomit_range");
+	
+	g_hBoomerBhop.AddChangeHook(ConVarChanged);
 	g_hVomitRange.AddChangeHook(ConVarChanged);
 	
 
@@ -50,6 +57,7 @@ public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] new
 
 void GetCvars()
 {
+	g_bBoomerBhop = g_hBoomerBhop.BoolValue;
 	g_fVomitRange = g_hVomitRange.FloatValue;
 }
 
@@ -70,7 +78,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 2 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
-	if(GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && (GetEntProp(client, Prop_Send, "m_hasVisibleThreats") || TargetSurvivor(client)))
+	if(g_bBoomerBhop && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && (GetEntProp(client, Prop_Send, "m_hasVisibleThreats") || TargetSurvivor(client)))
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
