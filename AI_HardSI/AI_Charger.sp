@@ -3,6 +3,7 @@
 #include <sourcemod>
 #include <sdktools>
 
+ConVar g_hChargerBhop;
 ConVar g_hChargeStartSpeed;
 ConVar g_hChargeProximity;
 ConVar g_hHealthThresholdCharger;
@@ -14,9 +15,10 @@ float g_fChargeProximity;
 int g_iHealthThresholdCharger;
 int g_iAimOffsetSensitivityCharger;
 
+bool g_bChargerBhop;
 bool g_bShouldCharge[MAXPLAYERS + 1];
 
-public Plugin myinfo = 
+public Plugin myinfo =
 {
 	name = "AI CHARGER",
 	author = "Breezy",
@@ -27,12 +29,14 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
+	g_hChargerBhop = CreateConVar("ai_charger_bhop", "1", "Flag to enable bhop facsimile on AI chargers");
 	g_hChargeProximity = CreateConVar("ai_charge_proximity", "300.0", "How close a client will approach before charging");
 	g_hHealthThresholdCharger = CreateConVar("ai_health_threshold_charger", "300", "Charger will charge if its health drops to this level");
 	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "20", "If the client has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
 	
 	g_hChargeStartSpeed = FindConVar("z_charge_start_speed");
 
+	g_hChargerBhop.AddChangeHook(ConVarChanged);
 	g_hChargeStartSpeed.AddChangeHook(ConVarChanged);
 	g_hChargeProximity.AddChangeHook(ConVarChanged);
 	g_hHealthThresholdCharger.AddChangeHook(ConVarChanged);
@@ -54,6 +58,7 @@ public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] new
 
 void GetCvars()
 {
+	g_bChargerBhop = g_hChargerBhop.BoolValue;
 	g_fChargeStartSpeed = g_hChargeStartSpeed.FloatValue;
 	g_fChargeProximity = g_hChargeProximity.FloatValue;
 	g_iHealthThresholdCharger = g_hHealthThresholdCharger.IntValue;
@@ -105,7 +110,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		}
 	}
 
-	if(200.0 < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if(g_bChargerBhop && 200.0 < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
