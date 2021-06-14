@@ -3,13 +3,11 @@
 #include <sourcemod>
 #include <sdktools>
 
-ConVar g_hSurvivorSpeed;
 ConVar g_hChargeStartSpeed;
 ConVar g_hChargeProximity;
 ConVar g_hHealthThresholdCharger;
 ConVar g_hAimOffsetSensitivityCharger;
 
-float g_fSurvivorSpeed;
 float g_fChargeStartSpeed;
 float g_fChargeProximity;
 
@@ -33,10 +31,8 @@ public void OnPluginStart()
 	g_hHealthThresholdCharger = CreateConVar("ai_health_threshold_charger", "300", "Charger will charge if its health drops to this level");
 	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "20", "If the client has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
 	
-	g_hSurvivorSpeed = FindConVar("survivor_speed");
 	g_hChargeStartSpeed = FindConVar("z_charge_start_speed");
-	
-	g_hSurvivorSpeed.AddChangeHook(ConVarChanged);
+
 	g_hChargeStartSpeed.AddChangeHook(ConVarChanged);
 	g_hChargeProximity.AddChangeHook(ConVarChanged);
 	g_hHealthThresholdCharger.AddChangeHook(ConVarChanged);
@@ -58,7 +54,6 @@ public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] new
 
 void GetCvars()
 {
-	g_fSurvivorSpeed = g_hSurvivorSpeed.FloatValue;
 	g_fChargeStartSpeed = g_hChargeStartSpeed.FloatValue;
 	g_fChargeProximity = g_hChargeProximity.FloatValue;
 	g_iHealthThresholdCharger = g_hHealthThresholdCharger.IntValue;
@@ -376,7 +371,7 @@ void Charger_OnCharge(int client)
 		if(iTarget)
 			vLength += GetEntPropFloat(iTarget, Prop_Data, "m_flMaxspeed");
 		else
-			vLength += g_fSurvivorSpeed;
+			vLength += 220.0;
 
 		NormalizeVector(NearestVectors, NearestVectors);
 		ScaleVector(NearestVectors, vLength);
