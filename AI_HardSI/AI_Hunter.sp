@@ -190,7 +190,7 @@ void Hunter_OnPounce(int client)
 	static float vPos[3];
 	
 	GetClientAbsOrigin(client, vPos);
-	if(g_fWallDetectionDistance > 0.0 && HitSolid(client, vPos))
+	if(g_fWallDetectionDistance > 0.0 && HitWall(client, vPos))
 	{
 		if(GetRandomInt(0, 1))
 			AngleLunge(iLunge, 45.0);
@@ -209,22 +209,22 @@ void Hunter_OnPounce(int client)
 	}
 }
 
-bool HitSolid(int client, float vStart[3])
+bool HitWall(int client, const float vStart[3])
 {
-	static float vEyeDir[3];
-	GetClientEyeAngles(client, vEyeDir);
-	GetAngleVectors(vEyeDir, vEyeDir, NULL_VECTOR, NULL_VECTOR);
-	NormalizeVector(vEyeDir, vEyeDir);
-	ScaleVector(vEyeDir, g_fWallDetectionDistance);
-	AddVectors(vStart, vEyeDir, vEyeDir);
+	static float vEnd[3];
+	GetClientEyeAngles(client, vEnd);
+	GetAngleVectors(vEnd, vEnd, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vEnd, vEnd);
+	ScaleVector(vEnd, g_fWallDetectionDistance);
+	AddVectors(vStart, vEnd, vEnd);
 
-	static float vMin[3];
-	static float vMax[3];
-	GetClientMins(client, vMin);
-	GetClientMaxs(client, vMax);
+	static float vMins[3];
+	static float vMaxs[3];
+	GetClientMins(client, vMins);
+	GetClientMaxs(client, vMaxs);
 
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vStart, vEyeDir, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
 
 	static bool bDidHit;
 	bDidHit = false;
