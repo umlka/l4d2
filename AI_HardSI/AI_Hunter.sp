@@ -24,7 +24,7 @@ float g_fWallDetectionDistance;
 bool g_bCanLunge[MAXPLAYERS + 1];
 bool g_bHasQueuedLunge[MAXPLAYERS + 1];
 
-public Plugin myinfo = 
+public Plugin myinfo =
 {
 	name = "AI HUNTER",
 	author = "Breezy",
@@ -35,14 +35,6 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {	
-	FindConVar("hunter_committed_attack_range").SetFloat(10000.0);
-	FindConVar("hunter_pounce_ready_range").SetFloat(500.0);
-	FindConVar("hunter_leap_away_give_up_range").SetFloat(0.0);
-	FindConVar("hunter_pounce_max_loft_angle").SetFloat(0.0);
-	FindConVar("z_pounce_crouch_delay").SetFloat(0.1);
-	FindConVar("z_pounce_damage_interrupt").SetInt(150);
-	g_hLungeInterval = FindConVar("z_lunge_interval");
-
 	g_hFastPounceProximity = CreateConVar("ai_fast_pounce_proximity", "1000.0", "At what distance to start pouncing fast");
 	g_hPounceVerticalAngle = CreateConVar("ai_pounce_vertical_angle", "7.0", "Vertical angle to which AI hunter pounces will be restricted");
 	g_hPounceAngleMean = CreateConVar("ai_pounce_angle_mean", "10.0", "Mean angle produced by Gaussian RNG");
@@ -50,6 +42,14 @@ public void OnPluginStart()
 	g_hStraightPounceProximity = CreateConVar("ai_straight_pounce_proximity", "350.0", "Distance to nearest survivor at which hunter will consider pouncing straight");
 	g_hAimOffsetSensitivityHunter = CreateConVar("ai_aim_offset_sensitivity_hunter", "179", "If the hunter has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
 	g_hWallDetectionDistance = CreateConVar("ai_wall_detection_distance", "-1.0", "How far in front of himself infected bot will check for a wall. Use '-1' to disable feature");
+
+	FindConVar("hunter_committed_attack_range").SetFloat(10000.0);
+	FindConVar("hunter_pounce_ready_range").SetFloat(500.0);
+	FindConVar("hunter_leap_away_give_up_range").SetFloat(0.0);
+	FindConVar("hunter_pounce_max_loft_angle").SetFloat(0.0);
+	FindConVar("z_pounce_crouch_delay").SetFloat(0.1);
+	FindConVar("z_pounce_damage_interrupt").SetInt(150);
+	g_hLungeInterval = FindConVar("z_lunge_interval");
 
 	g_hLungeInterval.AddChangeHook(ConVarChanged);
 	g_hFastPounceProximity.AddChangeHook(ConVarChanged);
