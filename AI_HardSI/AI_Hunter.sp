@@ -222,6 +222,11 @@ bool HitWall(int client, const float vStart[3])
 	static float vMaxs[3];
 	GetClientMins(client, vMins);
 	GetClientMaxs(client, vMaxs);
+	
+	vMins[0] += 3.0;
+	vMins[1] += 3.0;
+	vMaxs[0] -= 3.0;
+	vMaxs[1] -= 3.0;
 
 	static Handle hTrace;
 	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
