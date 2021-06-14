@@ -298,31 +298,6 @@ public bool TraceEntityFilter(int entity, int contentsMask)
 	return true;
 }
 
-void Boomer_OnVomit(int client)
-{
-	static float NearestVectors[3];
-	if(MakeNearestVectors(client, NearestVectors))
-	{
-		static float vLength;
-		vLength = GetVectorLength(NearestVectors);
-		vLength = vLength < g_fVomitRange ? g_fVomitRange : vLength;
-
-		static int iTarget;
-		iTarget = TargetSurvivor(client);
-		if(iTarget)
-			vLength += GetEntPropFloat(iTarget, Prop_Data, "m_flMaxspeed");
-		else
-			vLength += 220.0;
-
-		NormalizeVector(NearestVectors, NearestVectors);
-		ScaleVector(NearestVectors, vLength);
-
-		static float NearestAngles[3];
-		GetVectorAngles(NearestVectors, NearestAngles);
-		TeleportEntity(client, NULL_VECTOR, NearestAngles, NearestVectors);
-	}
-}
-
 float NearestSurvivorDistance(int client)
 {
 	static int i;
@@ -351,18 +326,8 @@ float NearestSurvivorDistance(int client)
 	return fDists[0];
 }
 
-bool IsAliveSurvivor(int client)
-{
-	return IsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
-}
-
-bool IsValidClient(int client)
-{
-	return client > 0 && client <= MaxClients && IsClientInGame(client);
-}
-
 #define CROUCHING_HEIGHT 56.0
-bool MakeNearestVectors(int client, float NearestVectors[3])
+void Boomer_OnVomit(int client)
 {
 	static int iAimTarget;
 	static float vOrigin[3];
@@ -383,14 +348,36 @@ bool MakeNearestVectors(int client, float NearestVectors[3])
 		}
 	}
 
-	if(!IsAliveSurvivor(iAimTarget))
-		return false;
+	if(IsAliveSurvivor(iAimTarget))
+	{
+		GetClientAbsOrigin(iAimTarget, vTarget);
 
-	GetClientAbsOrigin(iAimTarget, vTarget);
-	
-	vTarget[2] += CROUCHING_HEIGHT;
-	MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
-	return true;
+		vTarget[2] += CROUCHING_HEIGHT;
+
+		static float NearestVectors[3];
+		MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
+
+		static float vLength;
+		vLength = GetVectorLength(NearestVectors);
+		vLength = (vLength < g_fVomitRange ? g_fVomitRange : vLength) + GetEntPropFloat(iAimTarget, Prop_Data, "m_flMaxspeed");
+
+		NormalizeVector(NearestVectors, NearestVectors);
+		ScaleVector(NearestVectors, vLength);
+
+		static float NearestAngles[3];
+		GetVectorAngles(NearestVectors, NearestAngles);
+		TeleportEntity(client, NULL_VECTOR, NearestAngles, NearestVectors);
+	}
+}
+
+bool IsAliveSurvivor(int client)
+{
+	return IsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
+}
+
+bool IsValidClient(int client)
+{
+	return client > 0 && client <= MaxClients && IsClientInGame(client);
 }
 
 int GetClosestSurvivor(int client, int iAimTarget = -1)
