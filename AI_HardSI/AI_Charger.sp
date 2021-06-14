@@ -363,22 +363,31 @@ bool HitWall(int client, int iTarget)
 	vMaxs[1] -= 3.0;
 	vMaxs[2] -= 15.0;
 
-	vPos[2] += 5.0;
-	vTarget[2] += 5.0;
+	vPos[2] += 10.0;
+	vTarget[2] += 10.0;
 
 	static Handle hTrace;
 	hTrace = TR_TraceHullFilterEx(vPos, vTarget, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
 
-	static bool bDidHit;
-	bDidHit = false;
+	static float vEndNonCol[3];
 
 	if(hTrace != null)
 	{
-		bDidHit = TR_DidHit(hTrace);
+		if(TR_DidHit(hTrace))
+		{
+			TR_GetEndPosition(vEndNonCol, hTrace);
+			if(GetVectorDistance(vTarget, vEndNonCol) < 32.0)
+			{
+				delete hTrace;
+				return true;
+			}
+			delete hTrace;
+			return false;
+		}
 		delete hTrace;
 	}
-	
-	return bDidHit;
+
+	return true;
 }
 
 bool IsChargeSurvivor(int client)
@@ -405,47 +414,55 @@ void BlockCharge(int client)
 void Charger_OnCharge(int client)
 {
 	static int iAimTarget;
-	static float vOrigin[3];
-	static float vTarget[3];
-
-	GetClientAbsOrigin(client, vOrigin);
 
 	iAimTarget = GetClientAimTarget(client, true);
 	if(!IsAliveSurvivor(iAimTarget) || IsIncapacitated(iAimTarget) || IsPinned(iAimTarget) || IsTargetWatchingAttacker(client, g_iAimOffsetSensitivityCharger))
 	{
 		static int iNewTarget;
-		iNewTarget = GetClosestSurvivor(client, iAimTarget);
+		iNewTarget = GetClosestSurvivor(client, iAimTarget, g_fChargeProximity + 260.0);
 		if(iNewTarget != -1)
-		{
-			GetClientAbsOrigin(iNewTarget, vTarget);
-			if(GetVectorDistance(vOrigin, vTarget) < g_fChargeProximity)
-				iAimTarget = iNewTarget;
-		}
+			iAimTarget = iNewTarget;
 	}
+
+	static float vAngles[3];
+	static float vVectors[3];
+	static float vVelocity[3];
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
+
+	static float vLength;
+	vLength = GetVectorLength(vVelocity);
+	vLength = vLength < g_fChargeStartSpeed ? g_fChargeStartSpeed : vLength;
 
 	if(IsAliveSurvivor(iAimTarget))
 	{
+		static float vOrigin[3];
+		static float vTarget[3];
+
+		GetClientAbsOrigin(client, vOrigin);
 		GetClientAbsOrigin(iAimTarget, vTarget);
 
 		vTarget[2] += CROUCHING_HEIGHT;
-		
-		static float NearestVectors[3];
-		MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
-		
-		static float vVelocity[3];
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
 
-		static float vLength;
-		vLength = GetVectorLength(vVelocity);
-		vLength = (vLength < g_fChargeStartSpeed ? g_fChargeStartSpeed : vLength) + GetEntPropFloat(iAimTarget, Prop_Data, "m_flMaxspeed");
+		MakeVectorFromPoints(vOrigin, vTarget, vVectors);
 
-		NormalizeVector(NearestVectors, NearestVectors);
-		ScaleVector(NearestVectors, vLength);
+		GetVectorAngles(vVectors, vAngles);
 
-		static float NearestAngles[3];
-		GetVectorAngles(NearestVectors, NearestAngles);
-		TeleportEntity(client, NULL_VECTOR, NearestAngles, NearestVectors);
+		//vLength += GetEntPropFloat(iAimTarget, Prop_Data, "m_flMaxspeed");
 	}
+	else
+	{
+		GetClientEyeAngles(client, vAngles);
+
+		vVectors[0] = Cosine(DegToRad(vAngles[1])) * Cosine(DegToRad(vAngles[0]));
+		vVectors[1] = Sine(DegToRad(vAngles[1])) * Cosine(DegToRad(vAngles[0]));
+		vVectors[2] = Sine(DegToRad(vAngles[0]));
+
+		//vLength += NearestSurvivorDistance(client);
+	}
+	
+	NormalizeVector(vVectors, vVectors);
+	ScaleVector(vVectors, vLength);
+	TeleportEntity(client, NULL_VECTOR, vAngles, vVectors);
 }
 
 bool IsAliveSurvivor(int client)
@@ -517,10 +534,11 @@ float GetPlayerAimOffset(int iAttacker, int iTarget)
 	return RadToDeg(ArcCosine(GetVectorDotProduct(vAim, vAttacker)));
 }
 
-int GetClosestSurvivor(int client, int iAimTarget = -1)
+int GetClosestSurvivor(int client, int iAimTarget = -1, float fDistance)
 {
 	static int i;
 	static int iNum;
+	static float fDist;
 	static float vOrigin[3];
 	static float vTarget[3];
 	static int iTargets[MAXPLAYERS + 1];
@@ -538,19 +556,39 @@ int GetClosestSurvivor(int client, int iAimTarget = -1)
 	for(i = 0; i < iNum; i++)
 	{
 		iTarget = iTargets[i];
-		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget))
+		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !IsIncapacitated(iTarget) && !IsPinned(iTarget) && !HitWall(client, iTarget))
 		{
 			GetClientAbsOrigin(iTarget, vTarget);
-			aTargets.Set(aTargets.Push(GetVectorDistance(vOrigin, vTarget)), iTarget, 1);
+			fDist = GetVectorDistance(vOrigin, vTarget);
+			if(fDist < fDistance)
+				aTargets.Set(aTargets.Push(fDist), iTarget, 1);
 		}
 	}
 
 	if(aTargets.Length == 0)
 	{
-		delete aTargets;
-		return -1;
-	}
+		iNum = 0;
 		
+		GetClientAbsOrigin(client, vOrigin);
+		
+		for(i = 1; i <= MaxClients; i++)
+		{
+			if(i != iAimTarget && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !IsIncapacitated(i) && !IsPinned(i) && !HitWall(client, i))
+			{
+				GetClientAbsOrigin(i, vTarget);
+				fDist = GetVectorDistance(vOrigin, vTarget);
+				if(fDist < fDistance)
+					aTargets.Set(aTargets.Push(fDist), i, 1);
+			}
+		}
+		
+		if(aTargets.Length == 0)
+		{
+			delete aTargets;
+			return -1;
+		}
+	}
+
 	aTargets.Sort(Sort_Ascending, Sort_Float);
 	iAimTarget = aTargets.Get(0, 1);
 	delete aTargets;
