@@ -97,7 +97,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		static int iTarget;
 		iTarget = GetClientAimTarget(client, true);
-		if(IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget))
+		if(IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget) && !HitWall(client, iTarget))
 		{
 			buttons |= IN_ATTACK;
 			buttons |= IN_ATTACK2;
@@ -336,6 +336,44 @@ float NearestSurvivorDistance(int client)
 
 	SortFloats(fDists, iNum, Sort_Ascending);
 	return fDists[0];
+}
+
+bool HitWall(int client, int iTarget)
+{
+	static float vPos[3];
+	GetClientAbsOrigin(client, vPos);
+	
+	static float vTarget[3];
+	GetClientAbsOrigin(iTarget, vTarget);
+
+	static float vMins[3];
+	static float vMaxs[3];
+	GetClientMins(client, vMins);
+	GetClientMaxs(client, vMaxs);
+	
+	vMins[0] += 3.0;
+	vMins[1] += 3.0;
+	vMins[2] += 3.0;
+	vMaxs[0] -= 3.0;
+	vMaxs[1] -= 3.0;
+	vMaxs[2] -= 15.0;
+
+	vPos[2] += 5.0;
+	vTarget[2] += 5.0;
+
+	static Handle hTrace;
+	hTrace = TR_TraceHullFilterEx(vPos, vTarget, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+
+	static bool bDidHit;
+	bDidHit = false;
+
+	if(hTrace != null)
+	{
+		bDidHit = TR_DidHit(hTrace);
+		delete hTrace;
+	}
+	
+	return bDidHit;
 }
 
 bool IsChargeSurvivor(int client)
