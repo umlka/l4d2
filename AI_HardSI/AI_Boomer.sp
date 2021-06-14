@@ -338,44 +338,55 @@ float NearestSurvivorDistance(int client)
 void Boomer_OnVomit(int client)
 {
 	static int iAimTarget;
-	static float vOrigin[3];
-	static float vTarget[3];
-
-	GetClientAbsOrigin(client, vOrigin);
 
 	iAimTarget = GetClientAimTarget(client, true);
 	if(!IsAliveSurvivor(iAimTarget))
 	{
 		static int iNewTarget;
-		iNewTarget = GetClosestSurvivor(client, iAimTarget);
+		iNewTarget = GetClosestSurvivor(client, iAimTarget, g_fVomitRange + 260.0);
 		if(iNewTarget != -1)
-		{
-			GetClientAbsOrigin(iNewTarget, vTarget);
-			if(GetVectorDistance(vOrigin, vTarget) < g_fVomitRange)
-				iAimTarget = iNewTarget;
-		}
+			iAimTarget = iNewTarget;
 	}
+
+	static float vAngles[3];
+	static float vVectors[3];
+	static float vVelocity[3];
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
+
+	static float vLength;
+	vLength = GetVectorLength(vVelocity);
+	vLength = vLength < g_fVomitRange ? g_fVomitRange : vLength;
 
 	if(IsAliveSurvivor(iAimTarget))
 	{
+		static float vOrigin[3];
+		static float vTarget[3];
+
 		GetClientAbsOrigin(iAimTarget, vTarget);
+		GetClientAbsOrigin(client, vOrigin);
 
 		vTarget[2] += CROUCHING_HEIGHT;
 
-		static float NearestVectors[3];
-		MakeVectorFromPoints(vOrigin, vTarget, NearestVectors);
+		MakeVectorFromPoints(vOrigin, vTarget, vVectors);
 
-		static float vLength;
-		vLength = GetVectorLength(NearestVectors);
-		vLength = (vLength < g_fVomitRange ? g_fVomitRange : vLength) + GetEntPropFloat(iAimTarget, Prop_Data, "m_flMaxspeed");
+		GetVectorAngles(vVectors, vAngles);
 
-		NormalizeVector(NearestVectors, NearestVectors);
-		ScaleVector(NearestVectors, vLength);
-
-		static float NearestAngles[3];
-		GetVectorAngles(NearestVectors, NearestAngles);
-		TeleportEntity(client, NULL_VECTOR, NearestAngles, NearestVectors);
+		vLength += GetEntPropFloat(iAimTarget, Prop_Data, "m_flMaxspeed");
 	}
+	else
+	{
+		GetClientEyeAngles(client, vAngles);
+
+		vVectors[0] = Cosine(DegToRad(vAngles[1])) * Cosine(DegToRad(vAngles[0]));
+		vVectors[1] = Sine(DegToRad(vAngles[1])) * Cosine(DegToRad(vAngles[0]));
+		vVectors[2] = Sine(DegToRad(vAngles[0]));
+
+		vLength += NearestSurvivorDistance(client);
+	}
+	
+	NormalizeVector(vVectors, vVectors);
+	ScaleVector(vVectors, vLength);
+	TeleportEntity(client, NULL_VECTOR, vAngles, vVectors);
 }
 
 bool IsAliveSurvivor(int client)
@@ -388,17 +399,18 @@ bool IsValidClient(int client)
 	return client > 0 && client <= MaxClients && IsClientInGame(client);
 }
 
-int GetClosestSurvivor(int client, int iAimTarget = -1)
+int GetClosestSurvivor(int client, int iAimTarget = -1, float fDistance)
 {
 	static int i;
 	static int iNum;
+	static float fDist;
 	static float vOrigin[3];
 	static float vTarget[3];
 	static int iTargets[MAXPLAYERS + 1];
 	
 	GetClientEyePosition(client, vOrigin);
 	iNum = GetClientsInRange(vOrigin, RangeType_Visibility, iTargets, MAXPLAYERS);
-
+	
 	if(iNum == 0)
 		return -1;
 			
@@ -412,14 +424,34 @@ int GetClosestSurvivor(int client, int iAimTarget = -1)
 		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget))
 		{
 			GetClientAbsOrigin(iTarget, vTarget);
-			aTargets.Set(aTargets.Push(GetVectorDistance(vOrigin, vTarget)), iTarget, 1);
+			fDist = GetVectorDistance(vOrigin, vTarget);
+			if(fDist < fDistance)
+				aTargets.Set(aTargets.Push(fDist), iTarget, 1);
 		}
 	}
 
 	if(aTargets.Length == 0)
 	{
-		delete aTargets;
-		return -1;
+		iNum = 0;
+		
+		GetClientAbsOrigin(client, vOrigin);
+		
+		for(i = 1; i <= MaxClients; i++)
+		{
+			if(i != iAimTarget && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
+			{
+				GetClientAbsOrigin(i, vTarget);
+				fDist = GetVectorDistance(vOrigin, vTarget);
+				if(fDist < fDistance)
+					aTargets.Set(aTargets.Push(fDist), i, 1);
+			}
+		}
+		
+		if(aTargets.Length == 0)
+		{
+			delete aTargets;
+			return -1;
+		}
 	}
 
 	aTargets.Sort(Sort_Ascending, Sort_Float);
