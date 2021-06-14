@@ -209,7 +209,7 @@ void Hunter_OnPounce(int client)
 	}
 }
 
-bool HitWall(int client, const float vStart[3])
+bool HitWall(int client, float vStart[3])
 {
 	static float vEnd[3];
 	GetClientEyeAngles(client, vEnd);
@@ -227,6 +227,9 @@ bool HitWall(int client, const float vStart[3])
 	vMins[1] += 3.0;
 	vMaxs[0] -= 3.0;
 	vMaxs[1] -= 3.0;
+
+	vStart[2] += 5.0;
+	vEnd[2] += 5.0;
 
 	static Handle hTrace;
 	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
