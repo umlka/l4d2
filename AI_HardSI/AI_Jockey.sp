@@ -15,7 +15,7 @@ float g_fHopActivationProximity;
 bool g_bCanLeap[MAXPLAYERS + 1];
 bool g_bDoNormalJump[MAXPLAYERS + 1];
 
-public Plugin myinfo = 
+public Plugin myinfo =
 {
 	name = "AI JOCKEY",
 	author = "Breezy",
@@ -26,19 +26,21 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	FindConVar("z_jockey_leap_range").SetFloat(1000.0);
-	g_hJockeyLeapAgain = FindConVar("z_jockey_leap_again_timer");
-	g_hJockeyLeapAgain.SetFloat(0.1);
-
 	g_hJockeyStumbleRadius = CreateConVar("ai_jockey_stumble_radius", "50.0", "Stumble radius of a client landing a ride");
 	g_hHopActivationProximity = CreateConVar("ai_hop_activation_proximity", "500.0", "How close a client will approach before it starts hopping");
 
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("jockey_ride", Event_JockeyRide, EventHookMode_Pre);
 	
+	FindConVar("z_jockey_leap_range").SetFloat(1000.0);
+
+	g_hJockeyLeapAgain = FindConVar("z_jockey_leap_again_timer");
+	g_hJockeyLeapAgain.SetFloat(0.1);
+
 	g_hJockeyLeapAgain.AddChangeHook(ConVarChanged);
 	g_hJockeyStumbleRadius.AddChangeHook(ConVarChanged);
 	g_hHopActivationProximity.AddChangeHook(ConVarChanged);
+	FindConVar("mp_gamemode").AddChangeHook(OnGameModeChanged);
 }
 
 public void OnPluginEnd()
@@ -49,6 +51,7 @@ public void OnPluginEnd()
 public void OnConfigsExecuted()
 {
 	GetCvars();
+	GetCurrentMode();
 }
 
 public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -61,6 +64,57 @@ void GetCvars()
 	g_fJockeyLeapAgain = g_hJockeyLeapAgain.FloatValue;
 	g_fJockeyStumbleRadius = g_hJockeyStumbleRadius.FloatValue;
 	g_fHopActivationProximity = g_hHopActivationProximity.FloatValue;
+}
+
+public void OnGameModeChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+{
+	GetCurrentMode();
+}
+
+bool g_bMapStarted;
+public void OnMapStart()
+{
+	g_bMapStarted = true;
+}
+
+public void OnMapEnd()
+{
+	g_bMapStarted = false;
+}
+
+int g_iCurrentMode;
+void GetCurrentMode()
+{
+	if(g_bMapStarted == false)
+		return;
+
+	g_iCurrentMode = 0;
+
+	int entity = CreateEntityByName("info_gamemode");
+	if(IsValidEntity(entity))
+	{
+		DispatchSpawn(entity);
+		HookSingleEntityOutput(entity, "OnCoop", OnGamemode, true);
+		HookSingleEntityOutput(entity, "OnSurvival", OnGamemode, true);
+		HookSingleEntityOutput(entity, "OnVersus", OnGamemode, true);
+		HookSingleEntityOutput(entity, "OnScavenge", OnGamemode, true);
+		ActivateEntity(entity);
+		AcceptEntityInput(entity, "PostSpawnActivate");
+		if(IsValidEntity(entity)) // Because sometimes "PostSpawnActivate" seems to kill the ent.
+			RemoveEdict(entity); // Because multiple plugins creating at once, avoid too many duplicate ents in the same frame
+	}
+}
+
+public void OnGamemode(const char[] output, int caller, int activator, float delay)
+{
+	if(strcmp(output, "OnCoop") == 0)
+		g_iCurrentMode = 1;
+	else if(strcmp(output, "OnSurvival") == 0)
+		g_iCurrentMode = 2;
+	else if(strcmp(output, "OnVersus") == 0)
+		g_iCurrentMode = 4;
+	else if(strcmp(output, "OnScavenge") == 0)
+		g_iCurrentMode = 8;
 }
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
@@ -93,6 +147,9 @@ public Action Timer_LeapCooldown(Handle timer, int client)
 
 public void Event_JockeyRide(Event event, const char[] name, bool dontBroadcast)
 {	
+	if(g_iCurrentMode != 1 || g_fJockeyStumbleRadius <= 0.0)
+		return;
+
 	int attacker = GetClientOfUserId(event.GetInt("userid"));
 	int victim = GetClientOfUserId(event.GetInt("victim"));
 	if(attacker > 0 && victim > 0)
