@@ -436,7 +436,7 @@ void Charger_OnCharge(int client)
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
 
 	static float vLength;
-	vLength = GetVectorLength(vVelocity);
+	vLength = GetVectorLength(vVelocity) + CROUCHING_HEIGHT;
 	vLength = vLength < g_fChargeStartSpeed ? g_fChargeStartSpeed : vLength;
 
 	if(IsAliveSurvivor(iAimTarget))
@@ -447,8 +447,7 @@ void Charger_OnCharge(int client)
 		GetClientAbsOrigin(client, vOrigin);
 		GetClientAbsOrigin(iAimTarget, vTarget);
 
-		if(GetEntityFlags(client) & FL_ONGROUND == 0)
-			vTarget[2] += CROUCHING_HEIGHT;
+		vTarget[2] += CROUCHING_HEIGHT;
 
 		MakeVectorFromPoints(vOrigin, vTarget, vVectors);
 
