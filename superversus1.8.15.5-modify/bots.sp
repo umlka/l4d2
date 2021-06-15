@@ -849,13 +849,16 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 {
 	int player_userid = event.GetInt("player");
 	int player = GetClientOfUserId(player_userid);
-	if(player == 0 || g_sPlayerModel[player][0] == 0 || !IsClientInGame(player) || IsFakeClient(player) || !IsSurvivor(player))
+	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || !IsSurvivor(player))
 		return;
 
 	int bot_userid = event.GetInt("bot");
 	int bot = GetClientOfUserId(bot_userid);
 	g_iBotPlayer[bot] = player_userid;
 	g_iPlayerBot[player] = bot_userid;
+
+	if(g_sPlayerModel[player][0] == 0)
+		return;
 
 	SetEntProp(bot, Prop_Send, "m_survivorCharacter", GetEntProp(player, Prop_Send, "m_survivorCharacter"));
 	SetEntityModel(bot, g_sPlayerModel[player]);
