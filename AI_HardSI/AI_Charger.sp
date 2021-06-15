@@ -130,7 +130,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 	return Plugin_Continue;
 }
-
+/*
 bool Bhop(int client, int &buttons, float vAng[3])
 {
 	static bool bJumped;
@@ -187,7 +187,7 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 
 	return false;
 }
-/*
+*/
 bool Bhop(int client, int &buttons, const float vAng[3])
 {
 	static bool bJumped;
@@ -231,7 +231,7 @@ bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 
 	return false;
 }
-*/
+
 #define JUMP_HEIGHT 56.0
 bool WontFall(int client, const float vVel[3])
 {
@@ -289,10 +289,22 @@ bool WontFall(int client, const float vVel[3])
 		if(TR_DidHit(hTrace))
 		{
 			TR_GetEndPosition(vEnd, hTrace);
-			if(vEndNonCol[2] - vEnd[2] > 124.0)
+			if(GetVectorDistance(vEnd, vEndNonCol) > 128.0)
 			{
 				delete hTrace;
 				return false;
+			}
+
+			static int entity;
+			static char sClassName[13];
+			if((entity = TR_GetEntityIndex(hTrace)) > MaxClients)
+			{
+				GetEdictClassname(entity, sClassName, sizeof(sClassName));
+				if(strcmp(sClassName, "trigger_hurt") == 0)
+				{
+					delete hTrace;
+					return false;
+				}
 			}
 			delete hTrace;
 			return true;
@@ -488,8 +500,8 @@ bool IsIncapacitated(int client)
 
 bool IsPinned(int client)
 {
-	/*if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
-		return true;*/
+	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
+		return true;
 	if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
 		return true;
 	if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
