@@ -5,11 +5,13 @@
 
 ConVar g_hChargerBhop;
 ConVar g_hChargeStartSpeed;
+ConVar g_hChargeMaxSpeed;
 ConVar g_hChargeProximity;
 ConVar g_hHealthThresholdCharger;
 ConVar g_hAimOffsetSensitivityCharger;
 
 float g_fChargeStartSpeed;
+float g_fChargeMaxSpeed;
 float g_fChargeProximity;
 
 int g_iHealthThresholdCharger;
@@ -35,9 +37,11 @@ public void OnPluginStart()
 	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "20", "If the client has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 179.0);
 	
 	g_hChargeStartSpeed = FindConVar("z_charge_start_speed");
+	g_hChargeMaxSpeed = FindConVar("z_charge_max_speed");
 
 	g_hChargerBhop.AddChangeHook(ConVarChanged);
 	g_hChargeStartSpeed.AddChangeHook(ConVarChanged);
+	g_hChargeMaxSpeed.AddChangeHook(ConVarChanged);
 	g_hChargeProximity.AddChangeHook(ConVarChanged);
 	g_hHealthThresholdCharger.AddChangeHook(ConVarChanged);
 	g_hAimOffsetSensitivityCharger.AddChangeHook(ConVarChanged);
@@ -60,6 +64,7 @@ void GetCvars()
 {
 	g_bChargerBhop = g_hChargerBhop.BoolValue;
 	g_fChargeStartSpeed = g_hChargeStartSpeed.FloatValue;
+	g_fChargeMaxSpeed = g_hChargeMaxSpeed.FloatValue;
 	g_fChargeProximity = g_hChargeProximity.FloatValue;
 	g_iHealthThresholdCharger = g_hHealthThresholdCharger.IntValue;
 	g_iAimOffsetSensitivityCharger = g_hAimOffsetSensitivityCharger.IntValue;
@@ -102,7 +107,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		static int iTarget;
 		iTarget = GetClientAimTarget(client, true);
-		if(IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget) && !HitWall(client, iTarget))
+		if(IsAliveSurvivor(iTarget) && !IsIncapacitated(iTarget) && (buttons & IN_ATTACK2 != 0 || !HitWall(client, iTarget)))
 		{
 			buttons |= IN_ATTACK;
 			buttons |= IN_ATTACK2;
@@ -420,7 +425,7 @@ void Charger_OnCharge(int client)
 	if(!IsAliveSurvivor(iAimTarget) || IsIncapacitated(iAimTarget) || IsPinned(iAimTarget) || IsTargetWatchingAttacker(client, g_iAimOffsetSensitivityCharger))
 	{
 		static int iNewTarget;
-		iNewTarget = GetClosestSurvivor(client, iAimTarget, g_fChargeProximity + 260.0);
+		iNewTarget = GetClosestSurvivor(client, iAimTarget, g_fChargeProximity > g_fChargeMaxSpeed ? g_fChargeProximity : g_fChargeMaxSpeed);
 		if(iNewTarget != -1)
 			iAimTarget = iNewTarget;
 	}
@@ -442,7 +447,8 @@ void Charger_OnCharge(int client)
 		GetClientAbsOrigin(client, vOrigin);
 		GetClientAbsOrigin(iAimTarget, vTarget);
 
-		vTarget[2] += CROUCHING_HEIGHT;
+		if(GetEntityFlags(client) & FL_ONGROUND == 0)
+			vTarget[2] += CROUCHING_HEIGHT;
 
 		MakeVectorFromPoints(vOrigin, vTarget, vVectors);
 
@@ -483,16 +489,16 @@ bool IsIncapacitated(int client)
 
 bool IsPinned(int client)
 {
-	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
-		return true;
+	/*if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
+		return true;*/
 	if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
 		return true;
 	if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
 		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
+	/*if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
 		return true;
 	if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
-		return true;
+		return true;*/
 	return false;
 }
 
@@ -574,7 +580,7 @@ int GetClosestSurvivor(int client, int iAimTarget = -1, float fDistance)
 		
 		for(i = 1; i <= MaxClients; i++)
 		{
-			if(i != iAimTarget && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !IsIncapacitated(i) && !IsPinned(i)/* && !HitWall(client, i)*/)
+			if(i != iAimTarget && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !IsIncapacitated(i) && !IsPinned(i) && !HitWall(client, i))
 			{
 				GetClientAbsOrigin(i, vTarget);
 				fDist = GetVectorDistance(vOrigin, vTarget);
