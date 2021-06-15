@@ -68,24 +68,24 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 void Bhop(int client, int &buttons, float vAng[3])
 {
 	if(buttons & IN_FORWARD)
-		Client_Push(client, vAng, 180.0);
+		Client_Push(client, vAng, 120.0);
 		
 	if(buttons & IN_BACK)
 	{
 		vAng[1] += 180.0;
-		Client_Push(client, vAng, 90.0);
+		Client_Push(client, vAng, 60.0);
 	}
 	
 	if(buttons & IN_MOVELEFT)
 	{
 		vAng[1] += 90.0;
-		Client_Push(client, vAng, 90.0);
+		Client_Push(client, vAng, 60.0);
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		vAng[1] -= 90.0;
-		Client_Push(client, vAng, 90.0);
+		Client_Push(client, vAng, 60.0);
 	}
 }
 
