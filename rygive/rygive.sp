@@ -813,15 +813,13 @@ int CreateInfected(const char[] sZombie, const float[3] vPos, const float[3] vAn
 
 Action Timer_Chase(Handle timer, int infected)
 {
-	if(!IsValidEntity(infected))
+	if(g_hSDK_Call_InfectedAttackSurvivorTeam == null || !IsValidEntity(infected))
 		return;
 
 	char class[64];
 	GetEntityClassname(infected, class, sizeof(class));
-	if(strcmp(class, "infected", false) != 0)
-		return;
-
-	SDKCall(g_hSDK_Call_InfectedAttackSurvivorTeam, infected);
+	if(strcmp(class, "infected", false) == 0)
+		SDKCall(g_hSDK_Call_InfectedAttackSurvivorTeam, infected);
 }
 
 public void OnNextFrame_SetPos(DataPack datapack)
@@ -1233,12 +1231,11 @@ void TeleportToSurvivor(int client)
 		GetClientAbsOrigin(iTarget, vPos);
 		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
 	}
-	
-	CheatCommand(client, "give smg");
-	
+
 	char sScriptName[32];
 	FormatEx(sScriptName, 32, "give %s", g_sMeleeClass[GetRandomInt(0, g_iMeleeClassCount - 1)]);	
 	CheatCommand(client, sScriptName);
+	CheatCommand(client, "give smg");
 }
 
 int GetTeleportTarget(int client)
@@ -1520,7 +1517,7 @@ bool GetDirectionEndPoint(int client, float vEndPos[3]) // builds simple ray fro
 	GetClientEyePosition(client, vPos);
 	GetClientEyeAngles(client, vDir);
 	
-	Handle hTrace = TR_TraceRayFilterEx(vPos, vDir, MASK_PLAYERSOLID, RayType_Infinite, TraceRay_NoPlayers);
+	Handle hTrace = TR_TraceRayFilterEx(vPos, vDir, MASK_PLAYERSOLID_BRUSHONLY, RayType_Infinite, TraceRay_NoPlayers);
 	if(hTrace)
 	{
 		if(TR_DidHit(hTrace))
@@ -1554,7 +1551,7 @@ bool GetNonCollideEndPoint(int client, int team, float vEnd[3], float vEndNonCol
 
 	GetTeamClientSize(team, vMin, vMax);
 	
-	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMin, vMax, MASK_PLAYERSOLID, TraceRay_NoPlayers);
+	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, TraceRay_NoPlayers);
 	if(hTrace != null)
 	{
 		if(TR_DidHit(hTrace))
@@ -1596,7 +1593,7 @@ bool IsTeamStuckPos(int team, float vPos[3], bool bDuck = false) // check if the
 	if(bDuck)
 		vMax[2] -= 18.0;
 
-	hTrace = TR_TraceHullFilterEx(vPos, vPos, vMin, vMax, MASK_PLAYERSOLID, TraceRay_NoPlayers);
+	hTrace = TR_TraceHullFilterEx(vPos, vPos, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, TraceRay_NoPlayers);
 	if(hTrace)
 	{
 		bHit = TR_DidHit(hTrace);
@@ -1607,7 +1604,20 @@ bool IsTeamStuckPos(int team, float vPos[3], bool bDuck = false) // check if the
 
 public bool TraceRay_NoPlayers(int entity, int contentsMask)
 {
-	return entity > MaxClients;
+	if(entity <= MaxClients)
+		return false;
+	else
+	{
+		static char sClassName[9];
+		GetEntityClassname(entity, sClassName, sizeof(sClassName));
+		if(sClassName[0] == 'i' || sClassName[0] == 'w')
+		{
+			if(strcmp(sClassName, "infected") == 0 || strcmp(sClassName, "witch") == 0)
+				return false;
+		}
+	}
+
+	return true;
 }
 
 void TeleportFix(int client)
@@ -2342,7 +2352,7 @@ void LoadGameData()
 		SetFailState("Failed to find signature: %s", NAME_InfectedAttackSurvivorTeam); 
 	g_hSDK_Call_InfectedAttackSurvivorTeam = EndPrepSDKCall();
 	if(g_hSDK_Call_InfectedAttackSurvivorTeam == null)
-		SetFailState("Failed to create SDKCall: %s", NAME_InfectedAttackSurvivorTeam);
+		LogError("Failed to create SDKCall: %s", NAME_InfectedAttackSurvivorTeam);
 
 	delete hGameData;
 }
