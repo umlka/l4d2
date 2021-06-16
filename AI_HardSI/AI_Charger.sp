@@ -130,7 +130,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 	return Plugin_Continue;
 }
-/*
+
 bool Bhop(int client, int &buttons, float vAng[3])
 {
 	static bool bJumped;
@@ -187,7 +187,7 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 
 	return false;
 }
-*/
+/*
 bool Bhop(int client, int &buttons, const float vAng[3])
 {
 	static bool bJumped;
@@ -231,7 +231,7 @@ bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 
 	return false;
 }
-
+*/
 #define JUMP_HEIGHT 56.0
 bool WontFall(int client, const float vVel[3])
 {
