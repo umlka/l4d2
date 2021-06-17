@@ -130,7 +130,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 	return Plugin_Continue;
 }
-
+/*
 bool Bhop(int client, int &buttons, float vAng[3])
 {
 	static bool bJumped;
@@ -187,7 +187,7 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 
 	return false;
 }
-/*
+*/
 bool Bhop(int client, int &buttons, const float vAng[3])
 {
 	static bool bJumped;
@@ -221,7 +221,7 @@ bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
 
-	if(WontFall(client, vVel))
+	if(WontFall(client, vVel, vVec))
 	{
 		buttons |= IN_DUCK;
 		buttons |= IN_JUMP;
@@ -231,14 +231,14 @@ bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 
 	return false;
 }
-*/
+
 #define JUMP_HEIGHT 56.0
-bool WontFall(int client, const float vVel[3])
+bool WontFall(int client, const float vVel[3], const float vVec[3])
 {
 	static float vStart[3];
 	static float vEnd[3];
 	GetClientAbsOrigin(client, vStart);
-	AddVectors(vVel, vStart, vEnd);
+	AddVectors(vStart, vVel, vEnd);
 
 	static float vMins[3];
 	static float vMaxs[3];
@@ -271,6 +271,16 @@ bool WontFall(int client, const float vVel[3])
 				delete hTrace;
 				return false;
 			}
+
+			static float fAngle;
+			static float vNormal[3];
+			TR_GetPlaneNormal(hTrace, vNormal);
+			fAngle = GetAngleBetweenVectors(vVel, vNormal, vVec);
+			if(fAngle == 90.0 || fAngle > 135.0)
+			{
+				delete hTrace;
+				return false;
+			}
 		}
 		delete hTrace;
 	}
@@ -289,7 +299,7 @@ bool WontFall(int client, const float vVel[3])
 		if(TR_DidHit(hTrace))
 		{
 			TR_GetEndPosition(vEnd, hTrace);
-			if(GetVectorDistance(vEnd, vEndNonCol) > 128.0)
+			if(vEndNonCol[2] - vEnd[2] > 120.0)
 			{
 				delete hTrace;
 				return false;
@@ -312,6 +322,27 @@ bool WontFall(int client, const float vVel[3])
 		delete hTrace;
 	}
 	return false;
+}
+
+//---------------------------------------------------------
+// calculate the angle between 2 vectors
+// the direction will be used to determine the sign of angle (right hand rule)
+// all of the 3 vectors have to be normalized
+//---------------------------------------------------------
+float GetAngleBetweenVectors(const float vector1[3], const float vector2[3], const float direction[3])
+{
+	static float vector1_n[3], vector2_n[3], direction_n[3], cross[3];
+	NormalizeVector(direction, direction_n);
+	NormalizeVector(vector1, vector1_n);
+	NormalizeVector(vector2, vector2_n);
+	static float degree;
+	degree = ArcCosine(GetVectorDotProduct(vector1_n, vector2_n )) * 57.29577951;   // 180/Pi
+	GetVectorCrossProduct(vector1_n, vector2_n, cross);
+
+	if(GetVectorDotProduct(cross, direction_n ) < 0.0)
+		degree *= -1.0;
+
+	return degree;
 }
 
 public bool TraceEntityFilter(int entity, int contentsMask)
