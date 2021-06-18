@@ -18,7 +18,7 @@ Handle g_hSDK_Call_RoundRespawn;
 Handle g_hSDK_Call_SetHumanSpec;
 Handle g_hSDK_Call_TakeOverBot;
 Handle g_hSDK_Call_GoAwayFromKeyboard;
-Handle g_hSDK_Call_SetObserverTarget;
+//Handle g_hSDK_Call_SetObserverTarget;
 
 Handle g_hBotsUpdateTimer;
 
@@ -682,21 +682,6 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 		TakeOver(i);
 }
 
-void InitPlugin()
-{
-	Bots_Intensity(); //加强生还者BOT,需要的去掉注释
-	delete g_hBotsUpdateTimer;
-}
-
-void Bots_Intensity()
-{
-	int flags = GetCommandFlags("sb_force_max_intensity");
-	SetCommandFlags("sb_force_max_intensity", flags & ~FCVAR_CHEAT);
-	ServerCommand("sb_force_max_intensity Nick; sb_force_max_intensity Coach; sb_force_max_intensity Ellis; sb_force_max_intensity Rochelle; sb_force_max_intensity Bill; sb_force_max_intensity Zoey; sb_force_max_intensity Louis; sb_force_max_intensity Francis");
-	ServerExecute();
-	SetCommandFlags("sb_force_max_intensity", flags);
-}
-
 void ResetPlugin()
 {
 	g_iRoundStart = 0;
@@ -714,27 +699,26 @@ bool IsRoundStarted()
 
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
-	if(g_iRoundStart == 0 && g_iPlayerSpawn == 1)
-		InitPlugin();
 	g_iRoundStart = 1;
 }
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
-	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
-		InitPlugin();
 	g_iPlayerSpawn = 1;
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(GetClientTeam(client) == TEAM_SURVIVOR)
 	{
-		UpdateSurvivorLimitConVar();
-
 		delete g_hBotsUpdateTimer;
 		g_hBotsUpdateTimer = CreateTimer(2.0, Timer_BotsUpdate);
 		
-		if(!IsFakeClient(client) && IsFirstTime(client))
-			RecordSteamID(client);
+		if(!IsFakeClient(client))
+		{
+			if(IsFirstTime(client))
+				RecordSteamID(client);
+
+			UpdateSurvivorLimitConVar();
+		}
 
 		SetGhostStatus(client, 0);
 
@@ -1469,7 +1453,7 @@ void LoadGameData()
 	g_hSDK_Call_GoAwayFromKeyboard = EndPrepSDKCall();
 	if(g_hSDK_Call_GoAwayFromKeyboard == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard");
-
+/*
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CTerrorPlayer::SetObserverTarget") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::SetObserverTarget");
@@ -1477,7 +1461,7 @@ void LoadGameData()
 	g_hSDK_Call_SetObserverTarget = EndPrepSDKCall();
 	if(g_hSDK_Call_SetObserverTarget == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::SetObserverTarget");
-
+*/
 	SetupDetours(hGameData);
 
 	delete hGameData;
@@ -1608,8 +1592,9 @@ public MRESReturn PlayerGoAwayFromKeyboardPost(int pThis, DHookReturn hReturn)
 	{
 		g_bShouldIgnore = true;
 		
-		SDKCall(g_hSDK_Call_SetHumanSpec, g_iSurvivorBot, pThis);
-		SDKCall(g_hSDK_Call_SetObserverTarget, pThis, g_iSurvivorBot);
+		//SDKCall(g_hSDK_Call_SetHumanSpec, g_iSurvivorBot, pThis);
+		//SDKCall(g_hSDK_Call_SetObserverTarget, pThis, g_iSurvivorBot);
+		SetHumanIdle(g_iSurvivorBot, pThis);
 
 		WriteTakeoverPanel(pThis, g_iSurvivorBot);
 		
