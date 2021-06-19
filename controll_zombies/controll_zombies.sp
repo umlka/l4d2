@@ -225,7 +225,6 @@ Address g_pResetStatCondition;
 DynamicDetour g_dDetour;
 
 ConVar g_hGameMode;
-ConVar g_hCoopSphereFix;
 ConVar g_hMaxTankPlayer;
 ConVar g_hAllowSurvuivorLimit; 
 ConVar g_hSurvuivorAllowChance;
@@ -327,7 +326,7 @@ public void OnPluginStart()
 	g_hAllowSurvuivorLimit = CreateConVar("cz_allow_survivor_limit", "3" , "至少有多少名正常生还者(未被控,未倒地,未死亡)时,才允许玩家接管坦克", CVAR_FLAGS, true, 0.0);
 	g_hSurvuivorAllowChance = CreateConVar("cz_survivor_allow_chance", "0.0" , "准备叛变的玩家数量为0时,自动抽取生还者和感染者玩家的几率(排除闲置旁观玩家)(0.0=不自动抽取)", CVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hExchangeTeam = CreateConVar("cz_exchange_team", "1" , "特感玩家杀死生还者玩家后是否互换队伍?(0=否,1=是)", CVAR_FLAGS);
-	g_hPZSuicideTime = CreateConVar("cz_pz_suicide_time", "300.0" , "特感玩家复活后自动处死的时间(0=不会处死复活后的特感玩家)", CVAR_FLAGS, true, 0.0);
+	g_hPZSuicideTime = CreateConVar("cz_pz_suicide_time", "120.0" , "特感玩家复活后自动处死的时间(0=不会处死复活后的特感玩家)", CVAR_FLAGS, true, 0.0);
 	g_hPZRespawnTime = CreateConVar("cz_pz_respawn_time", "15" , "特感玩家自动复活时间(0=插件不会接管特感玩家的复活)", CVAR_FLAGS, true, 0.0);
 	g_hPZPunishTime = CreateConVar("cz_pz_punish_time", "10" , "特感玩家在ghost状态下切换特感类型后下次复活延长的时间(0=插件不会延长复活时间)", CVAR_FLAGS, true, 0.0);
 	g_hPZPunishHealth = CreateConVar("cz_pz_punish_health", "1" , "特感玩家在ghost状态下切换特感类型后血量是否减半(0=插件不会减半血量)", CVAR_FLAGS);
@@ -402,10 +401,15 @@ public void OnPluginStart()
 	}
 	
 	//防止战役模式加入特感方时出现紫黑色网格球体以及客户端控制台"Material effects/spawn_sphere has bad reference count 0 when being bound"报错
-	g_hCoopSphereFix = FindConVar("z_scrimmage_sphere");
-	g_hCoopSphereFix.SetBounds(ConVarBound_Lower, true, 0.0);
-	g_hCoopSphereFix.SetBounds(ConVarBound_Upper, true, 0.0);
-	g_hCoopSphereFix.SetInt(0);
+	ConVar hConVar = FindConVar("z_scrimmage_sphere");
+	hConVar.SetBounds(ConVarBound_Lower, true, 0.0);
+	hConVar.SetBounds(ConVarBound_Upper, true, 0.0);
+	hConVar.IntValue = 0;
+	
+	hConVar = FindConVar("z_max_player_zombies");
+	hConVar.SetBounds(ConVarBound_Lower, true, 32.0);
+	hConVar.SetBounds(ConVarBound_Upper, true, 32.0);
+	hConVar.IntValue = 32;
 
 	//https://wiki.alliedmods.net/Events_(SourceMod_Scripting)#Hooking_Events 防止某些插件在Pre挂钩上面阻止事件广播，导致Post挂钩监听不到事件触发
 	HookEvent("player_left_start_area", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
@@ -413,12 +417,12 @@ public void OnPluginStart()
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("player_team", Event_PlayerTeam, EventHookMode_Pre);
-	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
-	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
-	HookEvent("tank_frustrated", Event_TankFrustrated, EventHookMode_Pre);
-	HookEvent("bot_player_replace", Event_ClientReplace, EventHookMode_Pre);
-	HookEvent("player_bot_replace", Event_ClientReplace, EventHookMode_Pre);
+	HookEvent("player_team", Event_PlayerTeam);
+	HookEvent("player_spawn", Event_PlayerSpawn);
+	HookEvent("player_death", Event_PlayerDeath);
+	HookEvent("tank_frustrated", Event_TankFrustrated);
+	HookEvent("bot_player_replace", Event_ClientReplace);
+	HookEvent("player_bot_replace", Event_ClientReplace);
 
 	AddCommandListener(CommandListener_Spawn, "z_add");
 	AddCommandListener(CommandListener_Spawn, "z_spawn");
@@ -434,9 +438,16 @@ public void OnPluginStart()
 
 public void OnPluginEnd()
 {
-	g_hCoopSphereFix.SetBounds(ConVarBound_Lower, false);
-	g_hCoopSphereFix.SetBounds(ConVarBound_Upper, false);
-	g_hCoopSphereFix.RestoreDefault();
+	ConVar hConVar = FindConVar("z_scrimmage_sphere");
+	hConVar.SetBounds(ConVarBound_Lower, false);
+	hConVar.SetBounds(ConVarBound_Upper, false);
+	hConVar.RestoreDefault();
+	
+	hConVar = FindConVar("z_max_player_zombies");
+	hConVar.SetBounds(ConVarBound_Lower, false);
+	hConVar.SetBounds(ConVarBound_Upper, false);
+	hConVar.RestoreDefault();
+
 	for(int i = 1; i <= MaxClients; i++)
 		RemoveSurvivorModelGlow(i);
 		
@@ -566,7 +577,7 @@ static int GetColorType(int client)
 			return 1;
 		else
 		{
-			if(GetEntPropFloat(client, Prop_Send, "m_vomitFadeStart") >= GetGameTime())
+			if(GetEntPropFloat(client, Prop_Send, "m_vomitFadeStart") >= GetGameTime() + 5.0)
 				return 3;
 			else
 				return 0;
@@ -583,16 +594,16 @@ int GetColor(ConVar hConVar)
 		return 0;
 
 	char sColors[3][4];
-	int color = ExplodeString(sTemp, " ", sColors, sizeof(sColors), sizeof(sColors[]));
+	int iColor = ExplodeString(sTemp, " ", sColors, sizeof(sColors), sizeof(sColors[]));
 
-	if(color != 3)
+	if(iColor != 3)
 		return 0;
 
-	color = StringToInt(sColors[0]);
-	color += 256 * StringToInt(sColors[1]);
-	color += 65536 * StringToInt(sColors[2]);
+	iColor = StringToInt(sColors[0]);
+	iColor += 256 * StringToInt(sColors[1]);
+	iColor += 65536 * StringToInt(sColors[2]);
 
-	return color;
+	return iColor;
 }
 
 public void ConVarChanged_Admin(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -950,9 +961,12 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	if(IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client))
 		return Plugin_Continue;
 
+	static int iFlags;
+	iFlags = GetEntProp(client, Prop_Data, "m_afButtonPressed");
+
 	if(GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 	{
-		if(GetEntProp(client, Prop_Data, "m_afButtonPressed") & IN_ZOOM)
+		if(iFlags & IN_ZOOM)
 		{
 			if(g_iPZSpawned[client] == 1 && CheckClientAccess(client, 4) == true)
 				SelectAscendingZombieClass(client);
@@ -964,7 +978,7 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 		/*if(!g_bDirectorNoSpecials)
 			return Plugin_Continue;*/
 		
-		if(buttons & IN_ATTACK)
+		if(iFlags & IN_ATTACK)
 		{
 			static int iSpawnState;
 			if(GetEntProp(client, Prop_Send, "m_ghostSpawnState") == 1)
@@ -981,7 +995,7 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	}
 	else
 	{
-		if(GetEntProp(client, Prop_Data, "m_afButtonPressed") & IN_ZOOM && CheckClientAccess(client, 5) == true)
+		if(iFlags & IN_ZOOM && CheckClientAccess(client, 5) == true)
 			ResetInfectedAbility(client, 0.1); //管理员鼠标中键重置技能冷却
 	}
 
@@ -1086,7 +1100,7 @@ public Action CheckSurvivorLeftSafeArea(Handle timer)
 
 		for(int i = 1; i <= MaxClients; i++)
 		{
-			if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3 && g_iPZSpawned[i] == 0)
+			if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3 && GetPlayerWeaponSlot(i, 0) == -1)
 			{
 				delete g_hPZRespawnTimer[i];
 				CalculatePZRespawnTime(i);
@@ -1191,7 +1205,6 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 	if(client == 0 || !IsClientInGame(client))
 		return;
 
-	DeleteTimer(client);
 	g_iPZSpawned[client] = 0;
 	RemoveSurvivorModelGlow(client);
 	
@@ -1284,6 +1297,22 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	if(IsPlayerAlive(client))
 	{
 		g_iTankBot[client] = 0;
+		
+		if(!IsFakeClient(client) && GetClientTeam(client) == 3)
+		{
+			if(g_iPZSpawned[client] == 0)
+			{
+				if(GetEntProp(client, Prop_Send, "m_isGhost") == 0)
+					SetInfectedGhost(client, GetEntProp(client, Prop_Send, "m_zombieClass") == 8);
+			}
+			else if(g_iPZSpawned[client] == 1)
+			{
+				if(g_bHasPlayerControlledZombies == false && g_iPZRespawnTime > 0 && g_iPZPunishTime > 0 && g_bUsedClassCmd[client] && GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
+					CPrintToChat(client, "{olive}下次重生时间 {default}-> {red}+%d秒", g_iPZPunishTime);
+			}
+		}
+
+		g_iPZSpawned[client]++;
 		RequestFrame(OnNextFrame_PlayerSpawn, userid); //player_bot_replace在player_spawn之后触发，延迟一帧进行接管判断
 	}
 }
@@ -1316,21 +1345,6 @@ public void OnNextFrame_PlayerSpawn(int userid)
 							TankLeaveStasis(client); //解除战役模式下特感方有玩家存在时坦克卡住的问题
 					}
 				}
-				else
-				{
-					if(g_iPZSpawned[client] == 0)
-					{
-						if(GetEntProp(client, Prop_Send, "m_isGhost") == 0)
-							SetInfectedGhost(client, GetEntProp(client, Prop_Send, "m_zombieClass") == 8);
-					}
-					else if(g_iPZSpawned[client] == 1)
-					{
-						if(g_bHasPlayerControlledZombies == false && g_iPZRespawnTime > 0 && g_iPZPunishTime > 0 && g_bUsedClassCmd[client] && GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
-							CPrintToChat(client, "{olive}下次重生时间 {default}-> {red}+%d秒", g_iPZPunishTime);
-					}
-		
-					g_iPZSpawned[client]++;
-				}
 			}
 		}
 	}
@@ -1343,7 +1357,6 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 	if(client == 0 || !IsClientInGame(client))
 		return;
 
-	DeleteTimer(client);
 	g_iPZSpawned[client] = 0;
 
 	switch(GetClientTeam(client))
@@ -1393,12 +1406,15 @@ public Action Timer_PZRespawn(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) && IsClientInGame(client))
 	{
-		if(g_bHasPlayerControlledZombies == false && !IsFakeClient(client) && GetClientTeam(client) == 3 && g_iPZSpawned[client] == 0)
+		if(g_bHasPlayerControlledZombies == false && !IsFakeClient(client) && GetClientTeam(client) == 3 && GetPlayerWeaponSlot(client, 0) == -1)
 		{
 			if(g_iPZRespawnCountdown[client] > 0)
 				PrintHintText(client, "%d 秒后重生", g_iPZRespawnCountdown[client]--);
 			else if(AttemptRespawnPZ(client))
 			{
+				SetInfectedGhost(client, false);
+				SetEntProp(client, Prop_Send,"m_isCulling", 0);
+
 				g_hPZRespawnTimer[client] = null;
 				return Plugin_Stop;
 			}
@@ -1622,6 +1638,7 @@ void ForceCrouch(int client)
 void GhostsModeProtector(int iState=0) 
 {
 	static int i;
+	static int iWeapon;
 	static int iGhost[MAXPLAYERS + 1];
 	static int iLifeState[MAXPLAYERS + 1];
 
@@ -1634,9 +1651,11 @@ void GhostsModeProtector(int iState=0)
 				if(!IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
 					continue;
 
+				iWeapon = GetPlayerWeaponSlot(i, 0);
+
 				if(i != g_iPZOnSpawn)
 				{
-					if(g_iPZSpawned[i] != 0)
+					if(iWeapon != -1)
 					{
 						if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
 						{
@@ -1646,11 +1665,8 @@ void GhostsModeProtector(int iState=0)
 					}
 					else
 					{
-						if(!IsPlayerAlive(i))
-						{
-							SetEntProp(i, Prop_Send, "m_lifeState", 0);
-							iLifeState[i] = 1;
-						}
+						SetEntProp(i, Prop_Send, "m_lifeState", 0);
+						iLifeState[i] = 1;
 					}
 				}
 				else
@@ -1667,7 +1683,7 @@ void GhostsModeProtector(int iState=0)
 			{
 				if(i != g_iPZOnSpawn && IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3)
 				{
-					if(g_iPZSpawned[i] != 0)
+					if(GetPlayerWeaponSlot(i, 0) != -1)
 					{
 						if(iGhost[i] == 1)
 							SetEntProp(i, Prop_Send, "m_isGhost", 1);
@@ -2316,16 +2332,13 @@ int GenerateIndex()
 
 	for(i = 0; i < 6; i++) 
 	{
-		if(g_iSpawnCounts[i] < g_iSpawnLimits[i]) 
-			iTempSpawnWeights[i] = g_iSpawnWeights[i];
-		else 
-			iTempSpawnWeights[i] = 0;
-
+		iTempSpawnWeights[i] = g_iSpawnCounts[i] < g_iSpawnLimits[i] ? g_iSpawnWeights[i] : 0;
 		iTotalSpawnWeight += iTempSpawnWeights[i];
 	}
 
 	static float fIntervalEnds[6];
 	float fUnit = 1.0 / iTotalSpawnWeight;
+
 	for(i = 0; i < 6; i++) 
 	{
 		if(iTempSpawnWeights[i] >= 0) 
