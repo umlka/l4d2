@@ -577,7 +577,7 @@ static int GetColorType(int client)
 			return 1;
 		else
 		{
-			if(GetEntPropFloat(client, Prop_Send, "m_vomitFadeStart") >= GetGameTime() + 5.0)
+			if(GetEntPropFloat(client, Prop_Send, "m_vomitFadeStart") + 5.0 >= GetGameTime())
 				return 3;
 			else
 				return 0;
