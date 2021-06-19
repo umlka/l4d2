@@ -1638,7 +1638,6 @@ void ForceCrouch(int client)
 void GhostsModeProtector(int iState=0) 
 {
 	static int i;
-	static int iWeapon;
 	static int iGhost[MAXPLAYERS + 1];
 	static int iLifeState[MAXPLAYERS + 1];
 
@@ -1648,14 +1647,12 @@ void GhostsModeProtector(int iState=0)
 		{
 			for(i = 1; i <= MaxClients; i++)
 			{
-				if(!IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
-					continue;
-
-				iWeapon = GetPlayerWeaponSlot(i, 0);
-
 				if(i != g_iPZOnSpawn)
 				{
-					if(iWeapon != -1)
+					if(!IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
+						continue;
+
+					if(GetPlayerWeaponSlot(i, 0) != -1)
 					{
 						if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
 						{
