@@ -10,7 +10,6 @@
 #define TEAM_SPECTATOR	1
 #define TEAM_SURVIVOR	2
 #define TEAM_INFECTED   3
-#define TEAM_PASSING	4
 
 StringMap g_aSteamIDs;
 
@@ -315,13 +314,13 @@ public void OnPluginStart()
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
-	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
-	HookEvent("player_team", Event_PlayerTeam, EventHookMode_Pre);
-	HookEvent("survivor_rescued", Event_SurvivorRescued, EventHookMode_Pre);
-	HookEvent("player_bot_replace", Event_PlayerBotReplace, EventHookMode_Pre);
-	HookEvent("bot_player_replace", Event_BotPlayerReplace, EventHookMode_Pre);
-	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving, EventHookMode_Pre);
+	HookEvent("player_spawn", Event_PlayerSpawn);
+	HookEvent("player_death", Event_PlayerDeath);
+	HookEvent("player_team", Event_PlayerTeam);
+	HookEvent("survivor_rescued", Event_SurvivorRescued);
+	HookEvent("player_bot_replace", Event_PlayerBotReplace);
+	HookEvent("bot_player_replace", Event_BotPlayerReplace);
+	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving);
 
 	AddCommandListener(CommandListener_SpecNext, "spec_next");
 	
@@ -833,7 +832,7 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 {
 	int player_userid = event.GetInt("player");
 	int player = GetClientOfUserId(player_userid);
-	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || !IsSurvivor(player))
+	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || GetClientTeam(player) != TEAM_SURVIVOR)
 		return;
 
 	int bot_userid = event.GetInt("bot");
@@ -856,7 +855,7 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 public void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast)
 {
 	int player = GetClientOfUserId(event.GetInt("player"));
-	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || !IsSurvivor(player))
+	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || GetClientTeam(player) != TEAM_SURVIVOR)
 		return;
 
 	int bot = GetClientOfUserId(event.GetInt("bot"));
@@ -865,13 +864,6 @@ public void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroa
 	GetClientModel(bot, sModel, sizeof(sModel));
 	SetEntityModel(player, sModel);
 	SetEntProp(player, Prop_Send, "m_survivorCharacter", GetEntProp(bot, Prop_Send, "m_survivorCharacter"));
-}
-
-bool IsSurvivor(int client)
-{
-	if(GetClientTeam(client) != TEAM_SURVIVOR && GetClientTeam(client) != TEAM_PASSING)
-		return false;
-	return true;
 }
 
 public void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadcast)
@@ -1617,7 +1609,7 @@ public MRESReturn PlayerSetModelPost(int pThis, DHookParam hParams)
 	if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis))
 		return MRES_Ignored;
 
-	if(!IsSurvivor(pThis))
+	if(GetClientTeam(pThis) != TEAM_SURVIVOR)
 	{
 		g_sPlayerModel[pThis][0] = 0;
 		return MRES_Ignored;
