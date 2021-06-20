@@ -2035,7 +2035,7 @@ void TySaveWeapon(int client)
 		GetEdictClassname(iSlot0, g_sWeaponInfo[client][Slot0], sizeof(g_sWeaponInfo[][]));
 
 		g_iWeaponInfo[client][iClip] = GetEntProp(iSlot0, Prop_Send, "m_iClip1");
-		g_iWeaponInfo[client][iAmmo] = GetClientAmmo(client, g_sWeaponInfo[client][Slot0]);
+		g_iWeaponInfo[client][iAmmo] = GetOrSetPlayerAmmo(client, iSlot0);
 		g_iWeaponInfo[client][iUpGrade] = GetEntProp(iSlot0, Prop_Send, "m_upgradeBitVec");
 		g_iWeaponInfo[client][iUpAmmo] = GetEntProp(iSlot0, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded");
 		g_iWeaponInfo[client][iSkin0] = GetEntProp(iSlot0, Prop_Send, "m_nSkin");
@@ -2202,7 +2202,7 @@ void TyGiveWeapon(int client)
 		if(iSlot != -1)
 		{	
 			SetEntProp(iSlot, Prop_Send, "m_iClip1", g_iWeaponInfo[client][iClip]);
-			SetClientAmmo(client, g_sWeaponInfo[client][0], g_iWeaponInfo[client][iAmmo]);
+			GetOrSetPlayerAmmo(client, iSlot, g_iWeaponInfo[client][iAmmo]);
 			SetEntProp(iSlot, Prop_Send, "m_upgradeBitVec", g_iWeaponInfo[client][iUpGrade]);
 			SetEntProp(iSlot, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded", g_iWeaponInfo[client][iUpAmmo]);
 			SetEntProp(iSlot, Prop_Send, "m_nSkin", g_iWeaponInfo[client][iSkin0]);
@@ -2237,47 +2237,6 @@ void TyCleanWeapon(int client)
 	g_sWeaponInfo[client][Slot4][0] = '\0';
 }
 
-int GetWeaponOffset(const char[] sWeapon)
-{
-	int iWeaponOffset;
-
-	if(strncmp(sWeapon[13], "m60", 3) == 0) //先验证M60避免与下面的rifle冲突
-		iWeaponOffset = 12;
-	else if(strncmp(sWeapon[7], "rifle", 5) == 0)
-		iWeaponOffset = 24;
-	else if(strncmp(sWeapon[7], "smg", 3) == 0)
-		iWeaponOffset = 20;
-	else if(strncmp(sWeapon[7], "pumpshotgun", 11) == 0 || strncmp(sWeapon[7], "shotgun_chrome", 14) == 0)
-		iWeaponOffset = 28;
-	else if(strncmp(sWeapon[7], "autoshotgun", 11) == 0|| strncmp(sWeapon[7], "shotgun_spas", 12) == 0)
-		iWeaponOffset = 32;
-	else if(strncmp(sWeapon[7], "hunting_rifle", 13) == 0)
-		iWeaponOffset = 36;
-	else if(strncmp(sWeapon[7], "sniper", 6) == 0)
-		iWeaponOffset = 40;
-	else if(strncmp(sWeapon[7], "grenade", 7) == 0)
-		iWeaponOffset = 68;
-
-	return iWeaponOffset;
-}
-
-int GetClientAmmo(int client, const char[] sWeapon)
-{
-	int iWeaponOffset = GetWeaponOffset(sWeapon);
-	int iAmmoOffset = FindSendPropInfo("CTerrorPlayer", "m_iAmmo");
-	
-	return iWeaponOffset > 0 ? GetEntData(client, iAmmoOffset + iWeaponOffset) : 0;
-}
-
-void SetClientAmmo(int client, const char[] sWeapon, int iCount)
-{
-	int iWeaponOffset = GetWeaponOffset(sWeapon);
-	int iAmmoOffset = FindSendPropInfo("CTerrorPlayer", "m_iAmmo");
-	
-	if(iWeaponOffset > 0) 
-		SetEntData(client, iAmmoOffset+iWeaponOffset, iCount);
-}
-
 void DeletePlayerSlot(int client, int iWeapon)
 {		
 	if(RemovePlayerItem(client, iWeapon)) 
@@ -2293,6 +2252,56 @@ void DeletePlayerSlotAll(int client)
 		if(iSlot != -1)
 			DeletePlayerSlot(client, iSlot);
 	}
+}
+
+int GetOrSetPlayerAmmo(int client, int iWeapon, int iReserveAmmo = -1)
+{
+	static StringMap hWeaponOffsets;
+	if(hWeaponOffsets == null)
+		hWeaponOffsets = InitWeaponOffsets(hWeaponOffsets);
+		
+	static int iOffsetAmmo;
+	if(iOffsetAmmo < 1)
+		iOffsetAmmo = FindSendPropInfo("CTerrorPlayer", "m_iAmmo");
+
+	char sWeapon[32];
+	GetEdictClassname(iWeapon, sWeapon, sizeof(sWeapon));
+
+	int offset;
+	hWeaponOffsets.GetValue(sWeapon, offset);
+
+	if(offset)
+	{
+		if(iReserveAmmo != -1)
+			SetEntData(client, iOffsetAmmo + offset, iReserveAmmo);
+		else
+			return GetEntData(client, iOffsetAmmo + offset);
+	}
+
+	return 0;
+}
+
+StringMap InitWeaponOffsets(StringMap hWeaponOffsets)
+{
+	hWeaponOffsets = CreateTrie();
+	hWeaponOffsets.SetValue("weapon_rifle", 12);
+	hWeaponOffsets.SetValue("weapon_smg", 20);
+	hWeaponOffsets.SetValue("weapon_pumpshotgun", 28);
+	hWeaponOffsets.SetValue("weapon_shotgun_chrome", 28);
+	hWeaponOffsets.SetValue("weapon_autoshotgun", 32);
+	hWeaponOffsets.SetValue("weapon_hunting_rifle", 36);
+	hWeaponOffsets.SetValue("weapon_rifle_sg552", 12);
+	hWeaponOffsets.SetValue("weapon_rifle_desert", 12);
+	hWeaponOffsets.SetValue("weapon_rifle_ak47", 12);
+	hWeaponOffsets.SetValue("weapon_smg_silenced", 20);
+	hWeaponOffsets.SetValue("weapon_smg_mp5", 20);
+	hWeaponOffsets.SetValue("weapon_shotgun_spas", 32);
+	hWeaponOffsets.SetValue("weapon_sniper_scout", 40);
+	hWeaponOffsets.SetValue("weapon_sniper_military", 40);
+	hWeaponOffsets.SetValue("weapon_sniper_awp", 40);
+	hWeaponOffsets.SetValue("weapon_rifle_m60", 24);
+	hWeaponOffsets.SetValue("weapon_grenade_launcher", 68);
+	return hWeaponOffsets;
 }
 
 //https://github.com/brxce/hardcoop/blob/master/addons/sourcemod/scripting/modules/SS_SpawnQueue.sp
