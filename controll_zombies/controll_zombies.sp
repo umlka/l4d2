@@ -2035,7 +2035,7 @@ void TySaveWeapon(int client)
 		GetEdictClassname(iSlot0, g_sWeaponInfo[client][Slot0], sizeof(g_sWeaponInfo[][]));
 
 		g_iWeaponInfo[client][iClip] = GetEntProp(iSlot0, Prop_Send, "m_iClip1");
-		g_iWeaponInfo[client][iAmmo] = GetOrSetPlayerAmmo(client, iSlot0);
+		g_iWeaponInfo[client][iAmmo] = GetOrSetPlayerAmmo(client, g_sWeaponInfo[client][Slot0]);
 		g_iWeaponInfo[client][iUpGrade] = GetEntProp(iSlot0, Prop_Send, "m_upgradeBitVec");
 		g_iWeaponInfo[client][iUpAmmo] = GetEntProp(iSlot0, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded");
 		g_iWeaponInfo[client][iSkin0] = GetEntProp(iSlot0, Prop_Send, "m_nSkin");
@@ -2202,7 +2202,7 @@ void TyGiveWeapon(int client)
 		if(iSlot != -1)
 		{	
 			SetEntProp(iSlot, Prop_Send, "m_iClip1", g_iWeaponInfo[client][iClip]);
-			GetOrSetPlayerAmmo(client, iSlot, g_iWeaponInfo[client][iAmmo]);
+			GetOrSetPlayerAmmo(client, g_sWeaponInfo[client][0], g_iWeaponInfo[client][iAmmo]);
 			SetEntProp(iSlot, Prop_Send, "m_upgradeBitVec", g_iWeaponInfo[client][iUpGrade]);
 			SetEntProp(iSlot, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded", g_iWeaponInfo[client][iUpAmmo]);
 			SetEntProp(iSlot, Prop_Send, "m_nSkin", g_iWeaponInfo[client][iSkin0]);
@@ -2254,7 +2254,7 @@ void DeletePlayerSlotAll(int client)
 	}
 }
 
-int GetOrSetPlayerAmmo(int client, int iWeapon, int iReserveAmmo = -1)
+int GetOrSetPlayerAmmo(int client, const char[] sWeapon, int iReserveAmmo = -1)
 {
 	static StringMap hWeaponOffsets;
 	if(hWeaponOffsets == null)
@@ -2263,9 +2263,6 @@ int GetOrSetPlayerAmmo(int client, int iWeapon, int iReserveAmmo = -1)
 	static int iOffsetAmmo;
 	if(iOffsetAmmo < 1)
 		iOffsetAmmo = FindSendPropInfo("CTerrorPlayer", "m_iAmmo");
-
-	char sWeapon[32];
-	GetEdictClassname(iWeapon, sWeapon, sizeof(sWeapon));
 
 	int offset;
 	hWeaponOffsets.GetValue(sWeapon, offset);
@@ -2283,7 +2280,7 @@ int GetOrSetPlayerAmmo(int client, int iWeapon, int iReserveAmmo = -1)
 
 StringMap InitWeaponOffsets(StringMap hWeaponOffsets)
 {
-	hWeaponOffsets = CreateTrie();
+	hWeaponOffsets = new StringMap();
 	hWeaponOffsets.SetValue("weapon_rifle", 12);
 	hWeaponOffsets.SetValue("weapon_smg", 20);
 	hWeaponOffsets.SetValue("weapon_pumpshotgun", 28);
