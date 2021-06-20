@@ -2018,7 +2018,7 @@ void TySaveWeapon(int client)
 	}
 	else 
 	{
-		g_iWeaponInfo[client][iHealth] = GetEntData(client, FindDataMapInfo(client, "m_iHealth"));
+		g_iWeaponInfo[client][iHealth] = GetEntProp(client, Prop_Data, "m_iHealth");
 		g_iWeaponInfo[client][iHealthTemp]	= RoundToNearest(GetEntPropFloat(client, Prop_Send, "m_healthBuffer"));
 		g_iWeaponInfo[client][iHealthTime] = RoundToNearest(GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime"));
 		g_iWeaponInfo[client][iGoingToDie] = GetEntProp(client, Prop_Send, "m_isGoingToDie");
