@@ -2151,8 +2151,12 @@ void vSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int m
 	iSlot = GetPlayerWeaponSlot(client, 2);
 	if(iSlot > MaxClients)
 	{
-		GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
-		strcopy(sWeaponInfo[client][2], maxlength, sWeapon);
+		GetClientWeapon(client, sWeapon, sizeof(sWeapon));
+		if(strcmp(sWeapon, "weapon_vomitjar") != 0 && strcmp(sWeapon, "weapon_pipe_bomb") != 0 && strcmp(sWeapon, "weapon_molotov") != 0)
+		{
+			GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
+			strcopy(sWeaponInfo[client][2], maxlength, sWeapon);
+		}
 	}
 
 	iSlot = GetPlayerWeaponSlot(client, 3);
