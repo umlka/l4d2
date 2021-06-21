@@ -312,14 +312,14 @@ public void OnPluginStart()
 	RegAdminCmd("sm_botset", CmdBotSet, ADMFLAG_RCON, "设置开局Bot的数量");
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("map_transition", Event_RoundEnd, EventHookMode_Pre);
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("player_team", Event_PlayerTeam);
 	HookEvent("survivor_rescued", Event_SurvivorRescued);
-	HookEvent("player_bot_replace", Event_PlayerBotReplace);
-	HookEvent("bot_player_replace", Event_BotPlayerReplace);
+	HookEvent("player_bot_replace", Event_PlayerBotReplace, EventHookMode_Pre);
+	HookEvent("bot_player_replace", Event_BotPlayerReplace, EventHookMode_Pre);
 	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving);
 
 	AddCommandListener(CommandListener_SpecNext, "spec_next");
