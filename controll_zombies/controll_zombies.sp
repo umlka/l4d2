@@ -203,7 +203,6 @@ ConVar g_hSurvuivorAllowChance;
 ConVar g_hSbAllBotGame; 
 ConVar g_hAllowAllBotSurvivorTeam;
 ConVar g_hSurvivorMaxIncapacitatedCount;
-//ConVar g_hDirectorNoSpecials; 
 ConVar g_hExchangeTeam;
 ConVar g_hPZSuicideTime;
 ConVar g_hPZRespawnTime;
@@ -225,7 +224,6 @@ bool g_bHasAnySurvivorLeftSafeArea;
 bool g_bHasPlayerControlledZombies;
 bool g_bSbAllBotGame; 
 bool g_bAllowAllBotSurvivorTeam;
-//bool g_bDirectorNoSpecials;
 bool g_bExchangeTeam;
 bool g_bPZPunishHealth;
 bool g_bIsPlayerBP[MAXPLAYERS + 1];
@@ -339,10 +337,7 @@ public void OnPluginStart()
 	g_hAllowAllBotSurvivorTeam.AddChangeHook(vOtherConVarChanged);
 	g_hSurvivorMaxIncapacitatedCount = FindConVar("survivor_max_incapacitated_count");
 	g_hSurvivorMaxIncapacitatedCount.AddChangeHook(vColorConVarChanged);
-	/*	
-	g_hDirectorNoSpecials = FindConVar("director_no_specials");
-	g_hDirectorNoSpecials.AddChangeHook(vOtherConVarChanged);
-	*/
+
 	g_hMaxTankPlayer.AddChangeHook(vOtherConVarChanged);
 	g_hAllowSurvuivorLimit.AddChangeHook(vOtherConVarChanged);
 	g_hSurvuivorAllowChance.AddChangeHook(vOtherConVarChanged);
@@ -496,7 +491,6 @@ void vGetOtherCvars()
 	g_fSurvuivorAllowChance = g_hSurvuivorAllowChance.FloatValue;
 	g_bSbAllBotGame = g_hSbAllBotGame.BoolValue;
 	g_bAllowAllBotSurvivorTeam = g_hAllowAllBotSurvivorTeam.BoolValue;
-	//g_bDirectorNoSpecials = g_hDirectorNoSpecials.BoolValue;
 	g_bExchangeTeam = g_hExchangeTeam.BoolValue;
 	g_fPZSuicideTime = g_hPZSuicideTime.FloatValue;
 	g_iPZRespawnTime = g_hPZRespawnTime.IntValue;
@@ -935,7 +929,6 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 
 	static int iFlags;
 	iFlags = GetEntProp(client, Prop_Data, "m_afButtonPressed");
-
 	if(GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 	{
 		if(iFlags & IN_ZOOM)
@@ -945,23 +938,19 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 
 			return Plugin_Continue;
 		}
-
-		//在director_no_specials值为1的情况下强制重生
-		/*if(!g_bDirectorNoSpecials)
-			return Plugin_Continue;*/
 		
-		if(iFlags & IN_ATTACK)
+		if(buttons & IN_USE == 0)
 		{
-			static int iSpawnState;
-			if(GetEntProp(client, Prop_Send, "m_ghostSpawnState") == 1)
+			if(iFlags & IN_ATTACK)
 			{
-				SetEntProp(client, Prop_Send, "m_ghostSpawnState", 0);
-				iSpawnState = 1;
-			}
-			else if(iSpawnState == 1 && GetEntProp(client, Prop_Send, "m_ghostSpawnState") == 0)
-			{
-				buttons &= ~IN_ATTACK;
-				iSpawnState = 0;
+				static int iSpawnState;
+				iSpawnState = GetEntProp(client, Prop_Send, "m_ghostSpawnState");
+				if(iSpawnState & 1)
+				{
+					SetEntProp(client, Prop_Send, "m_ghostSpawnState", iSpawnState & ~1);
+					buttons &= ~IN_ATTACK;
+					return Plugin_Changed;
+				}
 			}
 		}
 	}
@@ -2053,6 +2042,31 @@ void vSetStatus(int client, int[][] iStatusInfo/*, char[][] sStatusInfo*/)
 		StopSound(client, SNDCHAN_STATIC, "player/heartbeatloop.wav");
 }
 
+int g_iGrenadeThrower[MAXPLAYERS + 1];
+public void OnEntityCreated(int entity, const char[] classname)
+{
+	if(classname[0] != 'm' && classname[0] != 'p' && classname[0] != 'v')
+		return;
+
+	if(strncmp(classname, "molotov_projectile", 19) == 0 || strncmp(classname, "pipe_bomb_projectile", 21) == 0 || strncmp(classname, "vomitjar_projectile", 20) == 0)
+		SDKHook(entity, SDKHook_SpawnPost, Hook_SpawnPost);
+}
+
+public void Hook_SpawnPost(int entity)
+{
+	SDKUnhook(entity, SDKHook_SpawnPost, Hook_SpawnPost);
+	if(entity <= MaxClients || !IsValidEntity(entity))
+		return;
+
+	int iOwner = GetEntPropEnt(entity, Prop_Data, "m_hOwnerEntity");
+	if(0 < iOwner <= MaxClients && IsClientInGame(iOwner) && GetClientTeam(iOwner) == 2)
+	{
+		int iSlot = GetPlayerWeaponSlot(iOwner, 2);
+		if(iSlot > MaxClients)
+			g_iGrenadeThrower[iOwner] = EntIndexToEntRef(iSlot);
+	}
+}
+
 void vRemoveWeapons(int client)
 {
 	int iWeapon;
@@ -2152,8 +2166,7 @@ void vSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int m
 	iSlot = GetPlayerWeaponSlot(client, 2);
 	if(iSlot > MaxClients)
 	{
-		GetClientWeapon(client, sWeapon, sizeof(sWeapon));
-		if(strcmp(sWeapon, "weapon_vomitjar") != 0 && strcmp(sWeapon, "weapon_pipe_bomb") != 0 && strcmp(sWeapon, "weapon_molotov") != 0)
+		if(EntIndexToEntRef(iSlot) != g_iGrenadeThrower[client])
 		{
 			GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
 			strcopy(sWeaponInfo[client][2], maxlength, sWeapon);
