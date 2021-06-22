@@ -1336,7 +1336,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
 					if(g_iCmdEnterCooling & (1 << 4))
 						g_fCmdLastUsedTime[client] = GetEngineTime();
-					RequestFrame(ChangeTeamToSurvivorDelayed, GetClientUserId(attacker));
+					RequestFrame(OnNextFrame_ChangeTeamToSurvivor, GetClientUserId(attacker));
 					CPrintToChat(attacker, "{green}★ {red}特感玩家 {default}杀死 {red}生还者玩家 {default}后，{olive}二者互换队伍");
 				}
 			}
@@ -1356,7 +1356,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 				{
 					if(g_iCmdEnterCooling & (1 << 2))
 						g_fCmdLastUsedTime[client] = GetEngineTime();
-					RequestFrame(ChangeTeamToSurvivorDelayed, userid);
+					RequestFrame(OnNextFrame_ChangeTeamToSurvivor, userid);
 					CPrintToChat(client, "{green}★ {olive}玩家Tank {default}死亡后自动切换回 {blue}生还者队伍");
 				}
 			}
@@ -1430,7 +1430,7 @@ public void Event_TankFrustrated(Event event, const char[] name, bool dontBroadc
 
 	if(g_iCmdEnterCooling & (1 << 1))
 		g_fCmdLastUsedTime[client] = GetEngineTime();
-	RequestFrame(ChangeTeamToSurvivorDelayed, GetClientUserId(client));
+	RequestFrame(OnNextFrame_ChangeTeamToSurvivor, GetClientUserId(client));
 	CPrintToChat(client, "{green}★ {default}丢失 {olive}Tank控制权 {default}后自动切换回 {blue}生还者队伍");
 }
 
@@ -1875,7 +1875,7 @@ bool bIsValidEntRef(int entity)
 
 //------------------------------------------------------------------------------
 //切换回生还者
-public void ChangeTeamToSurvivorDelayed(int client) 
+public void OnNextFrame_ChangeTeamToSurvivor(int client) 
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
 		return;
@@ -2071,7 +2071,7 @@ void vSurvivorWeapons(int client, int iType)
 {
 	static bool bRecorded[MAXPLAYERS + 1];
 	static int iWeaponInfo[MAXPLAYERS + 1][7];
-	static char sWeaponInfo[MAXPLAYERS + 1][5][32];
+	static char sWeaponInfo[MAXPLAYERS + 1][6][32];
 	
 	switch(iType)
 	{
@@ -2113,6 +2113,7 @@ void vCleanWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
 	sWeaponInfo[client][2][0] = '\0';
 	sWeaponInfo[client][3][0] = '\0';
 	sWeaponInfo[client][4][0] = '\0';
+	sWeaponInfo[client][5][0] = '\0';
 }
 
 void vSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int maxlength)
@@ -2172,6 +2173,13 @@ void vSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int m
 		GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
 		strcopy(sWeaponInfo[client][4], maxlength, sWeapon);
 	}
+	
+	iSlot = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+	if(iSlot > MaxClients)
+	{
+		GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
+		strcopy(sWeaponInfo[client][5], maxlength, sWeapon);
+	}
 }
 
 void vGiveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
@@ -2227,6 +2235,9 @@ void vGiveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
 
 	if(sWeaponInfo[client][4][0] != '\0')
 		vCheatCommand(client, "give", sWeaponInfo[client][4]);
+		
+	if(sWeaponInfo[client][5][0] != '\0')
+		FakeClientCommand(client, "use %s", sWeaponInfo[client][5]);
 }
 
 void vSurvivorClean(int client)
