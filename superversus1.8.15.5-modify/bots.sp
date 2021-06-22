@@ -20,9 +20,9 @@ Handle g_hSDK_Call_GoAwayFromKeyboard;
 //Handle g_hSDK_Call_SetObserverTarget;
 
 Handle g_hBotsUpdateTimer;
-Handle g_hGiveTimer[MAXPLAYERS + 1];
+Handle g_hGiveWeaponTimer[MAXPLAYERS + 1];
 
-Address g_pRespawn;
+Address g_pRoundRespawn;
 Address g_pStatsCondition;
 
 DynamicDetour g_dDetourSetHumanSpec;
@@ -583,7 +583,7 @@ void vGetOtherCvars()
 
 public void OnClientDisconnect(int client)
 {
-	delete g_hGiveTimer[client];
+	delete g_hGiveWeaponTimer[client];
 
 	if(IsFakeClient(client))
 		return;
@@ -675,7 +675,7 @@ public void OnMapEnd()
 {
 	vResetPlugin();
 	for(int i = 1; i <= MaxClients; i++)
-		delete g_hGiveTimer[i];
+		delete g_hGiveWeaponTimer[i];
 }
 
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -686,7 +686,7 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		vTakeOver(i);
-		delete g_hGiveTimer[i];
+		delete g_hGiveWeaponTimer[i];
 	}
 }
 
@@ -734,8 +734,8 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 		{
 			if(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon") > MaxClients)
 			{
-				delete g_hGiveTimer[client];
-				g_hGiveTimer[client] = CreateTimer(0.1, Timer_GivePlayerWeapon, GetClientUserId(client));
+				delete g_hGiveWeaponTimer[client];
+				g_hGiveWeaponTimer[client] = CreateTimer(0.1, Timer_GivePlayerWeapon, GetClientUserId(client));
 			}
 		}
 	}
@@ -745,7 +745,7 @@ public Action Timer_GivePlayerWeapon(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) && IsClientInGame(client))
 	{
-		g_hGiveTimer[client] = null;
+		g_hGiveWeaponTimer[client] = null;
 		if(GetClientTeam(client) == 2 && IsPlayerAlive(client))
 			vGiveWeapon(client);
 	}
@@ -832,7 +832,7 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 	int bot_userid = event.GetInt("bot");
 	int bot = GetClientOfUserId(bot_userid);
 
-	delete g_hGiveTimer[bot];
+	delete g_hGiveWeaponTimer[bot];
 
 	g_iBotPlayer[bot] = player_userid;
 	g_iPlayerBot[player] = bot_userid;
@@ -855,7 +855,7 @@ public void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroa
 	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || GetClientTeam(player) != TEAM_SURVIVOR)
 		return;
 
-	delete g_hGiveTimer[player];
+	delete g_hGiveWeaponTimer[player];
 
 	int bot = GetClientOfUserId(event.GetInt("bot"));
 
@@ -867,7 +867,7 @@ public void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroa
 
 public void Event_PlayerTransitioned(Event event, const char[] name, bool dontBroadcast)
 {
-	delete g_hGiveTimer[GetClientOfUserId(event.GetInt("userid"))];
+	delete g_hGiveWeaponTimer[GetClientOfUserId(event.GetInt("userid"))];
 }
 
 public void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadcast)
@@ -1471,11 +1471,11 @@ void vRegisterStatsConditionPatch(GameData hGameData = null)
 	if(iByteMatch == -1)
 		SetFailState("Failed to find byte: RoundRespawn_Byte");
 
-	g_pRespawn = hGameData.GetAddress("RoundRespawn");
-	if(!g_pRespawn)
+	g_pRoundRespawn = hGameData.GetAddress("RoundRespawn");
+	if(!g_pRoundRespawn)
 		SetFailState("Failed to find address: RoundRespawn");
 	
-	g_pStatsCondition = g_pRespawn + view_as<Address>(iOffset);
+	g_pStatsCondition = g_pRoundRespawn + view_as<Address>(iOffset);
 	
 	int iByteOrigin = LoadFromAddress(g_pStatsCondition, NumberType_Int8);
 	if(iByteOrigin != iByteMatch)
