@@ -21,11 +21,11 @@ static const int CProfile_TeamIndex[] = { NO_INDEX, NO_INDEX, SERVER_INDEX, RED_
  * @note Prints a message to a specific client in the chat area.
  * @note Supports color tags.
  *
- * @param client 		Client index.
- * @param sMessage 		Message (formatting rules).
- * @return 				No return
+ * @param client	Client index.
+ * @param sMessage	Message (formatting rules).
+ * @return			No return
  * 
- * On error/Errors:   If the client is not connected an error will be thrown.
+ * On error/Errors:	If the client is not connected an error will be thrown.
  */
 stock void CPrintToChat(int client, const char[] sMessage, any ...)
 {
@@ -52,9 +52,9 @@ stock void CPrintToChat(int client, const char[] sMessage, any ...)
  * @note Prints a message to all clients in the chat area.
  * @note Supports color tags.
  *
- * @param client		Client index.
- * @param sMessage 		Message (formatting rules)
- * @return 				No return
+ * @param client	Client index.
+ * @param sMessage	Message (formatting rules)
+ * @return			No return
  */
 stock void CPrintToChatAll(const char[] sMessage, any ...)
 {
@@ -75,33 +75,33 @@ stock void CPrintToChatAll(const char[] sMessage, any ...)
  * @note Replaces color tags in a string with color codes
  *
  * @param sMessage	String.
- * @param maxlength   Maximum length of the string buffer.
- * @return			  Client index that can be used for SayText2 author index
+ * @param maxlength	Maximum length of the string buffer.
+ * @return			Client index that can be used for SayText2 author index
  * 
- * On error/Errors:   If there is more then one team color is used an error will be thrown.
+ * On error/Errors:	If there is more then one team color is used an error will be thrown.
  */
 stock int CFormat(char[] sMessage, int maxlength)
 {	
 	int iRandomPlayer = NO_INDEX;
 	
-	for(int i; i < MAX_COLORS; i++)												//	Para otras etiquetas de color se requiere un bucle.
+	for(int i; i < MAX_COLORS; i++)													//	Para otras etiquetas de color se requiere un bucle.
 	{
-		if(StrContains(sMessage, CTag[i]) == -1) 										//	Si no se encuentra la etiqueta, omitir.
+		if(StrContains(sMessage, CTag[i]) == -1)									//	Si no se encuentra la etiqueta, omitir.
 			continue;
 		else if(!CTagReqSayText2[i])
-			ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i]); 					//	Si la etiqueta no necesita Saytext2 simplemente reemplazará.
-		else																				//	La etiqueta necesita Saytext2.
+			ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i]);				//	Si la etiqueta no necesita Saytext2 simplemente reemplazará.
+		else																		//	La etiqueta necesita Saytext2.
 		{	
 			if(iRandomPlayer == NO_INDEX)											//	Si no se especificó un cliente aleatorio para la etiqueta, reemplaca la etiqueta y busca un cliente para la etiqueta.
 			{
-				iRandomPlayer = CFindRandomPlayerByTeam(CProfile_TeamIndex[i]); 			//	Busca un cliente válido para la etiqueta, equipo de infectados oh supervivientes.
-				if(iRandomPlayer == NO_PLAYER) 
-					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[5]); 			//	Si no se encuentra un cliente valido, reemplasa la etiqueta con una etiqueta de color verde.
+				iRandomPlayer = CFindRandomPlayerByTeam(CProfile_TeamIndex[i]);		//	Busca un cliente válido para la etiqueta, equipo de infectados oh supervivientes.
+				if(iRandomPlayer == NO_PLAYER)
+					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[5]);		//	Si no se encuentra un cliente valido, reemplasa la etiqueta con una etiqueta de color verde.
 				else 
-					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i]); 			// 	Si el cliente fue encontrado simplemente reemplasa.
+					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i]);		// 	Si el cliente fue encontrado simplemente reemplasa.
 			}
-			else 																			//	Si en caso de usar dos colores de equipo infectado y equipo de superviviente juntos se mandará un mensaje de error.
-				ThrowError("Using two team colors in one message is not allowed"); 			//	Si se ha usadó una combinación de colores no validad se registrara en la carpeta logs.
+			else																	//	Si en caso de usar dos colores de equipo infectado y equipo de superviviente juntos se mandará un mensaje de error.
+				ThrowError("Using two team colors in one message is not allowed");	//	Si se ha usadó una combinación de colores no validad se registrara en la carpeta logs.
 		}
 	}
 
@@ -111,8 +111,8 @@ stock int CFormat(char[] sMessage, int maxlength)
 /**
  * @note Founds a random player with specified team
  *
- * @param color_team  Client team.
- * @return			  Client index or NO_PLAYER if no player found
+ * @param color_team	Client team.
+ * @return				Client index or NO_PLAYER if no player found
  */
 stock int CFindRandomPlayerByTeam(int color_team)
 {
@@ -133,10 +133,10 @@ stock int CFindRandomPlayerByTeam(int color_team)
 /**
  * @note Sends a SayText2 usermessage to a client
  *
- * @param sMessage 		Client index
- * @param maxlength 	Author index
- * @param sMessage 		Message
- * @return 				No return.
+ * @param sMessage	Client index
+ * @param maxlength	Author index
+ * @param sMessage	Message
+ * @return			No return.
  */
 stock void CSayText2(int client, int author, const char[] sMessage)
 {
@@ -191,7 +191,7 @@ Handle g_hSDK_Call_HasPlayerControlledZombies;
 Handle g_hPZRespawnTimer[MAXPLAYERS + 1];
 Handle g_hPZSuicideTimer[MAXPLAYERS + 1];
 
-Address g_pRespawn;
+Address g_pRoundRespawn;
 Address g_pStatsCondition;
 
 DynamicDetour g_dDetour;
@@ -1222,7 +1222,7 @@ public Action Timer_LadderAndGlow(Handle timer, int client)
 	}
 }
 
-public void OnNextFrame_ChangeTeamTo(int client)
+void OnNextFrame_ChangeTeamTo(int client)
 {
 	if(g_bHasPlayerControlledZombies == false && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3)
 	{
@@ -1268,7 +1268,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	}
 }
 
-public void OnNextFrame_PlayerSpawn(int userid)
+void OnNextFrame_PlayerSpawn(int userid)
 {
 	int client = GetClientOfUserId(userid);
 	if(client == 0 || !IsClientInGame(client) || IsClientInKickQueue(client) || !IsPlayerAlive(client))
@@ -1430,20 +1430,24 @@ public void Event_ClientReplace(Event event, const char[] name, bool dontBroadca
 	int bot = GetClientOfUserId(bot_userid);
 	int player = GetClientOfUserId(player_userid);
 
-	g_iPZSpawned[bot] = 0;
-	g_iPZSpawned[player] = 0;
-
-	if(name[0] == 'p')
+	switch(name[0])
 	{
-		g_iPlayerBot[player] = bot_userid;
-		g_iBotPlayer[bot] = player_userid;
-
-		if(GetClientTeam(bot) == 3 && GetEntProp(bot, Prop_Send, "m_zombieClass") == 8)
+		case 'b':
+			g_iPZSpawned[bot] = 0;
+			
+		case 'p':
 		{
-			if(IsFakeClient(player))
-				g_iTankBot[bot] = 1; //防卡功能中踢出FakeClient后，第二次触发Tank产生并替换原有的Tank(BOT替换BOT)
-			else
-				g_iTankBot[bot] = 2; //主动或被动放弃Tank控制权(BOT替换玩家)
+			g_iPZSpawned[player] = 0;
+			g_iPlayerBot[player] = bot_userid;
+			g_iBotPlayer[bot] = player_userid;
+
+			if(GetClientTeam(bot) == 3 && GetEntProp(bot, Prop_Send, "m_zombieClass") == 8)
+			{
+				if(IsFakeClient(player))
+					g_iTankBot[bot] = 1; //防卡功能中踢出FakeClient后，第二次触发Tank产生并替换原有的Tank(BOT替换BOT)
+				else
+					g_iTankBot[bot] = 2; //主动或被动放弃Tank控制权(BOT替换玩家)
+			}
 		}
 	}
 }
@@ -1705,6 +1709,7 @@ bool bTakeOverTank(int tank)
 			{
 				vSurvivorClean(client);
 				vSurvivorSave(client);
+				ChangeClientTeam(client, 3);
 				CreateTimer(1.0, Timer_ReturnToSurvivor, GetClientUserId(client), TIMER_REPEAT);
 			}
 			
@@ -1750,7 +1755,6 @@ bool bAllowSurvivorTakeOver()
 		if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 			iAlivesurvivor++;
 	}
-
 	return iAlivesurvivor > 1;
 }
 
@@ -1771,7 +1775,7 @@ bool bIsPinned(int client)
 	return false;
 }
 
-public void OnNextFrame_CreateSurvivorModelGlow(int client)
+void OnNextFrame_CreateSurvivorModelGlow(int client)
 {
 	if(g_bHasPlayerControlledZombies == false && bHasPlayerZombie())
 		vCreateSurvivorModelGlow(GetClientOfUserId(client));
@@ -1864,7 +1868,7 @@ bool bIsValidEntRef(int entity)
 
 //------------------------------------------------------------------------------
 //切换回生还者
-public void OnNextFrame_ChangeTeamToSurvivor(int client) 
+void OnNextFrame_ChangeTeamToSurvivor(int client) 
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
 		return;
@@ -2441,7 +2445,7 @@ void vLoadGameData()
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "ZombieAbortControl") == false)
 	{
 		LogError("Failed to find signature: ZombieAbortControl");
-		vPrepSDKCall_StateTransition(hGameData);
+		vPrepStateTransitionSDKCall(hGameData);
 	}
 	else
 	{
@@ -2450,7 +2454,7 @@ void vLoadGameData()
 		if(g_hSDK_Call_ZombieAbortControl == null)
 		{
 			LogError("Failed to create SDKCall: ZombieAbortControl");
-			vPrepSDKCall_StateTransition(hGameData);
+			vPrepStateTransitionSDKCall(hGameData);
 		}
 	}
 
@@ -2527,11 +2531,11 @@ void vRegisterStatsConditionPatch(GameData hGameData = null)
 	if(iByteMatch == -1)
 		SetFailState("Failed to find byte: RoundRespawn_Byte");
 
-	g_pRespawn = hGameData.GetAddress("RoundRespawn");
-	if(!g_pRespawn)
+	g_pRoundRespawn = hGameData.GetAddress("RoundRespawn");
+	if(!g_pRoundRespawn)
 		SetFailState("Failed to find address: RoundRespawn");
 	
-	g_pStatsCondition = g_pRespawn + view_as<Address>(iOffset);
+	g_pStatsCondition = g_pRoundRespawn + view_as<Address>(iOffset);
 	
 	int iByteOrigin = LoadFromAddress(g_pStatsCondition, NumberType_Int8);
 	if(iByteOrigin != iByteMatch)
@@ -2552,24 +2556,15 @@ void vSetInfectedGhost(int client, bool bSavePos = false)
 	}
 
 	if(g_hSDK_Call_ZombieAbortControl != null)
-		vInfectedForceGhost(client);
+	{
+		SetEntProp(client, Prop_Send, "m_isCulling", 1);
+		SDKCall(g_hSDK_Call_ZombieAbortControl, client, 0.0);
+	}
 	else
-		vStateTransition(client, 8);
-		
+		SDKCall(g_hSDK_Call_State_Transition, client, 8);
+
 	if(bSavePos)
 		TeleportEntity(client, vOrigin, vAngles, vVelocity);
-}
-
-//https://forums.alliedmods.net/showthread.php?p=1118704
-void vInfectedForceGhost(int client)
-{
-	SetEntProp(client, Prop_Send,"m_isCulling", 1);
-	SDKCall(g_hSDK_Call_ZombieAbortControl, client, 0.0);
-}
-
-void vStateTransition(int client, int iMode) 
-{
-	SDKCall(g_hSDK_Call_State_Transition, client, iMode);
 }
 
 void vSetZombieClass(int client, int iZombieClass)
@@ -2592,7 +2587,7 @@ void vSetZombieClass(int client, int iZombieClass)
 		SetEntPropEnt(client, Prop_Send, "m_customAbility", iAbility);
 }
 
-void vTakeOverZombieBot(int client, int iTarget) 
+void vTakeOverZombieBot(int client, int iTarget)
 {
 	AcceptEntityInput(client, "clearparent");
 	SDKCall(g_hSDK_Call_TakeOverZombieBot, client, iTarget);
@@ -2627,7 +2622,7 @@ void vSetHumanIdle(int bot, int client)
 	SetEntProp(client, Prop_Send, "m_iObserverMode", 5);
 }
 
-void vPrepSDKCall_StateTransition(GameData hGameData = null)
+void vPrepStateTransitionSDKCall(GameData hGameData = null)
 {
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "State_Transition") == false)
@@ -2685,7 +2680,7 @@ void OnNextFrame_EnterGhostState(int client)
 				PrintHintText(client, "灵魂状态下按下鼠标[中键]可以快速切换特感");
 		}
 
-		vClassMenuCheck(client);
+		vClassSelectionMenu(client);
 	
 		if(g_fPZSuicideTime > 0.0)
 		{
@@ -2695,7 +2690,7 @@ void OnNextFrame_EnterGhostState(int client)
 	}
 }
 
-void vClassMenuCheck(int client)
+void vClassSelectionMenu(int client)
 {
 	if((g_iAutoDisplayMenu == -1 || g_iDisplayed[client] < g_iAutoDisplayMenu) && bCheckClientAccess(client, 4) == true)
 	{
