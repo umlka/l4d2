@@ -1,6 +1,7 @@
 #pragma semicolon 1
 #pragma newdecls required
 #include <sourcemod>
+#include <sdkhooks>
 #include <sdktools>
 
 #define PLUGIN_VERSION	"4.3"
@@ -180,21 +181,18 @@ public void Event_MapTransition(Event event, const char[] name, bool dontBroadca
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
-	if(GetGameTime() >= 60.0)
-		return;
-
 	int userid = event.GetInt("userid");
 	int client = GetClientOfUserId(userid);
-	if(g_bSpawned[client] == false && GetClientTeam(client) == 2)
-		CreateTimer(0.2, Timer_Restore, userid, TIMER_FLAG_NO_MAPCHANGE);
+	if(g_bSpawned[client] == false && GetClientTeam(client) == 2 && IsPlayerAlive(client))
+		CreateTimer(0.5, Timer_Restore, userid, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public Action Timer_Restore(Handle timer, int client)
 {
-	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2) 
+	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
 		return;
 
-	if(g_bRecorded[client] == false && g_bSpawned[client] == false && IsFakeClient(client) && GetGameTime() < 60.0)
+	if(g_bRecorded[client] == false && g_bSpawned[client] == false && IsFakeClient(client) && GetGameTime() < 30.0)
 		vAppropriateUnusedSave(client);
 
 	if(g_bSpawned[client] == false)
@@ -360,6 +358,31 @@ void vCopyStatus(int client, int iTarget, int[][] iStatusInfo, char[][] sStatusI
 	strcopy(sStatusInfo[iTarget], maxlength, sStatusInfo[client]);
 }
 
+int g_iGrenadeThrower[MAXPLAYERS + 1];
+public void OnEntityCreated(int entity, const char[] classname)
+{
+	if(classname[0] != 'm' && classname[0] != 'p' && classname[0] != 'v')
+		return;
+
+	if(strncmp(classname, "molotov_projectile", 19) == 0 || strncmp(classname, "pipe_bomb_projectile", 21) == 0 || strncmp(classname, "vomitjar_projectile", 20) == 0)
+		SDKHook(entity, SDKHook_SpawnPost, Hook_SpawnPost);
+}
+
+public void Hook_SpawnPost(int entity)
+{
+	SDKUnhook(entity, SDKHook_SpawnPost, Hook_SpawnPost);
+	if(entity <= MaxClients || !IsValidEntity(entity))
+		return;
+
+	int iOwner = GetEntPropEnt(entity, Prop_Data, "m_hOwnerEntity");
+	if(0 < iOwner <= MaxClients && IsClientInGame(iOwner) && GetClientTeam(iOwner) == 2)
+	{
+		int iSlot = GetPlayerWeaponSlot(iOwner, 2);
+		if(iSlot > MaxClients)
+			g_iGrenadeThrower[iOwner] = EntIndexToEntRef(iSlot);
+	}
+}
+
 void vRemoveWeapons(int client)
 {
 	int iWeapon;
@@ -465,8 +488,7 @@ void vSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int m
 	iSlot = GetPlayerWeaponSlot(client, 2);
 	if(iSlot > MaxClients)
 	{
-		GetClientWeapon(client, sWeapon, sizeof(sWeapon));
-		if(strcmp(sWeapon, "weapon_vomitjar") != 0 && strcmp(sWeapon, "weapon_pipe_bomb") != 0 && strcmp(sWeapon, "weapon_molotov") != 0)
+		if(EntIndexToEntRef(iSlot) != g_iGrenadeThrower[client])
 		{
 			GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
 			strcopy(sWeaponInfo[client][2], maxlength, sWeapon);
