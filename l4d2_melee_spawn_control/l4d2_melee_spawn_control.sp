@@ -25,8 +25,8 @@
 #define MELEE_MANIFEST	"scripts\\melee\\melee_manifest.txt"
 #define DEFAULT_MELEES	"fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;golfclub;shovel;pitchfork"
 
-DynamicDetour g_dDetourMeleeWeaponAllowedToExist;
-DynamicDetour g_dDetourGameRulesGetMissionInfo;
+DynamicDetour g_dDetourMeleeAllowed;
+DynamicDetour g_dDetourGetMissionInfo;
 
 StringMap g_aMapSetMelees;
 StringMap g_aMapInitMelees;
@@ -51,7 +51,7 @@ public Plugin myinfo=
 
 public void OnPluginStart()
 {
-	LoadGameData();
+	vLoadGameData();
 
 	g_aMapSetMelees = new StringMap();
 	g_aMapInitMelees = new StringMap();
@@ -62,10 +62,10 @@ public void OnPluginStart()
 
 public void OnPluginEnd()
 {
-	if(!g_dDetourMeleeWeaponAllowedToExist.Disable(Hook_Post, MeleeWeaponAllowedToExistPost))
+	if(!g_dDetourMeleeAllowed.Disable(Hook_Post, mreMeleeAllowedPost))
 		SetFailState("Failed to disable detour: CDirectorItemManager::IsMeleeWeaponAllowedToExist");
 
-	if(!g_dDetourGameRulesGetMissionInfo.Disable(Hook_Post, GameRulesGetMissionInfoPost))
+	if(!g_dDetourGetMissionInfo.Disable(Hook_Post, mreGetMissionInfoPost))
 		SetFailState("Failed to disable detour: CTerrorGameRules::GetMissionInfo");
 }
 
@@ -80,7 +80,7 @@ public void OnMapEnd()
 	g_aMapSetMelees.Clear();
 }
 
-public MRESReturn MeleeWeaponAllowedToExistPost(DHookReturn hReturn, DHookParam hParams)
+public MRESReturn mreMeleeAllowedPost(DHookReturn hReturn, DHookParam hParams)
 {
 	/*char sScriptName[32];
 	hParams.GetString(1, sScriptName, sizeof(sScriptName));
@@ -96,7 +96,7 @@ public MRESReturn MeleeWeaponAllowedToExistPost(DHookReturn hReturn, DHookParam 
 	return MRES_Override;
 }
 
-public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
+public MRESReturn mreGetMissionInfoPost(DHookReturn hReturn)
 {
 	if(g_bMapStarted == true)
 		return MRES_Ignored;
@@ -119,7 +119,7 @@ public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 		if(strcmp(sMapCurrentMelees, "N/A") != 0)
 			strcopy(sMissionBaseMelees, sizeof(sMissionBaseMelees), sMapCurrentMelees);
 		else
-			ReadMeleeManifest(sMissionBaseMelees, sizeof(sMissionBaseMelees)); //darkwood, eye
+			vReadMeleeManifest(sMissionBaseMelees, sizeof(sMissionBaseMelees)); //darkwood, eye
 			
 		if(sMissionBaseMelees[0] == 0)
 			strcopy(sMissionBaseMelees, sizeof(sMissionBaseMelees), DEFAULT_MELEES);
@@ -129,7 +129,7 @@ public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 
 	char sMapSetMelees[512];
 	if(g_aMapSetMelees.GetString(sMissionName, sMapSetMelees, sizeof(sMapSetMelees)) == false)
-		GetMapSetMelees(sMissionName, sMissionBaseMelees, sMapSetMelees, sizeof(sMapSetMelees));
+		vGetMapSetMelees(sMissionName, sMissionBaseMelees, sMapSetMelees, sizeof(sMapSetMelees));
 
 	if(sMapSetMelees[0] == 0)
 		return MRES_Ignored;
@@ -147,7 +147,7 @@ public MRESReturn GameRulesGetMissionInfoPost(DHookReturn hReturn)
 	return MRES_Ignored;
 }
 
-void GetMapSetMelees(const char[] sMissionName, const char[] sMissionBaseMelees, char[] sMapSetMelees, int maxlength)
+void vGetMapSetMelees(const char[] sMissionName, const char[] sMissionBaseMelees, char[] sMapSetMelees, int maxlength)
 {
 	char sBaseMelees[512], sExtraMelees[512];
 	g_hBaseMelees.GetString(sBaseMelees, sizeof(sBaseMelees));
@@ -192,7 +192,7 @@ void GetMapSetMelees(const char[] sMissionName, const char[] sMissionBaseMelees,
 		sBaseMelees[strlen(sBaseMelees) - 1] = 0;
 	}
 	
-	int pos = GetCharPosInString(sBaseMelees , ';', 16);
+	int pos = iGetCharPosInString(sBaseMelees , ';', 16);
 	if(pos != -1)
 		sBaseMelees[pos] = 0;
 
@@ -200,7 +200,7 @@ void GetMapSetMelees(const char[] sMissionName, const char[] sMissionBaseMelees,
 	g_aMapSetMelees.SetString(sMissionName, sBaseMelees, true);
 }
 
-int GetCharPosInString(const char[] str, char c, int which)
+int iGetCharPosInString(const char[] str, char c, int which)
 {
 	int len = strlen(str);
 	if(which > len)
@@ -218,7 +218,7 @@ int GetCharPosInString(const char[] str, char c, int which)
 	return -1;
 }
 
-void ReadMeleeManifest(char[] sManifest, int maxlength)
+void vReadMeleeManifest(char[] sManifest, int maxlength)
 {
 	File hFile = OpenFile(MELEE_MANIFEST, "r");
 	if(hFile == null)
@@ -238,7 +238,7 @@ void ReadMeleeManifest(char[] sManifest, int maxlength)
 		if(strlen(sLine) < 27)
 			continue;
 
-		if(SplitStringRight(sLine, "scripts/melee/", sLine, sizeof(sLine)) && SplitString(sLine, ".txt", sLine, sizeof(sLine)) != -1)
+		if(bSplitStringRight(sLine, "scripts/melee/", sLine, sizeof(sLine)) && SplitString(sLine, ".txt", sLine, sizeof(sLine)) != -1)
 			Format(sManifest, maxlength, "%s;%s", sManifest, sLine);
 	}
 	
@@ -248,7 +248,7 @@ void ReadMeleeManifest(char[] sManifest, int maxlength)
 	delete hFile;
 }
 
-bool SplitStringRight(const char[] source, const char[] split, char[] part, int partLen)
+bool bSplitStringRight(const char[] source, const char[] split, char[] part, int partLen)
 {
 	int index = StrContains(source, split); // get start index of split string 
 	
@@ -264,7 +264,7 @@ bool SplitStringRight(const char[] source, const char[] split, char[] part, int 
 	return true;
 }
 
-void LoadGameData()
+void vLoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
@@ -298,24 +298,24 @@ void LoadGameData()
 	if((g_hSDK_Call_KvFindKey = EndPrepSDKCall()) == null)
 		SetFailState("Failed to create SDKCall: KeyValues::FindKey");
 
-	SetupDetours(hGameData);
+	vSetupDetours(hGameData);
 
 	delete hGameData;
 }
 
-void SetupDetours(GameData hGameData = null)
+void vSetupDetours(GameData hGameData = null)
 {
-	g_dDetourMeleeWeaponAllowedToExist = DynamicDetour.FromConf(hGameData, "CDirectorItemManager::IsMeleeWeaponAllowedToExist");
-	if(g_dDetourMeleeWeaponAllowedToExist == null)
+	g_dDetourMeleeAllowed = DynamicDetour.FromConf(hGameData, "CDirectorItemManager::IsMeleeWeaponAllowedToExist");
+	if(g_dDetourMeleeAllowed == null)
 		SetFailState("Failed to find signature: CDirectorItemManager::IsMeleeWeaponAllowedToExist");
 		
-	if(!g_dDetourMeleeWeaponAllowedToExist.Enable(Hook_Post, MeleeWeaponAllowedToExistPost))
+	if(!g_dDetourMeleeAllowed.Enable(Hook_Post, mreMeleeAllowedPost))
 		SetFailState("Failed to detour post: CDirectorItemManager::IsMeleeWeaponAllowedToExist");
 
-	g_dDetourGameRulesGetMissionInfo = DynamicDetour.FromConf(hGameData, "CTerrorGameRules::GetMissionInfo");
-	if(g_dDetourGameRulesGetMissionInfo == null)
+	g_dDetourGetMissionInfo = DynamicDetour.FromConf(hGameData, "CTerrorGameRules::GetMissionInfo");
+	if(g_dDetourGetMissionInfo == null)
 		SetFailState("Failed to find signature: CTerrorGameRules::GetMissionInfo");
 		
-	if(!g_dDetourGameRulesGetMissionInfo.Enable(Hook_Post, GameRulesGetMissionInfoPost))
+	if(!g_dDetourGetMissionInfo.Enable(Hook_Post, mreGetMissionInfoPost))
 		SetFailState("Failed to detour post: CTerrorGameRules::GetMissionInfo");
 }
