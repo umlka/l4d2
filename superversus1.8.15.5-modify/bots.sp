@@ -20,6 +20,7 @@ Handle g_hSDK_Call_GoAwayFromKeyboard;
 //Handle g_hSDK_Call_SetObserverTarget;
 
 Handle g_hBotsUpdateTimer;
+Handle g_hGiveTimer[MAXPLAYERS + 1];
 
 Address g_pRespawn;
 Address g_pStatsCondition;
@@ -314,12 +315,13 @@ public void OnPluginStart()
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_RoundEnd, EventHookMode_Pre);
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-	HookEvent("player_spawn", Event_PlayerSpawn);
+	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("player_team", Event_PlayerTeam);
 	HookEvent("survivor_rescued", Event_SurvivorRescued);
 	HookEvent("player_bot_replace", Event_PlayerBotReplace, EventHookMode_Pre);
 	HookEvent("bot_player_replace", Event_BotPlayerReplace, EventHookMode_Pre);
+	HookEvent("player_transitioned", Event_PlayerTransitioned, EventHookMode_Pre);
 	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving);
 
 	AddCommandListener(CommandListener_SpecNext, "spec_next");
@@ -581,6 +583,8 @@ void vGetOtherCvars()
 
 public void OnClientDisconnect(int client)
 {
+	delete g_hGiveTimer[client];
+
 	if(IsFakeClient(client))
 		return;
 
@@ -670,6 +674,8 @@ void vUpdateSurvivorLimitConVar()
 public void OnMapEnd()
 {
 	vResetPlugin();
+	for(int i = 1; i <= MaxClients; i++)
+		delete g_hGiveTimer[i];
 }
 
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -678,7 +684,10 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 		vResetPlugin();
 
 	for(int i = 1; i <= MaxClients; i++)
+	{
 		vTakeOver(i);
+		delete g_hGiveTimer[i];
+	}
 }
 
 void vResetPlugin()
@@ -723,38 +732,23 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
 		if(g_bGiveWeaponType == true && g_iRoundStart == 1 && IsPlayerAlive(client))
 		{
-			int iActiveWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-			if(iActiveWeapon != -1)
+			if(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon") > MaxClients)
 			{
-				DataPack pack = new DataPack();
-				pack.WriteCell(GetClientUserId(client));
-				pack.WriteCell(EntIndexToEntRef(iActiveWeapon));
-				RequestFrame(OnNextFrame_GivePlayerWeapon, pack);
+				delete g_hGiveTimer[client];
+				g_hGiveTimer[client] = CreateTimer(0.1, Timer_GivePlayerWeapon, GetClientUserId(client));
 			}
 		}
 	}
 }
 
-public void OnNextFrame_GivePlayerWeapon(DataPack pack)
+public Action Timer_GivePlayerWeapon(Handle timer, int client)
 {
-	pack.Reset();
-	int client = pack.ReadCell();
-	if((client = GetClientOfUserId(client)) && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client) && bIsValidSpawn(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"), pack.ReadCell(), client))
-		vGiveWeapon(client);
-}
-
-bool bIsValidSpawn(int iActiveWeapon, int iEntRef, int client)
-{
-	if(iActiveWeapon == -1)
-		return true;
-		
-	if(EntIndexToEntRef(iActiveWeapon) == iEntRef)
-		return true;
-		
-	if(GetEntProp(client, Prop_Send, "m_iCurrentUseAction") == 5)
-		return true;
-	
-	return false;
+	if((client = GetClientOfUserId(client)) && IsClientInGame(client))
+	{
+		g_hGiveTimer[client] = null;
+		if(GetClientTeam(client) == 2 && IsPlayerAlive(client))
+			vGiveWeapon(client);
+	}
 }
 
 public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
@@ -837,6 +831,9 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 
 	int bot_userid = event.GetInt("bot");
 	int bot = GetClientOfUserId(bot_userid);
+
+	delete g_hGiveTimer[bot];
+
 	g_iBotPlayer[bot] = player_userid;
 	g_iPlayerBot[player] = bot_userid;
 
@@ -858,12 +855,19 @@ public void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroa
 	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || GetClientTeam(player) != TEAM_SURVIVOR)
 		return;
 
+	delete g_hGiveTimer[player];
+
 	int bot = GetClientOfUserId(event.GetInt("bot"));
 
 	static char sModel[128];
 	GetClientModel(bot, sModel, sizeof(sModel));
 	SetEntityModel(player, sModel);
 	SetEntProp(player, Prop_Send, "m_survivorCharacter", GetEntProp(bot, Prop_Send, "m_survivorCharacter"));
+}
+
+public void Event_PlayerTransitioned(Event event, const char[] name, bool dontBroadcast)
+{
+	delete g_hGiveTimer[GetClientOfUserId(event.GetInt("userid"))];
 }
 
 public void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadcast)
@@ -1212,7 +1216,7 @@ void vGiveSecondary(int client)
 		vRemovePlayerSlot(client, 1);
 		int iRandom = g_iSlotWeapons[1][GetRandomInt(0, g_iSlotCount[1] - 1)];
 		if(iRandom > 2)
-			vGiveMeleeWeapon(client, g_sWeaponName[1][iRandom]);
+			vGiveMelee(client, g_sWeaponName[1][iRandom]);
 		else
 			vCheatCommand(client, "give", g_sWeaponName[1][iRandom]);
 	}
@@ -1258,11 +1262,9 @@ void vGiveAveragePrimary(int client)
 		}
 	}
 
-	int iAverage = iTotal > 0 ? RoundToNearest(1.0 * iTier / iTotal) : 0;
-
 	vRemovePlayerSlot(client, 0);
 
-	switch(iAverage)
+	switch(iTotal > 0 ? RoundToNearest(1.0 * iTier / iTotal) : 0)
 	{
 		case 1:
 			vCheatCommand(client, "give", g_sWeaponName[0][GetRandomInt(0, 4)]); //随机给一把tier1武器
@@ -1395,7 +1397,7 @@ void vGetScriptName(const char[] sMeleeClass, char[] sScriptName, int maxlength)
 	strcopy(sScriptName, maxlength, g_sMeleeClass[GetRandomInt(0, g_iMeleeClassCount - 1)]);
 }
 
-void vGiveMeleeWeapon(int client, const char[] sMeleeClass)
+void vGiveMelee(int client, const char[] sMeleeClass)
 {
 	char sScriptName[32];
 	vGetScriptName(sMeleeClass, sScriptName, sizeof(sScriptName));
