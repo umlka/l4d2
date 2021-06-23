@@ -926,21 +926,22 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	if(IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client))
 		return Plugin_Continue;
 
-	static int iFlags;
-	iFlags = GetEntProp(client, Prop_Data, "m_afButtonPressed");
+	if(buttons & IN_ATTACK)
+		buttons &= ~IN_USE;
+
 	if(GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 	{
-		if(iFlags & IN_ZOOM)
+		if(GetEntProp(client, Prop_Data, "m_afButtonPressed") & IN_ZOOM)
 		{
 			if(g_iPZSpawned[client] == 1 && bCheckClientAccess(client, 4) == true)
 				vSelectAscendingZombieClass(client);
 
 			return Plugin_Continue;
 		}
-		
+
 		if(buttons & IN_USE == 0)
 		{
-			if(iFlags & IN_ATTACK)
+			if(buttons & IN_ATTACK)
 			{
 				static int iSpawnState;
 				iSpawnState = GetEntProp(client, Prop_Send, "m_ghostSpawnState");
@@ -955,7 +956,7 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	}
 	else
 	{
-		if(iFlags & IN_ZOOM && bCheckClientAccess(client, 5) == true)
+		if(GetEntProp(client, Prop_Data, "m_afButtonPressed") & IN_ZOOM && bCheckClientAccess(client, 5) == true)
 			vResetInfectedAbility(client, 0.1); //管理员鼠标中键重置技能冷却
 	}
 
