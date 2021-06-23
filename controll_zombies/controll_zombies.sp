@@ -1172,6 +1172,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 	{
 		if(g_bHasPlayerControlledZombies == false && g_bHasAnySurvivorLeftSafeArea == true && g_iPZRespawnTime > 0)
 		{
+			delete g_hPZRespawnTimer[client];
 			vCalculatePZRespawnTime(client);
 			g_hPZRespawnTimer[client] = CreateTimer(1.0, Timer_PZRespawn, userid, TIMER_REPEAT);
 		}
@@ -1310,6 +1311,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 		return;
 
 	g_iPZSpawned[client] = 0;
+	vDeleteTimer(client);
 
 	switch(GetClientTeam(client))
 	{
