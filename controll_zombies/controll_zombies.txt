@@ -51,11 +51,12 @@
 		"Signatures" 
 		{
 			/* CTerrorPlayer::OnEnterGhostState() */
-			"CTerrorPlayer::OnEnterGhostState"	//https://github.com/Psykotikism/Mutant_Tanks/blob/master/addons/sourcemod/gamedata/mutant_tanks.txt
+			"CTerrorPlayer::OnEnterGhostState"
 			{
 				"library"	"server"
 				"linux"		"@_ZN13CTerrorPlayer17OnEnterGhostStateEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x8D\x2A\x2A\x2A\x2A\x2A\x57\xFF\xD2\x8B\x06\x8B\x90\x2A\x2A\x2A\x2A\x8B\xCE\xFF\xD2"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x8B\xF1\x8B\x86\x2A\x2A\x2A\x2A\x8B\x50\x0C\x8D\x8E\x2A\x2A\x2A\x2A\x57\xFF\xD2\x8B\x06\x8B\x90\x2A\x2A\x2A\x2A\x8B\xCE\xFF\xD2"
+						/* ? ? ? ? ? ? 53 56 8B F1 8B 86 ? ? ? ? 8B 50 0C 8D 8E ? ? ? ? 57 FF D2 8B 06 8B 90 ? ? ? ? 8B CE FF D2 */
 			}
 			"Tank::LeaveStasis" //found by BHaType https://forums.alliedmods.net/showthread.php?t=319342&page=2
 			{

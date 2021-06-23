@@ -178,7 +178,6 @@ char g_sGameMode[32];
 
 Handle g_hSDK_Call_IsInStasis;
 Handle g_hSDK_Call_LeaveStasis;
-Handle g_hSDK_Call_ZombieAbortControl;
 Handle g_hSDK_Call_State_Transition;
 Handle g_hSDK_Call_SetClass;
 Handle g_hSDK_Call_CreateAbility;
@@ -1367,7 +1366,6 @@ public Action Timer_PZRespawn(Handle timer, int client)
 			else if(bAttemptRespawnPZ(client))
 			{
 				vSetInfectedGhost(client, false);
-				SetEntProp(client, Prop_Send,"m_isCulling", 0);
 
 				g_hPZRespawnTimer[client] = null;
 				return Plugin_Stop;
@@ -2445,21 +2443,12 @@ void vLoadGameData()
 		SetFailState("Failed to create SDKCall: Tank::LeaveStasis");
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "ZombieAbortControl") == false)
-	{
-		LogError("Failed to find signature: ZombieAbortControl");
-		vPrepStateTransitionSDKCall(hGameData);
-	}
-	else
-	{
-		PrepSDKCall_AddParameter(SDKType_Float, SDKPass_Plain);
-		g_hSDK_Call_ZombieAbortControl = EndPrepSDKCall();
-		if(g_hSDK_Call_ZombieAbortControl == null)
-		{
-			LogError("Failed to create SDKCall: ZombieAbortControl");
-			vPrepStateTransitionSDKCall(hGameData);
-		}
-	}
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "State_Transition") == false)
+		SetFailState("Failed to find signature: State_Transition");
+	PrepSDKCall_AddParameter(SDKType_Float, SDKPass_Plain);
+	g_hSDK_Call_State_Transition = EndPrepSDKCall();
+	if(g_hSDK_Call_State_Transition == null)
+		SetFailState("Failed to create SDKCall: State_Transition");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SetClass") == false)
@@ -2558,13 +2547,7 @@ void vSetInfectedGhost(int client, bool bSavePos = false)
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
 	}
 
-	if(g_hSDK_Call_ZombieAbortControl != null)
-	{
-		SetEntProp(client, Prop_Send, "m_isCulling", 1);
-		SDKCall(g_hSDK_Call_ZombieAbortControl, client, 0.0);
-	}
-	else
-		SDKCall(g_hSDK_Call_State_Transition, client, 8);
+	SDKCall(g_hSDK_Call_State_Transition, client, 8);
 
 	if(bSavePos)
 		TeleportEntity(client, vOrigin, vAngles, vVelocity);
@@ -2623,17 +2606,6 @@ void vSetHumanIdle(int bot, int client)
 {
 	SDKCall(g_hSDK_Call_SetHumanSpec, bot, client);
 	SetEntProp(client, Prop_Send, "m_iObserverMode", 5);
-}
-
-void vPrepStateTransitionSDKCall(GameData hGameData = null)
-{
-	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "State_Transition") == false)
-		SetFailState("Failed to find signature: State_Transition");
-	PrepSDKCall_AddParameter(SDKType_Float, SDKPass_Plain);
-	g_hSDK_Call_State_Transition = EndPrepSDKCall();
-	if(g_hSDK_Call_State_Transition == null)
-		SetFailState("Failed to create SDKCall: State_Transition");
 }
 
 void vSetupDetours(GameData hGameData = null)
