@@ -1248,7 +1248,8 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	if(IsPlayerAlive(client))
 	{
 		g_iTankBot[client] = 0;
-		
+		delete g_hPZSuicideTimer[client];
+
 		if(!IsFakeClient(client) && GetClientTeam(client) == 3)
 		{
 			if(g_iPZSpawned[client] == 0)
@@ -2705,7 +2706,7 @@ public Action Timer_PZSuicide(Handle timer, int client)
 	if((client = GetClientOfUserId(client)) && IsClientInGame(client))
 	{
 		g_hPZSuicideTimer[client] = null;
-		if(g_bHasPlayerControlledZombies == false && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client))
+		if(g_bHasPlayerControlledZombies == false && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
 		{
 			ForcePlayerSuicide(client);
 			CPrintToChat(client, "{olive}复活后自动处死时间 {default}-> {red}%.1f秒", g_fPZSuicideTime);
