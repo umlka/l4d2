@@ -193,7 +193,7 @@ Handle g_hPZSuicideTimer[MAXPLAYERS + 1];
 Address g_pRoundRespawn;
 Address g_pStatsCondition;
 
-DynamicDetour g_dDetour;
+DynamicDetour g_dDetour[2];
 
 ConVar g_hGameMode;
 ConVar g_hMaxTankPlayer;
@@ -417,8 +417,12 @@ public void OnPluginEnd()
 		vRemoveSurvivorModelGlow(i);
 		
 	vStatsConditionPatch(false);
-	if(!g_dDetour.Disable(Hook_Pre, mreOnEnterGhostStatePre) || !g_dDetour.Disable(Hook_Post, mreOnEnterGhostStatePost))
+
+	if(!g_dDetour[0].Disable(Hook_Pre, mreOnEnterGhostStatePre) || !g_dDetour[0].Disable(Hook_Post, mreOnEnterGhostStatePost))
 		SetFailState("Failed to disable detour: CTerrorPlayer::OnEnterGhostState");
+/*		
+	if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre))
+		SetFailState("Failed to disable detour: CTerrorPlayer::MaterializeFromGhost");*/
 }
 
 public void OnConfigsExecuted()
@@ -722,6 +726,7 @@ public Action CmdBP(int client, int args)
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
+	SDKCall(g_hSDK_Call_State_Transition, client, 8);
 	if(bCheckClientAccess(client, 3) == false)
 	{
 		PrintToChat(client, "无权使用该指令");
@@ -927,12 +932,11 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	if(IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client))
 		return Plugin_Continue;
 
-	if(buttons & IN_ATTACK)
-		buttons &= ~IN_USE;
-
+	static int iFlags;
+	iFlags = GetEntProp(client, Prop_Data, "m_afButtonPressed");
 	if(GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 	{
-		if(GetEntProp(client, Prop_Data, "m_afButtonPressed") & IN_ZOOM)
+		if(iFlags & IN_ZOOM)
 		{
 			if(g_iPZSpawned[client] == 1 && bCheckClientAccess(client, 4) == true)
 				vSelectAscendingZombieClass(client);
@@ -940,25 +944,22 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 			return Plugin_Continue;
 		}
 
-		if(buttons & IN_USE == 0)
+		if(iFlags & IN_ATTACK)
 		{
-			if(buttons & IN_ATTACK)
+			static int iSpawnState;
+			iSpawnState = GetEntProp(client, Prop_Send, "m_ghostSpawnState");
+			if(iSpawnState & 1)
 			{
-				static int iSpawnState;
-				iSpawnState = GetEntProp(client, Prop_Send, "m_ghostSpawnState");
-				if(iSpawnState & 1)
-				{
-					SetEntProp(client, Prop_Send, "m_ghostSpawnState", iSpawnState & ~1);
-					buttons &= ~IN_ATTACK;
-					return Plugin_Changed;
-				}
+				SetEntProp(client, Prop_Send, "m_ghostSpawnState", iSpawnState & ~1);
+				buttons &= ~IN_ATTACK;
+				return Plugin_Changed;
 			}
 		}
 	}
 	else
 	{
-		if(GetEntProp(client, Prop_Data, "m_afButtonPressed") & IN_ZOOM && bCheckClientAccess(client, 5) == true)
-			vResetInfectedAbility(client, 0.1);//管理员鼠标中键重置技能冷却
+		if(iFlags & IN_ZOOM && bCheckClientAccess(client, 5) == true)
+			vResetInfectedAbility(client, 0.1); //管理员鼠标中键重置技能冷却
 	}
 
 	return Plugin_Continue;
@@ -1269,7 +1270,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 		}
 
 		g_iPZSpawned[client]++;
-		RequestFrame(OnNextFrame_PlayerSpawn, userid);//player_bot_replace在player_spawn之后触发，延迟一帧进行接管判断
+		RequestFrame(OnNextFrame_PlayerSpawn, userid); //player_bot_replace在player_spawn之后触发，延迟一帧进行接管判断
 	}
 }
 
@@ -1298,7 +1299,7 @@ void OnNextFrame_PlayerSpawn(int userid)
 						bool bTakeOver = !!(g_iTankBot[client] != 2 && iGetTankPlayers() < g_iMaxTankPlayer && bTakeOverTank(client));
 
 						if(!bTakeOver && !g_bMutantTanks && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_Call_IsInStasis, client)))
-							SDKCall(g_hSDK_Call_LeaveStasis, client);//解除战役模式下特感方有玩家存在时坦克卡住的问题
+							SDKCall(g_hSDK_Call_LeaveStasis, client); //解除战役模式下特感方有玩家存在时坦克卡住的问题
 					}
 				}
 			}
@@ -1404,7 +1405,7 @@ bool bRespawnPZ(int client, int iZombieClass)
 	/*if(GetEntProp(client, Prop_Send, "m_iObserverMode") != 6)
 		SetEntProp(client, Prop_Send, "m_iObserverMode", 6);*/
 
-	FakeClientCommand(client, "spec_next");//相比于手动获取玩家位置传送，更省力和节约资源的方法
+	FakeClientCommand(client, "spec_next"); //相比于手动获取玩家位置传送，更省力和节约资源的方法
 
 	if(/*GetClientTeam(client) == 3 && */GetEntProp(client, Prop_Send, "m_lifeState") != 1)
 		SetEntProp(client, Prop_Send, "m_lifeState", 1);
@@ -1449,9 +1450,9 @@ public void Event_ClientReplace(Event event, const char[] name, bool dontBroadca
 			if(GetClientTeam(bot) == 3 && GetEntProp(bot, Prop_Send, "m_zombieClass") == 8)
 			{
 				if(IsFakeClient(player))
-					g_iTankBot[bot] = 1;//防卡功能中踢出FakeClient后，第二次触发Tank产生并替换原有的Tank(BOT替换BOT)
+					g_iTankBot[bot] = 1; //防卡功能中踢出FakeClient后，第二次触发Tank产生并替换原有的Tank(BOT替换BOT)
 				else
-					g_iTankBot[bot] = 2;//主动或被动放弃Tank控制权(BOT替换玩家)
+					g_iTankBot[bot] = 2; //主动或被动放弃Tank控制权(BOT替换玩家)
 			}
 		}
 	}
@@ -1705,7 +1706,7 @@ bool bTakeOverTank(int tank)
 		}
 	}
 
-	client = (iPbCount == 0) ? (FloatCompare(GetRandomFloat(0.0, 1.0), g_fSurvuivorAllowChance) == -1 ? (iOtherCount == 0 ? -1 : iOtherClients[GetRandomInt(0, iOtherCount - 1)]) : -1) : iPbClients[GetRandomInt(0, iPbCount - 1)];//随机抽取一名幸运玩家
+	client = (iPbCount == 0) ? (FloatCompare(GetRandomFloat(0.0, 1.0), g_fSurvuivorAllowChance) == -1 ? (iOtherCount == 0 ? -1 : iOtherClients[GetRandomInt(0, iOtherCount - 1)]) : -1) : iPbClients[GetRandomInt(0, iPbCount - 1)]; //随机抽取一名幸运玩家
 	if(client != -1 && iGetStandingSurvivors() >= g_iAllowSurvuivorLimit)
 	{
 		switch((g_iLastTeamId[client] = GetClientTeam(client)))
@@ -2600,7 +2601,7 @@ void vStatsConditionPatch(bool bPatch) // Prevents respawn command from reset th
 	if(!bPatched && bPatch)
 	{
 		bPatched = true;
-		StoreToAddress(g_pStatsCondition, 0x79, NumberType_Int8);// if(!bool) - 0x75 JNZ => 0x78 JNS (jump short if not sign) - always not jump
+		StoreToAddress(g_pStatsCondition, 0x79, NumberType_Int8); // if(!bool) - 0x75 JNZ => 0x78 JNS (jump short if not sign) - always not jump
 	}
 	else if(bPatched && !bPatch)
 	{
@@ -2617,21 +2618,28 @@ void vSetHumanIdle(int bot, int client)
 
 void vSetupDetours(GameData hGameData = null)
 {
-	g_dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::OnEnterGhostState");
-	if(g_dDetour == null)
+	g_dDetour[0] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::OnEnterGhostState");
+	if(g_dDetour[0] == null)
 		SetFailState("Failed to load signature: CTerrorPlayer::OnEnterGhostState");
 		
-	if(!g_dDetour.Enable(Hook_Pre, mreOnEnterGhostStatePre))
+	if(!g_dDetour[0].Enable(Hook_Pre, mreOnEnterGhostStatePre))
 		SetFailState("Failed to detour pre: CTerrorPlayer::OnEnterGhostState");
 		
-	if(!g_dDetour.Enable(Hook_Post, mreOnEnterGhostStatePost))
+	if(!g_dDetour[0].Enable(Hook_Post, mreOnEnterGhostStatePost))
 		SetFailState("Failed to detour post: CTerrorPlayer::OnEnterGhostState");
+/*		
+	g_dDetour[1] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::MaterializeFromGhost");
+	if(g_dDetour[1] == null)
+		SetFailState("Failed to load signature: CTerrorPlayer::MaterializeFromGhost");
+		
+	if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre))
+		SetFailState("Failed to detour pre: CTerrorPlayer::MaterializeFromGhost");*/
 }
 
 public MRESReturn mreOnEnterGhostStatePre(int pThis)
 {
 	if(g_bHasPlayerControlledZombies == false && bIsRoundStarted() == false)
-		return MRES_Supercede;//阻止死亡状态下的特感玩家在团灭后下一回合开始前进入Ghost State
+		return MRES_Supercede; //阻止死亡状态下的特感玩家在团灭后下一回合开始前进入Ghost State
 	
 	return MRES_Ignored;
 }
@@ -2648,7 +2656,12 @@ public MRESReturn mreOnEnterGhostStatePost(int pThis)
 	
 	return MRES_Ignored;
 }
-
+/*
+public MRESReturn mreMaterializeFromGhostPre(int pThis)
+{
+	return MRES_Ignored;
+}
+*/
 void OnNextFrame_EnterGhostState(int client)
 {
 	if(g_bHasPlayerControlledZombies == false && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") != 8 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
