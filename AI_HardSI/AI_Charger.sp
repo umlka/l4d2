@@ -592,6 +592,7 @@ int GetClosestSurvivor(int client, int iAimTarget = -1, float fDistance)
 	static float vTarget[3];
 	static int iTargets[MAXPLAYERS + 1];
 	
+	iNum = 0;
 	GetClientEyePosition(client, vOrigin);
 	iNum = GetClientsInRange(vOrigin, RangeType_Visibility, iTargets, MAXPLAYERS);
 	
