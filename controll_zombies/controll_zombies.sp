@@ -120,7 +120,7 @@ stock int CFindRandomPlayerByTeam(int color_team)
 		return 0;
 	else
 	{
-		for(int i = 1; i <= MaxClients; i ++)
+		for(int i = 1; i <= MaxClients; i++)
 		{
 			if(IsClientInGame(i) && GetClientTeam(i) == color_team)
 				return i;
@@ -197,9 +197,9 @@ DynamicDetour g_dDetour;
 
 ConVar g_hGameMode;
 ConVar g_hMaxTankPlayer;
-ConVar g_hAllowSurvuivorLimit; 
+ConVar g_hAllowSurvuivorLimit;
 ConVar g_hSurvuivorAllowChance;
-ConVar g_hSbAllBotGame; 
+ConVar g_hSbAllBotGame;
 ConVar g_hAllowAllBotSurvivorTeam;
 ConVar g_hSurvivorMaxIncapacitatedCount;
 ConVar g_hExchangeTeam;
@@ -221,7 +221,7 @@ ConVar g_hSpawnWeights[6];
 
 bool g_bHasAnySurvivorLeftSafeArea;
 bool g_bHasPlayerControlledZombies;
-bool g_bSbAllBotGame; 
+bool g_bSbAllBotGame;
 bool g_bAllowAllBotSurvivorTeam;
 bool g_bExchangeTeam;
 bool g_bPZPunishHealth;
@@ -230,7 +230,7 @@ bool g_bUsedClassCmd[MAXPLAYERS + 1];
 
 int g_iSILimit;
 int g_iPZOnSpawn;
-int g_iRoundStart; 
+int g_iRoundStart;
 int g_iPlayerSpawn;
 int g_iSurvivorMaxIncapacitatedCount;
 int g_iAllowSurvuivorLimit;
@@ -299,7 +299,7 @@ public void OnPluginStart()
 	g_hPZPunishTime = CreateConVar("cz_pz_punish_time", "10" , "特感玩家在ghost状态下切换特感类型后下次复活延长的时间(0=插件不会延长复活时间)", CVAR_FLAGS, true, 0.0);
 	g_hPZPunishHealth = CreateConVar("cz_pz_punish_health", "1" , "特感玩家在ghost状态下切换特感类型后血量是否减半(0=插件不会减半血量)", CVAR_FLAGS);
 	g_hAutoDisplayMenu = CreateConVar("cz_atuo_display_menu", "1" , "在感染玩家死亡重生后向其显示更改类型的菜单?(0=不显示,-1=每次都显示,大于0=每回合总计显示的最大次数)", CVAR_FLAGS, true, -1.0);
-	g_hPZTeamLimit = CreateConVar("cz_pz_team_limit", "-1" , "感染玩家数量达到多少后将限制使用sm_team3命令(-1=感染玩家不能超过生还玩家,大于等于0=感染玩家不能超过该值)", CVAR_FLAGS, true, -1.0);
+	g_hPZTeamLimit = CreateConVar("cz_pz_team_limit", "2" , "感染玩家数量达到多少后将限制使用sm_team3命令(-1=感染玩家不能超过生还玩家,大于等于0=感染玩家不能超过该值)", CVAR_FLAGS, true, -1.0);
 	g_hCmdCooldownTime = CreateConVar("cz_cmd_cooldown_time", "60.0" , "sm_team2,sm_team3两个命令的冷却时间(0.0-无冷却)", CVAR_FLAGS, true, 0.0);
 	g_hCmdEnterCooling = CreateConVar("cz_return_enter_cooling", "31" , "什么情况下sm_team2,sm_team3命令会进入冷却(1=使用其中一个命令,2=坦克玩家掉控,4=坦克玩家死亡,8=坦克玩家未及时重生,16=特感玩家杀掉生还者玩家,31=所有)", CVAR_FLAGS);
 	g_hPZChangeTeamTo = CreateConVar("cz_pz_change_team_to", "0" , "换图,过关以及任务失败时是否自动将特感玩家切换到哪个队伍?(0=不切换,1=旁观者,2=生还者)", CVAR_FLAGS, true, 0.0, true, 2.0);
@@ -307,23 +307,23 @@ public void OnPluginStart()
 	g_hGlowColor[COLOR_INCAPA] = CreateConVar("cz_survivor_color_incapacitated", "180 0 0" , "特感玩家看到的倒地状态生还者发光颜色", CVAR_FLAGS);
 	g_hGlowColor[COLOR_BLACKW] = CreateConVar("cz_survivor_color_blackwhite", "255 255 255" , "特感玩家看到的黑白状态生还者发光颜色", CVAR_FLAGS);
 	g_hGlowColor[COLOR_VOMITED] = CreateConVar("cz_survivor_color_nowit", "155 0 180" , "特感玩家看到的被Boomer喷或炸中过的生还者发光颜色", CVAR_FLAGS);
-	g_hAccessAdminFlags = CreateConVar("cz_admin_flags", "z;;;;;z" , "哪些标志能绕过sm_team4,sm_team2,sm_team3,sm_bp,sm_class,鼠标中键重置冷却的使用限制(留空表示所有人都不会被限制)", CVAR_FLAGS);
+	g_hAccessAdminFlags = CreateConVar("cz_admin_flags", "z;;z;;;z" , "哪些标志能绕过sm_team4,sm_team2,sm_team3,sm_bp,sm_class,鼠标中键重置冷却的使用限制(留空表示所有人都不会被限制)", CVAR_FLAGS);
 	g_hAdminImmunityLevels = CreateConVar("cz_admin_immunitylevels", "99;99;99;99;99;99" , "要达到什么免疫级别才能绕过sm_team4,sm_team2,sm_team3,sm_bp,sm_class,鼠标中键重置冷的使用限制", CVAR_FLAGS);
 
 	//https://github.com/brxce/hardcoop/blob/master/addons/sourcemod/scripting/modules/SS_SpawnQueue.sp
 	g_hSILimit = CreateConVar("cz_si_limit", "32", "同时存在的最大特感数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_SMOKER] = CreateConVar("cz_smoker_limit",	"6", "smoker同时存在的最大数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_BOOMER] = CreateConVar("cz_boomer_limit",	"6", "boomer同时存在的最大数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_HUNTER] = CreateConVar("cz_hunter_limit",	"2", "hunter同时存在的最大数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_SPITTER] = CreateConVar("cz_spitter_limit", "6", "spitter同时存在的最大数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_JOCKEY] = CreateConVar("cz_jockey_limit",	"2", "jockey同时存在的最大数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_CHARGER] = CreateConVar("cz_charger_limit", "2", "charger同时存在的最大数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnWeights[SI_SMOKER] = CreateConVar("cz_smoker_weight", "75", "smoker产生比重", CVAR_FLAGS, true, 0.0);
+	g_hSpawnLimits[SI_SMOKER] = CreateConVar("cz_smoker_limit",	"6", "同时存在的最大smoker数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_BOOMER] = CreateConVar("cz_boomer_limit",	"6", "同时存在的最大boomer数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_HUNTER] = CreateConVar("cz_hunter_limit",	"2", "同时存在的最大hunter数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_SPITTER] = CreateConVar("cz_spitter_limit", "6", "同时存在的最大spitter数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_JOCKEY] = CreateConVar("cz_jockey_limit",	"2", "同时存在的最大jockey数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_CHARGER] = CreateConVar("cz_charger_limit", "2", "同时存在的最大charger数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnWeights[SI_SMOKER] = CreateConVar("cz_smoker_weight", "100", "smoker产生比重", CVAR_FLAGS, true, 0.0);
 	g_hSpawnWeights[SI_BOOMER] = CreateConVar("cz_boomer_weight", "100", "boomer产生比重", CVAR_FLAGS, true, 0.0);
-	g_hSpawnWeights[SI_HUNTER] = CreateConVar("cz_hunter_weight", "50", "hunter产生比重", CVAR_FLAGS, true, 0.0);
-	g_hSpawnWeights[SI_SPITTER] = CreateConVar("cz_spitter_weight", "75", "spitter产生比重", CVAR_FLAGS, true, 0.0);
-	g_hSpawnWeights[SI_JOCKEY] = CreateConVar("cz_jockey_weight", "30", "jockey产生比重", CVAR_FLAGS, true, 0.0);
-	g_hSpawnWeights[SI_CHARGER] = CreateConVar("cz_charger_weight", "10", "charger产生比重", CVAR_FLAGS, true, 0.0);
+	g_hSpawnWeights[SI_HUNTER] = CreateConVar("cz_hunter_weight", "100", "hunter产生比重", CVAR_FLAGS, true, 0.0);
+	g_hSpawnWeights[SI_SPITTER] = CreateConVar("cz_spitter_weight", "100", "spitter产生比重", CVAR_FLAGS, true, 0.0);
+	g_hSpawnWeights[SI_JOCKEY] = CreateConVar("cz_jockey_weight", "100", "jockey产生比重", CVAR_FLAGS, true, 0.0);
+	g_hSpawnWeights[SI_CHARGER] = CreateConVar("cz_charger_weight", "100", "charger产生比重", CVAR_FLAGS, true, 0.0);
 
 	//AutoExecConfig(true, "controll_zombies");
 	//想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
@@ -511,12 +511,13 @@ void vGetColorCvars()
 {
 	g_iSurvivorMaxIncapacitatedCount = g_hSurvivorMaxIncapacitatedCount.IntValue;
 
-	for(int i; i < 4; i++)
+	int i;
+	for(; i < 4; i++)
 		g_iGlowColor[i] = iGetColor(g_hGlowColor[i]);
 		
 	if(g_bHasPlayerControlledZombies == false && bHasPlayerZombie())
 	{
-		for(int i = 1; i <= MaxClients; i++)
+		for(i = 1; i <= MaxClients; i++)
 		{
 			if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && bIsValidEntRef(g_iModelEntRef[i]))
 				vSetGlowColor(i);
@@ -957,7 +958,7 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	else
 	{
 		if(GetEntProp(client, Prop_Data, "m_afButtonPressed") & IN_ZOOM && bCheckClientAccess(client, 5) == true)
-			vResetInfectedAbility(client, 0.1); //管理员鼠标中键重置技能冷却
+			vResetInfectedAbility(client, 0.1);//管理员鼠标中键重置技能冷却
 	}
 
 	return Plugin_Continue;
@@ -1051,7 +1052,7 @@ bool bIsRoundStarted()
 	return g_iRoundStart && g_iPlayerSpawn;
 }
 
-public Action CheckSurvivorLeftSafeArea(Handle timer) 
+public Action CheckSurvivorLeftSafeArea(Handle timer)
 {
 	if(g_bHasAnySurvivorLeftSafeArea == false && bHasAnySurvivorLeftSafeArea())
 	{
@@ -1211,12 +1212,14 @@ public Action Timer_LadderAndGlow(Handle timer, int client)
 		else
 		{
 			SendConVarValue(client, g_hGameMode, g_sGameMode);
-			for(int i = 1; i <= MaxClients; i++)
+			
+			int i;
+			for(i = 1; i <= MaxClients; i++)
 				vRemoveSurvivorModelGlow(i);
 
 			if(bHasPlayerZombie())
 			{
-				for(int i = 1; i <= MaxClients; i++)
+				for(i = 1; i <= MaxClients; i++)
 					vCreateSurvivorModelGlow(i);
 			}
 		}
@@ -1238,7 +1241,7 @@ void OnNextFrame_ChangeTeamTo(int client)
 	}
 }
 
-public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) 
+public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
 		vRemoveInfectedClips();
@@ -1266,7 +1269,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 		}
 
 		g_iPZSpawned[client]++;
-		RequestFrame(OnNextFrame_PlayerSpawn, userid); //player_bot_replace在player_spawn之后触发，延迟一帧进行接管判断
+		RequestFrame(OnNextFrame_PlayerSpawn, userid);//player_bot_replace在player_spawn之后触发，延迟一帧进行接管判断
 	}
 }
 
@@ -1295,7 +1298,7 @@ void OnNextFrame_PlayerSpawn(int userid)
 						bool bTakeOver = !!(g_iTankBot[client] != 2 && iGetTankPlayers() < g_iMaxTankPlayer && bTakeOverTank(client));
 
 						if(!bTakeOver && !g_bMutantTanks && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_Call_IsInStasis, client)))
-							SDKCall(g_hSDK_Call_LeaveStasis, client); //解除战役模式下特感方有玩家存在时坦克卡住的问题
+							SDKCall(g_hSDK_Call_LeaveStasis, client);//解除战役模式下特感方有玩家存在时坦克卡住的问题
 					}
 				}
 			}
@@ -1401,7 +1404,7 @@ bool bRespawnPZ(int client, int iZombieClass)
 	/*if(GetEntProp(client, Prop_Send, "m_iObserverMode") != 6)
 		SetEntProp(client, Prop_Send, "m_iObserverMode", 6);*/
 
-	FakeClientCommand(client, "spec_next"); //相比于手动获取玩家位置传送，更省力和节约资源的方法
+	FakeClientCommand(client, "spec_next");//相比于手动获取玩家位置传送，更省力和节约资源的方法
 
 	if(/*GetClientTeam(client) == 3 && */GetEntProp(client, Prop_Send, "m_lifeState") != 1)
 		SetEntProp(client, Prop_Send, "m_lifeState", 1);
@@ -1446,15 +1449,15 @@ public void Event_ClientReplace(Event event, const char[] name, bool dontBroadca
 			if(GetClientTeam(bot) == 3 && GetEntProp(bot, Prop_Send, "m_zombieClass") == 8)
 			{
 				if(IsFakeClient(player))
-					g_iTankBot[bot] = 1; //防卡功能中踢出FakeClient后，第二次触发Tank产生并替换原有的Tank(BOT替换BOT)
+					g_iTankBot[bot] = 1;//防卡功能中踢出FakeClient后，第二次触发Tank产生并替换原有的Tank(BOT替换BOT)
 				else
-					g_iTankBot[bot] = 2; //主动或被动放弃Tank控制权(BOT替换玩家)
+					g_iTankBot[bot] = 2;//主动或被动放弃Tank控制权(BOT替换玩家)
 			}
 		}
 	}
 }
 
-public Action Timer_ReturnToSurvivor(Handle timer, int client) 
+public Action Timer_ReturnToSurvivor(Handle timer, int client)
 {
 	static int i;
 	static int iTimes[MAXPLAYERS + 1] = {20, ...};
@@ -1565,7 +1568,7 @@ void vForceCrouch(int client)
 }
 
 //https://forums.alliedmods.net/showthread.php?t=291562
-void vGhostsModeProtector(int iState = 0) 
+void vGhostsModeProtector(int iState = 0)
 {
 	static int i;
 	static int iGhost[MAXPLAYERS + 1];
@@ -1639,7 +1642,7 @@ void vSetGodMode(int client, float fDuration)
 
 	SetEntProp(client, Prop_Data, "m_takedamage", 0);
 	
-	if(fDuration > 0.0) 
+	if(fDuration > 0.0)
 		CreateTimer(fDuration, Timer_Mortal, GetClientUserId(client));
 }
 
@@ -1658,7 +1661,7 @@ int iGetAnyValidAliveSurvivorBot()
 	int[] iNotPlayerBots = new int[MaxClients];
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(bIsValidAliveSurvivorBot(i)) 
+		if(bIsValidAliveSurvivorBot(i))
 		{
 			if((iPlayer = GetClientOfUserId(g_iBotPlayer[i])) && IsClientInGame(iPlayer) && !IsFakeClient(iPlayer) && GetClientTeam(iPlayer) != 2)
 				iHasPlayerBots[iHasPlayer++] = i;
@@ -1702,7 +1705,7 @@ bool bTakeOverTank(int tank)
 		}
 	}
 
-	client = (iPbCount == 0) ? (FloatCompare(GetRandomFloat(0.0, 1.0), g_fSurvuivorAllowChance) == -1 ? (iOtherCount == 0 ? -1 : iOtherClients[GetRandomInt(0, iOtherCount - 1)]) : -1) : iPbClients[GetRandomInt(0, iPbCount - 1)]; //随机抽取一名幸运玩家
+	client = (iPbCount == 0) ? (FloatCompare(GetRandomFloat(0.0, 1.0), g_fSurvuivorAllowChance) == -1 ? (iOtherCount == 0 ? -1 : iOtherClients[GetRandomInt(0, iOtherCount - 1)]) : -1) : iPbClients[GetRandomInt(0, iPbCount - 1)];//随机抽取一名幸运玩家
 	if(client != -1 && iGetStandingSurvivors() >= g_iAllowSurvuivorLimit)
 	{
 		switch((g_iLastTeamId[client] = GetClientTeam(client)))
@@ -1811,6 +1814,9 @@ void vCreateSurvivorModelGlow(int client)
 	DispatchKeyValue(iEntity, "CollisionGroup", "0");
 	DispatchSpawn(iEntity);
 
+	SetEntProp(iEntity, Prop_Data, "m_iEFlags", 0);
+	SetEntProp(iEntity, Prop_Data, "m_fEffects", 0x020); //don't draw entity
+
 	SetEntProp(iEntity, Prop_Send, "m_iGlowType", 3);
 	SetEntProp(iEntity, Prop_Send, "m_nGlowRange", 20000);
 	SetEntProp(iEntity, Prop_Send, "m_nGlowRangeMin", 1);
@@ -1870,7 +1876,7 @@ bool bIsValidEntRef(int entity)
 
 //------------------------------------------------------------------------------
 //切换回生还者
-void OnNextFrame_ChangeTeamToSurvivor(int client) 
+void OnNextFrame_ChangeTeamToSurvivor(int client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
 		return;
@@ -2000,7 +2006,7 @@ void vSaveStatus(int client, int[][] iStatusInfo/*, char[][] sStatusInfo, int ma
 	iStatusInfo[client][0] = GetEntProp(client, Prop_Send, "m_currentReviveCount");
 	iStatusInfo[client][1] = GetEntProp(client, Prop_Send, "m_bIsOnThirdStrike");
 
-	if(GetEntProp(client, Prop_Send, "m_isIncapacitated") == 1) 
+	if(GetEntProp(client, Prop_Send, "m_isIncapacitated") == 1)
 	{
 		iStatusInfo[client][3] = 1;	
 		iStatusInfo[client][4] = 30;
@@ -2018,19 +2024,19 @@ void vSaveStatus(int client, int[][] iStatusInfo/*, char[][] sStatusInfo, int ma
 
 void vSetStatus(int client, int[][] iStatusInfo/*, char[][] sStatusInfo*/)
 {
-	/*SetEntProp(client, Prop_Send, "m_survivorCharacter", iStatusInfo[client][6]); 
+	/*SetEntProp(client, Prop_Send, "m_survivorCharacter", iStatusInfo[client][6]);
 	SetEntityModel(client, sStatusInfo[client]);
 	
 	if(IsFakeClient(client))
 	{
 		for(int i; i < 8; i++)
 		{
-			if(strcmp(sStatusInfo[client], g_sSurvivorModels[i]) == 0) 
+			if(strcmp(sStatusInfo[client], g_sSurvivorModels[i]) == 0)
 				SetClientInfo(client, "name", g_sSurvivorNames[i]);
 		}
 	}*/
 
-	if(!IsPlayerAlive(client)) 
+	if(!IsPlayerAlive(client))
 		return;
 
 	if(GetEntProp(client, Prop_Send, "m_isIncapacitated") == 1)
@@ -2336,18 +2342,18 @@ StringMap aInitWeaponOffsets(StringMap aWeaponOffsets)
 }
 
 //https://github.com/brxce/hardcoop/blob/master/addons/sourcemod/scripting/modules/SS_SpawnQueue.sp
-int iGetInfecteds() 
+int iGetInfecteds()
 {
 	int iCount;
-	for(int i = 1; i <= MaxClients; i++) 
+	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i))
+		if(IsClientInGame(i) && !IsClientInKickQueue(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && GetEntProp(i, Prop_Send, "m_zombieClass") != 8)
 			iCount++;
 	}
 	return iCount;
 }
 
-bool bAttemptRespawnPZ(int client) 
+bool bAttemptRespawnPZ(int client)
 {
 	if(iGetInfecteds() < g_iSILimit)
 	{
@@ -2360,14 +2366,14 @@ bool bAttemptRespawnPZ(int client)
 	return false;
 }
 
-int iGenerateIndex() 
+int iGenerateIndex()
 {	
 	int i;
 	int iTotalSpawnWeight;
 	int iStandardizedSpawnWeight;
 	int iTempSpawnWeights[6];
 
-	for(i = 0; i < 6; i++) 
+	for(i = 0; i < 6; i++)
 	{
 		iTempSpawnWeights[i] = g_iSpawnCounts[i] < g_iSpawnLimits[i] ? g_iSpawnWeights[i] : 0;
 		iTotalSpawnWeight += iTempSpawnWeights[i];
@@ -2376,9 +2382,9 @@ int iGenerateIndex()
 	static float fIntervalEnds[6];
 	float fUnit = 1.0 / iTotalSpawnWeight;
 
-	for(i = 0; i < 6; i++) 
+	for(i = 0; i < 6; i++)
 	{
-		if(iTempSpawnWeights[i] >= 0) 
+		if(iTempSpawnWeights[i] >= 0)
 		{
 			iStandardizedSpawnWeight += iTempSpawnWeights[i];
 			fIntervalEnds[i] = iStandardizedSpawnWeight * fUnit;
@@ -2386,12 +2392,12 @@ int iGenerateIndex()
 	}
 
 	float fRandom = GetRandomFloat(0.0, 1.0);
-	for(i = 0; i < 6; i++) 
+	for(i = 0; i < 6; i++)
 	{
-		if(iTempSpawnWeights[i] <= 0) 
+		if(iTempSpawnWeights[i] <= 0)
 			continue;
 
-		if(fIntervalEnds[i] < fRandom) 
+		if(fIntervalEnds[i] < fRandom)
 			continue;
 
 		return i;
@@ -2400,16 +2406,16 @@ int iGenerateIndex()
 	return -1;
 }
 
-void vSITypeCount() 
+void vSITypeCount()
 {
 	int i;
-	for(i = 0; i < 6; i++) 
+	for(i = 0; i < 6; i++)
 		g_iSpawnCounts[i] = 0;
 
 	int iZombieClass;
-	for(i = 1; i <= MaxClients; i++) 
+	for(i = 1;i <= MaxClients;i++)
 	{
-		if(IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && 0 < (iZombieClass = GetEntProp(i, Prop_Send, "m_zombieClass")) < 7)
+		if(IsClientInGame(i) && !IsClientInKickQueue(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && 0 < (iZombieClass = GetEntProp(i, Prop_Send, "m_zombieClass")) < 7)
 			g_iSpawnCounts[iZombieClass - 1]++;
 	}
 }
@@ -2420,11 +2426,11 @@ void vLoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false) 
+	if(FileExists(sPath) == false)
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null) 
+	if(hGameData == null)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	StartPrepSDKCall(SDKCall_Player);
@@ -2594,7 +2600,7 @@ void vStatsConditionPatch(bool bPatch) // Prevents respawn command from reset th
 	if(!bPatched && bPatch)
 	{
 		bPatched = true;
-		StoreToAddress(g_pStatsCondition, 0x79, NumberType_Int8); // if(!bool) - 0x75 JNZ => 0x78 JNS (jump short if not sign) - always not jump
+		StoreToAddress(g_pStatsCondition, 0x79, NumberType_Int8);// if(!bool) - 0x75 JNZ => 0x78 JNS (jump short if not sign) - always not jump
 	}
 	else if(bPatched && !bPatch)
 	{
@@ -2625,7 +2631,7 @@ void vSetupDetours(GameData hGameData = null)
 public MRESReturn mreOnEnterGhostStatePre(int pThis)
 {
 	if(g_bHasPlayerControlledZombies == false && bIsRoundStarted() == false)
-		return MRES_Supercede; //阻止死亡状态下的特感玩家在团灭后下一回合开始前进入Ghost State
+		return MRES_Supercede;//阻止死亡状态下的特感玩家在团灭后下一回合开始前进入Ghost State
 	
 	return MRES_Ignored;
 }
