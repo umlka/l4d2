@@ -36,7 +36,7 @@ public Plugin myinfo =
 public void OnPluginStart()
 {	
 	g_hFastPounceProximity = CreateConVar("ai_fast_pounce_proximity", "1000.0", "At what distance to start pouncing fast");
-	g_hPounceVerticalAngle = CreateConVar("ai_pounce_vertical_angle", "7.0", "Vertical angle to which AI hunter pounces will be restricted");
+	g_hPounceVerticalAngle = CreateConVar("ai_pounce_vertical_angle", "15.0", "Vertical angle to which AI hunter pounces will be restricted");
 	g_hPounceAngleMean = CreateConVar("ai_pounce_angle_mean", "10.0", "Mean angle produced by Gaussian RNG");
 	g_hPounceAngleStd = CreateConVar("ai_pounce_angle_std", "20.0", "One standard deviation from mean as produced by Gaussian RNG");
 	g_hStraightPounceProximity = CreateConVar("ai_straight_pounce_proximity", "350.0", "Distance to nearest survivor at which hunter will consider pouncing straight");
@@ -44,7 +44,7 @@ public void OnPluginStart()
 	g_hWallDetectionDistance = CreateConVar("ai_wall_detection_distance", "-1.0", "How far in front of himself infected bot will check for a wall. Use '-1' to disable feature");
 
 	FindConVar("hunter_committed_attack_range").SetFloat(10000.0);
-	FindConVar("hunter_pounce_ready_range").SetFloat(500.0);
+	FindConVar("hunter_pounce_ready_range").SetFloat(2000.0);
 	FindConVar("hunter_leap_away_give_up_range").SetFloat(0.0);
 	FindConVar("hunter_pounce_max_loft_angle").SetFloat(0.0);
 	FindConVar("z_pounce_crouch_delay").SetFloat(0.1);
