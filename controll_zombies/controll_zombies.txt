@@ -12,6 +12,13 @@
 				"return"	"void"
 				"this"		"entity"
 			}
+			"CTerrorPlayer::MaterializeFromGhost"
+			{
+				"signature"		"CTerrorPlayer::MaterializeFromGhost"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"entity"
+			}
 		}
 
 		"Addresses"
@@ -80,6 +87,17 @@
 				"linux"		"@_ZN9CCSPlayer16State_TransitionE13CSPlayerState"
 				"windows"	"\x55\x8B\xEC\x56\x8B\xF1\x8B\x86\x2A\x2A\x2A\x2A\x57\x8B\x7D\x2A\x85\xC0\x74\x2A\x83"
 				/* 55 8B EC 56 8B F1 8B 86 ? ? ? ? 57 8B 7D ? 85 C0 74 ? 83 */
+			}
+			/*
+			 * CTerrorPlayer::MaterializeFromGhost(void)
+			 */
+			"CTerrorPlayer::MaterializeFromGhost"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer20MaterializeFromGhostEv"
+				"windows"	"\x56\x8B\xF1\x8B\x06\x8B\x90\x2A\x2A\x2A\x2A\xFF\xD2\x50\xE8\x2A\x2A\x2A\x2A\x83\xC4"
+				/* 56 8B F1 8B 06 8B 90 ? ? ? ? FF D2 50 E8 ? ? ? ? 83 C4 */
+				/* Search "%s materialized from spawn mode as a %s" */
 			}
 			"SetClass"
 			{
