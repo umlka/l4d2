@@ -726,7 +726,6 @@ public Action CmdBP(int client, int args)
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
-	SDKCall(g_hSDK_Call_State_Transition, client, 8);
 	if(bCheckClientAccess(client, 3) == false)
 	{
 		PrintToChat(client, "无权使用该指令");
