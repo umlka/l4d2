@@ -74,13 +74,6 @@
 				"linux"		"@_ZN4Tank11LeaveStasisEv"
 				"windows"	"\x56\x57\x8B\xF9\x80\xBF\xF1\x00\x00\x00\x02\x8D\xB7\xF1\x00\x00\x00"
 			}
-			"ZombieAbortControl"
-			{
-				"library"	"server"
-				"linux"		"@_ZN13CTerrorPlayer24PlayerZombieAbortControlEv"
-				"windows"	"\x55\x8B\xEC\x83\xEC\x30\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x83\xF8\x03\x0F\x85" // Updated by Crasher_3637
-				/* 55 8B EC 83 EC 30 56 8B F1 E8 ? ? ? ? 83 F8 03 0F 85 */ 
-			}
 			"State_Transition"
 			{
 				"library"	"server"
