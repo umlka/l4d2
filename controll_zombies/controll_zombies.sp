@@ -262,6 +262,7 @@ float g_fSurvuivorAllowChance;
 float g_fPZSuicideTime;
 float g_fCmdCooldownTime;
 float g_fCmdLastUsedTime[MAXPLAYERS + 1];
+float g_fInUseButtonsTime[MAXPLAYERS + 1];
 
 bool g_bMutantTanks = false;
 
@@ -420,9 +421,9 @@ public void OnPluginEnd()
 
 	if(!g_dDetour[0].Disable(Hook_Pre, mreOnEnterGhostStatePre) || !g_dDetour[0].Disable(Hook_Post, mreOnEnterGhostStatePost))
 		SetFailState("Failed to disable detour: CTerrorPlayer::OnEnterGhostState");
-/*		
+		
 	if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre))
-		SetFailState("Failed to disable detour: CTerrorPlayer::MaterializeFromGhost");*/
+		SetFailState("Failed to disable detour: CTerrorPlayer::MaterializeFromGhost");
 }
 
 public void OnConfigsExecuted()
@@ -935,6 +936,9 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	iFlags = GetEntProp(client, Prop_Data, "m_afButtonPressed");
 	if(GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 	{
+		if(iFlags & IN_USE)
+			g_fInUseButtonsTime[client] = GetGameTime();
+	
 		if(iFlags & IN_ZOOM)
 		{
 			if(g_iPZSpawned[client] == 1 && bCheckClientAccess(client, 4) == true)
@@ -2626,13 +2630,13 @@ void vSetupDetours(GameData hGameData = null)
 		
 	if(!g_dDetour[0].Enable(Hook_Post, mreOnEnterGhostStatePost))
 		SetFailState("Failed to detour post: CTerrorPlayer::OnEnterGhostState");
-/*		
+		
 	g_dDetour[1] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::MaterializeFromGhost");
 	if(g_dDetour[1] == null)
 		SetFailState("Failed to load signature: CTerrorPlayer::MaterializeFromGhost");
 		
 	if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre))
-		SetFailState("Failed to detour pre: CTerrorPlayer::MaterializeFromGhost");*/
+		SetFailState("Failed to detour pre: CTerrorPlayer::MaterializeFromGhost");
 }
 
 public MRESReturn mreOnEnterGhostStatePre(int pThis)
@@ -2655,12 +2659,18 @@ public MRESReturn mreOnEnterGhostStatePost(int pThis)
 	
 	return MRES_Ignored;
 }
-/*
+
 public MRESReturn mreMaterializeFromGhostPre(int pThis)
 {
+	if(GetGameTime() - g_fInUseButtonsTime[pThis] < 1.0)
+	{
+		CPrintToChat(pThis, "{red}请勿恶意触发Bug");
+		return MRES_Supercede;
+	}
+
 	return MRES_Ignored;
 }
-*/
+
 void OnNextFrame_EnterGhostState(int client)
 {
 	if(g_bHasPlayerControlledZombies == false && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") != 8 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
