@@ -262,7 +262,6 @@ float g_fSurvuivorAllowChance;
 float g_fPZSuicideTime;
 float g_fCmdCooldownTime;
 float g_fCmdLastUsedTime[MAXPLAYERS + 1];
-float g_fInUseButtonsTime[MAXPLAYERS + 1];
 
 bool g_bMutantTanks = false;
 
@@ -929,16 +928,13 @@ public Action CommandListener_CallVote(int client, const char[] command, int arg
 // INSIDE_ENTITY	 1024  "Can't spawn here" "Something is blocking this spot"
 public Action OnPlayerRunCmd(int client, int &buttons)
 {
-	if(IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client))
+	if(IsFakeClient(client) || GetClientTeam(client) != 3 || GetPlayerWeaponSlot(client, 0) == -1)
 		return Plugin_Continue;
 
 	static int iFlags;
 	iFlags = GetEntProp(client, Prop_Data, "m_afButtonPressed");
 	if(GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 	{
-		if(iFlags & IN_USE)
-			g_fInUseButtonsTime[client] = GetGameTime();
-	
 		if(iFlags & IN_ZOOM)
 		{
 			if(g_iPZSpawned[client] == 1 && bCheckClientAccess(client, 4) == true)
@@ -2662,12 +2658,7 @@ public MRESReturn mreOnEnterGhostStatePost(int pThis)
 
 public MRESReturn mreMaterializeFromGhostPre(int pThis)
 {
-	if(GetGameTime() - g_fInUseButtonsTime[pThis] < 1.0)
-	{
-		CPrintToChat(pThis, "{red}请勿恶意触发Bug");
-		return MRES_Supercede;
-	}
-
+	//return MRES_Supercede;
 	return MRES_Ignored;
 }
 
