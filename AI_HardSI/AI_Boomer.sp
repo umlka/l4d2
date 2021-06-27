@@ -30,7 +30,7 @@ public void OnPluginStart()
 	
 
 	FindConVar("z_vomit_fatigue").SetInt(0);
-	FindConVar("z_boomer_near_dist").SetInt(1000);
+	FindConVar("z_boomer_near_dist").SetInt(1);
 	FindConVar("boomer_vomit_delay").SetFloat(0.1);
 	FindConVar("boomer_exposed_time_tolerance").SetFloat(10000.0);
 
