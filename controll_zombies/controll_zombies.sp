@@ -193,7 +193,7 @@ Handle g_hPZSuicideTimer[MAXPLAYERS + 1];
 Address g_pRoundRespawn;
 Address g_pStatsCondition;
 
-DynamicDetour g_dDetour[2];
+DynamicDetour g_dDetour[3];
 
 ConVar g_hGameMode;
 ConVar g_hMaxTankPlayer;
@@ -262,6 +262,7 @@ float g_fSurvuivorAllowChance;
 float g_fPZSuicideTime;
 float g_fCmdCooldownTime;
 float g_fCmdLastUsedTime[MAXPLAYERS + 1];
+float g_fBugExploitTime[MAXPLAYERS + 1][2];
 
 bool g_bMutantTanks = false;
 
@@ -421,8 +422,11 @@ public void OnPluginEnd()
 	if(!g_dDetour[0].Disable(Hook_Pre, mreOnEnterGhostStatePre) || !g_dDetour[0].Disable(Hook_Post, mreOnEnterGhostStatePost))
 		SetFailState("Failed to disable detour: CTerrorPlayer::OnEnterGhostState");
 		
-	if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre))
+	if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre) || !g_dDetour[1].Disable(Hook_Post, mreMaterializeFromGhostPost))
 		SetFailState("Failed to disable detour: CTerrorPlayer::MaterializeFromGhost");
+		
+	if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre) || !g_dDetour[2].Disable(Hook_Post, mrePlayerZombieAbortControlPost))
+		SetFailState("Failed to disable detour: CTerrorPlayer::PlayerZombieAbortControl");
 }
 
 public void OnConfigsExecuted()
@@ -2633,6 +2637,19 @@ void vSetupDetours(GameData hGameData = null)
 		
 	if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre))
 		SetFailState("Failed to detour pre: CTerrorPlayer::MaterializeFromGhost");
+		
+	if(!g_dDetour[1].Enable(Hook_Post, mreMaterializeFromGhostPost))
+		SetFailState("Failed to detour pre: CTerrorPlayer::MaterializeFromGhost");
+		
+	g_dDetour[2] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::PlayerZombieAbortControl");
+	if(g_dDetour[2] == null)
+		SetFailState("Failed to load signature: CTerrorPlayer::PlayerZombieAbortControl");
+		
+	if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre))
+		SetFailState("Failed to detour pre: CTerrorPlayer::PlayerZombieAbortControl");
+		
+	if(!g_dDetour[2].Enable(Hook_Post, mrePlayerZombieAbortControlPost))
+		SetFailState("Failed to detour pre: CTerrorPlayer::PlayerZombieAbortControl");
 }
 
 public MRESReturn mreOnEnterGhostStatePre(int pThis)
@@ -2658,7 +2675,33 @@ public MRESReturn mreOnEnterGhostStatePost(int pThis)
 
 public MRESReturn mreMaterializeFromGhostPre(int pThis)
 {
-	//return MRES_Supercede;
+	if(!IsFakeClient(pThis) && GetGameTime() - g_fBugExploitTime[pThis][1] < 1.0)
+		return MRES_Supercede;
+
+	return MRES_Ignored;
+}
+
+public MRESReturn mreMaterializeFromGhostPost(int pThis)
+{
+	if(!IsFakeClient(pThis))
+		g_fBugExploitTime[pThis][0] = GetGameTime();
+
+	return MRES_Ignored;
+}
+
+public MRESReturn mrePlayerZombieAbortControlPre(int pThis)
+{
+	if(!IsFakeClient(pThis) && GetGameTime() - g_fBugExploitTime[pThis][0] < 1.0)
+		return MRES_Supercede;
+
+	return MRES_Ignored;
+}
+
+public MRESReturn mrePlayerZombieAbortControlPost(int pThis)
+{
+	if(!IsFakeClient(pThis))
+		g_fBugExploitTime[pThis][1] = GetGameTime();
+
 	return MRES_Ignored;
 }
 
