@@ -413,13 +413,13 @@ void vSurvivorWeapons(int client, int iType, int iTarget = -1)
 			
 		case 1:
 		{
-			bRecorded[client] = true;
-			vSaveWeapons(client, iWeaponInfo, sWeaponInfo, sizeof(sWeaponInfo[][]));
+			if(IsPlayerAlive(client) && bSaveWeapons(client, iWeaponInfo, sWeaponInfo, sizeof(sWeaponInfo[][])))
+				bRecorded[client] = true;
 		}
 			
 		case 2:
 		{
-			if(bRecorded[client])
+			if(IsPlayerAlive(client) && bRecorded[client] == true)
 			{
 				vRemoveWeapons(client);
 				vGiveWeapons(client, iWeaponInfo, sWeaponInfo);
@@ -452,8 +452,10 @@ void vCleanWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
 	sWeaponInfo[client][5][0] = '\0';
 }
 
-void vSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int maxlength)
+bool bSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int maxlength)
 {
+	bool bSaved = false;
+
 	char sWeapon[32];
 	int iSlot = GetPlayerWeaponSlot(client, 0);
 	if(iSlot > MaxClients)
@@ -466,6 +468,8 @@ void vSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int m
 		iWeaponInfo[client][2] = GetEntProp(iSlot, Prop_Send, "m_upgradeBitVec");
 		iWeaponInfo[client][3] = GetEntProp(iSlot, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded");
 		iWeaponInfo[client][4] = GetEntProp(iSlot, Prop_Send, "m_nSkin");
+
+		bSaved = true;
 	}
 
 	iSlot = GetPlayerWeaponSlot(client, 1);
@@ -483,6 +487,8 @@ void vSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int m
 			iWeaponInfo[client][5] = GetEntProp(iSlot, Prop_Send, "m_iClip1");
 
 		iWeaponInfo[client][6] = GetEntProp(iSlot, Prop_Send, "m_nSkin");
+		
+		bSaved = true;
 	}
 
 	iSlot = GetPlayerWeaponSlot(client, 2);
@@ -492,6 +498,8 @@ void vSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int m
 		{
 			GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
 			strcopy(sWeaponInfo[client][2], maxlength, sWeapon);
+			
+			bSaved = true;
 		}
 	}
 
@@ -500,6 +508,8 @@ void vSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int m
 	{
 		GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
 		strcopy(sWeaponInfo[client][3], maxlength, sWeapon);
+		
+		bSaved = true;
 	}
 
 	iSlot = GetPlayerWeaponSlot(client, 4);
@@ -507,18 +517,27 @@ void vSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int m
 	{
 		GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
 		strcopy(sWeaponInfo[client][4], maxlength, sWeapon);
+		
+		bSaved = true;
 	}
 	
-	iSlot = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-	if(iSlot > MaxClients)
+	if(bSaved == true)
 	{
-		GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
-		strcopy(sWeaponInfo[client][5], maxlength, sWeapon);
+		iSlot = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+		if(iSlot > MaxClients)
+		{
+			GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
+			strcopy(sWeaponInfo[client][5], maxlength, sWeapon);
+		}
 	}
+	
+	return bSaved;
 }
 
 void vGiveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
 {
+	bool bGived = false;
+
 	int iSlot;
 	if(sWeaponInfo[client][0][0] != '\0')
 	{
@@ -538,6 +557,8 @@ void vGiveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
 				
 			if(iWeaponInfo[client][4] > 0)
 				SetEntProp(iSlot, Prop_Send, "m_nSkin", iWeaponInfo[client][4]);
+				
+			bGived = true;
 		}
 	}
 
@@ -559,19 +580,39 @@ void vGiveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
 				
 			if(iWeaponInfo[client][6] > 0)
 				SetEntProp(iSlot, Prop_Send, "m_nSkin", iWeaponInfo[client][6]);
+				
+			bGived = true;
 		}
 	}
 
 	if(sWeaponInfo[client][2][0] != '\0')
+	{
 		vCheatCommand(client, "give", sWeaponInfo[client][2]);
 
+		iSlot = GetPlayerWeaponSlot(client, 2);
+		if(iSlot > MaxClients)
+			bGived = true;
+	}
+
 	if(sWeaponInfo[client][3][0] != '\0')
+	{
 		vCheatCommand(client, "give", sWeaponInfo[client][3]);
 
+		iSlot = GetPlayerWeaponSlot(client, 3);
+		if(iSlot > MaxClients)
+			bGived = true;
+	}
+
 	if(sWeaponInfo[client][4][0] != '\0')
+	{
 		vCheatCommand(client, "give", sWeaponInfo[client][4]);
+
+		iSlot = GetPlayerWeaponSlot(client, 4);
+		if(iSlot > MaxClients)
+			bGived = true;
+	}
 		
-	if(sWeaponInfo[client][5][0] != '\0')
+	if(bGived == true && sWeaponInfo[client][5][0] != '\0')
 		FakeClientCommand(client, "use %s", sWeaponInfo[client][5]);
 }
 
