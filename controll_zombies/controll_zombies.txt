@@ -12,9 +12,18 @@
 				"return"	"void"
 				"this"		"entity"
 			}
+			/* CTerrorPlayer::MaterializeFromGhost(void) */
 			"CTerrorPlayer::MaterializeFromGhost"
 			{
 				"signature"		"CTerrorPlayer::MaterializeFromGhost"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"entity"
+			}
+			/* CTerrorPlayer::PlayerZombieAbortControl(CTerrorPlayer *this) */
+			"CTerrorPlayer::PlayerZombieAbortControl"
+			{
+				"signature"		"CTerrorPlayer::PlayerZombieAbortControl"
 				"callconv"		"thiscall"
 				"return"		"void"
 				"this"			"entity"
@@ -81,9 +90,7 @@
 				"windows"	"\x55\x8B\xEC\x56\x8B\xF1\x8B\x86\x2A\x2A\x2A\x2A\x57\x8B\x7D\x2A\x85\xC0\x74\x2A\x83"
 				/* 55 8B EC 56 8B F1 8B 86 ? ? ? ? 57 8B 7D ? 85 C0 74 ? 83 */
 			}
-			/*
-			 * CTerrorPlayer::MaterializeFromGhost(void)
-			 */
+			/* CTerrorPlayer::MaterializeFromGhost(void) */
 			"CTerrorPlayer::MaterializeFromGhost"
 			{
 				"library"	"server"
@@ -91,6 +98,14 @@
 				"windows"	"\x56\x8B\xF1\x8B\x06\x8B\x90\x2A\x2A\x2A\x2A\xFF\xD2\x50\xE8\x2A\x2A\x2A\x2A\x83\xC4"
 				/* 56 8B F1 8B 06 8B 90 ? ? ? ? FF D2 50 E8 ? ? ? ? 83 C4 */
 				/* Search "%s materialized from spawn mode as a %s" */
+			}
+			/* CTerrorPlayer::PlayerZombieAbortControl(CTerrorPlayer *this) */
+			"CTerrorPlayer::PlayerZombieAbortControl"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer24PlayerZombieAbortControlEv"
+				"windows"	"\x55\x8B\xEC\x83\xEC\x30\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x83\xF8\x03\x0F\x85" // Updated by Crasher_3637
+				/* 55 8B EC 83 EC 30 56 8B F1 E8 ? ? ? ? 83 F8 03 0F 85 */ 
 			}
 			"SetClass"
 			{
@@ -137,9 +152,7 @@
 				"windows"  "\x55\x8B\xEC\x81\xEC\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x8D\x85"
 				/* 55 8B EC 81 EC ? ? ? ? ? ? ? ? ? ? ? ? ? ? 53 56 8D 85 */
 			}
-			/*
-			* CTerrorGameRules::HasPlayerControlledZombies()
-			*/
+			/* CTerrorGameRules::HasPlayerControlledZombies() */
 			"HasPlayerControlledZombies"
 			{
 				"library"	"server"
