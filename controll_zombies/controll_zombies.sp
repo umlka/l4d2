@@ -290,15 +290,6 @@ public any aNative_IsSpawnablePZScanProtectAvailable(Handle plugin, int numParam
 
 public void OnPluginStart()
 {
-	if(g_bLateLoad)
-	{
-		for(int i = 1; i <= MaxClients; i++)
-		{
-			if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && bIsValidEntRef(g_iModelEntRef[i]))
-				SDKHook(i, SDKHook_PostThinkPost, Hook_PostThinkPost);
-		}
-	}
-
 	vLoadGameData();
 
 	g_hMaxTankPlayer = CreateConVar("cz_max_tank_player", "1" , "坦克玩家达到多少后插件将不再控制玩家接管(0=不接管坦克)", CVAR_FLAGS, true, 0.0);
@@ -407,6 +398,15 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_team3", CmdTeam3, "切换到Team 3.");
 	RegConsoleCmd("sm_bp", CmdBP, "叛变为坦克.");
 	RegConsoleCmd("sm_class", CmdChangeClass, "更改特感类型.");
+	
+	if(g_bLateLoad)
+	{
+		if(SDKCall(g_hSDK_Call_HasPlayerControlledZombies) == false && bHasPlayerZombie())
+		{
+			for(i = 1; i <= MaxClients; i++)
+				vCreateSurvivorModelGlow(i);
+		}
+	}
 }
 
 public void OnPluginEnd()
