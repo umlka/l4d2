@@ -28,6 +28,14 @@
 				"return"		"void"
 				"this"			"entity"
 			}
+			/* ForEachTerrorPlayer<SpawnablePZScan>(SpawnablePZScan &) */
+			"ForEachTerrorPlayer<SpawnablePZScan>"
+			{
+				"signature"		"ForEachTerrorPlayer<SpawnablePZScan>"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"ignore"
+			}
 		}
 
 		"Addresses"
@@ -106,6 +114,18 @@
 				"linux"		"@_ZN13CTerrorPlayer24PlayerZombieAbortControlEv"
 				"windows"	"\x55\x8B\xEC\x83\xEC\x30\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x83\xF8\x03\x0F\x85" // Updated by Crasher_3637
 				/* 55 8B EC 83 EC 30 56 8B F1 E8 ? ? ? ? 83 F8 03 0F 85 */ 
+			}
+			/* ForEachTerrorPlayer<SpawnablePZScan>(SpawnablePZScan &) */
+			"ForEachTerrorPlayer<SpawnablePZScan>"
+			{
+				"library"	"server"
+				"linux"		"@_Z19ForEachTerrorPlayerI15SpawnablePZScanEbRT_"
+			}
+			/* UTIL_GetCommandClientIndex(void) */
+			"UTIL_GetCommandClientIndex"
+			{
+				"library"	"server"
+				"linux"		"@_Z26UTIL_GetCommandClientIndexv"
 			}
 			"SetClass"
 			{
