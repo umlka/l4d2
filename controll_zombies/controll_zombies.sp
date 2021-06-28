@@ -264,44 +264,54 @@ float g_fCmdCooldownTime;
 float g_fCmdLastUsedTime[MAXPLAYERS + 1];
 float g_fBugExploitTime[MAXPLAYERS + 1][2];
 
-bool g_bMutantTanks = false;
-
-public void OnLibraryAdded(const char[] name)
-{
-	if(strcmp(name, "mutant_tanks") == 0)
-		g_bMutantTanks = true;
-}
-
-public void OnLibraryRemoved(const char[] name)
-{
-	if(strcmp(name, "mutant_tanks") == 0)
-		g_bMutantTanks = false;
-}
-
 public Plugin myinfo = 
 {
 	name = "Controll Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.0.0",
+	version = "3.0.1",
 	url = "https://steamcommunity.com/id/sorallll"
+}
+
+bool g_bLateLoad;
+
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	CreateNative("CZ_IsSpawnablePZScanProtectAvailable", aNative_IsSpawnablePZScanProtectAvailable);
+	
+	g_bLateLoad = late;
+	return APLRes_Success;
+}
+
+public any aNative_IsSpawnablePZScanProtectAvailable(Handle plugin, int numParams)
+{
+	return g_dDetour[3] != null;
 }
 
 public void OnPluginStart()
 {
+	if(g_bLateLoad)
+	{
+		for(int i = 1; i <= MaxClients; i++)
+		{
+			if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && bIsValidEntRef(g_iModelEntRef[i]))
+				SDKHook(i, SDKHook_PostThinkPost, Hook_PostThinkPost);
+		}
+	}
+
 	vLoadGameData();
 
 	g_hMaxTankPlayer = CreateConVar("cz_max_tank_player", "1" , "坦克玩家达到多少后插件将不再控制玩家接管(0=不接管坦克)", CVAR_FLAGS, true, 0.0);
 	g_hAllowSurvuivorLimit = CreateConVar("cz_allow_survivor_limit", "3" , "至少有多少名正常生还者(未被控,未倒地,未死亡)时,才允许玩家接管坦克", CVAR_FLAGS, true, 0.0);
 	g_hSurvuivorAllowChance = CreateConVar("cz_survivor_allow_chance", "0.0" , "准备叛变的玩家数量为0时,自动抽取生还者和感染者玩家的几率(排除闲置旁观玩家)(0.0=不自动抽取)", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hExchangeTeam = CreateConVar("cz_exchange_team", "1" , "特感玩家杀死生还者玩家后是否互换队伍?(0=否,1=是)", CVAR_FLAGS);
+	g_hExchangeTeam = CreateConVar("cz_exchange_team", "0" , "特感玩家杀死生还者玩家后是否互换队伍?(0=否,1=是)", CVAR_FLAGS);
 	g_hPZSuicideTime = CreateConVar("cz_pz_suicide_time", "120.0" , "特感玩家复活后自动处死的时间(0=不会处死复活后的特感玩家)", CVAR_FLAGS, true, 0.0);
 	g_hPZRespawnTime = CreateConVar("cz_pz_respawn_time", "15" , "特感玩家自动复活时间(0=插件不会接管特感玩家的复活)", CVAR_FLAGS, true, 0.0);
-	g_hPZPunishTime = CreateConVar("cz_pz_punish_time", "10" , "特感玩家在ghost状态下切换特感类型后下次复活延长的时间(0=插件不会延长复活时间)", CVAR_FLAGS, true, 0.0);
+	g_hPZPunishTime = CreateConVar("cz_pz_punish_time", "30" , "特感玩家在ghost状态下切换特感类型后下次复活延长的时间(0=插件不会延长复活时间)", CVAR_FLAGS, true, 0.0);
 	g_hPZPunishHealth = CreateConVar("cz_pz_punish_health", "1" , "特感玩家在ghost状态下切换特感类型后血量是否减半(0=插件不会减半血量)", CVAR_FLAGS);
 	g_hAutoDisplayMenu = CreateConVar("cz_atuo_display_menu", "1" , "在感染玩家死亡重生后向其显示更改类型的菜单?(0=不显示,-1=每次都显示,大于0=每回合总计显示的最大次数)", CVAR_FLAGS, true, -1.0);
 	g_hPZTeamLimit = CreateConVar("cz_pz_team_limit", "2" , "感染玩家数量达到多少后将限制使用sm_team3命令(-1=感染玩家不能超过生还玩家,大于等于0=感染玩家不能超过该值)", CVAR_FLAGS, true, -1.0);
-	g_hCmdCooldownTime = CreateConVar("cz_cmd_cooldown_time", "60.0" , "sm_team2,sm_team3两个命令的冷却时间(0.0-无冷却)", CVAR_FLAGS, true, 0.0);
+	g_hCmdCooldownTime = CreateConVar("cz_cmd_cooldown_time", "120.0" , "sm_team2,sm_team3两个命令的冷却时间(0.0-无冷却)", CVAR_FLAGS, true, 0.0);
 	g_hCmdEnterCooling = CreateConVar("cz_return_enter_cooling", "31" , "什么情况下sm_team2,sm_team3命令会进入冷却(1=使用其中一个命令,2=坦克玩家掉控,4=坦克玩家死亡,8=坦克玩家未及时重生,16=特感玩家杀掉生还者玩家,31=所有)", CVAR_FLAGS);
 	g_hPZChangeTeamTo = CreateConVar("cz_pz_change_team_to", "0" , "换图,过关以及任务失败时是否自动将特感玩家切换到哪个队伍?(0=不切换,1=旁观者,2=生还者)", CVAR_FLAGS, true, 0.0, true, 2.0);
 	g_hGlowColor[COLOR_NORMAL] = CreateConVar("cz_survivor_color_normal", "0 180 0" , "特感玩家看到的正常状态生还者发光颜色", CVAR_FLAGS);
@@ -316,8 +326,8 @@ public void OnPluginStart()
 	g_hSpawnLimits[SI_SMOKER] = CreateConVar("cz_smoker_limit",	"6", "同时存在的最大smoker数量", CVAR_FLAGS, true, 0.0, true, 32.0);
 	g_hSpawnLimits[SI_BOOMER] = CreateConVar("cz_boomer_limit",	"6", "同时存在的最大boomer数量", CVAR_FLAGS, true, 0.0, true, 32.0);
 	g_hSpawnLimits[SI_HUNTER] = CreateConVar("cz_hunter_limit",	"2", "同时存在的最大hunter数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_SPITTER] = CreateConVar("cz_spitter_limit", "6", "同时存在的最大spitter数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_JOCKEY] = CreateConVar("cz_jockey_limit",	"2", "同时存在的最大jockey数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_SPITTER] = CreateConVar("cz_spitter_limit", "2", "同时存在的最大spitter数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_JOCKEY] = CreateConVar("cz_jockey_limit",	"6", "同时存在的最大jockey数量", CVAR_FLAGS, true, 0.0, true, 32.0);
 	g_hSpawnLimits[SI_CHARGER] = CreateConVar("cz_charger_limit", "2", "同时存在的最大charger数量", CVAR_FLAGS, true, 0.0, true, 32.0);
 	g_hSpawnWeights[SI_SMOKER] = CreateConVar("cz_smoker_weight", "100", "smoker产生比重", CVAR_FLAGS, true, 0.0);
 	g_hSpawnWeights[SI_BOOMER] = CreateConVar("cz_boomer_weight", "100", "boomer产生比重", CVAR_FLAGS, true, 0.0);
@@ -1286,7 +1296,7 @@ void OnNextFrame_PlayerSpawn(int userid)
 					{
 						bool bTakeOver = !!(g_iTankBot[client] != 2 && iGetTankPlayers() < g_iMaxTankPlayer && bTakeOverTank(client));
 
-						if(!bTakeOver && !g_bMutantTanks && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_Call_IsInStasis, client)))
+						if(!bTakeOver && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_Call_IsInStasis, client)))
 							SDKCall(g_hSDK_Call_LeaveStasis, client); //解除战役模式下特感方有玩家存在时坦克卡住的问题
 					}
 				}
