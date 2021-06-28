@@ -917,7 +917,7 @@ public Action CommandListener_CallVote(int client, const char[] command, int arg
 // INSIDE_ENTITY	 1024  "Can't spawn here" "Something is blocking this spot"
 public Action OnPlayerRunCmd(int client, int &buttons)
 {
-	if(IsFakeClient(client) || GetClientTeam(client) != 3 || GetPlayerWeaponSlot(client, 0) == -1)
+	if(IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client))
 		return Plugin_Continue;
 
 	static int iFlags;
@@ -1052,7 +1052,7 @@ public Action CheckSurvivorLeftSafeArea(Handle timer)
 
 		for(int i = 1; i <= MaxClients; i++)
 		{
-			if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3 && GetPlayerWeaponSlot(i, 0) == -1)
+			if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3 && !IsPlayerAlive(i))
 			{
 				delete g_hPZRespawnTimer[i];
 				vCalculatePZRespawnTime(i);
@@ -1352,7 +1352,7 @@ public Action Timer_PZRespawn(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) && IsClientInGame(client))
 	{
-		if(g_bHasPlayerControlledZombies == false && !IsFakeClient(client) && GetClientTeam(client) == 3 && GetPlayerWeaponSlot(client, 0) == -1)
+		if(g_bHasPlayerControlledZombies == false && !IsFakeClient(client) && GetClientTeam(client) == 3 && !IsPlayerAlive(client))
 		{
 			if(g_iPZRespawnCountdown[client] > 0)
 				PrintHintText(client, "%d 秒后重生", g_iPZRespawnCountdown[client]--);
