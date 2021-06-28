@@ -179,6 +179,7 @@ char g_sGameMode[32];
 Handle g_hSDK_Call_IsInStasis;
 Handle g_hSDK_Call_LeaveStasis;
 Handle g_hSDK_Call_State_Transition;
+Handle g_hSDK_Call_GetCommandClientIndex;
 Handle g_hSDK_Call_SetClass;
 Handle g_hSDK_Call_CreateAbility;
 Handle g_hSDK_Call_TakeOverZombieBot;
@@ -193,7 +194,7 @@ Handle g_hPZSuicideTimer[MAXPLAYERS + 1];
 Address g_pRoundRespawn;
 Address g_pStatsCondition;
 
-DynamicDetour g_dDetour[3];
+DynamicDetour g_dDetour[4];
 
 ConVar g_hGameMode;
 ConVar g_hMaxTankPlayer;
@@ -229,7 +230,6 @@ bool g_bIsPlayerBP[MAXPLAYERS + 1];
 bool g_bUsedClassCmd[MAXPLAYERS + 1];
 
 int g_iSILimit;
-int g_iPZOnSpawn;
 int g_iRoundStart;
 int g_iPlayerSpawn;
 int g_iSurvivorMaxIncapacitatedCount;
@@ -390,9 +390,6 @@ public void OnPluginStart()
 	HookEvent("bot_player_replace", Event_ClientReplace);
 	HookEvent("player_bot_replace", Event_ClientReplace);
 
-	AddCommandListener(CommandListener_Spawn, "z_add");
-	AddCommandListener(CommandListener_Spawn, "z_spawn");
-	AddCommandListener(CommandListener_Spawn, "z_spawn_old");
 	AddCommandListener(CommandListener_CallVote, "callvote");
 
 	RegConsoleCmd("sm_team4", CmdTeam4, "切换到Team 4.");
@@ -427,6 +424,9 @@ public void OnPluginEnd()
 		
 	if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre) || !g_dDetour[2].Disable(Hook_Post, mrePlayerZombieAbortControlPost))
 		SetFailState("Failed to disable detour: CTerrorPlayer::PlayerZombieAbortControl");
+		
+	if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dDetour[3].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
+		SetFailState("Failed to disable detour: ForEachTerrorPlayer<SpawnablePZScan>");
 }
 
 public void OnConfigsExecuted()
@@ -883,21 +883,6 @@ int iGetZombieClass(const char[] sClass)
 			return i;
 	}
 	return -1;
-}
-
-//兼容总监的多特.hud.api.扩展.7+版本
-public Action BinHook_OnSpawnSpecial()
-{
-	g_iPZOnSpawn = 0;
-	vGhostsModeProtector();
-	g_iPZOnSpawn = 0;
-}
-
-public Action CommandListener_Spawn(int client, const char[] command, int argc)
-{
-	g_iPZOnSpawn = client;
-	vGhostsModeProtector();
-	g_iPZOnSpawn = 0;
 }
 
 public Action CommandListener_CallVote(int client, const char[] command, int argc)
@@ -1569,74 +1554,6 @@ void vForceCrouch(int client)
 {
 	SetEntProp(client, Prop_Send, "m_bDucked", 1);
 	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
-}
-
-//https://forums.alliedmods.net/showthread.php?t=291562
-void vGhostsModeProtector(int iState = 0)
-{
-	static int i;
-	static int iGhost[MAXPLAYERS + 1];
-	static int iLifeState[MAXPLAYERS + 1];
-
-	switch(iState)
-	{
-		case 0: 
-		{
-			for(i = 1; i <= MaxClients; i++)
-			{
-				if(i != g_iPZOnSpawn)
-				{
-					if(!IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
-						continue;
-
-					if(GetPlayerWeaponSlot(i, 0) != -1)
-					{
-						if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
-						{
-							SetEntProp(i, Prop_Send, "m_isGhost", 0);
-							iGhost[i] = 1;
-						}
-					}
-					else
-					{
-						SetEntProp(i, Prop_Send, "m_lifeState", 0);
-						iLifeState[i] = 1;
-					}
-				}
-				else
-				{
-					iGhost[i] = 0;
-					iLifeState[i] = 0;
-				}
-			}
-		}
-
-		case 1: 
-		{
-			for(i = 1; i <= MaxClients; i++)
-			{
-				if(i != g_iPZOnSpawn && IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3)
-				{
-					if(GetPlayerWeaponSlot(i, 0) != -1)
-					{
-						if(iGhost[i] == 1)
-							SetEntProp(i, Prop_Send, "m_isGhost", 1);
-					}
-					else
-					{
-						if(iLifeState[i] == 1)
-							SetEntProp(i, Prop_Send, "m_lifeState", 1);
-					}
-				}
-				
-				iGhost[i] = 0;
-				iLifeState[i] = 0;
-			}
-		}
-	}
-
-	if(iState == 0)
-		RequestFrame(vGhostsModeProtector, 1);
 }
 
 void vSetGodMode(int client, float fDuration)
@@ -2502,6 +2419,14 @@ void vLoadGameData()
 	if(g_hSDK_Call_State_Transition == null)
 		SetFailState("Failed to create SDKCall: State_Transition");
 
+	StartPrepSDKCall(SDKCall_Static);
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "UTIL_GetCommandClientIndex") == false)
+		SetFailState("Failed to find signature: UTIL_GetCommandClientIndex");
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	g_hSDK_Call_GetCommandClientIndex = EndPrepSDKCall();
+	if(g_hSDK_Call_GetCommandClientIndex == null)
+		SetFailState("Failed to create SDKCall: UTIL_GetCommandClientIndex");
+
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SetClass") == false)
 		SetFailState("Failed to find signature: SetClass");
@@ -2691,6 +2616,16 @@ void vSetupDetours(GameData hGameData = null)
 		
 	if(!g_dDetour[2].Enable(Hook_Post, mrePlayerZombieAbortControlPost))
 		SetFailState("Failed to detour pre: CTerrorPlayer::PlayerZombieAbortControl");
+		
+	g_dDetour[3] = DynamicDetour.FromConf(hGameData, "ForEachTerrorPlayer<SpawnablePZScan>");
+	if(g_dDetour[3] == null)
+		SetFailState("Failed to load signature: ForEachTerrorPlayer<SpawnablePZScan>");
+		
+	if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre))
+		SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
+		
+	if(!g_dDetour[3].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
+		SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
 }
 
 public MRESReturn mreOnEnterGhostStatePre(int pThis)
@@ -2716,7 +2651,7 @@ public MRESReturn mreOnEnterGhostStatePost(int pThis)
 
 public MRESReturn mreMaterializeFromGhostPre(int pThis)
 {
-	if(!IsFakeClient(pThis) && GetGameTime() - g_fBugExploitTime[pThis][1] < 1.0)
+	if(!IsFakeClient(pThis) && GetGameTime() - g_fBugExploitTime[pThis][1] < 1.5)
 		return MRES_Supercede;
 
 	return MRES_Ignored;
@@ -2732,7 +2667,7 @@ public MRESReturn mreMaterializeFromGhostPost(int pThis)
 
 public MRESReturn mrePlayerZombieAbortControlPre(int pThis)
 {
-	if(!IsFakeClient(pThis) && GetGameTime() - g_fBugExploitTime[pThis][0] < 1.0)
+	if(!IsFakeClient(pThis) && GetGameTime() - g_fBugExploitTime[pThis][0] < 1.5)
 		return MRES_Supercede;
 
 	return MRES_Ignored;
@@ -2743,6 +2678,18 @@ public MRESReturn mrePlayerZombieAbortControlPost(int pThis)
 	if(!IsFakeClient(pThis))
 		g_fBugExploitTime[pThis][1] = GetGameTime();
 
+	return MRES_Ignored;
+}
+
+public MRESReturn mreForEachTerrorPlayerSpawnablePZScanPre()
+{
+	vSpawnablePZScanProtect(0, SDKCall(g_hSDK_Call_GetCommandClientIndex));
+	return MRES_Ignored;
+}
+
+public MRESReturn mreForEachTerrorPlayerSpawnablePZScanPost()
+{
+	vSpawnablePZScanProtect(1);
 	return MRES_Ignored;
 }
 
@@ -2788,6 +2735,50 @@ public Action Timer_PZSuicide(Handle timer, int client)
 		{
 			ForcePlayerSuicide(client);
 			CPrintToChat(client, "{olive}复活后自动处死时间 {default}-> {red}%.1f秒", g_fPZSuicideTime);
+		}
+	}
+}
+
+void vSpawnablePZScanProtect(int iState, int client = -1)
+{
+	static int i;
+	static bool bResetGhost[MAXPLAYERS + 1];
+	static bool bResetLifeState[MAXPLAYERS + 1];
+
+	switch(iState)
+	{
+		case 0: 
+		{
+			for(i = 1; i <= MaxClients; i++)
+			{
+				if(i == client || !IsClientInGame(i) || GetClientTeam(i) != 3 || IsFakeClient(i))
+					continue;
+
+				if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
+				{
+					bResetGhost[i] = true;
+					SetEntProp(i, Prop_Send, "m_isGhost", 0);
+				}
+				else if(!IsPlayerAlive(i))
+				{
+					bResetLifeState[i] = true;
+					SetEntProp(i, Prop_Send, "m_lifeState", 0);
+				}
+			}
+		}
+
+		case 1: 
+		{
+			for(i = 1; i <= MaxClients; i++)
+			{
+				if(bResetGhost[i])
+					SetEntProp(i, Prop_Send, "m_isGhost", 1);
+				if(bResetLifeState[i])
+					SetEntProp(i, Prop_Send, "m_lifeState", 1);
+			
+				bResetGhost[i] = false;
+				bResetLifeState[i] = false;
+			}
 		}
 	}
 }
