@@ -274,7 +274,50 @@ static void vGenerateAndExecuteSpawnQueue()
 			client = iGetAnyValidClient();
 			if(client > 0)
 			{
-				g_iPreferredDirection = bDetectRusher() ? 3 : 4;
+				static float fFlow;
+				static int iRusher;
+				static bool bForward;
+				static ArrayList aList;
+	
+				bForward = false;
+				aList = new ArrayList(2);
+				for(i = 1; i <= MaxClients; i++)
+				{
+					if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
+					{
+			
+						fFlow = L4D2Direct_GetFlowDistance(i);
+						if(fFlow && fFlow != -9999.0)
+							aList.Set(aList.Push(fFlow), i, 1);
+					}
+				}
+
+				aList.Sort(Sort_Descending, Sort_Float);
+		
+				static int iCount;
+				iCount = aList.Length;
+				iRusher = iCount > 0 ? aList.Get(0, 1) : 0;
+	
+				if(iCount >= 2)
+				{
+					fFlow = aList.Get(0, 0);
+
+					static float fLastFlow;
+					fLastFlow = aList.Get(iCount - 1, 0);
+
+					if(fFlow - fLastFlow > g_fRusherDistance)
+					{
+						#if SPAWN_DEBUG
+						PrintToServer("[SS] Rusher->%N", iRusher);
+						#endif
+
+						bForward = true;
+					}
+				}
+
+				delete aList;
+
+				g_iPreferredDirection = bForward ? 3 : 4;
 
 				static bool bResetGhost[MAXPLAYERS + 1];
 				static bool bResetLifeState[MAXPLAYERS + 1];
@@ -326,7 +369,15 @@ static void vGenerateAndExecuteSpawnQueue()
 					}
 				}
 
-				vVerifySIType(aSpawnQueue, iCurrentSI + iSize);
+				if(iRusher > 0)
+					vVerifySIType(iRusher, aSpawnQueue, iCurrentSI + iSize);
+				else
+				{
+					#if SPAWN_DEBUG
+					PrintToServer("[SS] 无最高路程玩家");
+					#endif
+				}
+
 				g_iPreferredDirection = 4;
 			}
 		}
@@ -334,69 +385,7 @@ static void vGenerateAndExecuteSpawnQueue()
 	}
 }
 
-static bool bDetectRusher()
-{
-	static float fFlow;
-	static int i, client, iCountFlow;
-	static ArrayList aList;
-	
-	iCountFlow = 0;
-	aList = new ArrayList(2);
-
-	for(i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-		{
-			
-			fFlow = L4D2Direct_GetFlowDistance(i);
-			if(fFlow && fFlow != -9999.0)
-			{
-				iCountFlow++;
-				aList.Set(aList.Push(fFlow), i, 1);
-			}
-			else
-			{
-				//如过前面的流量检测无效则用CTerrorPlayer::GetLastKnownArea检测
-			}
-		}
-	}
-
-	if(iCountFlow >= 3)
-	{
-		aList.Sort(Sort_Descending, Sort_Float);
-
-		static float fLastFlow;
-
-		for(i = 0; i < iCountFlow; i++)
-		{
-			client = aList.Get(i, 1);
-
-			if(i < iCountFlow / 2)
-			{
-				fFlow = aList.Get(i, 0);
-
-				static int x;
-				for(x = i + 1; x <= iCountFlow / 2; x++)
-				{
-					fLastFlow = aList.Get(x, 0);
-					if(fFlow - fLastFlow > g_fRusherDistance)
-					{
-						#if SPAWN_DEBUG
-						PrintToServer("[SS] Rusher->%N", client);
-						#endif
-						delete aList;
-						return true;
-					}
-				}
-			}
-		}
-	}
-
-	delete aList;
-	return false;
-}
-
-static void vVerifySIType(ArrayList aSpawnQueue, int iAllowedSI)
+static void vVerifySIType(int iRusher, ArrayList aSpawnQueue, int iAllowedSI)
 {
 	static int i;
 	static int iCount;
@@ -425,42 +414,31 @@ static void vVerifySIType(ArrayList aSpawnQueue, int iAllowedSI)
 		if(iAllowedSI > iQueueLength)
 			iAllowedSI = iQueueLength;
 		
-		static int iHighestFlowSurvivor;
-		iHighestFlowSurvivor = L4D_GetHighestFlowSurvivor();
-		if(iHighestFlowSurvivor > 0)
+		g_hSpawnRange.IntValue += 500;
+		g_hDiscardRange.IntValue += 500;
+		static float fSpawnPos[3];
+		for(i = 0; i < iAllowedSI; i++)
 		{
-			g_hSpawnRange.IntValue += 500;
-			g_hDiscardRange.IntValue += 500;
-			static float fSpawnPos[3];
-			for(i = 0; i < iAllowedSI; i++)
-			{
-				iIndex = aSpawnQueue.Get(i);
-				#if SPAWN_DEBUG
-				PrintToServer("[SS] %s产生失败", g_sZombieClass[iIndex]);
-				#endif
-				if(L4D_GetRandomPZSpawnPosition(iHighestFlowSurvivor, iIndex + 1, 10, fSpawnPos))
-				{
-					L4D2_SpawnSpecial(iIndex + 1, fSpawnPos, NULL_VECTOR);
-					#if SPAWN_DEBUG
-					PrintToServer("[SS] 补充产生%s", g_sZombieClass[iIndex]);
-					#endif
-				}
-				else
-				{
-					#if SPAWN_DEBUG
-					PrintToServer("[SS] %s寻位失败", g_sZombieClass[iIndex]);
-					#endif
-				}
-			}
-			g_hSpawnRange.IntValue -= 500;
-			g_hDiscardRange.IntValue -= 500;
-		}
-		else
-		{
+			iIndex = aSpawnQueue.Get(i);
 			#if SPAWN_DEBUG
-			PrintToServer("[SS] 获取最高路程玩家失败");
+			PrintToServer("[SS] %s产生失败", g_sZombieClass[iIndex]);
 			#endif
+			if(L4D_GetRandomPZSpawnPosition(iRusher, iIndex + 1, 10, fSpawnPos))
+			{
+				L4D2_SpawnSpecial(iIndex + 1, fSpawnPos, NULL_VECTOR);
+				#if SPAWN_DEBUG
+				PrintToServer("[SS] 补充产生%s", g_sZombieClass[iIndex]);
+				#endif
+			}
+			else
+			{
+				#if SPAWN_DEBUG
+				PrintToServer("[SS] %s寻位失败", g_sZombieClass[iIndex]);
+				#endif
+			}
 		}
+		g_hSpawnRange.IntValue -= 500;
+		g_hDiscardRange.IntValue -= 500;
 	}
 }
 
@@ -575,7 +553,7 @@ public void OnPluginStart()
 	g_hSIextra = CreateConVar("ss_extra_limit", "1", "生还者团队玩家每增加一个可增加多少个特感", _, true, 0.0, true, 32.0);
 	g_hGroupbase = CreateConVar("ss_groupbase_limit", "4", "生还者团队玩家不超过4人时一次产生多少只特感", _, true, 0.0, true, 32.0);
 	g_hGroupextra = CreateConVar("ss_groupextra_limit", "2", "生还者团队玩家每增加多少玩家一次多产生一只", _, true, 1.0, true, 32.0);
-	g_hRusherDistance = CreateConVar("ss_rusher_distance", "1000.0", "路程超过多少算跑图", _, true, 500.0);
+	g_hRusherDistance = CreateConVar("ss_rusher_distance", "1500.0", "路程超过多少算跑图", _, true, 500.0);
 	g_hTankSpawnAction = CreateConVar("ss_tankspawn_action", "1", "坦克产生后是否对当前刷特参数进行修改, 坦克死完后恢复?[ 0 = 忽略(保持原有的刷特状态) | 1 = 自定义 ]", _, true, 0.0, true, 1.0);
 	g_hTankSpawnLimits = CreateConVar("ss_tankspawn_limits", "3;1;3;0;3;3", "坦克产生后每种特感数量的自定义参数");
 	g_hTankSpawnWeights = CreateConVar("ss_tankspawn_weights", "80;300;100;0;100;100", "坦克产生后每种特感比重的自定义参数");
