@@ -486,6 +486,23 @@ void HookEvents()
 	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 }
 
+bool g_bControlZombies;
+
+public void OnLibraryAdded(const char[] name)
+{
+	if(strcmp(name, "control_zombies") == 0)
+		g_bControlZombies = true;
+}
+
+public void OnLibraryRemoved(const char[] name)
+{
+	if(strcmp(name, "control_zombies") == 0)
+		g_bControlZombies = false;
+}
+
+native void CZ_SetSpawnQueue(int client);
+native void CZ_ResetSpawnQueue();
+
 public void OnPluginStart()
 {
 	g_aModulesArray = new ArrayList(10); // Reduced from 100 to 10.
@@ -3400,25 +3417,7 @@ public int MenuHandler_ConfirmI(Menu menu, MenuAction action, int param1, int pa
 					if(IsPlayerAlive(param1) || IsGhost(param1))
 						return;
 
-					bool[] bResetGhost = new bool[MaxClients + 1];
-					bool[] bResetLifeState = new bool[MaxClients + 1];
-					for(int i = 1; i <= MaxClients; i++)
-					{
-						if(i == param1 || !IsClientInGame(i) || GetClientTeam(i) != 3 || IsFakeClient(i))
-							continue;
-
-						if(IsGhost(i))
-						{
-							bResetGhost[i] = true;
-							SetEntProp(i, Prop_Send, "m_isGhost", 0);
-						}
-						else if(!IsPlayerAlive(i))
-						{
-							bResetLifeState[i] = true;
-							SetEntProp(i, Prop_Send, "m_lifeState", 0);
-						}
-					}
-
+					vSpawnablePZScanProtect(0, param1);
 					CheatCommand(param1, g_esPlayerData[param1].sItemName);
 
 					int iMaxRetry = g_hPluginSettings[hSpawnAttempts].IntValue;
@@ -3427,6 +3426,8 @@ public int MenuHandler_ConfirmI(Menu menu, MenuAction action, int param1, int pa
 						if(!IsPlayerAlive(param1))
 							CheatCommand(param1, g_esPlayerData[param1].sItemName);
 					}
+
+					vSpawnablePZScanProtect(1);
 
 					if(IsPlayerAlive(param1))
 					{
@@ -3437,15 +3438,9 @@ public int MenuHandler_ConfirmI(Menu menu, MenuAction action, int param1, int pa
 					else
 						PrintToChat(param1, "%s %T", MSGTAG, "Spawn Failed", param1);
 
-					for(int i = 1; i <= MaxClients; i++)
-					{
-						if(bResetGhost[i]) 
-							SetEntProp(i, Prop_Send, "m_isGhost", 1);
-						if(bResetLifeState[i]) 
-							SetEntProp(i, Prop_Send, "m_lifeState", 1);
-					}
 					return;
 				}
+	
 				strcopy(g_esPlayerData[param1].sBought, 64, g_esPlayerData[param1].sItemName);
 				g_esPlayerData[param1].iBoughtCost = g_esPlayerData[param1].iItemCost;
 				RemovePoints(param1, g_esPlayerData[param1].iItemCost);
@@ -3459,5 +3454,59 @@ public int MenuHandler_ConfirmI(Menu menu, MenuAction action, int param1, int pa
 		}
 		case MenuAction_End:
 			delete menu;
+	}
+}
+
+void vSpawnablePZScanProtect(int iState, int client = -1)
+{
+	static int i;
+	static bool bResetGhost[MAXPLAYERS + 1];
+	static bool bResetLifeState[MAXPLAYERS + 1];
+
+	switch(iState)
+	{
+		case 0: 
+		{
+			if(g_bControlZombies)
+				CZ_SetSpawnQueue(client);
+			else
+			{
+				for(i = 1; i <= MaxClients; i++)
+				{
+					if(i == client || !IsClientInGame(i) || GetClientTeam(i) != 3 || IsFakeClient(i))
+						continue;
+
+					if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
+					{
+						bResetGhost[i] = true;
+						SetEntProp(i, Prop_Send, "m_isGhost", 0);
+					}
+					else if(!IsPlayerAlive(i))
+					{
+						bResetLifeState[i] = true;
+						SetEntProp(i, Prop_Send, "m_lifeState", 0);
+					}
+				}
+			}
+		}
+
+		case 1: 
+		{
+			if(g_bControlZombies)
+				CZ_ResetSpawnQueue();
+			else
+			{
+				for(i = 1; i <= MaxClients; i++)
+				{
+					if(bResetGhost[i])
+						SetEntProp(i, Prop_Send, "m_isGhost", 1);
+					if(bResetLifeState[i])
+						SetEntProp(i, Prop_Send, "m_lifeState", 1);
+			
+					bResetGhost[i] = false;
+					bResetLifeState[i] = false;
+				}
+			}
+		}
 	}
 }
