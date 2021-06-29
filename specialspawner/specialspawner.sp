@@ -369,6 +369,8 @@ static void vGenerateAndExecuteSpawnQueue()
 					}
 				}
 
+				g_iPreferredDirection = 4;
+
 				if(iRusher > 0)
 					vVerifySIType(iRusher, aSpawnQueue, iCurrentSI + iSize);
 				else
@@ -377,8 +379,6 @@ static void vGenerateAndExecuteSpawnQueue()
 					PrintToServer("[SS] 无最高路程玩家");
 					#endif
 				}
-
-				g_iPreferredDirection = 4;
 			}
 		}
 		delete aSpawnQueue;
@@ -553,7 +553,7 @@ public void OnPluginStart()
 	g_hSIextra = CreateConVar("ss_extra_limit", "1", "生还者团队玩家每增加一个可增加多少个特感", _, true, 0.0, true, 32.0);
 	g_hGroupbase = CreateConVar("ss_groupbase_limit", "4", "生还者团队玩家不超过4人时一次产生多少只特感", _, true, 0.0, true, 32.0);
 	g_hGroupextra = CreateConVar("ss_groupextra_limit", "2", "生还者团队玩家每增加多少玩家一次多产生一只", _, true, 1.0, true, 32.0);
-	g_hRusherDistance = CreateConVar("ss_rusher_distance", "1500.0", "路程超过多少算跑图", _, true, 500.0);
+	g_hRusherDistance = CreateConVar("ss_rusher_distance", "2000.0", "路程超过多少算跑图", _, true, 500.0);
 	g_hTankSpawnAction = CreateConVar("ss_tankspawn_action", "1", "坦克产生后是否对当前刷特参数进行修改, 坦克死完后恢复?[ 0 = 忽略(保持原有的刷特状态) | 1 = 自定义 ]", _, true, 0.0, true, 1.0);
 	g_hTankSpawnLimits = CreateConVar("ss_tankspawn_limits", "3;1;3;0;3;3", "坦克产生后每种特感数量的自定义参数");
 	g_hTankSpawnWeights = CreateConVar("ss_tankspawn_weights", "80;300;100;0;100;100", "坦克产生后每种特感比重的自定义参数");
