@@ -179,6 +179,7 @@ char g_sGameMode[32];
 Handle g_hSDK_Call_IsInStasis;
 Handle g_hSDK_Call_LeaveStasis;
 Handle g_hSDK_Call_State_Transition;
+Handle g_hSDK_Call_MaterializeFromGhost;
 //Handle g_hSDK_Call_GetCommandClientIndex;
 Handle g_hSDK_Call_SetClass;
 Handle g_hSDK_Call_CreateAbility;
@@ -955,14 +956,8 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 		}
 		else if(iFlags & IN_ATTACK)
 		{
-			static int iSpawnState;
-			iSpawnState = GetEntProp(client, Prop_Send, "m_ghostSpawnState");
-			if(iSpawnState & 1)
-			{
-				SetEntProp(client, Prop_Send, "m_ghostSpawnState", iSpawnState & ~1);
-				buttons &= ~IN_ATTACK;
-				return Plugin_Changed;
-			}
+			if(GetEntProp(client, Prop_Send, "m_ghostSpawnState") == 1)
+				SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
 		}
 	}
 	else
@@ -1198,7 +1193,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		g_iLastTeamId[client] = 0;
 
 		if(team == 2 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
-			SetEntProp(client, Prop_Send, "m_isGhost", 0);
+			SDKCall(g_hSDK_Call_MaterializeFromGhost, client); //SetEntProp(client, Prop_Send, "m_isGhost", 0);
 	}
 	else if(oldteam == 0)
 	{
@@ -1839,7 +1834,7 @@ void vChangeTeamToSurvivor(int client)
 
 	//防止因切换而导致正处于Ghost状态的坦克丢失
 	if(GetEntProp(client, Prop_Send, "m_isGhost") == 1)
-		SetEntProp(client, Prop_Send, "m_isGhost", 0);
+		SDKCall(g_hSDK_Call_MaterializeFromGhost, client); //SetEntProp(client, Prop_Send, "m_isGhost", 0);
 
 	int iBot = GetClientOfUserId(g_iPlayerBot[client]);
 	if(iBot == 0 || !bIsValidAliveSurvivorBot(iBot))
@@ -2444,6 +2439,14 @@ void vLoadGameData()
 	g_hSDK_Call_State_Transition = EndPrepSDKCall();
 	if(g_hSDK_Call_State_Transition == null)
 		SetFailState("Failed to create SDKCall: State_Transition");
+		
+	StartPrepSDKCall(SDKCall_Player);
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::MaterializeFromGhost") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::MaterializeFromGhost");
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	g_hSDK_Call_MaterializeFromGhost = EndPrepSDKCall();
+	if(g_hSDK_Call_MaterializeFromGhost == null)
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::MaterializeFromGhost");
 /*
 	StartPrepSDKCall(SDKCall_Static);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "UTIL_GetCommandClientIndex") == false)
