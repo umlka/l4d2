@@ -44,26 +44,10 @@
 				"return"		"void"
 				"this"			"ignore"
 			}
-			/* CTerrorPlayer::OnPreThinkGhostState(CTerrorPlayer *__hidden this) */
-			"CTerrorPlayer::OnPreThinkGhostState"
-			{
-				"signature"		"CTerrorPlayer::OnPreThinkGhostState"
-				"callconv"		"thiscall"
-				"return"		"void"
-				"this"			"ignore"
-			}
 			/* CDirector::IsInTransition(void) */
 			"CDirector::IsInTransition"
 			{
 				"signature"		"CDirector::IsInTransition"
-				"callconv"		"thiscall"
-				"return"		"int"
-				"this"			"ignore"
-			}
-			/* CDirector::AreGhostsAllowedInFinale(void) */
-			"CDirector::AreGhostsAllowedInFinale"
-			{
-				"signature"		"CDirector::AreGhostsAllowedInFinale"
 				"callconv"		"thiscall"
 				"return"		"int"
 				"this"			"ignore"
@@ -159,29 +143,11 @@
 				"library"	"server"
 				"linux"		"@_ZNK13ZombieManager18CanZombieSpawnHereERK6VectorP13TerrorNavArea15ZombieClassTypebP20CBaseCombatCharacter"
 			}
-			/* CTerrorPlayer::OnPreThinkGhostState(CTerrorPlayer *__hidden this) */
-			"CTerrorPlayer::OnPreThinkGhostState"
-			{
-				"library"	"server"
-				"linux"		"@_ZN13CTerrorPlayer20OnPreThinkGhostStateEv"
-			}
 			/* CDirector::IsInTransition(void) */
 			"CDirector::IsInTransition"
 			{
 				"library"	"server"
 				"linux"		"@_ZNK9CDirector14IsInTransitionEv"
-			}
-			/* CDirector::AreGhostsAllowedInFinale(void) */
-			"CDirector::AreGhostsAllowedInFinale"
-			{
-				"library"	"server"
-				"linux"		"@_ZNK9CDirector24AreGhostsAllowedInFinaleEv"
-			}
-			/* UTIL_GetCommandClientIndex(void) */
-			"UTIL_GetCommandClientIndex"
-			{
-				"library"	"server"
-				"linux"		"@_Z26UTIL_GetCommandClientIndexv"
 			}
 			"SetClass"
 			{
