@@ -1054,10 +1054,8 @@ void vResetClientData(int client)
 //Event
 public void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
 { 
-	if(bIsRoundStarted() == false || g_bHasAnySurvivorLeftSafeArea == true || !bHasAnySurvivorLeftSafeArea())
-		return;
-	
-	CreateTimer(0.1, CheckSurvivorLeftSafeArea, _, TIMER_FLAG_NO_MAPCHANGE);
+	if(g_bHasAnySurvivorLeftSafeArea == false && bIsRoundStarted() == true && bHasAnySurvivorLeftSafeArea())
+		CreateTimer(0.1, CheckSurvivorLeftSafeArea, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 bool bIsRoundStarted()
@@ -1071,16 +1069,17 @@ public Action CheckSurvivorLeftSafeArea(Handle timer)
 	{
 		g_bHasAnySurvivorLeftSafeArea = true;
 
-		if(g_bHasPlayerControlledZombies == true || g_iPZRespawnTime == 0)
-			return;
-
-		for(int i = 1; i <= MaxClients; i++)
+		if(g_iPZRespawnTime > 0 && g_bHasPlayerControlledZombies == false)
 		{
-			if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3 && !IsPlayerAlive(i))
+
+			for(int i = 1; i <= MaxClients; i++)
 			{
-				delete g_hPZRespawnTimer[i];
-				vCalculatePZRespawnTime(i);
-				g_hPZRespawnTimer[i] = CreateTimer(1.0, Timer_PZRespawn, GetClientUserId(i), TIMER_REPEAT);
+				if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3 && !IsPlayerAlive(i))
+				{
+					delete g_hPZRespawnTimer[i];
+					vCalculatePZRespawnTime(i);
+					g_hPZRespawnTimer[i] = CreateTimer(1.0, Timer_PZRespawn, GetClientUserId(i), TIMER_REPEAT);
+				}
 			}
 		}
 	}
@@ -1308,9 +1307,14 @@ void OnNextFrame_PlayerSpawn(int userid)
 				{
 					if(g_bHasPlayerControlledZombies == false && GetEntProp(client, Prop_Send, "m_zombieClass") == 8)
 					{
-						bool bTakeOver = !!(g_iTankBot[client] != 2 && iGetTankPlayers() < g_iMaxTankPlayer && bTakeOverTank(client));
+						bool bTakeOver;
+						if(g_iTankBot[client] != 2 && iGetTankPlayers() < g_iMaxTankPlayer)
+						{
+							if((bTakeOver = bTakeOverTank(client)) == true)
+								CPrintToChatAll("{green}★ {red}AI Tank {default}已被 {red}%N {olive}接管", client);
+						}
 
-						if(!bTakeOver && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_Call_IsInStasis, client)))
+						if(bTakeOver == false && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_Call_IsInStasis, client)))
 							SDKCall(g_hSDK_Call_LeaveStasis, client); //解除战役模式下特感方有玩家存在时坦克卡住的问题
 					}
 				}
@@ -1675,11 +1679,7 @@ bool bTakeOverTank(int tank)
 			}
 		}
 
-		vTakeOverZombieBot(client, tank);
-
-		CPrintToChatAll("{green}★ {red}AI Tank {default}已被 {red}%N {olive}接管", client);
-
-		return true;
+		return iTakeOverZombieBot(client, tank) == 8 && IsPlayerAlive(client);
 	}
 
 	return false;
@@ -2584,10 +2584,11 @@ void vSetZombieClass(int client, int iZombieClass)
 		SetEntPropEnt(client, Prop_Send, "m_customAbility", iAbility);
 }
 
-void vTakeOverZombieBot(int client, int iTarget)
+int iTakeOverZombieBot(int client, int iTarget)
 {
 	AcceptEntityInput(client, "clearparent");
 	SDKCall(g_hSDK_Call_TakeOverZombieBot, client, iTarget);
+	return GetEntProp(client, Prop_Send, "m_zombieClass");
 }
 
 void vRoundRespawn(int client)
