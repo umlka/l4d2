@@ -500,8 +500,8 @@ public void OnLibraryRemoved(const char[] name)
 		g_bControlZombies = false;
 }
 
-native void CZ_SetSpawnQueue(int client);
-native void CZ_ResetSpawnQueue();
+native void CZ_SetSpawnablePZ(int client);
+native void CZ_ResetSpawnablePZ();
 
 public void OnPluginStart()
 {
@@ -3468,7 +3468,7 @@ void vSpawnablePZScanProtect(int iState, int client = -1)
 		case 0: 
 		{
 			if(g_bControlZombies)
-				CZ_SetSpawnQueue(client);
+				CZ_SetSpawnablePZ(client);
 			else
 			{
 				for(i = 1; i <= MaxClients; i++)
@@ -3493,7 +3493,7 @@ void vSpawnablePZScanProtect(int iState, int client = -1)
 		case 1: 
 		{
 			if(g_bControlZombies)
-				CZ_ResetSpawnQueue();
+				CZ_ResetSpawnablePZ();
 			else
 			{
 				for(i = 1; i <= MaxClients; i++)
