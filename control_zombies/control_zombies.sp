@@ -182,7 +182,6 @@ Handle g_hSDK_Call_IsInStasis;
 Handle g_hSDK_Call_LeaveStasis;
 Handle g_hSDK_Call_State_Transition;
 Handle g_hSDK_Call_MaterializeFromGhost;
-//Handle g_hSDK_Call_GetCommandClientIndex;
 Handle g_hSDK_Call_SetClass;
 Handle g_hSDK_Call_CreateAbility;
 Handle g_hSDK_Call_TakeOverZombieBot;
@@ -2446,15 +2445,7 @@ void vLoadGameData()
 	g_hSDK_Call_MaterializeFromGhost = EndPrepSDKCall();
 	if(g_hSDK_Call_MaterializeFromGhost == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::MaterializeFromGhost");
-/*
-	StartPrepSDKCall(SDKCall_Static);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "UTIL_GetCommandClientIndex") == false)
-		SetFailState("Failed to find signature: UTIL_GetCommandClientIndex");
-	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	g_hSDK_Call_GetCommandClientIndex = EndPrepSDKCall();
-	if(g_hSDK_Call_GetCommandClientIndex == null)
-		SetFailState("Failed to create SDKCall: UTIL_GetCommandClientIndex");
-*/
+
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SetClass") == false)
 		SetFailState("Failed to find signature: SetClass");
@@ -2634,7 +2625,7 @@ void vSetupDetours(GameData hGameData = null)
 		SetFailState("Failed to detour pre: CTerrorPlayer::MaterializeFromGhost");
 		
 	if(!g_dDetour[1].Enable(Hook_Post, mreMaterializeFromGhostPost))
-		SetFailState("Failed to detour pre: CTerrorPlayer::MaterializeFromGhost");
+		SetFailState("Failed to detour post: CTerrorPlayer::MaterializeFromGhost");
 		
 	g_dDetour[2] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::PlayerZombieAbortControl");
 	if(g_dDetour[2] == null)
@@ -2644,7 +2635,7 @@ void vSetupDetours(GameData hGameData = null)
 		SetFailState("Failed to detour pre: CTerrorPlayer::PlayerZombieAbortControl");
 		
 	if(!g_dDetour[2].Enable(Hook_Post, mrePlayerZombieAbortControlPost))
-		SetFailState("Failed to detour pre: CTerrorPlayer::PlayerZombieAbortControl");
+		SetFailState("Failed to detour post: CTerrorPlayer::PlayerZombieAbortControl");
 		
 	g_dDetour[3] = DynamicDetour.FromConf(hGameData, "ForEachTerrorPlayer<SpawnablePZScan>");
 	if(g_dDetour[3] == null)
@@ -2654,7 +2645,7 @@ void vSetupDetours(GameData hGameData = null)
 		SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
 		
 	if(!g_dDetour[3].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
-		SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
+		SetFailState("Failed to detour post: ForEachTerrorPlayer<SpawnablePZScan>");
 		
 	g_dDetour[4] = DynamicDetour.FromConf(hGameData, "ZombieManager::CanZombieSpawnHere");
 	if(g_dDetour[4] == null)
@@ -2664,14 +2655,14 @@ void vSetupDetours(GameData hGameData = null)
 		SetFailState("Failed to detour pre: ZombieManager::CanZombieSpawnHere");
 		
 	if(!g_dDetour[4].Enable(Hook_Post, mreCanZombieSpawnHerePost))
-		SetFailState("Failed to detour pre: ZombieManager::CanZombieSpawnHere");
+		SetFailState("Failed to detour post: ZombieManager::CanZombieSpawnHere");
 
 	g_dDetour[5] = DynamicDetour.FromConf(hGameData, "CDirector::IsInTransition");
 	if(g_dDetour[5] == null)
 		SetFailState("Failed to load signature: CDirector::IsInTransition");
 
 	if(!g_dDetour[5].Enable(Hook_Post, mreIsInTransitionPost))
-		SetFailState("Failed to detour pre: CDirector::IsInTransition");
+		SetFailState("Failed to detour post: CDirector::IsInTransition");
 }
 
 void vDisableDetours()
@@ -2750,7 +2741,6 @@ public MRESReturn mrePlayerZombieAbortControlPost(int pThis)
 
 public MRESReturn mreForEachTerrorPlayerSpawnablePZScanPre()
 {
-	//g_iSpawnablePZ = SDKCall(g_hSDK_Call_GetCommandClientIndex);
 	vSpawnablePZScanProtect(0);
 	return MRES_Ignored;
 }
