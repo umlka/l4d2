@@ -36,6 +36,38 @@
 				"return"		"void"
 				"this"			"ignore"
 			}
+			/* ZombieManager::CanZombieSpawnHere(int, int, CNavArea *, int, int, int) */
+			"ZombieManager::CanZombieSpawnHere"
+			{
+				"signature"		"ZombieManager::CanZombieSpawnHere"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"ignore"
+			}
+			/* CTerrorPlayer::OnPreThinkGhostState(CTerrorPlayer *__hidden this) */
+			"CTerrorPlayer::OnPreThinkGhostState"
+			{
+				"signature"		"CTerrorPlayer::OnPreThinkGhostState"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"ignore"
+			}
+			/* CDirector::IsInTransition(void) */
+			"CDirector::IsInTransition"
+			{
+				"signature"		"CDirector::IsInTransition"
+				"callconv"		"thiscall"
+				"return"		"int"
+				"this"			"ignore"
+			}
+			/* CDirector::AreGhostsAllowedInFinale(void) */
+			"CDirector::AreGhostsAllowedInFinale"
+			{
+				"signature"		"CDirector::AreGhostsAllowedInFinale"
+				"callconv"		"thiscall"
+				"return"		"int"
+				"this"			"ignore"
+			}
 		}
 
 		"Addresses"
@@ -103,8 +135,8 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN13CTerrorPlayer20MaterializeFromGhostEv"
-				"windows"	"\x56\x8B\xF1\x8B\x06\x8B\x90\x2A\x2A\x2A\x2A\xFF\xD2\x50\xE8\x2A\x2A\x2A\x2A\x83\xC4"
-				/* 56 8B F1 8B 06 8B 90 ? ? ? ? FF D2 50 E8 ? ? ? ? 83 C4 */
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xFF\x2A\x50\xE8\x2A\x2A\x2A\x2A\x83\x2A\x2A\x50\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x8B\x2A\xFF\x2A\x50\x68\x2A\x2A\x2A\x2A\xE8"
+				/* ? ? ? ? ? ? ? ? ? ? ? FF ? 50 E8 ? ? ? ? 83 ? ? 50 8B ? 8B 90 ? ? ? ? 8B ? FF ? 50 68 ? ? ? ? E8 */
 				/* Search "%s materialized from spawn mode as a %s" */
 			}
 			/* CTerrorPlayer::PlayerZombieAbortControl(CTerrorPlayer *this) */
@@ -120,6 +152,30 @@
 			{
 				"library"	"server"
 				"linux"		"@_Z19ForEachTerrorPlayerI15SpawnablePZScanEbRT_"
+			}
+			/* ZombieManager::CanZombieSpawnHere(int, int, CNavArea *, int, int, int) */
+			"ZombieManager::CanZombieSpawnHere"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK13ZombieManager18CanZombieSpawnHereERK6VectorP13TerrorNavArea15ZombieClassTypebP20CBaseCombatCharacter"
+			}
+			/* CTerrorPlayer::OnPreThinkGhostState(CTerrorPlayer *__hidden this) */
+			"CTerrorPlayer::OnPreThinkGhostState"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer20OnPreThinkGhostStateEv"
+			}
+			/* CDirector::IsInTransition(void) */
+			"CDirector::IsInTransition"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK9CDirector14IsInTransitionEv"
+			}
+			/* CDirector::AreGhostsAllowedInFinale(void) */
+			"CDirector::AreGhostsAllowedInFinale"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK9CDirector24AreGhostsAllowedInFinaleEv"
 			}
 			/* UTIL_GetCommandClientIndex(void) */
 			"UTIL_GetCommandClientIndex"

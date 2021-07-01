@@ -197,7 +197,7 @@ Handle g_hPZSuicideTimer[MAXPLAYERS + 1];
 Address g_pRoundRespawn;
 Address g_pStatsCondition;
 
-DynamicDetour g_dDetour[4];
+DynamicDetour g_dDetour[6];
 
 ConVar g_hGameMode;
 ConVar g_hMaxTankPlayer;
@@ -400,6 +400,7 @@ public void OnPluginStart()
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("finale_vehicle_leaving", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("player_team", Event_PlayerTeam);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_death", Event_PlayerDeath);
@@ -442,17 +443,7 @@ public void OnPluginEnd()
 		
 	vStatsConditionPatch(false);
 
-	if(!g_dDetour[0].Disable(Hook_Pre, mreOnEnterGhostStatePre) || !g_dDetour[0].Disable(Hook_Post, mreOnEnterGhostStatePost))
-		SetFailState("Failed to disable detour: CTerrorPlayer::OnEnterGhostState");
-		
-	if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre) || !g_dDetour[1].Disable(Hook_Post, mreMaterializeFromGhostPost))
-		SetFailState("Failed to disable detour: CTerrorPlayer::MaterializeFromGhost");
-		
-	if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre) || !g_dDetour[2].Disable(Hook_Post, mrePlayerZombieAbortControlPost))
-		SetFailState("Failed to disable detour: CTerrorPlayer::PlayerZombieAbortControl");
-		
-	if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dDetour[3].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
-		SetFailState("Failed to disable detour: ForEachTerrorPlayer<SpawnablePZScan>");
+	vDisableDetours();
 }
 
 public void OnConfigsExecuted()
@@ -958,10 +949,6 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 		}
 		else if(iFlags & IN_ATTACK)
 		{
-			#if	DEBUG
-				if(CheckCommandAccess(client, "", ADMFLAG_ROOT, false) == true)
-					PrintToChat(client, "m_ghostSpawnState->%d", GetEntProp(client, Prop_Send, "m_ghostSpawnState"));
-			#endif
 			if(GetEntProp(client, Prop_Send, "m_ghostSpawnState") == 1)
 				SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
 		}
@@ -1114,7 +1101,10 @@ public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 	g_iRoundStart = 1;
 
 	for(int i = 1; i <= MaxClients; i++)
+	{
 		vDeleteTimer(i);
+		g_fBugExploitTime[i][0] = g_fBugExploitTime[i][1] = GetGameTime();
+	}
 }
 
 //移除一些限制特感的透明墙体，增加活动空间. 并且能够修复C2M5上面坦克卡住的情况
@@ -1139,7 +1129,7 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 		vDeleteTimer(i);
 		vResetClientData(i);
 	}
-	
+
 	if(g_bHasPlayerControlledZombies == false)
 		vForceChangeTeamTo();
 }
@@ -1264,7 +1254,6 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	if(IsPlayerAlive(client))
 	{
 		g_iTankBot[client] = 0;
-		delete g_hPZSuicideTimer[client];
 
 		if(!IsFakeClient(client) && GetClientTeam(client) == 3)
 		{
@@ -1307,14 +1296,14 @@ void OnNextFrame_PlayerSpawn(int userid)
 				{
 					if(g_bHasPlayerControlledZombies == false && GetEntProp(client, Prop_Send, "m_zombieClass") == 8)
 					{
-						bool bTakeOver;
+						int iPlayer;
 						if(g_iTankBot[client] != 2 && iGetTankPlayers() < g_iMaxTankPlayer)
 						{
-							if((bTakeOver = bTakeOverTank(client)) == true)
-								CPrintToChatAll("{green}★ {red}AI Tank {default}已被 {red}%N {olive}接管", client);
+							if((iPlayer = iTakeOverTank(client)))
+								CPrintToChatAll("{green}★ {red}AI Tank {default}已被 {red}%N {olive}接管", iPlayer);
 						}
 
-						if(bTakeOver == false && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_Call_IsInStasis, client)))
+						if(iPlayer && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_Call_IsInStasis, client)))
 							SDKCall(g_hSDK_Call_LeaveStasis, client); //解除战役模式下特感方有玩家存在时坦克卡住的问题
 					}
 				}
@@ -1384,18 +1373,23 @@ public Action Timer_PZRespawn(Handle timer, int client)
 		{
 			if(g_iPZRespawnCountdown[client] > 0)
 				PrintHintText(client, "%d 秒后重生", g_iPZRespawnCountdown[client]--);
-			else if(bAttemptRespawnPZ(client))
+			else
 			{
-				vSetInfectedGhost(client, false);
+				if(bAttemptRespawnPZ(client))
+				{
+					vSetInfectedGhost(client, false);
 
-				g_hPZRespawnTimer[client] = null;
-				return Plugin_Stop;
-			}
-			else if(--g_iPZRespawnCountdown[client] <= -10)
-			{
-				CPrintToChat(client, "{red}重生失败, 请联系服主检查地图或者服务器配置");
-				g_hPZRespawnTimer[client] = null;
-				return Plugin_Stop;
+					g_hPZRespawnTimer[client] = null;
+					return Plugin_Stop;
+				}
+				else if(--g_iPZRespawnCountdown[client] <= -10)
+				{
+					CPrintToChat(client, "{red}重生失败, 请联系服主检查地图或者服务器配置");
+					g_hPZRespawnTimer[client] = null;
+					return Plugin_Stop;
+				}
+				else
+					PrintHintText(client, "重生尝试失败 %d 次", -g_iPZRespawnCountdown[client]);
 			}
 
 			return Plugin_Continue;
@@ -1639,7 +1633,7 @@ int iHasIdlePlayer(int client)
 	return 0;
 }
 
-bool bTakeOverTank(int tank)
+int iTakeOverTank(int tank)
 {
 	int client, iPbCount, iOtherCount;
 	int[] iPbClients = new int[MaxClients];
@@ -1679,10 +1673,10 @@ bool bTakeOverTank(int tank)
 			}
 		}
 
-		return iTakeOverZombieBot(client, tank) == 8 && IsPlayerAlive(client);
+		return iTakeOverZombieBot(client, tank) == 8 && IsPlayerAlive(client) ? client : 0;
 	}
 
-	return false;
+	return 0;
 }
 
 int iGetStandingSurvivors()
@@ -2661,6 +2655,47 @@ void vSetupDetours(GameData hGameData = null)
 		
 	if(!g_dDetour[3].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
 		SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
+		
+	g_dDetour[4] = DynamicDetour.FromConf(hGameData, "ZombieManager::CanZombieSpawnHere");
+	if(g_dDetour[4] == null)
+		SetFailState("Failed to load signature: ZombieManager::CanZombieSpawnHere");
+		
+	if(!g_dDetour[4].Enable(Hook_Pre, mreCanZombieSpawnHerePre))
+		SetFailState("Failed to detour pre: ZombieManager::CanZombieSpawnHere");
+		
+	if(!g_dDetour[4].Enable(Hook_Post, mreCanZombieSpawnHerePost))
+		SetFailState("Failed to detour pre: ZombieManager::CanZombieSpawnHere");
+
+	g_dDetour[5] = DynamicDetour.FromConf(hGameData, "CDirector::IsInTransition");
+	if(g_dDetour[5] == null)
+		SetFailState("Failed to load signature: CDirector::IsInTransition");
+		
+	if(!g_dDetour[5].Enable(Hook_Pre, mreIsInTransitionPre))
+		SetFailState("Failed to detour pre: CDirector::IsInTransition");
+		
+	if(!g_dDetour[5].Enable(Hook_Post, mreIsInTransitionPost))
+		SetFailState("Failed to detour pre: CDirector::IsInTransition");
+}
+
+void vDisableDetours()
+{
+	if(!g_dDetour[0].Disable(Hook_Pre, mreOnEnterGhostStatePre) || !g_dDetour[0].Disable(Hook_Post, mreOnEnterGhostStatePost))
+		SetFailState("Failed to disable detour: CTerrorPlayer::OnEnterGhostState");
+		
+	if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre) || !g_dDetour[1].Disable(Hook_Post, mreMaterializeFromGhostPost))
+		SetFailState("Failed to disable detour: CTerrorPlayer::MaterializeFromGhost");
+		
+	if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre) || !g_dDetour[2].Disable(Hook_Post, mrePlayerZombieAbortControlPost))
+		SetFailState("Failed to disable detour: CTerrorPlayer::PlayerZombieAbortControl");
+		
+	if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dDetour[3].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
+		SetFailState("Failed to disable detour: ForEachTerrorPlayer<SpawnablePZScan>");
+		
+	if(!g_dDetour[4].Enable(Hook_Pre, mreCanZombieSpawnHerePre) || !g_dDetour[4].Disable(Hook_Post, mreCanZombieSpawnHerePost))
+		SetFailState("Failed to disable detour: ZombieManager::CanZombieSpawnHere");
+
+	if(!g_dDetour[5].Enable(Hook_Pre, mreIsInTransitionPre) || !g_dDetour[5].Disable(Hook_Post, mreIsInTransitionPost))
+		SetFailState("Failed to disable detour: CDirector::IsInTransition");
 }
 
 public MRESReturn mreOnEnterGhostStatePre(int pThis)
@@ -2726,6 +2761,48 @@ public MRESReturn mreForEachTerrorPlayerSpawnablePZScanPre()
 public MRESReturn mreForEachTerrorPlayerSpawnablePZScanPost()
 {
 	vSpawnablePZScanProtect(1);
+	return MRES_Ignored;
+}
+
+bool g_bCanZombieSpawnHere;
+public MRESReturn mreCanZombieSpawnHerePre()
+{
+	g_bCanZombieSpawnHere = true;
+	return MRES_Ignored;
+}
+
+public MRESReturn mreCanZombieSpawnHerePost()
+{
+	g_bCanZombieSpawnHere = false;
+	return MRES_Ignored;
+}
+
+bool g_bOnPreThinkGhostState;
+public MRESReturn mreOnPreThinkGhostStatePre()
+{
+	g_bOnPreThinkGhostState = true;
+	return MRES_Ignored;
+}
+
+public MRESReturn mreOnPreThinkGhostStatePost()
+{
+	g_bOnPreThinkGhostState = false;
+	return MRES_Ignored;
+}
+
+public MRESReturn mreIsInTransitionPre()
+{
+	return MRES_Ignored;
+}
+
+public MRESReturn mreIsInTransitionPost(DHookReturn hReturn)
+{
+	if(g_bCanZombieSpawnHere || g_bOnPreThinkGhostState)
+	{
+		hReturn.Value = 0;
+		return MRES_Supercede;
+	}
+
 	return MRES_Ignored;
 }
 
