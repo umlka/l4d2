@@ -326,7 +326,7 @@ static void vGenerateAndExecuteSpawnQueue()
 				{
 					for(i = 1; i <= MaxClients; i++)
 					{
-						if(!IsClientInGame(i) || GetClientTeam(i) != 3 || IsFakeClient(i))
+						if(!IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
 							continue;
 
 						if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
@@ -907,10 +907,8 @@ public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 
 public void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
 { 
-	if(bIsRoundStarted() == false || g_bHasAnySurvivorLeftSafeArea == true || !bHasAnySurvivorLeftSafeArea())
-		return;
-	
-	CreateTimer(0.1, Timer_CheckSurvivorLeftSafeArea, _, TIMER_FLAG_NO_MAPCHANGE);
+	if(g_bHasAnySurvivorLeftSafeArea == false && bIsRoundStarted() == true && bHasAnySurvivorLeftSafeArea())
+		CreateTimer(0.1, Timer_CheckSurvivorLeftSafeArea, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 bool bIsRoundStarted()
