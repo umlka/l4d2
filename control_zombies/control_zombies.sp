@@ -148,6 +148,8 @@ stock void CSayText2(int client, int author, const char[] sMessage)
 }
 /**************************************************************************/
 
+#define DEBUG				1
+
 #define GAMEDATA 			"control_zombies"
 #define CVAR_FLAGS 			FCVAR_NOTIFY
 #define SOUND_CLASSMENU		"ui/helpful_event_1.wav"
@@ -235,7 +237,7 @@ bool g_bUsedClassCmd[MAXPLAYERS + 1];
 int g_iSILimit;
 int g_iRoundStart;
 int g_iPlayerSpawn;
-int g_iOnSpawnQueue;
+int g_iSpawnablePZ;
 int g_iSurvivorMaxIncapacitatedCount;
 int g_iAllowSurvuivorLimit;
 int g_iMaxTankPlayer;
@@ -273,7 +275,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.0.2",
+	version = "3.1.0",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -281,8 +283,8 @@ bool g_bLateLoad;
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
-	CreateNative("CZ_SetSpawnQueue", aNative_SetSpawnQueue);
-	CreateNative("CZ_ResetSpawnQueue", aNative_ResetSpawnQueue);
+	CreateNative("CZ_SetSpawnablePZ", aNative_SetSpawnablePZ);
+	CreateNative("CZ_ResetSpawnablePZ", aNative_ResetSpawnablePZ);
 
 	RegPluginLibrary("control_zombies");
 	
@@ -290,14 +292,14 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	return APLRes_Success;
 }
 
-public any aNative_SetSpawnQueue(Handle plugin, int numParams)
+public any aNative_SetSpawnablePZ(Handle plugin, int numParams)
 {
-	g_iOnSpawnQueue = GetNativeCell(1);
+	g_iSpawnablePZ = GetNativeCell(1);
 }
 
-public any aNative_ResetSpawnQueue(Handle plugin, int numParams)
+public any aNative_ResetSpawnablePZ(Handle plugin, int numParams)
 {
-	g_iOnSpawnQueue = 0;
+	g_iSpawnablePZ = 0;
 }
 
 public void OnPluginStart()
@@ -367,7 +369,7 @@ public void OnPluginStart()
 	g_hPZChangeTeamTo.AddChangeHook(vOtherConVarChanged);
 
 	int i;
-	for(i = 0; i < 4; i++)
+	for(; i < 4; i++)
 		g_hGlowColor[i].AddChangeHook(vColorConVarChanged);
 
 	g_hAccessAdminFlags.AddChangeHook(vAdminConVarChanged);
@@ -956,6 +958,10 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 		}
 		else if(iFlags & IN_ATTACK)
 		{
+			#if	DEBUG
+				if(CheckCommandAccess(client, "", ADMFLAG_ROOT, false) == true)
+					PrintToChat(client, "m_ghostSpawnState->%d", GetEntProp(client, Prop_Send, "m_ghostSpawnState"));
+			#endif
 			if(GetEntProp(client, Prop_Send, "m_ghostSpawnState") == 1)
 				SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
 		}
@@ -1007,8 +1013,7 @@ public void OnMapEnd()
 
 public void OnClientDisconnect(int client)
 {
-	if(g_iOnSpawnQueue == client)
-		g_iOnSpawnQueue = 0;
+	g_iSpawnablePZ = 0;
 
 	vRemoveSurvivorModelGlow(client);
 
@@ -1193,7 +1198,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		g_iLastTeamId[client] = 0;
 
 		if(team == 2 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
-			SDKCall(g_hSDK_Call_MaterializeFromGhost, client); //SetEntProp(client, Prop_Send, "m_isGhost", 0);
+			SetEntProp(client, Prop_Send, "m_isGhost", 0); //SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
 	}
 	else if(oldteam == 0)
 	{
@@ -1417,9 +1422,9 @@ bool bRespawnPZ(int client, int iZombieClass)
 	if(/*GetClientTeam(client) == 3 && */GetEntProp(client, Prop_Send, "m_lifeState") != 1)
 		SetEntProp(client, Prop_Send, "m_lifeState", 1);
 
-	g_iOnSpawnQueue = client;
+	g_iSpawnablePZ = client;
 	vCheatCommand(client, "z_spawn_old", g_sZombieClass[iZombieClass]);
-	g_iOnSpawnQueue = 0;
+	g_iSpawnablePZ = 0;
 	return IsPlayerAlive(client);
 }
 
@@ -1834,7 +1839,7 @@ void vChangeTeamToSurvivor(int client)
 
 	//防止因切换而导致正处于Ghost状态的坦克丢失
 	if(GetEntProp(client, Prop_Send, "m_isGhost") == 1)
-		SDKCall(g_hSDK_Call_MaterializeFromGhost, client); //SetEntProp(client, Prop_Send, "m_isGhost", 0);
+		SetEntProp(client, Prop_Send, "m_isGhost", 0); //SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
 
 	int iBot = GetClientOfUserId(g_iPlayerBot[client]);
 	if(iBot == 0 || !bIsValidAliveSurvivorBot(iBot))
@@ -2356,7 +2361,7 @@ int iGenerateIndex()
 	int iStandardizedSpawnWeight;
 	int iTempSpawnWeights[6];
 
-	for(i = 0; i < 6; i++)
+	for(; i < 6; i++)
 	{
 		iTempSpawnWeights[i] = g_iSpawnCounts[i] < g_iSpawnLimits[i] ? (g_bScaleWeights ? ((g_iSpawnLimits[i] - g_iSpawnCounts[i]) * g_iSpawnWeights[i]) : g_iSpawnWeights[i]) : 0;
 		iTotalSpawnWeight += iTempSpawnWeights[i];
@@ -2392,7 +2397,7 @@ int iGenerateIndex()
 void vSITypeCount()
 {
 	int i;
-	for(i = 0; i < 6; i++)
+	for(; i < 6; i++)
 		g_iSpawnCounts[i] = 0;
 
 	int iZombieClass;
@@ -2712,7 +2717,7 @@ public MRESReturn mrePlayerZombieAbortControlPost(int pThis)
 
 public MRESReturn mreForEachTerrorPlayerSpawnablePZScanPre()
 {
-	//g_iOnSpawnQueue = SDKCall(g_hSDK_Call_GetCommandClientIndex);
+	//g_iSpawnablePZ = SDKCall(g_hSDK_Call_GetCommandClientIndex);
 	vSpawnablePZScanProtect(0);
 	return MRES_Ignored;
 }
@@ -2781,7 +2786,7 @@ void vSpawnablePZScanProtect(int iState)
 		{
 			for(i = 1; i <= MaxClients; i++)
 			{
-				if(i == g_iOnSpawnQueue || !IsClientInGame(i) || GetClientTeam(i) != 3 || IsFakeClient(i))
+				if(i == g_iSpawnablePZ || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
 					continue;
 
 				if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
