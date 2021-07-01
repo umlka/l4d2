@@ -275,7 +275,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.1.0",
+	version = "3.1.1",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -1077,7 +1077,7 @@ public Action CheckSurvivorLeftSafeArea(Handle timer)
 				if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3 && !IsPlayerAlive(i))
 				{
 					delete g_hPZRespawnTimer[i];
-					vCalculatePZRespawnTime(i);
+					g_iPZRespawnCountdown[i] = 0;
 					g_hPZRespawnTimer[i] = CreateTimer(1.0, Timer_PZRespawn, GetClientUserId(i), TIMER_REPEAT);
 				}
 			}
