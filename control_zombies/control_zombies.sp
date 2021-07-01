@@ -275,7 +275,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.1.1",
+	version = "3.1.2",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -2669,10 +2669,7 @@ void vSetupDetours(GameData hGameData = null)
 	g_dDetour[5] = DynamicDetour.FromConf(hGameData, "CDirector::IsInTransition");
 	if(g_dDetour[5] == null)
 		SetFailState("Failed to load signature: CDirector::IsInTransition");
-		
-	if(!g_dDetour[5].Enable(Hook_Pre, mreIsInTransitionPre))
-		SetFailState("Failed to detour pre: CDirector::IsInTransition");
-		
+
 	if(!g_dDetour[5].Enable(Hook_Post, mreIsInTransitionPost))
 		SetFailState("Failed to detour pre: CDirector::IsInTransition");
 }
@@ -2694,7 +2691,7 @@ void vDisableDetours()
 	if(!g_dDetour[4].Enable(Hook_Pre, mreCanZombieSpawnHerePre) || !g_dDetour[4].Disable(Hook_Post, mreCanZombieSpawnHerePost))
 		SetFailState("Failed to disable detour: ZombieManager::CanZombieSpawnHere");
 
-	if(!g_dDetour[5].Enable(Hook_Pre, mreIsInTransitionPre) || !g_dDetour[5].Disable(Hook_Post, mreIsInTransitionPost))
+	if(!g_dDetour[5].Disable(Hook_Post, mreIsInTransitionPost))
 		SetFailState("Failed to disable detour: CDirector::IsInTransition");
 }
 
@@ -2777,27 +2774,9 @@ public MRESReturn mreCanZombieSpawnHerePost()
 	return MRES_Ignored;
 }
 
-bool g_bOnPreThinkGhostState;
-public MRESReturn mreOnPreThinkGhostStatePre()
-{
-	g_bOnPreThinkGhostState = true;
-	return MRES_Ignored;
-}
-
-public MRESReturn mreOnPreThinkGhostStatePost()
-{
-	g_bOnPreThinkGhostState = false;
-	return MRES_Ignored;
-}
-
-public MRESReturn mreIsInTransitionPre()
-{
-	return MRES_Ignored;
-}
-
 public MRESReturn mreIsInTransitionPost(DHookReturn hReturn)
 {
-	if(g_bCanZombieSpawnHere || g_bOnPreThinkGhostState)
+	if(g_bCanZombieSpawnHere)
 	{
 		hReturn.Value = 0;
 		return MRES_Supercede;
