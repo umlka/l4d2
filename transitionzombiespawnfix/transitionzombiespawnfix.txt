@@ -38,7 +38,7 @@
 				"library"	"server"
 				"linux"		"@_ZNK9CDirector14IsInTransitionEv"
 				"windows"	"\x80\x3D\x2A\x2A\x2A\x2A\x00\xB8\x01\x00\x00\x00"
-				/* 80 3D ? ? ? ? 00 B8 01 00 00 00  */
+				/* 80 3D ? ? ? ? 00 B8 01 00 00 00 */
 			}
 		}
     }
