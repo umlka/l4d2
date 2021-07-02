@@ -29,12 +29,16 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZNK13ZombieManager18CanZombieSpawnHereERK6VectorP13TerrorNavArea15ZombieClassTypebP20CBaseCombatCharacter"
+				"windows"	"\x55\x8B\xEC\x81\xEC\x90\x00\x00\x00\xA1\x2A\x2A\x2A\x2A\x33\xC5\x89\x45\xFC\x8B\x45\x10\x8B\x0D\x2A\x2A\x2A\x2A"
+				/* 55 8B EC 81 EC 90 00 00 00 A1 ? ? ? ? 33 C5 89 45 FC 8B 45 10 8B 0D ? ? ? ? */
 			}
 			/* CDirector::IsInTransition(void) */
 			"CDirector::IsInTransition"
 			{
 				"library"	"server"
 				"linux"		"@_ZNK9CDirector14IsInTransitionEv"
+				"windows"	"\x80\x3D\x2A\x2A\x2A\x2A\x00\xB8\x01\x00\x00\x00"
+				/* 80 3D ? ? ? ? 00 B8 01 00 00 00  */
 			}
 		}
     }
