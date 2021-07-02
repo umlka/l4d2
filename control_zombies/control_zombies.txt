@@ -120,6 +120,8 @@
 			{
 				"library"	"server"
 				"linux"		"@_Z19ForEachTerrorPlayerI15SpawnablePZScanEbRT_"
+				"windows"	"\x55\x8B\xEC\x83\xEC\x2C\x8B\x0D\x2A\x2A\x2A\x2A\x53\x8B\x5D\x08\x56"
+				/* 55 8B EC 83 EC 2C 8B 0D ? ? ? ? 53 8B 5D 08 56 */
 			}
 			"SetClass"
 			{
