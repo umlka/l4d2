@@ -196,7 +196,7 @@ Handle g_hPZSuicideTimer[MAXPLAYERS + 1];
 Address g_pRoundRespawn;
 Address g_pStatsCondition;
 
-DynamicDetour g_dDetour[6];
+DynamicDetour g_dDetour[4];
 
 ConVar g_hGameMode;
 ConVar g_hMaxTankPlayer;
@@ -2646,23 +2646,6 @@ void vSetupDetours(GameData hGameData = null)
 		
 	if(!g_dDetour[3].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
 		SetFailState("Failed to detour post: ForEachTerrorPlayer<SpawnablePZScan>");
-		
-	g_dDetour[4] = DynamicDetour.FromConf(hGameData, "ZombieManager::CanZombieSpawnHere");
-	if(g_dDetour[4] == null)
-		SetFailState("Failed to load signature: ZombieManager::CanZombieSpawnHere");
-		
-	if(!g_dDetour[4].Enable(Hook_Pre, mreCanZombieSpawnHerePre))
-		SetFailState("Failed to detour pre: ZombieManager::CanZombieSpawnHere");
-		
-	if(!g_dDetour[4].Enable(Hook_Post, mreCanZombieSpawnHerePost))
-		SetFailState("Failed to detour post: ZombieManager::CanZombieSpawnHere");
-
-	g_dDetour[5] = DynamicDetour.FromConf(hGameData, "CDirector::IsInTransition");
-	if(g_dDetour[5] == null)
-		SetFailState("Failed to load signature: CDirector::IsInTransition");
-
-	if(!g_dDetour[5].Enable(Hook_Post, mreIsInTransitionPost))
-		SetFailState("Failed to detour post: CDirector::IsInTransition");
 }
 
 void vDisableDetours()
@@ -2678,12 +2661,6 @@ void vDisableDetours()
 		
 	if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dDetour[3].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
 		SetFailState("Failed to disable detour: ForEachTerrorPlayer<SpawnablePZScan>");
-		
-	if(!g_dDetour[4].Enable(Hook_Pre, mreCanZombieSpawnHerePre) || !g_dDetour[4].Disable(Hook_Post, mreCanZombieSpawnHerePost))
-		SetFailState("Failed to disable detour: ZombieManager::CanZombieSpawnHere");
-
-	if(!g_dDetour[5].Disable(Hook_Post, mreIsInTransitionPost))
-		SetFailState("Failed to disable detour: CDirector::IsInTransition");
 }
 
 public MRESReturn mreOnEnterGhostStatePre(int pThis)
@@ -2751,30 +2728,6 @@ public MRESReturn mreForEachTerrorPlayerSpawnablePZScanPost()
 	return MRES_Ignored;
 }
 
-bool g_bCanZombieSpawnHere;
-public MRESReturn mreCanZombieSpawnHerePre()
-{
-	g_bCanZombieSpawnHere = true;
-	return MRES_Ignored;
-}
-
-public MRESReturn mreCanZombieSpawnHerePost()
-{
-	g_bCanZombieSpawnHere = false;
-	return MRES_Ignored;
-}
-
-public MRESReturn mreIsInTransitionPost(DHookReturn hReturn)
-{
-	if(g_bCanZombieSpawnHere)
-	{
-		hReturn.Value = 0;
-		return MRES_Supercede;
-	}
-
-	return MRES_Ignored;
-}
-
 void OnNextFrame_EnterGhostState(int client)
 {
 	if(g_bHasPlayerControlledZombies == false && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") != 8 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
@@ -2821,7 +2774,7 @@ public Action Timer_PZSuicide(Handle timer, int client)
 	}
 }
 
-void vSpawnablePZScanProtect(int iState)
+static void vSpawnablePZScanProtect(int iState)
 {
 	static int i;
 	static bool bResetGhost[MAXPLAYERS + 1];
