@@ -36,22 +36,6 @@
 				"return"		"void"
 				"this"			"ignore"
 			}
-			/* ZombieManager::CanZombieSpawnHere(int, int, CNavArea *, int, int, int) */
-			"ZombieManager::CanZombieSpawnHere"
-			{
-				"signature"		"ZombieManager::CanZombieSpawnHere"
-				"callconv"		"thiscall"
-				"return"		"void"
-				"this"			"ignore"
-			}
-			/* CDirector::IsInTransition(void) */
-			"CDirector::IsInTransition"
-			{
-				"signature"		"CDirector::IsInTransition"
-				"callconv"		"thiscall"
-				"return"		"int"
-				"this"			"ignore"
-			}
 		}
 
 		"Addresses"
@@ -136,18 +120,6 @@
 			{
 				"library"	"server"
 				"linux"		"@_Z19ForEachTerrorPlayerI15SpawnablePZScanEbRT_"
-			}
-			/* ZombieManager::CanZombieSpawnHere(int, int, CNavArea *, int, int, int) */
-			"ZombieManager::CanZombieSpawnHere"
-			{
-				"library"	"server"
-				"linux"		"@_ZNK13ZombieManager18CanZombieSpawnHereERK6VectorP13TerrorNavArea15ZombieClassTypebP20CBaseCombatCharacter"
-			}
-			/* CDirector::IsInTransition(void) */
-			"CDirector::IsInTransition"
-			{
-				"library"	"server"
-				"linux"		"@_ZNK9CDirector14IsInTransitionEv"
 			}
 			"SetClass"
 			{
