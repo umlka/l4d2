@@ -538,40 +538,6 @@ void vGetColorCvars()
 	int i;
 	for(; i < 4; i++)
 		g_iGlowColor[i] = iGetColor(g_hGlowColor[i]);
-		
-	if(g_bHasPlayerControlledZombies == false && bHasPlayerZombie())
-	{
-		for(i = 1; i <= MaxClients; i++)
-		{
-			if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && bIsValidEntRef(g_iModelEntRef[i]))
-				vSetGlowColor(i);
-		}
-	}
-}
-
-void vSetGlowColor(int client)
-{
-	static int iColorType;
-	if(GetEntProp(g_iModelEntRef[client], Prop_Send, "m_glowColorOverride") != g_iGlowColor[(iColorType = iGetColorType(client))])
-		SetEntProp(g_iModelEntRef[client], Prop_Send, "m_glowColorOverride", g_iGlowColor[iColorType]);
-}
-
-static int iGetColorType(int client)
-{
-	if(GetEntProp(client, Prop_Send, "m_currentReviveCount") >= g_iSurvivorMaxIncapacitatedCount)
-		return 2;
-	else
-	{
-		if(GetEntProp(client, Prop_Send, "m_isIncapacitated") > 0)
-			return 1;
-		else
-		{
-			if(GetEntPropFloat(client, Prop_Send, "m_vomitFadeStart") + 5.0 >= GetGameTime())
-				return 3;
-			else
-				return 0;
-		}
-	}
 }
 
 int iGetColor(ConVar hConVar)
@@ -1780,7 +1746,7 @@ public Action Hook_SetTransmit(int entity, int client)
 
 public void Hook_PostThinkPost(int client)
 {
-	if(GetClientTeam(client) != 2 || !IsPlayerAlive(client) || !bIsValidEntRef(g_iModelEntRef[client]))
+	if(/*GetClientTeam(client) != 2 || !IsPlayerAlive(client) || */!bIsValidEntRef(g_iModelEntRef[client]))
 	{
 		SDKUnhook(client, SDKHook_PostThinkPost, Hook_PostThinkPost);
 		return;
@@ -1796,6 +1762,31 @@ public void Hook_PostThinkPost(int client)
 	}
 
 	vSetGlowColor(client);
+}
+
+static void vSetGlowColor(int client)
+{
+	static int iColorType;
+	if(GetEntProp(g_iModelEntRef[client], Prop_Send, "m_glowColorOverride") != g_iGlowColor[(iColorType = iGetColorType(client))])
+		SetEntProp(g_iModelEntRef[client], Prop_Send, "m_glowColorOverride", g_iGlowColor[iColorType]);
+}
+
+static int iGetColorType(int client)
+{
+	if(GetEntProp(client, Prop_Send, "m_currentReviveCount") >= g_iSurvivorMaxIncapacitatedCount)
+		return 2;
+	else
+	{
+		if(GetEntProp(client, Prop_Send, "m_isIncapacitated") > 0)
+			return 1;
+		else
+		{
+			if(GetEntPropFloat(client, Prop_Send, "m_vomitFadeStart") + 15.0 >= GetGameTime())
+				return 3;
+			else
+				return 0;
+		}
+	}
 }
 
 void vRemoveSurvivorModelGlow(int client)
