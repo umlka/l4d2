@@ -263,8 +263,8 @@ int g_iModelIndex[MAXPLAYERS + 1];
 int g_iModelEntRef[MAXPLAYERS + 1];
 int g_iPZRespawnCountdown[MAXPLAYERS + 1];
 
-float g_fMapTime;
 float g_fSurvuivorAllowChance;
+float g_fMapStartTime;
 float g_fPZSuicideTime;
 float g_fCmdCooldownTime;
 float g_fCmdLastUsedTime[MAXPLAYERS + 1];
@@ -949,8 +949,10 @@ void vResetInfectedAbility(int client, float fTime)
 
 public void OnMapStart()
 {
-	g_fMapTime = GetGameTime();
 	PrecacheSound(SOUND_CLASSMENU);
+	g_fMapStartTime = GetGameTime();
+	for(int i = 1; i <= MaxClients; i++)
+		g_fBugExploitTime[i][0] = g_fBugExploitTime[i][1] = g_fMapStartTime;
 }
 
 public void OnMapEnd()
@@ -959,10 +961,7 @@ public void OnMapEnd()
 	g_iPlayerSpawn = 0;
 	g_bHasAnySurvivorLeftSafeArea = false;
 	for(int i = 1; i <= MaxClients; i++)
-	{
 		vDeleteTimer(i);
-		vResetClientData(i);
-	}
 }
 
 public void OnClientDisconnect(int client)
@@ -1068,10 +1067,7 @@ public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 	g_iRoundStart = 1;
 
 	for(int i = 1; i <= MaxClients; i++)
-	{
 		vDeleteTimer(i);
-		g_fBugExploitTime[i][0] = g_fBugExploitTime[i][1] = GetGameTime();
-	}
 }
 
 //移除一些限制特感的透明墙体，增加活动空间. 并且能够修复C2M5上面坦克卡住的情况
@@ -1784,7 +1780,7 @@ static int iGetColorType(int client)
 		else
 		{
 			static float fFadeStartTime;
-			if((fFadeStartTime = GetEntPropFloat(client, Prop_Send, "m_vomitFadeStart")) > g_fMapTime && fFadeStartTime >= GetGameTime() - 15.0)
+			if((fFadeStartTime = GetEntPropFloat(client, Prop_Send, "m_vomitFadeStart")) > g_fMapStartTime && fFadeStartTime >= GetGameTime() - 15.0)
 				return 3;
 			else
 				return 0;
