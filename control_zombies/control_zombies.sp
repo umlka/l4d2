@@ -1746,10 +1746,10 @@ public void Hook_PostThinkPost(int client)
 {
 	if(bIsValidEntRef(g_iModelEntRef[client]))
 	{
-		static int iLastModelIndex;
-		if(g_iModelIndex[client] && g_iModelIndex[client] != (iLastModelIndex = GetEntProp(client, Prop_Data, "m_nModelIndex")))
+		static int iModelIndex;
+		if(g_iModelIndex[client] && g_iModelIndex[client] != (iModelIndex = GetEntProp(client, Prop_Data, "m_nModelIndex")))
 		{
-			g_iModelIndex[client] = iLastModelIndex;
+			g_iModelIndex[client] = iModelIndex;
 
 			static char sModelName[128];
 			GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
