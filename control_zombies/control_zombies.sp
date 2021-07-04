@@ -263,6 +263,7 @@ int g_iModelIndex[MAXPLAYERS + 1];
 int g_iModelEntRef[MAXPLAYERS + 1];
 int g_iPZRespawnCountdown[MAXPLAYERS + 1];
 
+float g_fMapTime;
 float g_fSurvuivorAllowChance;
 float g_fPZSuicideTime;
 float g_fCmdCooldownTime;
@@ -948,6 +949,7 @@ void vResetInfectedAbility(int client, float fTime)
 
 public void OnMapStart()
 {
+	g_fMapTime = GetGameTime();
 	PrecacheSound(SOUND_CLASSMENU);
 }
 
@@ -1781,7 +1783,8 @@ static int iGetColorType(int client)
 			return 1;
 		else
 		{
-			if(GetEntPropFloat(client, Prop_Send, "m_vomitFadeStart") + 15.0 >= GetGameTime())
+			static float fFadeStartTime;
+			if((fFadeStartTime = GetEntPropFloat(client, Prop_Send, "m_vomitFadeStart")) > g_fMapTime && fFadeStartTime >= GetGameTime() - 15.0)
 				return 3;
 			else
 				return 0;
