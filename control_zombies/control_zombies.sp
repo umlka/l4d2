@@ -274,7 +274,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.1.2",
+	version = "3.1.3",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -1746,22 +1746,22 @@ public Action Hook_SetTransmit(int entity, int client)
 
 public void Hook_PostThinkPost(int client)
 {
-	if(/*GetClientTeam(client) != 2 || !IsPlayerAlive(client) || */!bIsValidEntRef(g_iModelEntRef[client]))
+	if(bIsValidEntRef(g_iModelEntRef[client]))
 	{
+		static int iLastModelIndex;
+		if(g_iModelIndex[client] && g_iModelIndex[client] != (iLastModelIndex = GetEntProp(client, Prop_Data, "m_nModelIndex")))
+		{
+			g_iModelIndex[client] = iLastModelIndex;
+
+			static char sModelName[128];
+			GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
+			SetEntityModel(g_iModelEntRef[client], sModelName);
+		}
+
+		vSetGlowColor(client);
+	}
+	else
 		SDKUnhook(client, SDKHook_PostThinkPost, Hook_PostThinkPost);
-		return;
-	}
-
-	if(g_iModelIndex[client] && g_iModelIndex[client] != GetEntProp(client, Prop_Data, "m_nModelIndex"))
-	{
-		g_iModelIndex[client] = GetEntProp(client, Prop_Data, "m_nModelIndex");
-
-		static char sModelName[128];
-		GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
-		SetEntityModel(g_iModelEntRef[client], sModelName);
-	}
-
-	vSetGlowColor(client);
 }
 
 static void vSetGlowColor(int client)
@@ -1789,16 +1789,17 @@ static int iGetColorType(int client)
 	}
 }
 
-void vRemoveSurvivorModelGlow(int client)
+static void vRemoveSurvivorModelGlow(int client)
 {
-	int entity = g_iModelEntRef[client];
+	static int entity;
+	entity = g_iModelEntRef[client];
 	g_iModelEntRef[client] = 0;
 
 	if(bIsValidEntRef(entity))
 		RemoveEntity(entity);
 }
 
-bool bIsValidEntRef(int entity)
+static bool bIsValidEntRef(int entity)
 {
 	if(entity && EntRefToEntIndex(entity) != INVALID_ENT_REFERENCE)
 		return true;
