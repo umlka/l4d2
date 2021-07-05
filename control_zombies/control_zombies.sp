@@ -223,8 +223,8 @@ ConVar g_hSpawnLimits[6];
 ConVar g_hSpawnWeights[6];
 ConVar g_hScaleWeights;
 
-bool g_bHasAnySurvivorLeftSafeArea;
 bool g_bHasPlayerControlledZombies;
+bool g_bHasAnySurvivorLeftSafeArea;
 bool g_bSbAllBotGame;
 bool g_bAllowAllBotSurvivorTeam;
 bool g_bExchangeTeam;
@@ -279,16 +279,12 @@ public Plugin myinfo =
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
-bool g_bLateLoad;
-
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	CreateNative("CZ_SetSpawnablePZ", aNative_SetSpawnablePZ);
 	CreateNative("CZ_ResetSpawnablePZ", aNative_ResetSpawnablePZ);
 
 	RegPluginLibrary("control_zombies");
-	
-	g_bLateLoad = late;
 	return APLRes_Success;
 }
 
@@ -394,36 +390,13 @@ public void OnPluginStart()
 	hConVar.SetBounds(ConVarBound_Upper, true, 32.0);
 	hConVar.IntValue = 32;
 
-	//https://wiki.alliedmods.net/Events_(SourceMod_Scripting)#Hooking_Events 防止某些插件在Pre挂钩上面阻止事件广播，导致Post挂钩监听不到事件触发
-	HookEvent("player_left_start_area", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
-	HookEvent("player_left_checkpoint", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
-	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("finale_vehicle_leaving", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("player_team", Event_PlayerTeam);
-	HookEvent("player_spawn", Event_PlayerSpawn);
-	HookEvent("player_death", Event_PlayerDeath);
-	HookEvent("tank_frustrated", Event_TankFrustrated);
-	HookEvent("bot_player_replace", Event_ClientReplace);
-	HookEvent("player_bot_replace", Event_ClientReplace);
-
-	AddCommandListener(CommandListener_CallVote, "callvote");
+	vIsAllowed();
 
 	RegConsoleCmd("sm_team4", CmdTeam4, "切换到Team 4.");
 	RegConsoleCmd("sm_team2", CmdTeam2, "切换到Team 2.");
 	RegConsoleCmd("sm_team3", CmdTeam3, "切换到Team 3.");
 	RegConsoleCmd("sm_bp", CmdBP, "叛变为坦克.");
 	RegConsoleCmd("sm_class", CmdChangeClass, "更改特感类型.");
-	
-	if(g_bLateLoad)
-	{
-		if(SDKCall(g_hSDK_Call_HasPlayerControlledZombies) == false && bHasPlayerZombie())
-		{
-			for(i = 1; i <= MaxClients; i++)
-				vCreateSurvivorModelGlow(i);
-		}
-	}
 }
 
 public void OnPluginEnd()
@@ -448,7 +421,7 @@ public void OnPluginEnd()
 
 public void OnConfigsExecuted()
 {
-	vGetModeCvars();
+	vIsAllowed();
 	vGetOtherCvars();
 	vGetColorCvars();
 	vGetSpawnCvars();
@@ -457,49 +430,100 @@ public void OnConfigsExecuted()
 
 public void vModeConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	vGetModeCvars();
+	vIsAllowed();
 }
 
-void vGetModeCvars()
+void vIsAllowed()
 {
 	g_hGameMode.GetString(g_sGameMode, sizeof(g_sGameMode));
 
 	bool bLast = g_bHasPlayerControlledZombies;
 	g_bHasPlayerControlledZombies = SDKCall(g_hSDK_Call_HasPlayerControlledZombies);
-	if(bLast != g_bHasPlayerControlledZombies)
+	if(g_bHasPlayerControlledZombies == true)
 	{
-		if(g_bHasPlayerControlledZombies == true) //coop->versus
+		vEvents(false);
+		if(bLast != g_bHasPlayerControlledZombies)
 		{
 			for(int i = 1; i <= MaxClients; i++)
 			{
+				vDeleteTimer(i);
+				vResetClientData(i);
 				if(IsClientInGame(i) && GetClientTeam(i) == 2)
 					vRemoveSurvivorModelGlow(i);
 			}
 		}
-		else if(bHasPlayerZombie()) //versus->coop
+	}
+	else
+	{
+		vEvents(true);
+		if(bLast != g_bHasPlayerControlledZombies)
 		{
-			for(int i = 1; i <= MaxClients; i++)
+			if(bHasPlayerZombie())
 			{
-				if(!IsClientInGame(i))
-					continue;
-
-				switch(GetClientTeam(i))
+				for(int i = 1; i <= MaxClients; i++)
 				{
-					case 2:
-						vCreateSurvivorModelGlow(i);
+					if(!IsClientInGame(i))
+						continue;
 
-					case 3:
+					switch(GetClientTeam(i))
 					{
-						if(!IsFakeClient(i))
+						case 2:
+							vCreateSurvivorModelGlow(i);
+
+						case 3:
 						{
-							//ChangeClientTeam(i, 1);
-							//ChangeClientTeam(i, 3);
-							CPrintToChat(i, "如果看不到[{red}特感梯子{default}]，请先[{olive}切换{default}]到其他[{red}团队{default}]再切换回来刷新[{olive}显示状态{default}]");
+							if(!IsFakeClient(i))
+							{
+								//ChangeClientTeam(i, 1);
+								//ChangeClientTeam(i, 3);
+								CPrintToChat(i, "如果看不到[{red}特感梯子{default}]，请先[{olive}切换{default}]到其他[{red}团队{default}]再切换回来刷新[{olive}显示状态{default}]");
+							}
 						}
 					}
 				}
 			}
 		}
+	}
+}
+
+void vEvents(bool bHook)
+{
+	static bool bHooked;
+	if(!bHooked && bHook)
+	{
+		bHooked = true;
+		HookEvent("player_left_start_area", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
+		HookEvent("player_left_checkpoint", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
+		HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+		HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+		HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
+		HookEvent("finale_vehicle_leaving", Event_RoundEnd, EventHookMode_PostNoCopy);
+		HookEvent("player_team", Event_PlayerTeam);
+		HookEvent("player_spawn", Event_PlayerSpawn);
+		HookEvent("player_death", Event_PlayerDeath);
+		HookEvent("tank_frustrated", Event_TankFrustrated);
+		HookEvent("bot_player_replace", Event_ClientReplace);
+		HookEvent("player_bot_replace", Event_ClientReplace);
+
+		AddCommandListener(CommandListener_CallVote, "callvote");
+	}
+	else if(bHooked && !bHook)
+	{
+		bHooked = false;
+		UnhookEvent("player_left_start_area", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
+		UnhookEvent("player_left_checkpoint", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
+		UnhookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+		UnhookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+		UnhookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
+		UnhookEvent("finale_vehicle_leaving", Event_RoundEnd, EventHookMode_PostNoCopy);
+		UnhookEvent("player_team", Event_PlayerTeam);
+		UnhookEvent("player_spawn", Event_PlayerSpawn);
+		UnhookEvent("player_death", Event_PlayerDeath);
+		UnhookEvent("tank_frustrated", Event_TankFrustrated);
+		UnhookEvent("bot_player_replace", Event_ClientReplace);
+		UnhookEvent("player_bot_replace", Event_ClientReplace);
+
+		RemoveCommandListener(CommandListener_CallVote, "callvote");
 	}
 }
 
@@ -547,19 +571,19 @@ int iGetColor(ConVar hConVar)
 	hConVar.GetString(sTemp, sizeof(sTemp));
 
 	if(sTemp[0] == 0)
-		return 0;
+		return 1;
 
 	char sColors[3][4];
 	int iColor = ExplodeString(sTemp, " ", sColors, sizeof(sColors), sizeof(sColors[]));
 
 	if(iColor != 3)
-		return 0;
-
+		return 1;
+		
 	iColor = StringToInt(sColors[0]);
 	iColor += 256 * StringToInt(sColors[1]);
 	iColor += 65536 * StringToInt(sColors[2]);
 
-	return iColor;
+	return iColor > 0 ? iColor : 1;
 }
 
 public void vAdminConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -597,7 +621,7 @@ void vGetAdminImmunityLevels()
 		g_iAdminImmunityLevels[i] = StringToInt(sAdminImmunityLevels[i]);
 }
 
-bool bCheckClientAccess(int client, int iIndex)
+static bool bCheckClientAccess(int client, int iIndex)
 {
 	if(g_iAccessAdminFlags[iIndex] == 0)
 		return true;
@@ -633,6 +657,12 @@ void vGetSpawnCvars()
 
 public Action CmdTeam4(int client, int args)
 {
+	if(g_bHasPlayerControlledZombies)
+	{
+		ReplyToCommand(client, "仅支持战役模式");
+		return Plugin_Handled;
+	}
+
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
@@ -648,6 +678,12 @@ public Action CmdTeam4(int client, int args)
 
 public Action CmdTeam2(int client, int args)
 {
+	if(g_bHasPlayerControlledZombies)
+	{
+		ReplyToCommand(client, "仅支持战役模式");
+		return Plugin_Handled;
+	}
+
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
@@ -677,6 +713,12 @@ public Action CmdTeam2(int client, int args)
 
 public Action CmdTeam3(int client, int args)
 {
+	if(g_bHasPlayerControlledZombies)
+	{
+		ReplyToCommand(client, "仅支持战役模式");
+		return Plugin_Handled;
+	}
+
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 3)
 		return Plugin_Handled;
 
@@ -711,6 +753,12 @@ public Action CmdTeam3(int client, int args)
 
 public Action CmdBP(int client, int args)
 {
+	if(g_bHasPlayerControlledZombies)
+	{
+		ReplyToCommand(client, "仅支持战役模式");
+		return Plugin_Handled;
+	}
+
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
@@ -745,6 +793,12 @@ public Action CmdBP(int client, int args)
 
 public Action CmdChangeClass(int client, int args)
 {
+	if(g_bHasPlayerControlledZombies)
+	{
+		ReplyToCommand(client, "仅支持战役模式");
+		return Plugin_Handled;
+	}
+
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 	
@@ -901,7 +955,7 @@ public Action CommandListener_CallVote(int client, const char[] command, int arg
 // INSIDE_ENTITY	 1024  "Can't spawn here" "Something is blocking this spot"
 public Action OnPlayerRunCmd(int client, int &buttons)
 {
-	if(IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client))
+	if(g_bHasPlayerControlledZombies || IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client))
 		return Plugin_Continue;
 
 	static int iFlags;
@@ -1022,7 +1076,7 @@ public Action CheckSurvivorLeftSafeArea(Handle timer)
 	{
 		g_bHasAnySurvivorLeftSafeArea = true;
 
-		if(g_iPZRespawnTime > 0 && g_bHasPlayerControlledZombies == false)
+		if(g_iPZRespawnTime > 0 && !g_bHasPlayerControlledZombies)
 		{
 
 			for(int i = 1; i <= MaxClients; i++)
@@ -1093,8 +1147,7 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 		vResetClientData(i);
 	}
 
-	if(g_bHasPlayerControlledZombies == false)
-		vForceChangeTeamTo();
+	vForceChangeTeamTo();
 }
 
 void vForceChangeTeamTo()
@@ -1128,15 +1181,15 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 	int team = event.GetInt("team");
 	if(team == 2)
 		RequestFrame(OnNextFrame_CreateSurvivorModelGlow, userid);
-	
+
 	if(IsFakeClient(client))
 		return;
 
-	CreateTimer(0.1, Timer_LadderAndGlow, userid, TIMER_FLAG_NO_MAPCHANGE);
-
 	if(team == 3)
 	{
-		if(g_bHasPlayerControlledZombies == false && g_bHasAnySurvivorLeftSafeArea == true && g_iPZRespawnTime > 0)
+		CreateTimer(0.1, Timer_LadderAndGlow, userid, TIMER_FLAG_NO_MAPCHANGE);
+	
+		if(g_iPZRespawnTime > 0 && g_bHasAnySurvivorLeftSafeArea == true)
 		{
 			delete g_hPZRespawnTimer[client];
 			vCalculatePZRespawnTime(client);
@@ -1144,26 +1197,31 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		}
 	}
 
-	int oldteam = event.GetInt("oldteam");
-	if(oldteam == 3)
+	switch(event.GetInt("oldteam"))
 	{
-		g_iLastTeamId[client] = 0;
+		case 0:
+		{
+			if(team == 3 && (g_iPZChangeTeamTo || g_iLastTeamId[client] == 3))
+				RequestFrame(OnNextFrame_ChangeTeamTo, userid);
 
-		if(team == 2 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
-			SetEntProp(client, Prop_Send, "m_isGhost", 0); //SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
-	}
-	else if(oldteam == 0)
-	{
-		if(team == 3 && (g_iPZChangeTeamTo || g_iLastTeamId[client] == 3))
-			RequestFrame(OnNextFrame_ChangeTeamTo, userid);
+			g_iLastTeamId[client] = 0;
+		}
+		
+		case 3:
+		{
+			g_iLastTeamId[client] = 0;
 
-		g_iLastTeamId[client] = 0;
+			if(team == 2 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+				SetEntProp(client, Prop_Send, "m_isGhost", 0); //SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
+			
+			CreateTimer(0.1, Timer_LadderAndGlow, userid, TIMER_FLAG_NO_MAPCHANGE);
+		}
 	}
 }
 
 public Action Timer_LadderAndGlow(Handle timer, int client)
 {
-	if(g_bHasPlayerControlledZombies == false && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client))
+	if(!g_bHasPlayerControlledZombies && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client))
 	{
 		if(GetClientTeam(client) == 3)
 		{
@@ -1193,7 +1251,7 @@ public Action Timer_LadderAndGlow(Handle timer, int client)
 
 void OnNextFrame_ChangeTeamTo(int client)
 {
-	if(g_bHasPlayerControlledZombies == false && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3)
+	if(!g_bHasPlayerControlledZombies && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3)
 	{
 		switch(g_iPZChangeTeamTo)
 		{
@@ -1214,62 +1272,59 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
 	int userid = event.GetInt("userid");
 	int client = GetClientOfUserId(userid);
-	if(IsPlayerAlive(client))
-	{
-		g_iTankBot[client] = 0;
+	if(!IsPlayerAlive(client))
+		return;
+	
+	g_iTankBot[client] = 0;
 
-		if(!IsFakeClient(client) && GetClientTeam(client) == 3)
+	if(!IsFakeClient(client) && GetClientTeam(client) == 3)
+	{
+		switch(g_iPZSpawned[client])
 		{
-			if(g_iPZSpawned[client] == 0)
+			case 0:
 			{
 				if(GetEntProp(client, Prop_Send, "m_isGhost") == 0)
 					vSetInfectedGhost(client, GetEntProp(client, Prop_Send, "m_zombieClass") == 8);
 			}
-			else if(g_iPZSpawned[client] == 1)
+				
+			case 1:
 			{
-				if(g_bHasPlayerControlledZombies == false && g_iPZRespawnTime > 0 && g_iPZPunishTime > 0 && g_bUsedClassCmd[client] && GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
+				if(g_iPZRespawnTime > 0 && g_iPZPunishTime > 0 && g_bUsedClassCmd[client] && GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
 					CPrintToChat(client, "{olive}下次重生时间 {default}-> {red}+%d秒", g_iPZPunishTime);
 			}
 		}
-
-		g_iPZSpawned[client]++;
-		RequestFrame(OnNextFrame_PlayerSpawn, userid); //player_bot_replace在player_spawn之后触发，延迟一帧进行接管判断
 	}
+
+	g_iPZSpawned[client]++;
+	RequestFrame(OnNextFrame_PlayerSpawn, userid); //player_bot_replace在player_spawn之后触发，延迟一帧进行接管判断
 }
 
-void OnNextFrame_PlayerSpawn(int userid)
+void OnNextFrame_PlayerSpawn(int client)
 {
-	int client = GetClientOfUserId(userid);
-	if(client == 0 || !IsClientInGame(client) || IsClientInKickQueue(client) || !IsPlayerAlive(client))
+	if(g_bHasPlayerControlledZombies || (client = GetClientOfUserId(client))== 0 || !IsClientInGame(client) || IsClientInKickQueue(client) || !IsPlayerAlive(client))
 		return;
 
 	switch(GetClientTeam(client))
 	{
 		case 2:
 		{
-			if(g_bHasPlayerControlledZombies == false && bHasPlayerZombie())
+			if(bHasPlayerZombie())
 				vCreateSurvivorModelGlow(client);
 		}
 		
 		case 3:
 		{
-			if(bIsRoundStarted() == true)
+			if(g_iRoundStart && IsFakeClient(client) && GetEntProp(client, Prop_Send, "m_zombieClass") == 8)
 			{
-				if(IsFakeClient(client))
+				int iPlayer;
+				if(g_iTankBot[client] != 2 && iGetTankPlayers() < g_iMaxTankPlayer)
 				{
-					if(g_bHasPlayerControlledZombies == false && GetEntProp(client, Prop_Send, "m_zombieClass") == 8)
-					{
-						int iPlayer;
-						if(g_iTankBot[client] != 2 && iGetTankPlayers() < g_iMaxTankPlayer)
-						{
-							if((iPlayer = iTakeOverTank(client)))
-								CPrintToChatAll("{green}★ {red}AI Tank {default}已被 {red}%N {olive}接管", iPlayer);
-						}
-
-						if(iPlayer == 0 && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_Call_IsInStasis, client)))
-							SDKCall(g_hSDK_Call_LeaveStasis, client); //解除战役模式下特感方有玩家存在时坦克卡住的问题
-					}
+					if((iPlayer = iTakeOverTank(client)))
+						CPrintToChatAll("{green}★ {red}AI Tank {default}已被 {red}%N {olive}接管", iPlayer);
 				}
+
+				if(iPlayer == 0 && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_Call_IsInStasis, client)))
+					SDKCall(g_hSDK_Call_LeaveStasis, client); //解除战役模式下特感方有玩家存在时坦克卡住的问题
 			}
 		}
 	}
@@ -1290,7 +1345,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 		case 2:
 		{
 			vRemoveSurvivorModelGlow(client);
-			if(g_bHasPlayerControlledZombies == false && g_bExchangeTeam && !IsFakeClient(client))
+			if(g_bExchangeTeam && !IsFakeClient(client))
 			{
 				int attacker = GetClientOfUserId(event.GetInt("attacker"));
 				if(0 < attacker <= MaxClients && !IsFakeClient(attacker) && GetClientTeam(attacker) == 3 && GetEntProp(attacker, Prop_Send, "m_zombieClass") != 8)
@@ -1308,7 +1363,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 		
 		case 3:
 		{
-			if(g_bHasPlayerControlledZombies == false && !IsFakeClient(client))
+			if(!IsFakeClient(client))
 			{
 				if(g_bHasAnySurvivorLeftSafeArea == true && g_iPZRespawnTime > 0)
 				{
@@ -1332,7 +1387,7 @@ public Action Timer_PZRespawn(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) && IsClientInGame(client))
 	{
-		if(g_bHasPlayerControlledZombies == false && !IsFakeClient(client) && GetClientTeam(client) == 3 && !IsPlayerAlive(client))
+		if(!IsFakeClient(client) && GetClientTeam(client) == 3 && !IsPlayerAlive(client))
 		{
 			if(g_iPZRespawnCountdown[client] > 0)
 				PrintHintText(client, "%d 秒后重生", g_iPZRespawnCountdown[client]--);
@@ -1391,9 +1446,6 @@ bool bRespawnPZ(int client, int iZombieClass)
 
 public void Event_TankFrustrated(Event event, const char[] name, bool dontBroadcast)
 {
-	if(g_bHasPlayerControlledZombies == true)
-		return;
-
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(g_iLastTeamId[client] != 2 || IsFakeClient(client))
 		return;
@@ -1686,7 +1738,7 @@ bool bIsPinned(int client)
 
 void OnNextFrame_CreateSurvivorModelGlow(int client)
 {
-	if(g_bHasPlayerControlledZombies == false && bHasPlayerZombie())
+	if(!g_bHasPlayerControlledZombies && bHasPlayerZombie())
 		vCreateSurvivorModelGlow(GetClientOfUserId(client));
 }
 
@@ -1724,7 +1776,7 @@ void vCreateSurvivorModelGlow(int client)
 	SetEntProp(iEntity, Prop_Send, "m_iGlowType", 3);
 	SetEntProp(iEntity, Prop_Send, "m_nGlowRange", 20000);
 	SetEntProp(iEntity, Prop_Send, "m_nGlowRangeMin", 1);
-	vSetGlowColor(client);
+	//vSetGlowColor(client);
 
 	SetVariantString("!activator");
 	AcceptEntityInput(iEntity, "SetAttached", client);
@@ -1744,22 +1796,20 @@ public Action Hook_SetTransmit(int entity, int client)
 
 public void Hook_PostThinkPost(int client)
 {
-	if(bIsValidEntRef(g_iModelEntRef[client]))
+	if(GetClientTeam(client) != 2 || !IsPlayerAlive(client) || !bIsValidEntRef(g_iModelEntRef[client]))
+		return;
+
+	static int iModelIndex;
+	if(g_iModelIndex[client] && g_iModelIndex[client] != (iModelIndex = GetEntProp(client, Prop_Data, "m_nModelIndex")))
 	{
-		static int iModelIndex;
-		if(g_iModelIndex[client] && g_iModelIndex[client] != (iModelIndex = GetEntProp(client, Prop_Data, "m_nModelIndex")))
-		{
-			g_iModelIndex[client] = iModelIndex;
+		g_iModelIndex[client] = iModelIndex;
 
-			static char sModelName[128];
-			GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
-			SetEntityModel(g_iModelEntRef[client], sModelName);
-		}
-
-		vSetGlowColor(client);
+		static char sModelName[128];
+		GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
+		SetEntityModel(g_iModelEntRef[client], sModelName);
 	}
-	else
-		SDKUnhook(client, SDKHook_PostThinkPost, Hook_PostThinkPost);
+
+	vSetGlowColor(client);
 }
 
 static void vSetGlowColor(int client)
@@ -1795,7 +1845,10 @@ static void vRemoveSurvivorModelGlow(int client)
 	g_iModelEntRef[client] = 0;
 
 	if(bIsValidEntRef(entity))
+	{
 		RemoveEntity(entity);
+		SDKUnhook(client, SDKHook_PostThinkPost, Hook_PostThinkPost);
+	}
 }
 
 static bool bIsValidEntRef(int entity)
@@ -1809,7 +1862,7 @@ static bool bIsValidEntRef(int entity)
 //切换回生还者
 void OnNextFrame_ChangeTeamToSurvivor(int client)
 {
-	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
+	if(g_bHasPlayerControlledZombies || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
 		return;
 
 	vChangeTeamToSurvivor(client);
@@ -2656,7 +2709,7 @@ void vDisableDetours()
 
 public MRESReturn mreOnEnterGhostStatePre(int pThis)
 {
-	if(g_bHasPlayerControlledZombies == false && bIsRoundStarted() == false)
+	if(!g_bHasPlayerControlledZombies && bIsRoundStarted() == false)
 		return MRES_Supercede; //阻止死亡状态下的特感玩家在团灭后下一回合开始前进入Ghost State
 	
 	return MRES_Ignored;
@@ -2664,13 +2717,8 @@ public MRESReturn mreOnEnterGhostStatePre(int pThis)
 
 public MRESReturn mreOnEnterGhostStatePost(int pThis)
 {
-	if(!IsFakeClient(pThis) && g_iPZSpawned[pThis] == 0)
-	{
-		if(g_bHasPlayerControlledZombies == false)
-			RequestFrame(OnNextFrame_EnterGhostState, GetClientUserId(pThis));
-		else
-			g_iPZSpawned[pThis]++;
-	}
+	if(!g_bHasPlayerControlledZombies && !IsFakeClient(pThis) && g_iPZSpawned[pThis] == 0)
+		RequestFrame(OnNextFrame_EnterGhostState, GetClientUserId(pThis));
 	
 	return MRES_Ignored;
 }
@@ -2721,7 +2769,7 @@ public MRESReturn mreForEachTerrorPlayerSpawnablePZScanPost()
 
 void OnNextFrame_EnterGhostState(int client)
 {
-	if(g_bHasPlayerControlledZombies == false && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") != 8 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+	if(!g_bHasPlayerControlledZombies && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") != 8 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 	{
 		if(g_iDisplayed[client] == 0)
 		{
@@ -2757,7 +2805,7 @@ public Action Timer_PZSuicide(Handle timer, int client)
 	if((client = GetClientOfUserId(client)) && IsClientInGame(client))
 	{
 		g_hPZSuicideTimer[client] = null;
-		if(g_bHasPlayerControlledZombies == false && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
+		if(!IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
 		{
 			ForcePlayerSuicide(client);
 			CPrintToChat(client, "{olive}复活后自动处死时间 {default}-> {red}%.1f秒", g_fPZSuicideTime);
