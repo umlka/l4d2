@@ -299,16 +299,16 @@ void InitPluginSettings()
 	g_fVersion = 1.80;
 
 	g_hPluginSettings[hVersion] = CreateConVar("em_points_sys_version", PLUGIN_VERSION, "该服务器上的积分系统版本.", FCVAR_NOTIFY|FCVAR_DONTRECORD|FCVAR_REPLICATED);
-	g_hPluginSettings[hStartPoints] = CreateConVar("l4d2_points_start", "10", "每一关/地图刚开始给多少积分.");
-	g_hPluginSettings[hNotifications] = CreateConVar("l4d2_points_notify", "0", "显示获得点数的信息?");
+	g_hPluginSettings[hStartPoints] = CreateConVar("l4d2_points_start", "10", "玩家积分低于该值时将会被重置为该值");
+	g_hPluginSettings[hNotifications] = CreateConVar("l4d2_points_notify", "0", "开关提示信息?");
 	g_hPluginSettings[hEnabled] = CreateConVar("l4d2_points_enable", "1", "启用积分系统?");
-	g_hPluginSettings[hModes] = CreateConVar("l4d2_points_modes", "coop,realism", "哪种游戏模式可以使用积分系统");
+	g_hPluginSettings[hModes] = CreateConVar("l4d2_points_modes", "coop,realism", "哪些游戏模式可以使用积分系统");
 	g_hPluginSettings[hTankLimit] = CreateConVar("l4d2_points_tank_limit", "1", "每个队伍允许产生多少只坦克");
 	g_hPluginSettings[hWitchLimit] = CreateConVar("l4d2_points_witch_limit", "5", "每个队伍允许产生多少只女巫");
-	g_hPluginSettings[hSpawnAttempts] = CreateConVar("l4d2_points_spawn_tries", "2", "购买成为一个特感后允许重生多少次");
-	g_hPluginSettings[hKillSpreeNum] = CreateConVar("l4d2_points_cikills", "15", "你需要杀多少感染者才能获得杀戮赏金");
+	g_hPluginSettings[hSpawnAttempts] = CreateConVar("l4d2_points_spawn_tries", "2", "特感玩家购买特感允许重试多少次");
+	g_hPluginSettings[hKillSpreeNum] = CreateConVar("l4d2_points_cikills", "15", "你需要杀多少普通感染者才能获得杀戮赏金");
 	g_hPluginSettings[hHeadShotNum] = CreateConVar("l4d2_points_headshots", "15", "你需要多少次爆头感染者才能获得猎头奖金");
-	g_hPluginSettings[hInfectedPlayerLimit] = CreateConVar("l4d2_points_infectedplayer_limit", "3", "允许同时存在多少个被感染者玩家");
+	g_hPluginSettings[hInfectedPlayerLimit] = CreateConVar("l4d2_points_infectedplayer_limit", "2", "允许同时存在多少个被感染者玩家");
 }
 
 void InitCategoriesEnabled()
@@ -327,7 +327,7 @@ void InitCategoriesEnabled()
 
 void InitPointRewards()
 {
-	g_hPointRewards[SurvRewardKillSpree] = CreateConVar("l4d2_points_cikill_value", "3", "击杀一定数量的感染者可以获得多少积分");
+	g_hPointRewards[SurvRewardKillSpree] = CreateConVar("l4d2_points_cikill_value", "3", "击杀一定数量的普通感染者可以获得多少积分");
 	g_hPointRewards[SurvRewardHeadShots] = CreateConVar("l4d2_points_headshots_value", "5", "爆头击杀一定数量的感染者可以获得多少积分");
 	g_hPointRewards[SurvKillInfec] = CreateConVar("l4d2_points_sikill", "1", "击杀一个特感可以获得多少积分");
 	g_hPointRewards[SurvKillTank] = CreateConVar("l4d2_points_tankkill", "5", "击杀一只坦克可以获得多少积分");
@@ -351,82 +351,82 @@ void InitPointRewards()
 	g_hPointRewards[InfecBoomSurv] = CreateConVar("l4d2_points_boom", "1", "boomer喷吐生还者可以获得多少积分");
 	g_hPointRewards[InfecIncapSurv] = CreateConVar("l4d2_points_incap", "3", "击倒一个生还者可以获得多少积分");
 	g_hPointRewards[InfecHurtSurv] = CreateConVar("l4d2_points_damage", "1", "造成伤害能得到多少积分");
-	g_hPointRewards[InfecKillSurv] = CreateConVar("l4d2_points_kill", "25", "击杀一个生还者可以获得多少积分");
+	g_hPointRewards[InfecKillSurv] = CreateConVar("l4d2_points_kill", "20", "击杀一个生还者可以获得多少积分");
 }
 
 void InitItemCosts()
 {
-	g_hItemCosts[CostP220] = CreateConVar("l4d2_points_pistol", "5", "购买小手枪需要消耗多少积分");
-	g_hItemCosts[CostMagnum] = CreateConVar("l4d2_points_magnum", "10", "购买马格南手枪需要消耗多少积分");
-	g_hItemCosts[CostUzi] = CreateConVar("l4d2_points_smg", "10", "购买乌兹冲锋枪需要消耗多少积分");
-	g_hItemCosts[CostSilenced] = CreateConVar("l4d2_points_silenced", "10", "购买消音冲锋枪需要消耗多少积分");
-	g_hItemCosts[CostMP5] = CreateConVar("l4d2_points_mp5", "10", "购买MP5冲锋枪需要消耗多少积分");
-	g_hItemCosts[CostM16] = CreateConVar("l4d2_points_m16", "12", "购买M16突击步枪需要消耗多少积分");
-	g_hItemCosts[CostAK47] = CreateConVar("l4d2_points_ak47", "15", "购买AK47突击步枪需要消耗多少积分");
-	g_hItemCosts[CostSCAR] = CreateConVar("l4d2_points_scar", "12", "购买SCAR-H突击步枪需要消耗多少积分");
-	g_hItemCosts[CostSG552] = CreateConVar("l4d2_points_sg552", "12", "购买SG552突击步枪需要消耗多少积分");
-	g_hItemCosts[CostMilitary] = CreateConVar("l4d2_points_military", "20", "购买30发连发狙击枪需要消耗多少积分");
-	g_hItemCosts[CostAWP] = CreateConVar("l4d2_points_awp", "150", "购买awp狙击枪需要消耗多少积分");
-	g_hItemCosts[CostScout] = CreateConVar("l4d2_points_scout", "20", "购买侦察狙击步枪(鸟狙)需要消耗多少积分");
-	g_hItemCosts[CostHunting] = CreateConVar("l4d2_points_hunting", "20", "购买狩猎狙击步枪(猎枪)需要消耗多少积分");
-	g_hItemCosts[CostAuto] = CreateConVar("l4d2_points_auto", "20", "购买一代连喷需要消耗多少积分");
-	g_hItemCosts[CostSPAS] = CreateConVar("l4d2_points_spas", "20", "购买二代连喷需要消耗多少积分");
-	g_hItemCosts[CostChrome] = CreateConVar("l4d2_points_chrome", "10", "购买二代铁喷需要消耗多少积分");
-	g_hItemCosts[CostPump] = CreateConVar("l4d2_points_pump", "10", "购买一代木喷需要消耗多少积分");
-	g_hItemCosts[CostGrenade] = CreateConVar("l4d2_points_grenade", "100", "购买榴弹发射器需要消耗多少积分");
-	g_hItemCosts[CostM60] = CreateConVar("l4d2_points_m60", "100", "购买M60机枪需要消耗多少积分");
-	g_hItemCosts[CostGasCan] = CreateConVar("l4d2_points_gascan", "100", "购买汽油桶需要消耗多少积分");
-	g_hItemCosts[CostOxygen] = CreateConVar("l4d2_points_oxygen", "100", "购买氧气罐需要消耗多少积分");
-	g_hItemCosts[CostPropane] = CreateConVar("l4d2_points_propane", "100", "购买燃气罐需要消耗多少积分");
-	g_hItemCosts[CostGnome] = CreateConVar("l4d2_points_gnome", "15", "购买侏儒人偶需要消耗多少积分");
-	g_hItemCosts[CostCola] = CreateConVar("l4d2_points_cola", "100", "购买可乐瓶需要消耗多少积分");
-	g_hItemCosts[CostFireworks] = CreateConVar("l4d2_points_fireworks", "100", "购买烟花盒需要消耗多少积分");
-	g_hItemCosts[CostKnife] = CreateConVar("l4d2_points_knife", "10", "购买小刀需要消耗多少积分");
-	g_hItemCosts[CostCricketbat] = CreateConVar("l4d2_points_cricketbat", "10", "购买板球棒需要消耗多少积分");
-	g_hItemCosts[CostCrowbar] = CreateConVar("l4d2_points_crowbar", "10", "购买撬棍需要消耗多少积分");
-	g_hItemCosts[CostElectricguitar] = CreateConVar("l4d2_points_electricguitar", "10", "购买电吉他需要消耗多少积分");
-	g_hItemCosts[CostFireaxe] = CreateConVar("l4d2_points_fireaxe", "10", "购买消防斧需要消耗多少积分");
-	g_hItemCosts[CostFryingpan] = CreateConVar("l4d2_points_fryingpan", "10", "购买平底锅需要消耗多少积分");
-	g_hItemCosts[CostGolfclub] = CreateConVar("l4d2_points_golfclub", "10", "购买高尔夫球棍需要消耗多少积分");
-	g_hItemCosts[CostBaseballbat] = CreateConVar("l4d2_points_baseballbat", "10", "购买棒球棒需要消耗多少积分");
-	g_hItemCosts[CostKatana] = CreateConVar("l4d2_points_katana", "10", "购买武士刀需要消耗多少积分");
-	g_hItemCosts[CostMachete] = CreateConVar("l4d2_points_machete", "10", "购买小砍刀需要消耗多少积分");
-	g_hItemCosts[CostTonfa] = CreateConVar("l4d2_points_tonfa", "10", "购买警棍需要消耗多少积分");
-	g_hItemCosts[CostRiotshield] = CreateConVar("l4d2_points_riotshield", "10", "购买防爆盾牌需要消耗多少积分");
-	g_hItemCosts[CostPitchfork] = CreateConVar("l4d2_points_pitchfork", "10", "购买干草叉需要消耗多少积分");
-	g_hItemCosts[CostShovel] = CreateConVar("l4d2_points_shovel", "10", "购买铁铲需要消耗多少积分");
-	g_hItemCosts[CostCustomMelee] = CreateConVar("l4d2_points_custommelee", "50", "购买第三方近战需要消耗多少积分");
-	g_hItemCosts[CostChainsaw] = CreateConVar("l4d2_points_chainsaw", "10", "购买电锯需要消耗多少积分");
-	g_hItemCosts[CostPipe] = CreateConVar("l4d2_points_pipe", "10", "购买土制炸弹需要消耗多少积分");
-	g_hItemCosts[CostMolotov] = CreateConVar("l4d2_points_molotov", "100", "购买燃烧瓶需要消耗多少积分");
-	g_hItemCosts[CostBile] = CreateConVar("l4d2_points_bile", "10", "购买胆汁需要消耗多少积分");
-	g_hItemCosts[CostHealthKit] = CreateConVar("l4d2_points_medkit", "25", "购买医疗包需要消耗多少积分");
-	g_hItemCosts[CostDefib] = CreateConVar("l4d2_points_defib", "30", "购买电击器需要消耗多少积分");
-	g_hItemCosts[CostAdren] = CreateConVar("l4d2_points_adrenaline", "10", "购买肾上腺素需要消耗多少积分");
-	g_hItemCosts[CostPills] = CreateConVar("l4d2_points_pills", "10", "购买止痛药需要消耗多少积分");
-	g_hItemCosts[CostExplosiveAmmo] = CreateConVar("l4d2_points_explosive_ammo", "15", "购买高爆弹药需要消耗多少积分");
-	g_hItemCosts[CostFireAmmo] = CreateConVar("l4d2_points_incendiary_ammo", "15", "购买燃烧弹药需要消耗多少积分");
-	g_hItemCosts[CostExplosivePack] = CreateConVar("l4d2_points_explosive_ammo_pack", "20", "购买高爆弹药包需要消耗多少积分");
-	g_hItemCosts[CostFirePack] = CreateConVar("l4d2_points_incendiary_ammo_pack", "20", "购买燃烧弹药包需要消耗多少积分");
-	g_hItemCosts[CostLaserSight] = CreateConVar("l4d2_points_laser", "10", "购买激光瞄准器需要消耗多少积分");
-	g_hItemCosts[CostHeal] = CreateConVar("l4d2_points_survivor_heal", "35", "购买回满血量需要消耗多少积分");
-	g_hItemCosts[CostAmmo] = CreateConVar("l4d2_points_refill", "10", "购买弹药补充需要消耗多少积分");
+	g_hItemCosts[CostP220] = CreateConVar("l4d2_points_pistol", "5", "购买小手枪需要多少积分");
+	g_hItemCosts[CostMagnum] = CreateConVar("l4d2_points_magnum", "10", "购买马格南手枪需要多少积分");
+	g_hItemCosts[CostUzi] = CreateConVar("l4d2_points_smg", "10", "购买乌兹冲锋枪需要多少积分");
+	g_hItemCosts[CostSilenced] = CreateConVar("l4d2_points_silenced", "10", "购买消音冲锋枪需要多少积分");
+	g_hItemCosts[CostMP5] = CreateConVar("l4d2_points_mp5", "10", "购买MP5冲锋枪需要多少积分");
+	g_hItemCosts[CostM16] = CreateConVar("l4d2_points_m16", "12", "购买M16突击步枪需要多少积分");
+	g_hItemCosts[CostAK47] = CreateConVar("l4d2_points_ak47", "15", "购买AK47突击步枪需要多少积分");
+	g_hItemCosts[CostSCAR] = CreateConVar("l4d2_points_scar", "12", "购买SCAR-H突击步枪需要多少积分");
+	g_hItemCosts[CostSG552] = CreateConVar("l4d2_points_sg552", "12", "购买SG552突击步枪需要多少积分");
+	g_hItemCosts[CostMilitary] = CreateConVar("l4d2_points_military", "20", "购买30发连发狙击枪需要多少积分");
+	g_hItemCosts[CostAWP] = CreateConVar("l4d2_points_awp", "150", "购买awp狙击枪需要多少积分");
+	g_hItemCosts[CostScout] = CreateConVar("l4d2_points_scout", "20", "购买侦察狙击步枪(鸟狙)需要多少积分");
+	g_hItemCosts[CostHunting] = CreateConVar("l4d2_points_hunting", "20", "购买狩猎狙击步枪(猎枪)需要多少积分");
+	g_hItemCosts[CostAuto] = CreateConVar("l4d2_points_auto", "20", "购买一代连喷需要多少积分");
+	g_hItemCosts[CostSPAS] = CreateConVar("l4d2_points_spas", "20", "购买二代连喷需要多少积分");
+	g_hItemCosts[CostChrome] = CreateConVar("l4d2_points_chrome", "10", "购买二代铁喷需要多少积分");
+	g_hItemCosts[CostPump] = CreateConVar("l4d2_points_pump", "10", "购买一代木喷需要多少积分");
+	g_hItemCosts[CostGrenade] = CreateConVar("l4d2_points_grenade", "100", "购买榴弹发射器需要多少积分");
+	g_hItemCosts[CostM60] = CreateConVar("l4d2_points_m60", "100", "购买M60机枪需要多少积分");
+	g_hItemCosts[CostGasCan] = CreateConVar("l4d2_points_gascan", "100", "购买汽油桶需要多少积分");
+	g_hItemCosts[CostOxygen] = CreateConVar("l4d2_points_oxygen", "100", "购买氧气罐需要多少积分");
+	g_hItemCosts[CostPropane] = CreateConVar("l4d2_points_propane", "100", "购买燃气罐需要多少积分");
+	g_hItemCosts[CostGnome] = CreateConVar("l4d2_points_gnome", "15", "购买侏儒人偶需要多少积分");
+	g_hItemCosts[CostCola] = CreateConVar("l4d2_points_cola", "100", "购买可乐瓶需要多少积分");
+	g_hItemCosts[CostFireworks] = CreateConVar("l4d2_points_fireworks", "100", "购买烟花盒需要多少积分");
+	g_hItemCosts[CostKnife] = CreateConVar("l4d2_points_knife", "10", "购买小刀需要多少积分");
+	g_hItemCosts[CostCricketbat] = CreateConVar("l4d2_points_cricketbat", "10", "购买板球棒需要多少积分");
+	g_hItemCosts[CostCrowbar] = CreateConVar("l4d2_points_crowbar", "10", "购买撬棍需要多少积分");
+	g_hItemCosts[CostElectricguitar] = CreateConVar("l4d2_points_electricguitar", "10", "购买电吉他需要多少积分");
+	g_hItemCosts[CostFireaxe] = CreateConVar("l4d2_points_fireaxe", "10", "购买消防斧需要多少积分");
+	g_hItemCosts[CostFryingpan] = CreateConVar("l4d2_points_fryingpan", "10", "购买平底锅需要多少积分");
+	g_hItemCosts[CostGolfclub] = CreateConVar("l4d2_points_golfclub", "10", "购买高尔夫球棍需要多少积分");
+	g_hItemCosts[CostBaseballbat] = CreateConVar("l4d2_points_baseballbat", "10", "购买棒球棒需要多少积分");
+	g_hItemCosts[CostKatana] = CreateConVar("l4d2_points_katana", "10", "购买武士刀需要多少积分");
+	g_hItemCosts[CostMachete] = CreateConVar("l4d2_points_machete", "10", "购买小砍刀需要多少积分");
+	g_hItemCosts[CostTonfa] = CreateConVar("l4d2_points_tonfa", "10", "购买警棍需要多少积分");
+	g_hItemCosts[CostRiotshield] = CreateConVar("l4d2_points_riotshield", "10", "购买防爆盾牌需要多少积分");
+	g_hItemCosts[CostPitchfork] = CreateConVar("l4d2_points_pitchfork", "10", "购买干草叉需要多少积分");
+	g_hItemCosts[CostShovel] = CreateConVar("l4d2_points_shovel", "10", "购买铁铲需要多少积分");
+	g_hItemCosts[CostCustomMelee] = CreateConVar("l4d2_points_custommelee", "50", "购买第三方近战需要多少积分");
+	g_hItemCosts[CostChainsaw] = CreateConVar("l4d2_points_chainsaw", "10", "购买电锯需要多少积分");
+	g_hItemCosts[CostPipe] = CreateConVar("l4d2_points_pipe", "10", "购买土制炸弹需要多少积分");
+	g_hItemCosts[CostMolotov] = CreateConVar("l4d2_points_molotov", "100", "购买燃烧瓶需要多少积分");
+	g_hItemCosts[CostBile] = CreateConVar("l4d2_points_bile", "10", "购买胆汁需要多少积分");
+	g_hItemCosts[CostHealthKit] = CreateConVar("l4d2_points_medkit", "25", "购买医疗包需要多少积分");
+	g_hItemCosts[CostDefib] = CreateConVar("l4d2_points_defib", "30", "购买电击器需要多少积分");
+	g_hItemCosts[CostAdren] = CreateConVar("l4d2_points_adrenaline", "10", "购买肾上腺素需要多少积分");
+	g_hItemCosts[CostPills] = CreateConVar("l4d2_points_pills", "10", "购买止痛药需要多少积分");
+	g_hItemCosts[CostExplosiveAmmo] = CreateConVar("l4d2_points_explosive_ammo", "15", "购买高爆弹药需要多少积分");
+	g_hItemCosts[CostFireAmmo] = CreateConVar("l4d2_points_incendiary_ammo", "15", "购买燃烧弹药需要多少积分");
+	g_hItemCosts[CostExplosivePack] = CreateConVar("l4d2_points_explosive_ammo_pack", "20", "购买高爆弹药包需要多少积分");
+	g_hItemCosts[CostFirePack] = CreateConVar("l4d2_points_incendiary_ammo_pack", "20", "购买燃烧弹药包需要多少积分");
+	g_hItemCosts[CostLaserSight] = CreateConVar("l4d2_points_laser", "10", "购买激光瞄准器需要多少积分");
+	g_hItemCosts[CostHeal] = CreateConVar("l4d2_points_survivor_heal", "35", "购买回满血量需要多少积分");
+	g_hItemCosts[CostAmmo] = CreateConVar("l4d2_points_refill", "10", "购买弹药补充需要多少积分");
 
-	g_hItemCosts[CostSuicide] = CreateConVar("l4d2_points_suicide", "5", "自杀会扣除多少积分");
-	g_hItemCosts[CostHunter] = CreateConVar("l4d2_points_hunter", "80", "购买一次成为hunter的机会需要消耗多少积分");
-	g_hItemCosts[CostJockey] = CreateConVar("l4d2_points_jockey", "80", "购买一次成为jockey的机会需要消耗多少积分");
-	g_hItemCosts[CostSmoker] = CreateConVar("l4d2_points_smoker", "70", "购买一次成为smoker的机会需要消耗多少积分");
-	g_hItemCosts[CostCharger] = CreateConVar("l4d2_points_charger", "100", "购买一次成为charger的机会需要消耗多少积分");
-	g_hItemCosts[CostBoomer] = CreateConVar("l4d2_points_boomer", "50", "购买一次成为boomer的机会需要消耗多少积分");
-	g_hItemCosts[CostSpitter] = CreateConVar("l4d2_points_spitter", "60", "购买一次成为spitter的机会需要消耗多少积分");
-	g_hItemCosts[CostInfectedHeal] = CreateConVar("l4d2_points_infected_heal", "200", "治愈感染,重新变成生还者需要消耗多少积分");
-	g_hItemCosts[CostWitch] = CreateConVar("l4d2_points_witch", "100", "购买一次成为witch的机会需要消耗多少积分");
-	g_hItemCosts[CostTank] = CreateConVar("l4d2_points_tank", "1000", "购买一次成为tank的机会需要消耗多少积分");
-	g_hItemCosts[CostTankHealMultiplier] = CreateConVar("l4d2_points_tank_heal_mult", "3", "根据l4d2_points_infected_heal坦克玩家应该增加多少个");
-	g_hItemCosts[CostHorde] = CreateConVar("l4d2_points_horde", "200", "购买一次产生尸潮的机会需要消耗多少积分");
-	g_hItemCosts[CostMob] = CreateConVar("l4d2_points_mob", "200", "购买一次成为怪物的机会需要消耗多少积分");
-	g_hItemCosts[CostUncommonMob] = CreateConVar("l4d2_points_umob", "200", "购买一次成为不常见的怪物的机会需要消耗多少积分");
-	g_hItemCosts[CostInfectedSlot] = CreateConVar("l4d2_points_infectedslot", "50", "购买一个感染者槽位需要消耗多少积分");
+	g_hItemCosts[CostSuicide] = CreateConVar("l4d2_points_suicide", "5", "特感玩家购买自杀需要多少积分");
+	g_hItemCosts[CostHunter] = CreateConVar("l4d2_points_hunter", "100", "购买一次成为hunter的机会需要多少积分");
+	g_hItemCosts[CostJockey] = CreateConVar("l4d2_points_jockey", "100", "购买一次成为jockey的机会需要多少积分");
+	g_hItemCosts[CostSmoker] = CreateConVar("l4d2_points_smoker", "100", "购买一次成为smoker的机会需要多少积分");
+	g_hItemCosts[CostCharger] = CreateConVar("l4d2_points_charger", "100", "购买一次成为charger的机会需要多少积分");
+	g_hItemCosts[CostBoomer] = CreateConVar("l4d2_points_boomer", "100", "购买一次成为boomer的机会需要多少积分");
+	g_hItemCosts[CostSpitter] = CreateConVar("l4d2_points_spitter", "100", "购买一次成为spitter的机会需要多少积分");
+	g_hItemCosts[CostInfectedHeal] = CreateConVar("l4d2_points_infected_heal", "100", "感染者治愈自己需要多少积分");
+	g_hItemCosts[CostWitch] = CreateConVar("l4d2_points_witch", "100", "购买一次witch需要多少积分");
+	g_hItemCosts[CostTank] = CreateConVar("l4d2_points_tank", "2000", "购买一次成为tank的机会需要多少积分");
+	g_hItemCosts[CostTankHealMultiplier] = CreateConVar("l4d2_points_tank_heal_mult", "10", "坦克玩家购买治愈相对于其他特感需要多少倍的积分消耗");
+	g_hItemCosts[CostHorde] = CreateConVar("l4d2_points_horde", "200", "购买一次horde需要多少积分");
+	g_hItemCosts[CostMob] = CreateConVar("l4d2_points_mob", "200", "购买一次mob需要多少积分");
+	g_hItemCosts[CostUncommonMob] = CreateConVar("l4d2_points_umob", "200", "购买一次umob需要多少积分");
+	g_hItemCosts[CostInfectedSlot] = CreateConVar("l4d2_points_infectedslot", "50", "购买一个感染者槽位需要多少积分");
 }
 
 void InitStructures()
@@ -3473,7 +3473,7 @@ void vSpawnablePZScanProtect(int iState, int client = -1)
 			{
 				for(i = 1; i <= MaxClients; i++)
 				{
-					if(i == client || !IsClientInGame(i) || GetClientTeam(i) != 3 || IsFakeClient(i))
+					if(i == client || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
 						continue;
 
 					if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
