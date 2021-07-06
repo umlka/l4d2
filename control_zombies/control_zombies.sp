@@ -277,7 +277,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.1.3",
+	version = "3.2.0",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -2437,7 +2437,7 @@ void vSITypeCount()
 		g_iSpawnCounts[i] = 0;
 
 	int iZombieClass;
-	for(i = 1;i <= MaxClients;i++)
+	for(i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientInGame(i) && !IsClientInKickQueue(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && 0 < (iZombieClass = GetEntProp(i, Prop_Send, "m_zombieClass")) < 7)
 			g_iSpawnCounts[iZombieClass - 1]++;
