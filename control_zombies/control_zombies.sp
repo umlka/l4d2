@@ -230,6 +230,8 @@ bool g_bAllowAllBotSurvivorTeam;
 bool g_bExchangeTeam;
 bool g_bPZPunishHealth;
 bool g_bScaleWeights;
+bool g_bIsSpawnablePZSupport;
+bool g_bOnMaterializeFromGhost;
 bool g_bIsPlayerBP[MAXPLAYERS + 1];
 bool g_bUsedClassCmd[MAXPLAYERS + 1];
 
@@ -255,12 +257,12 @@ int g_iAdminImmunityLevels[6];
 
 int g_iTankBot[MAXPLAYERS + 1];
 int g_iDisplayed[MAXPLAYERS + 1];
-int g_iPZSpawned[MAXPLAYERS + 1];
 int g_iPlayerBot[MAXPLAYERS + 1];
 int g_iBotPlayer[MAXPLAYERS + 1];
 int g_iLastTeamId[MAXPLAYERS + 1];
 int g_iModelIndex[MAXPLAYERS + 1];
 int g_iModelEntRef[MAXPLAYERS + 1];
+int g_iMaterialized[MAXPLAYERS + 1];
 int g_iPZRespawnCountdown[MAXPLAYERS + 1];
 
 float g_fSurvuivorAllowChance;
@@ -283,6 +285,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 {
 	CreateNative("CZ_SetSpawnablePZ", aNative_SetSpawnablePZ);
 	CreateNative("CZ_ResetSpawnablePZ", aNative_ResetSpawnablePZ);
+	CreateNative("CZ_IsSpawnablePZSupport", aNative_IsSpawnablePZSupport);
 
 	RegPluginLibrary("control_zombies");
 	return APLRes_Success;
@@ -296,6 +299,11 @@ public any aNative_SetSpawnablePZ(Handle plugin, int numParams)
 public any aNative_ResetSpawnablePZ(Handle plugin, int numParams)
 {
 	g_iSpawnablePZ = 0;
+}
+
+public any aNative_IsSpawnablePZSupport(Handle plugin, int numParams)
+{
+	return g_bIsSpawnablePZSupport;
 }
 
 public void OnPluginStart()
@@ -378,17 +386,6 @@ public void OnPluginStart()
 		g_hSpawnWeights[i].AddChangeHook(vSpawnConVarChanged);
 	}
 	g_hScaleWeights.AddChangeHook(vSpawnConVarChanged);
-	
-	//防止战役模式加入特感方时出现紫黑色网格球体以及客户端控制台"Material effects/spawn_sphere has bad reference count 0 when being bound"报错
-	ConVar hConVar = FindConVar("z_scrimmage_sphere");
-	hConVar.SetBounds(ConVarBound_Lower, true, 0.0);
-	hConVar.SetBounds(ConVarBound_Upper, true, 0.0);
-	hConVar.IntValue = 0;
-	
-	hConVar = FindConVar("z_max_player_zombies");
-	hConVar.SetBounds(ConVarBound_Lower, true, 32.0);
-	hConVar.SetBounds(ConVarBound_Upper, true, 32.0);
-	hConVar.IntValue = 32;
 
 	vIsAllowed();
 
@@ -401,22 +398,12 @@ public void OnPluginStart()
 
 public void OnPluginEnd()
 {
-	ConVar hConVar = FindConVar("z_scrimmage_sphere");
-	hConVar.SetBounds(ConVarBound_Lower, false);
-	hConVar.SetBounds(ConVarBound_Upper, false);
-	hConVar.RestoreDefault();
-	
-	hConVar = FindConVar("z_max_player_zombies");
-	hConVar.SetBounds(ConVarBound_Lower, false);
-	hConVar.SetBounds(ConVarBound_Upper, false);
-	hConVar.RestoreDefault();
+	vToggleConVars(false);
+	vToggleDetours(false);
+	vStatsConditionPatch(false);
 
 	for(int i = 1; i <= MaxClients; i++)
 		vRemoveSurvivorModelGlow(i);
-		
-	vStatsConditionPatch(false);
-
-	vDisableDetours();
 }
 
 public void OnConfigsExecuted()
@@ -441,7 +428,7 @@ void vIsAllowed()
 	g_bHasPlayerControlledZombies = SDKCall(g_hSDK_Call_HasPlayerControlledZombies);
 	if(g_bHasPlayerControlledZombies == true)
 	{
-		vEvents(false);
+		vToggle(false);
 		if(bLast != g_bHasPlayerControlledZombies)
 		{
 			for(int i = 1; i <= MaxClients; i++)
@@ -455,7 +442,7 @@ void vIsAllowed()
 	}
 	else
 	{
-		vEvents(true);
+		vToggle(true);
 		if(bLast != g_bHasPlayerControlledZombies)
 		{
 			if(bHasPlayerZombie())
@@ -486,12 +473,16 @@ void vIsAllowed()
 	}
 }
 
-void vEvents(bool bHook)
+void vToggle(bool bEnable)
 {
-	static bool bHooked;
-	if(!bHooked && bHook)
+	static bool bEnabled;
+	if(!bEnabled && bEnable)
 	{
-		bHooked = true;
+		bEnabled = true;
+
+		vToggleConVars(true);
+		vToggleDetours(true);
+
 		HookEvent("player_left_start_area", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
 		HookEvent("player_left_checkpoint", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
 		HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
@@ -502,14 +493,17 @@ void vEvents(bool bHook)
 		HookEvent("player_spawn", Event_PlayerSpawn);
 		HookEvent("player_death", Event_PlayerDeath);
 		HookEvent("tank_frustrated", Event_TankFrustrated);
-		HookEvent("bot_player_replace", Event_ClientReplace);
-		HookEvent("player_bot_replace", Event_ClientReplace);
+		HookEvent("player_bot_replace", Event_PlayerBotReplace);
 
 		AddCommandListener(CommandListener_CallVote, "callvote");
 	}
-	else if(bHooked && !bHook)
+	else if(bEnabled && !bEnable)
 	{
-		bHooked = false;
+		bEnabled = false;
+	
+		vToggleConVars(false);
+		vToggleDetours(false);
+
 		UnhookEvent("player_left_start_area", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
 		UnhookEvent("player_left_checkpoint", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
 		UnhookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
@@ -520,10 +514,40 @@ void vEvents(bool bHook)
 		UnhookEvent("player_spawn", Event_PlayerSpawn);
 		UnhookEvent("player_death", Event_PlayerDeath);
 		UnhookEvent("tank_frustrated", Event_TankFrustrated);
-		UnhookEvent("bot_player_replace", Event_ClientReplace);
-		UnhookEvent("player_bot_replace", Event_ClientReplace);
+		UnhookEvent("player_bot_replace", Event_PlayerBotReplace);
 
 		RemoveCommandListener(CommandListener_CallVote, "callvote");
+	}
+}
+
+void vToggleConVars(bool bEnable)
+{
+	static bool bEnabled;
+	if(!bEnabled && bEnable)
+	{
+		bEnabled = true;
+		ConVar hConVar = FindConVar("z_scrimmage_sphere");
+		hConVar.SetBounds(ConVarBound_Lower, true, 0.0);
+		hConVar.SetBounds(ConVarBound_Upper, true, 0.0);
+		hConVar.IntValue = 0;
+	
+		hConVar = FindConVar("z_max_player_zombies");
+		hConVar.SetBounds(ConVarBound_Lower, true, 32.0);
+		hConVar.SetBounds(ConVarBound_Upper, true, 32.0);
+		hConVar.IntValue = 32;
+	}
+	else if(bEnabled && !bEnable)
+	{
+		bEnabled = false;
+		ConVar hConVar = FindConVar("z_scrimmage_sphere");
+		hConVar.SetBounds(ConVarBound_Lower, false);
+		hConVar.SetBounds(ConVarBound_Upper, false);
+		hConVar.RestoreDefault();
+	
+		hConVar = FindConVar("z_max_player_zombies");
+		hConVar.SetBounds(ConVarBound_Lower, false);
+		hConVar.SetBounds(ConVarBound_Upper, false);
+		hConVar.RestoreDefault();
 	}
 }
 
@@ -814,7 +838,7 @@ public Action CmdChangeClass(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(g_iPZSpawned[client] != 1)
+	if(g_iMaterialized[client] != 0)
 	{
 		PrintToChat(client, "第一次灵魂状态下才能使用该指令");
 		return Plugin_Handled;
@@ -964,7 +988,7 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	{
 		if(iFlags & IN_ZOOM)
 		{
-			if(g_iPZSpawned[client] == 1 && bCheckClientAccess(client, 4) == true)
+			if(g_iMaterialized[client] == 0 && bCheckClientAccess(client, 4) == true)
 				vSelectAscendingZombieClass(client);
 		}
 		else if(iFlags & IN_ATTACK)
@@ -1020,8 +1044,6 @@ public void OnMapEnd()
 
 public void OnClientDisconnect(int client)
 {
-	g_iSpawnablePZ = 0;
-
 	vRemoveSurvivorModelGlow(client);
 
 	if(IsFakeClient(client))
@@ -1051,7 +1073,7 @@ void vResetClientData(int client)
 	vSurvivorClean(client);
 
 	g_iDisplayed[client] = 0;
-	g_iPZSpawned[client] = 0;
+	g_iMaterialized[client] = 0;
 	
 	g_bIsPlayerBP[client] = false;
 	g_bUsedClassCmd[client] = false;
@@ -1175,7 +1197,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 	if(client == 0 || !IsClientInGame(client))
 		return;
 
-	g_iPZSpawned[client] = 0;
+	g_iMaterialized[client] = 0;
 	vRemoveSurvivorModelGlow(client);
 	
 	int team = event.GetInt("team");
@@ -1279,23 +1301,10 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
 	if(!IsFakeClient(client) && GetClientTeam(client) == 3)
 	{
-		switch(g_iPZSpawned[client])
-		{
-			case 0:
-			{
-				if(GetEntProp(client, Prop_Send, "m_isGhost") == 0)
-					vSetInfectedGhost(client, GetEntProp(client, Prop_Send, "m_zombieClass") == 8);
-			}
-				
-			case 1:
-			{
-				if(g_iPZRespawnTime > 0 && g_iPZPunishTime > 0 && g_bUsedClassCmd[client] && GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
-					CPrintToChat(client, "{olive}下次重生时间 {default}-> {red}+%d秒", g_iPZPunishTime);
-			}
-		}
+		if(!g_bOnMaterializeFromGhost && GetEntProp(client, Prop_Send, "m_isGhost") == 0)
+			vSetInfectedGhost(client, GetEntProp(client, Prop_Send, "m_zombieClass") == 8);
 	}
 
-	g_iPZSpawned[client]++;
 	RequestFrame(OnNextFrame_PlayerSpawn, userid); //player_bot_replace在player_spawn之后触发，延迟一帧进行接管判断
 }
 
@@ -1337,8 +1346,8 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 	if(client == 0 || !IsClientInGame(client))
 		return;
 
-	g_iPZSpawned[client] = 0;
 	vDeleteTimer(client);
+	g_iMaterialized[client] = 0;
 
 	switch(GetClientTeam(client))
 	{
@@ -1456,32 +1465,22 @@ public void Event_TankFrustrated(Event event, const char[] name, bool dontBroadc
 	CPrintToChat(client, "{green}★ {default}丢失 {olive}Tank控制权 {default}后自动切换回 {blue}生还者队伍");
 }
 
-public void Event_ClientReplace(Event event, const char[] name, bool dontBroadcast)
+public void Event_PlayerBotReplace(Event event, const char[] name, bool dontBroadcast)
 {
 	int bot_userid = event.GetInt("bot");
 	int player_userid = event.GetInt("player");
 	int bot = GetClientOfUserId(bot_userid);
 	int player = GetClientOfUserId(player_userid);
 
-	switch(name[0])
-	{
-		case 'b':
-			g_iPZSpawned[bot] = 0;
-			
-		case 'p':
-		{
-			g_iPZSpawned[player] = 0;
-			g_iPlayerBot[player] = bot_userid;
-			g_iBotPlayer[bot] = player_userid;
+	g_iPlayerBot[player] = bot_userid;
+	g_iBotPlayer[bot] = player_userid;
 
-			if(GetClientTeam(bot) == 3 && GetEntProp(bot, Prop_Send, "m_zombieClass") == 8)
-			{
-				if(IsFakeClient(player))
-					g_iTankBot[bot] = 1; //防卡功能中踢出FakeClient后，第二次触发Tank产生并替换原有的Tank(BOT替换BOT)
-				else
-					g_iTankBot[bot] = 2; //主动或被动放弃Tank控制权(BOT替换玩家)
-			}
-		}
+	if(GetClientTeam(bot) == 3 && GetEntProp(bot, Prop_Send, "m_zombieClass") == 8)
+	{
+		if(IsFakeClient(player))
+			g_iTankBot[bot] = 1; //防卡功能中踢出FakeClient后，第二次触发Tank产生并替换原有的Tank(BOT替换BOT)
+		else
+			g_iTankBot[bot] = 2; //主动或被动放弃Tank控制权(BOT替换玩家)
 	}
 }
 
@@ -2477,7 +2476,7 @@ void vLoadGameData()
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "State_Transition") == false)
 		SetFailState("Failed to find signature: State_Transition");
-	PrepSDKCall_AddParameter(SDKType_Float, SDKPass_Plain);
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 	g_hSDK_Call_State_Transition = EndPrepSDKCall();
 	if(g_hSDK_Call_State_Transition == null)
 		SetFailState("Failed to create SDKCall: State_Transition");
@@ -2548,7 +2547,21 @@ void vLoadGameData()
 	if(g_hSDK_Call_HasPlayerControlledZombies == null)
 		SetFailState("Failed to create SDKCall: HasPlayerControlledZombies");
 
-	vSetupDetours(hGameData);
+	g_dDetour[0] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::OnEnterGhostState");
+	if(g_dDetour[0] == null)
+		SetFailState("Failed to load signature: CTerrorPlayer::OnEnterGhostState");
+
+	g_dDetour[1] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::MaterializeFromGhost");
+	if(g_dDetour[1] == null)
+		SetFailState("Failed to load signature: CTerrorPlayer::MaterializeFromGhost");
+
+	g_dDetour[2] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::PlayerZombieAbortControl");
+	if(g_dDetour[2] == null)
+		SetFailState("Failed to load signature: CTerrorPlayer::PlayerZombieAbortControl");
+	
+	g_dDetour[3] = DynamicDetour.FromConf(hGameData, "ForEachTerrorPlayer<SpawnablePZScan>");
+	if(g_dDetour[3] == null)
+		SetFailState("Failed to load signature: ForEachTerrorPlayer<SpawnablePZScan>");
 
 	delete hGameData;
 }
@@ -2649,67 +2662,60 @@ void vSetHumanIdle(int bot, int client)
 	SetEntProp(client, Prop_Send, "m_iObserverMode", 5);
 }
 
-void vSetupDetours(GameData hGameData = null)
+void vToggleDetours(bool bEnable)
 {
-	g_dDetour[0] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::OnEnterGhostState");
-	if(g_dDetour[0] == null)
-		SetFailState("Failed to load signature: CTerrorPlayer::OnEnterGhostState");
-		
-	if(!g_dDetour[0].Enable(Hook_Pre, mreOnEnterGhostStatePre))
-		SetFailState("Failed to detour pre: CTerrorPlayer::OnEnterGhostState");
-		
-	if(!g_dDetour[0].Enable(Hook_Post, mreOnEnterGhostStatePost))
-		SetFailState("Failed to detour post: CTerrorPlayer::OnEnterGhostState");
-		
-	g_dDetour[1] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::MaterializeFromGhost");
-	if(g_dDetour[1] == null)
-		SetFailState("Failed to load signature: CTerrorPlayer::MaterializeFromGhost");
-		
-	if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre))
-		SetFailState("Failed to detour pre: CTerrorPlayer::MaterializeFromGhost");
-		
-	if(!g_dDetour[1].Enable(Hook_Post, mreMaterializeFromGhostPost))
-		SetFailState("Failed to detour post: CTerrorPlayer::MaterializeFromGhost");
-		
-	g_dDetour[2] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::PlayerZombieAbortControl");
-	if(g_dDetour[2] == null)
-		SetFailState("Failed to load signature: CTerrorPlayer::PlayerZombieAbortControl");
-		
-	if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre))
-		SetFailState("Failed to detour pre: CTerrorPlayer::PlayerZombieAbortControl");
-		
-	if(!g_dDetour[2].Enable(Hook_Post, mrePlayerZombieAbortControlPost))
-		SetFailState("Failed to detour post: CTerrorPlayer::PlayerZombieAbortControl");
-		
-	g_dDetour[3] = DynamicDetour.FromConf(hGameData, "ForEachTerrorPlayer<SpawnablePZScan>");
-	if(g_dDetour[3] == null)
-		SetFailState("Failed to load signature: ForEachTerrorPlayer<SpawnablePZScan>");
-		
-	if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre))
-		SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
-		
-	if(!g_dDetour[3].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
-		SetFailState("Failed to detour post: ForEachTerrorPlayer<SpawnablePZScan>");
-}
+	static bool bEnabled;
+	if(!bEnabled && bEnable)
+	{
+		bEnabled = true;
 
-void vDisableDetours()
-{
-	if(!g_dDetour[0].Disable(Hook_Pre, mreOnEnterGhostStatePre) || !g_dDetour[0].Disable(Hook_Post, mreOnEnterGhostStatePost))
-		SetFailState("Failed to disable detour: CTerrorPlayer::OnEnterGhostState");
+		if(!g_dDetour[0].Enable(Hook_Pre, mreOnEnterGhostStatePre))
+			SetFailState("Failed to detour pre: CTerrorPlayer::OnEnterGhostState");
 		
-	if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre) || !g_dDetour[1].Disable(Hook_Post, mreMaterializeFromGhostPost))
-		SetFailState("Failed to disable detour: CTerrorPlayer::MaterializeFromGhost");
+		if(!g_dDetour[0].Enable(Hook_Post, mreOnEnterGhostStatePost))
+			SetFailState("Failed to detour post: CTerrorPlayer::OnEnterGhostState");
+			
+		if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre))
+			SetFailState("Failed to detour pre: CTerrorPlayer::MaterializeFromGhost");
 		
-	if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre) || !g_dDetour[2].Disable(Hook_Post, mrePlayerZombieAbortControlPost))
-		SetFailState("Failed to disable detour: CTerrorPlayer::PlayerZombieAbortControl");
+		if(!g_dDetour[1].Enable(Hook_Post, mreMaterializeFromGhostPost))
+			SetFailState("Failed to detour post: CTerrorPlayer::MaterializeFromGhost");
+			
+		if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre))
+			SetFailState("Failed to detour pre: CTerrorPlayer::PlayerZombieAbortControl");
 		
-	if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dDetour[3].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
-		SetFailState("Failed to disable detour: ForEachTerrorPlayer<SpawnablePZScan>");
+		if(!g_dDetour[2].Enable(Hook_Post, mrePlayerZombieAbortControlPost))
+			SetFailState("Failed to detour post: CTerrorPlayer::PlayerZombieAbortControl");
+			
+		if(!(g_bIsSpawnablePZSupport = g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre)))
+			SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
+		
+		if(!(g_bIsSpawnablePZSupport = g_dDetour[3].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost)))
+			SetFailState("Failed to detour post: ForEachTerrorPlayer<SpawnablePZScan>");
+	}
+	else if(bEnabled && !bEnable)
+	{
+		bEnabled = false;
+	
+		if(!g_dDetour[0].Disable(Hook_Pre, mreOnEnterGhostStatePre) || !g_dDetour[0].Disable(Hook_Post, mreOnEnterGhostStatePost))
+			SetFailState("Failed to disable detour: CTerrorPlayer::OnEnterGhostState");
+		
+		if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre) || !g_dDetour[1].Disable(Hook_Post, mreMaterializeFromGhostPost))
+			SetFailState("Failed to disable detour: CTerrorPlayer::MaterializeFromGhost");
+		
+		if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre) || !g_dDetour[2].Disable(Hook_Post, mrePlayerZombieAbortControlPost))
+			SetFailState("Failed to disable detour: CTerrorPlayer::PlayerZombieAbortControl");
+		
+		if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dDetour[3].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
+			SetFailState("Failed to disable detour: ForEachTerrorPlayer<SpawnablePZScan>");
+			
+		g_bIsSpawnablePZSupport = false;
+	}
 }
 
 public MRESReturn mreOnEnterGhostStatePre(int pThis)
 {
-	if(!g_bHasPlayerControlledZombies && bIsRoundStarted() == false)
+	if(bIsRoundStarted() == false)
 		return MRES_Supercede; //阻止死亡状态下的特感玩家在团灭后下一回合开始前进入Ghost State
 	
 	return MRES_Ignored;
@@ -2717,7 +2723,7 @@ public MRESReturn mreOnEnterGhostStatePre(int pThis)
 
 public MRESReturn mreOnEnterGhostStatePost(int pThis)
 {
-	if(!g_bHasPlayerControlledZombies && !IsFakeClient(pThis) && g_iPZSpawned[pThis] == 0)
+	if(g_iMaterialized[pThis] == 0 && !IsFakeClient(pThis))
 		RequestFrame(OnNextFrame_EnterGhostState, GetClientUserId(pThis));
 	
 	return MRES_Ignored;
@@ -2725,6 +2731,8 @@ public MRESReturn mreOnEnterGhostStatePost(int pThis)
 
 public MRESReturn mreMaterializeFromGhostPre(int pThis)
 {
+	g_bOnMaterializeFromGhost = true;
+
 	if(!IsFakeClient(pThis) && GetGameTime() - g_fBugExploitTime[pThis][1] < 1.5)
 		return MRES_Supercede;
 
@@ -2733,8 +2741,15 @@ public MRESReturn mreMaterializeFromGhostPre(int pThis)
 
 public MRESReturn mreMaterializeFromGhostPost(int pThis)
 {
+	g_iMaterialized[pThis]++;
+	g_bOnMaterializeFromGhost = false;
+
 	if(!IsFakeClient(pThis))
+	{
 		g_fBugExploitTime[pThis][0] = GetGameTime();
+		if(g_iMaterialized[pThis] == 1 && g_iPZRespawnTime > 0 && g_iPZPunishTime > 0 && g_bUsedClassCmd[pThis] && GetEntProp(pThis, Prop_Send, "m_zombieClass") != 8)
+			CPrintToChat(pThis, "{olive}下次重生时间 {default}-> {red}+%d秒", g_iPZPunishTime);
+	}
 
 	return MRES_Ignored;
 }
