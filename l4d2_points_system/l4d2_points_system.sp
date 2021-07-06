@@ -366,7 +366,7 @@ void InitItemCosts()
 	g_hItemCosts[CostSCAR] = CreateConVar("l4d2_points_scar", "12", "购买SCAR-H突击步枪需要多少积分");
 	g_hItemCosts[CostSG552] = CreateConVar("l4d2_points_sg552", "12", "购买SG552突击步枪需要多少积分");
 	g_hItemCosts[CostMilitary] = CreateConVar("l4d2_points_military", "20", "购买30发连发狙击枪需要多少积分");
-	g_hItemCosts[CostAWP] = CreateConVar("l4d2_points_awp", "150", "购买awp狙击枪需要多少积分");
+	g_hItemCosts[CostAWP] = CreateConVar("l4d2_points_awp", "500", "购买awp狙击枪需要多少积分");
 	g_hItemCosts[CostScout] = CreateConVar("l4d2_points_scout", "20", "购买侦察狙击步枪(鸟狙)需要多少积分");
 	g_hItemCosts[CostHunting] = CreateConVar("l4d2_points_hunting", "20", "购买狩猎狙击步枪(猎枪)需要多少积分");
 	g_hItemCosts[CostAuto] = CreateConVar("l4d2_points_auto", "20", "购买一代连喷需要多少积分");
@@ -374,7 +374,7 @@ void InitItemCosts()
 	g_hItemCosts[CostChrome] = CreateConVar("l4d2_points_chrome", "10", "购买二代铁喷需要多少积分");
 	g_hItemCosts[CostPump] = CreateConVar("l4d2_points_pump", "10", "购买一代木喷需要多少积分");
 	g_hItemCosts[CostGrenade] = CreateConVar("l4d2_points_grenade", "100", "购买榴弹发射器需要多少积分");
-	g_hItemCosts[CostM60] = CreateConVar("l4d2_points_m60", "100", "购买M60机枪需要多少积分");
+	g_hItemCosts[CostM60] = CreateConVar("l4d2_points_m60", "500", "购买M60机枪需要多少积分");
 	g_hItemCosts[CostGasCan] = CreateConVar("l4d2_points_gascan", "100", "购买汽油桶需要多少积分");
 	g_hItemCosts[CostOxygen] = CreateConVar("l4d2_points_oxygen", "100", "购买氧气罐需要多少积分");
 	g_hItemCosts[CostPropane] = CreateConVar("l4d2_points_propane", "100", "购买燃气罐需要多少积分");
@@ -502,6 +502,7 @@ public void OnLibraryRemoved(const char[] name)
 
 native void CZ_SetSpawnablePZ(int client);
 native void CZ_ResetSpawnablePZ();
+native bool CZ_IsSpawnablePZSupport();
 
 public void OnPluginStart()
 {
@@ -3467,7 +3468,7 @@ void vSpawnablePZScanProtect(int iState, int client = -1)
 	{
 		case 0: 
 		{
-			if(g_bControlZombies)
+			if(g_bControlZombies && CZ_IsSpawnablePZSupport())
 				CZ_SetSpawnablePZ(client);
 			else
 			{
@@ -3492,7 +3493,7 @@ void vSpawnablePZScanProtect(int iState, int client = -1)
 
 		case 1: 
 		{
-			if(g_bControlZombies)
+			if(g_bControlZombies && CZ_IsSpawnablePZSupport())
 				CZ_ResetSpawnablePZ();
 			else
 			{
