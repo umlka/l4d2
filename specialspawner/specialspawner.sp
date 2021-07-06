@@ -119,6 +119,8 @@ bool g_bControlZombies;
 bool g_bDirectorNoSpecials;
 bool g_bHasAnySurvivorLeftSafeArea;
 
+native bool CZ_IsSpawnablePZSupport();
+
 public void OnLibraryAdded(const char[] name)
 {
 	if(strcmp(name, "control_zombies") == 0)
@@ -322,7 +324,7 @@ static void vGenerateAndExecuteSpawnQueue()
 				static bool bResetGhost[MAXPLAYERS + 1];
 				static bool bResetLifeState[MAXPLAYERS + 1];
 
-				if(!g_bControlZombies)
+				if(!g_bControlZombies || !CZ_IsSpawnablePZSupport())
 				{
 					for(i = 1; i <= MaxClients; i++)
 					{
@@ -355,7 +357,7 @@ static void vGenerateAndExecuteSpawnQueue()
 				SetUserFlagBits(client, iFlagBits);
 				SetCommandFlags("z_spawn_old", iCmdFlags | FCVAR_CHEAT);
 				
-				if(!g_bControlZombies)
+				if(!g_bControlZombies || !CZ_IsSpawnablePZSupport())
 				{
 					for(i = 1; i <= MaxClients; i++)
 					{
