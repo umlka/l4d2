@@ -70,41 +70,41 @@ public void OnPluginStart()
 	CreateConVar("l4d2_dlock_version", PLUGIN_VERSION, "Plugin version", FCVAR_SPONLY|FCVAR_NOTIFY|FCVAR_REPLICATED);
 
 	g_hCvarMPGameMode = FindConVar("mp_gamemode");
-	g_hCvarMPGameMode.AddChangeHook(ConVarChanged_Allow);
-	g_hCvarModes.AddChangeHook(ConVarChanged_Allow);
-	g_hCvarModesOff.AddChangeHook(ConVarChanged_Allow);
-	g_hCvarModesTog.AddChangeHook(ConVarChanged_Allow);
-	g_hCvarAllow.AddChangeHook(ConVarChanged_Allow);
+	g_hCvarMPGameMode.AddChangeHook(vAllowConVarChanged);
+	g_hCvarModes.AddChangeHook(vAllowConVarChanged);
+	g_hCvarModesOff.AddChangeHook(vAllowConVarChanged);
+	g_hCvarModesTog.AddChangeHook(vAllowConVarChanged);
+	g_hCvarAllow.AddChangeHook(vAllowConVarChanged);
 	
-	g_hCvarFreezeNodoor.AddChangeHook(ConVarChanged_Cvars);
-	g_hCvarPrepareTime1r.AddChangeHook(ConVarChanged_Cvars);
-	g_hCvarPrepareTime2r.AddChangeHook(ConVarChanged_Cvars);
-	g_hCvarClientTimeOut.AddChangeHook(ConVarChanged_Cvars);
-	g_hCvarBreakTheDoor.AddChangeHook(ConVarChanged_Cvars);
-	g_hCvarDisplayPanel.AddChangeHook(ConVarChanged_Cvars);
-	g_hCvarDisplayMode.AddChangeHook(ConVarChanged_Cvars);
+	g_hCvarFreezeNodoor.AddChangeHook(vOtherConVarChanged);
+	g_hCvarPrepareTime1r.AddChangeHook(vOtherConVarChanged);
+	g_hCvarPrepareTime2r.AddChangeHook(vOtherConVarChanged);
+	g_hCvarClientTimeOut.AddChangeHook(vOtherConVarChanged);
+	g_hCvarBreakTheDoor.AddChangeHook(vOtherConVarChanged);
+	g_hCvarDisplayPanel.AddChangeHook(vOtherConVarChanged);
+	g_hCvarDisplayMode.AddChangeHook(vOtherConVarChanged);
 
 	//AutoExecConfig(true, "l4d2_doorlock");
 }
 
 public void OnConfigsExecuted()
 {
-	IsAllowed();
+	vIsAllowed();
 }
 
-public void ConVarChanged_Allow(ConVar convar, const char[] oldValue, const char[] newValue)
+public void vAllowConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	IsAllowed();
+	vIsAllowed();
 }
 
-public void ConVarChanged_Cvars(ConVar convar, const char[] oldValue, const char[] newValue)
+public void vOtherConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	GetCvars();
+	vGetCvars();
 }
 
-void GetCvars()
+void vGetCvars()
 {
-	int last = g_iCvarBreakTheDoor;
+	int iLast = g_iCvarBreakTheDoor;
 
 	g_bCvarFreezeNodoor = g_hCvarFreezeNodoor.BoolValue;
 	g_iCvarPrepareTime1r = g_hCvarPrepareTime1r.IntValue;
@@ -114,40 +114,40 @@ void GetCvars()
 	g_iCvarDisplayPanel = g_hCvarDisplayPanel.IntValue;
 	g_iCvarDisplayMode = g_hCvarDisplayMode.IntValue;
 
-	if(last != g_iCvarBreakTheDoor)
+	if(iLast != g_iCvarBreakTheDoor)
 	{
-		if(IsValidEntRef(g_iStartSafeDoor))
+		if(bIsValidEntRef(g_iStartSafeDoor))
 		{
-			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnOpen", OnFirst);
-			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnFullyOpen", OnFullyOpened);
+			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnOpen", vOnFirstOpen);
+			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnFullyOpen", vOnFullyOpen);
 		}
 
-		InitDoor();
+		vInitDoor();
 	}
 }
 
 //Silvers
-void IsAllowed()
+void vIsAllowed()
 {
 	bool bCvarAllow = g_hCvarAllow.BoolValue;
 	bool bAllowMode = IsAllowedGameMode();
-	GetCvars();
+	vGetCvars();
 
 	if(g_bCvarAllow == false && bCvarAllow == true && bAllowMode == true)
 	{
 		g_bCvarAllow = true;
-		InitDoor();
-		HookEvents(true);
+		vInitDoor();
+		vHookEvents(true);
 	}
 	else if(g_bCvarAllow == true && (bCvarAllow == false || bAllowMode == false))
 	{
 		g_bCvarAllow = false;
-		HookEvents(false);
+		vHookEvents(false);
 
-		if(IsValidEntRef(g_iStartSafeDoor))
+		if(bIsValidEntRef(g_iStartSafeDoor))
 		{
-			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnOpen", OnFirst);
-			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnFullyOpen", OnFullyOpened);
+			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnOpen", vOnFirstOpen);
+			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnFullyOpen", vOnFullyOpen);
 		}
 	}
 }
@@ -222,7 +222,7 @@ public void OnGamemode(const char[] output, int caller, int activator, float del
 		g_iCurrentMode = 8;
 }
 
-void HookEvents(bool bHook)
+void vHookEvents(bool bHook)
 {
 	if(bHook)
 	{
@@ -253,12 +253,12 @@ public void OnMapStart()
 
 public void OnMapEnd()
 {
-	Reset();
+	vReset();
 
 	g_bMapStarted = false;
 }
 
-void Reset()
+void vReset()
 {
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
@@ -267,7 +267,7 @@ void Reset()
 
 public Action OnPlayerRunCmd(int client)
 {
-	if(!g_bIsFreezeAllowed || !IsCountDownStoppedOrRunning())
+	if(!g_bIsFreezeAllowed || !bIsCountDownStoppedOrRunning())
 		return Plugin_Continue;
 
 	if(GetClientTeam(client) == 2)
@@ -284,7 +284,7 @@ public void OnClientDisconnect(int client)
 
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
-	Reset();
+	vReset();
 
 	if(g_bIsFirstRound) 
 		g_bIsFirstRound = false;
@@ -293,18 +293,18 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 0 && g_iPlayerSpawn == 1)
-		Start();
+		vStart();
 	g_iRoundStart = 1;
 }
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
-		Start();
+		vStart();
 	g_iPlayerSpawn = 1;
 }
 
-void Start()
+void vStart()
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -312,13 +312,13 @@ void Start()
 		g_bIsClientLoading[i] = true;
 	}
 
-	InitDoor();
+	vInitDoor();
 	CreateTimer(1.0, Timer_StartSequence, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void Event_PlayerTeam(Event event, char[] event_name, bool dontBroadcast)
 {
-	if(!IsCountDownStoppedOrRunning())
+	if(!bIsCountDownStoppedOrRunning())
 		return;
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
@@ -332,39 +332,39 @@ public void Event_PlayerTeam(Event event, char[] event_name, bool dontBroadcast)
 public Action Timer_StartSequence(Handle timer)
 {
 	g_iCountDown = -1;
-	SurvivorBotsStop();
+	vSurvivorBotsStop();
 
-	if(IsValidEntRef(g_iStartSafeDoor))
+	if(bIsValidEntRef(g_iStartSafeDoor))
 	{
-		LockTheDoor();
-		CreateTimer(1.0, LoadingTimer, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+		vLockTheDoor();
+		CreateTimer(1.0, Timer_LoadingStatus, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 	}
 	else if(g_bCvarFreezeNodoor)
 	{
 		g_bIsFreezeAllowed = true;
-		CreateTimer(1.0, LoadingTimer, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+		CreateTimer(1.0, Timer_LoadingStatus, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 	}
 	else
 	{
 		g_iCountDown = 0;
-		SurvivorBotsStart();
+		vSurvivorBotsStart();
 	}
 }
 
-public Action LoadingTimer(Handle timer)
+public Action Timer_LoadingStatus(Handle timer)
 {
-	if(IsFinishedLoading())
+	if(bIsFinishedLoading())
 	{
 		if(!g_bIsFreezeAllowed) 
-			UnFreezePlayers();
+			vUnFreezePlayers();
 
-		if(!IsCountDownRunning())
+		if(!bIsCountDownRunning())
 		{
 			if(!g_bIsFreezeAllowed)
-				SurvivorBotsStart();
+				vSurvivorBotsStart();
 
 			g_iCountDown = 0;
-			CreateTimer(1.0, StartTimer, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+			CreateTimer(1.0, Timer_MoveOut, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 		}
 
 		return Plugin_Stop;
@@ -375,24 +375,24 @@ public Action LoadingTimer(Handle timer)
 	return Plugin_Continue;
 }
 
-public Action StartTimer(Handle timer)
+public Action Timer_MoveOut(Handle timer)
 {
 	if(g_iCountDown == -1)
 	{
-		SurvivorBotsStop();
+		vSurvivorBotsStop();
 		return Plugin_Stop;
 	}
 	else if(g_iCountDown >= (g_bIsFirstRound ? g_iCvarPrepareTime1r : g_iCvarPrepareTime2r))
 	{
 		g_iCountDown = 0;
-		PrintTextAll("%t", "DL_Moveout");
-		SurvivorBotsStart();
-		UnFreezePlayers();
+		vPrintTextAll("%t", "DL_Moveout");
+		vSurvivorBotsStart();
+		vUnFreezePlayers();
 
-		if(IsValidEntRef(g_iStartSafeDoor))
-			UnlockTheDoor();
+		if(bIsValidEntRef(g_iStartSafeDoor))
+			vUnvLockTheDoor();
 
-		PlaySound(SOUND_MOVEOUT);
+		vPlaySound(SOUND_MOVEOUT);
 
 		g_bIsFirstRound = false;
 		return Plugin_Stop;
@@ -400,27 +400,27 @@ public Action StartTimer(Handle timer)
 	else
 	{
 		if(!g_bIsFreezeAllowed)
-			PrintTextAll("%t", "DL_Locked", (g_bIsFirstRound ? g_iCvarPrepareTime1r : g_iCvarPrepareTime2r) - g_iCountDown);
+			vPrintTextAll("%t", "DL_Locked", (g_bIsFirstRound ? g_iCvarPrepareTime1r : g_iCvarPrepareTime2r) - g_iCountDown);
 		else
-			PrintTextAll("%t", "DL_Frozen", (g_bIsFirstRound ? g_iCvarPrepareTime1r : g_iCvarPrepareTime2r) - g_iCountDown);
+			vPrintTextAll("%t", "DL_Frozen", (g_bIsFirstRound ? g_iCvarPrepareTime1r : g_iCvarPrepareTime2r) - g_iCountDown);
 
-		PlaySound(SOUND_COUNTDOWN);
+		vPlaySound(SOUND_COUNTDOWN);
 		g_iCountDown++;
 	}
 	return Plugin_Continue;
 }
 
-void SurvivorBotsStart()
+void vSurvivorBotsStart()
 {
 	FindConVar("sb_stop").SetInt(0);
 }
 
-void SurvivorBotsStop()
+void vSurvivorBotsStop()
 {
 	FindConVar("sb_stop").SetInt(1);
 }
 
-void ShowStatusPanel()
+void vShowStatusPanel()
 {
 	int i;
 	int iLoading;
@@ -526,17 +526,17 @@ public int PanelHandler(Menu menu, MenuAction action, int param1, int param2)
 
 }
 
-void LockTheDoor()
+void vLockTheDoor()
 {
 	DispatchKeyValue(g_iStartSafeDoor, "spawnflags", "585728");
 }
 
-void UnlockTheDoor()
+void vUnvLockTheDoor()
 {
 	DispatchKeyValue(g_iStartSafeDoor, "spawnflags", "8192");
 }
 
-void UnFreezePlayers()
+void vUnFreezePlayers()
 {
 	for(int i = 1; i <= MaxClients; i++) 
 	{
@@ -548,12 +548,9 @@ void UnFreezePlayers()
 	}
 }
 
-void InitDoor()
+void vInitDoor()
 {
 	g_iStartSafeDoor = 0;
-	
-	if(g_iCvarBreakTheDoor == 0)
-		return;
 
 	int iChangelevel;
 	int entity = INVALID_ENT_REFERENCE;
@@ -587,24 +584,34 @@ void InitDoor()
 		if(g_iStartSafeDoor == 0 && GetEntProp(entity, Prop_Send, "m_bLocked") == 1 && GetEntProp(entity, Prop_Data, "m_eDoorState") == 0)
 		{
 			GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vOrigin);
-			if(iChangelevel == 0 || !IsDotInEndArea(vOrigin, vMins, vMaxs))
+			if(iChangelevel == 0 || !bIsDotInEndArea(vOrigin, vMins, vMaxs))
 			{
+				
 				g_iStartSafeDoor = EntIndexToEntRef(entity);
-				HookSingleEntityOutput(entity, "OnOpen", OnFirst, true);
-				HookSingleEntityOutput(entity, "OnFullyOpen", OnFullyOpened, true);
+				switch(g_iCvarBreakTheDoor)
+				{
+					case 1:
+					{
+						HookSingleEntityOutput(entity, "OnOpen", vOnFirstOpen, true);
+						HookSingleEntityOutput(entity, "OnFullyOpen", vOnFullyOpen, true);
+					}
+					
+					case 2:
+						HookSingleEntityOutput(entity, "OnFullyOpen", vOnFullyOpen, true);
+				}
 				break;
 			}
 		}
 	}
 }
 
-stock bool IsDotInEndArea(const float vDot[3], const float vMins[3], const float vMaxs[3])
+bool bIsDotInEndArea(const float vDot[3], const float vMins[3], const float vMaxs[3])
 {
 	return vMins[0] < vDot[0] < vMaxs[0] && vMins[1] < vDot[1] < vMaxs[1] && vMins[2] < vDot[2] < vMaxs[2];
 }
 
 //https://forums.alliedmods.net/showthread.php?p=2700212
-public void OnFirst(const char[] output, int entity, int activator, float delay)
+public void vOnFirstOpen(const char[] output, int entity, int activator, float delay)
 {
 	char sModel[64];
 	GetEntPropString(entity, Prop_Data, "m_ModelName", sModel, sizeof(sModel));
@@ -613,22 +620,39 @@ public void OnFirst(const char[] output, int entity, int activator, float delay)
 	GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vPos);
 	GetEntPropVector(entity, Prop_Send, "m_angRotation", vAng);
 
+	SetEntProp(entity, Prop_Send, "m_nSolidType", 0);
+
 	int door = CreateEntityByName("prop_physics");
-	DispatchKeyValue(door, "spawnflags", "4"); // Prevent collision
+	DispatchKeyValue(door, "spawnflags", "4");
 	DispatchKeyValue(door, "model", sModel);
 	DispatchSpawn(door);
 
-	// Tilt ang away
+	TeleportEntity(door, vPos, vAng, NULL_VECTOR);
+
+	SetVariantString("unlock");
+	AcceptEntityInput(entity, "SetAnimation");
+
+	AcceptEntityInput(entity, "DisableCollision");
+	SetEntProp(entity, Prop_Data, "m_iEFlags", 0);
+	SetEntProp(entity, Prop_Data, "m_fEffects", 0x020);
+
+	entity = EntRefToEntIndex(entity);
+	for(int att; att < 2048; att++)
+	{
+		if(IsValidEdict(att))
+		{
+			if(HasEntProp(att, Prop_Send, "moveparent") && GetEntPropEnt(att, Prop_Send, "moveparent") == entity)
+			{
+				SetVariantString("!activator");
+				AcceptEntityInput(att, "SetParent", door);
+			}
+		}
+	}
+
 	GetAngleVectors(vAng, vDir, NULL_VECTOR, NULL_VECTOR);
 
-	float dist;
+	float dist = strcmp(sModel, "models/props_doors/checkpoint_door_-01.mdl") == 0 ? -10.0 : 10.0;
 
-	if(strcmp(sModel, "models/props_doors/checkpoint_door_-01.mdl") == 0)
-		dist = -10.0;
-	else
-		dist = 10.0;
-
-	// Move pos away due to ang change
 	vPos[0] += (vDir[0] * dist);
 	vPos[1] += (vDir[1] * dist);
 	vAng[0] = dist;
@@ -638,39 +662,25 @@ public void OnFirst(const char[] output, int entity, int activator, float delay)
 
 	TeleportEntity(door, vPos, vAng, vDir);
 
-	// Stop movement
-	FormatEx(sModel, sizeof(sModel), "OnUser1 !self:DisableMotion::3.0:1");
-	SetVariantString(sModel);
-	AcceptEntityInput(door, "AddOutput");
-	AcceptEntityInput(door, "FireUser1");
-
-	//Lux
-	AcceptEntityInput(entity, "DisableCollision");
-	SetEntProp(entity, Prop_Send, "m_noGhostCollision", 1);
-	SetEntProp(entity, Prop_Data, "m_CollisionGroup", 0x0004);
-	SetEntProp(entity, Prop_Data, "m_iEFlags", 0);
-	
-	SetEntProp(entity, Prop_Data, "m_fEffects", 0x020); //don't draw entity
-
 	EmitSoundToAll(GetRandomInt(0, 1) ? SOUND_BREAK1 : SOUND_BREAK2, door);
 }
 
-public void OnFullyOpened(const char[] output, int entity, int activator, float delay)
+public void vOnFullyOpen(const char[] output, int entity, int activator, float delay)
 {
-	DispatchKeyValue(entity, "spawnflags", "585728");
+	vLockTheDoor();
 }
 
-bool IsCountDownRunning()
+bool bIsCountDownRunning()
 {
 	return g_iCountDown > 0;
 }
 
-bool IsCountDownStoppedOrRunning()
+bool bIsCountDownStoppedOrRunning()
 {
 	return g_iCountDown != 0;
 }
 
-bool IsAnyClientLoading()
+bool bIsAnyClientLoading()
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -680,7 +690,7 @@ bool IsAnyClientLoading()
 	return false;
 }
 
-bool IsFinishedLoading()
+bool bIsFinishedLoading()
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -701,12 +711,12 @@ bool IsFinishedLoading()
 	}
 
 	if(g_iCvarDisplayPanel > 0 && g_bIsFirstRound)
-		ShowStatusPanel();
+		vShowStatusPanel();
 
-	return !IsAnyClientLoading();
+	return !bIsAnyClientLoading();
 }
 
-void PrintTextAll(const char[] format, any ...)
+void vPrintTextAll(const char[] format, any ...)
 {
 	char buffer[192];
 	for(int i = 1; i <= MaxClients; i++)
@@ -728,14 +738,14 @@ void PrintTextAll(const char[] format, any ...)
 	}
 }
 
-bool IsValidEntRef(int entity)
+bool bIsValidEntRef(int entity)
 {
 	if(entity && EntRefToEntIndex(entity) != INVALID_ENT_REFERENCE)
 		return true;
 	return false;
 }
 
-stock void PlaySound(const char[] sSound)
+void vPlaySound(const char[] sSound)
 {
 	EmitSoundToAll(sSound, SOUND_FROM_PLAYER, SNDCHAN_STATIC, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
 }
