@@ -230,7 +230,7 @@ bool g_bAllowAllBotSurvivorTeam;
 bool g_bExchangeTeam;
 bool g_bPZPunishHealth;
 bool g_bScaleWeights;
-bool g_bIsSpawnablePZSupport;
+bool g_bIsSpawnablePZSupported;
 bool g_bOnMaterializeFromGhost;
 bool g_bIsPlayerBP[MAXPLAYERS + 1];
 bool g_bUsedClassCmd[MAXPLAYERS + 1];
@@ -285,7 +285,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 {
 	CreateNative("CZ_SetSpawnablePZ", aNative_SetSpawnablePZ);
 	CreateNative("CZ_ResetSpawnablePZ", aNative_ResetSpawnablePZ);
-	CreateNative("CZ_IsSpawnablePZSupport", aNative_IsSpawnablePZSupport);
+	CreateNative("CZ_IsSpawnablePZSupported", aNative_IsSpawnablePZSupported);
 
 	RegPluginLibrary("control_zombies");
 	return APLRes_Success;
@@ -301,9 +301,9 @@ public any aNative_ResetSpawnablePZ(Handle plugin, int numParams)
 	g_iSpawnablePZ = 0;
 }
 
-public any aNative_IsSpawnablePZSupport(Handle plugin, int numParams)
+public any aNative_IsSpawnablePZSupported(Handle plugin, int numParams)
 {
-	return g_bIsSpawnablePZSupport;
+	return g_bIsSpawnablePZSupported;
 }
 
 public void OnPluginStart()
@@ -2687,16 +2687,18 @@ void vToggleDetours(bool bEnable)
 		if(!g_dDetour[2].Enable(Hook_Post, mrePlayerZombieAbortControlPost))
 			SetFailState("Failed to detour post: CTerrorPlayer::PlayerZombieAbortControl");
 			
-		if(!(g_bIsSpawnablePZSupport = g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre)))
+		if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre)))
 			SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
 		
-		if(!(g_bIsSpawnablePZSupport = g_dDetour[3].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost)))
+		if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost)))
 			SetFailState("Failed to detour post: ForEachTerrorPlayer<SpawnablePZScan>");
 	}
 	else if(bEnabled && !bEnable)
 	{
 		bEnabled = false;
-	
+
+		g_bIsSpawnablePZSupported = false;
+
 		if(!g_dDetour[0].Disable(Hook_Pre, mreOnEnterGhostStatePre) || !g_dDetour[0].Disable(Hook_Post, mreOnEnterGhostStatePost))
 			SetFailState("Failed to disable detour: CTerrorPlayer::OnEnterGhostState");
 		
@@ -2708,8 +2710,6 @@ void vToggleDetours(bool bEnable)
 		
 		if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dDetour[3].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
 			SetFailState("Failed to disable detour: ForEachTerrorPlayer<SpawnablePZScan>");
-			
-		g_bIsSpawnablePZSupport = false;
 	}
 }
 

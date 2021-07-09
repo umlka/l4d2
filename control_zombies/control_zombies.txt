@@ -55,6 +55,7 @@
 
 		"Offsets"
 		{
+			/* CBaseEntity::IsInStasis() */
 			"CBaseEntity::IsInStasis"
 			{
 				"windows"	"39"
@@ -75,21 +76,20 @@
 		"Signatures" 
 		{
 			/* CTerrorPlayer::OnEnterGhostState() */
-			"CTerrorPlayer::OnEnterGhostState"
+			"CTerrorPlayer::OnEnterGhostState" //https://forums.alliedmods.net/showthread.php?t=302140
 			{
 				"library"	"server"
 				"linux"		"@_ZN13CTerrorPlayer17OnEnterGhostStateEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x8B\xF1\x8B\x86\x2A\x2A\x2A\x2A\x8B\x50\x0C\x8D\x8E\x2A\x2A\x2A\x2A\x57\xFF\xD2\x8B\x06\x8B\x90\x2A\x2A\x2A\x2A\x8B\xCE\xFF\xD2"
-						/* ? ? ? ? ? ? 53 56 8B F1 8B 86 ? ? ? ? 8B 50 0C 8D 8E ? ? ? ? 57 FF D2 8B 06 8B 90 ? ? ? ? 8B CE FF D2 */
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x8B\x2A\x8B\x86\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x8D\x8E\x2A\x2A\x2A\x2A\x57"
+				/* ? ? ? ? ? ? 53 56 8B ? 8B 86 ? ? ? ? 8B ? ? 8D 8E ? ? ? ? 57 */
 			}
-			"Tank::LeaveStasis" //found by BHaType https://forums.alliedmods.net/showthread.php?t=319342&page=2
+			/* Tank::LeaveStasis() */
+			"Tank::LeaveStasis" //https://forums.alliedmods.net/showthread.php?t=302140
 			{
-				// * Tank::LeaveStasis(Tank *this)
-				// * 56 57 8B F9 80 BF F1 00 00 00 02 8D B7 F1 00 00 00
-				
 				"library"	"server"
 				"linux"		"@_ZN4Tank11LeaveStasisEv"
-				"windows"	"\x56\x57\x8B\xF9\x80\xBF\xF1\x00\x00\x00\x02\x8D\xB7\xF1\x00\x00\x00"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8D\xB7\x2A\x2A\x2A\x2A\x74\x2A\x8B\x86\x2A\x2A\x2A\x2A\x8B\x90\x2A\x2A\x2A\x2A\x8D\x8E\x2A\x2A\x2A\x2A\x56\xFF\x2A\xC6\x2A\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x8B"
+				/* ? ? ? ? ? ? ? ? ? ? ? 8D B7 ? ? ? ? 74 ? 8B 86 ? ? ? ? 8B 90 ? ? ? ? 8D 8E ? ? ? ? 56 FF ? C6 ? ? 8B ? 8B 90 ? ? ? ? 8B */
 			}
 			"State_Transition"
 			{
@@ -150,9 +150,8 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN13CTerrorPlayer12RoundRespawnEv"
-				"windows"	"\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x84\xC0\x75"
-				/* 56 8B F1 E8 ? ? ? ? E8 ? ? ? ? 84 C0 75	*/
-				/* previous function in vtable has a string */
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x84\x2A\x75\x2A\x8B\x2A\xE8\x2A\x2A\x2A\x2A\xC6\x86"
+				/* ? ? ? ? ? ? ? ? E8 ? ? ? ? 84 ? 75 ? 8B ? E8 ? ? ? ? C6 86 */
 			}
 			"SetHumanSpec"
 			{
