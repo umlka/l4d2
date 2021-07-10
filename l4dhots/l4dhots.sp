@@ -4,11 +4,11 @@
 
 public Plugin myinfo = 
 {
-    name = "L4D HOTs",
-    author = "ProdigySim, CircleSquared",
-    description = "Pills and Adrenaline heal over time",
-    version = "0.3",
-    url = "https://bitbucket.org/ProdigySim/misc-sourcemod-plugins"
+	name = "L4D HOTs",
+	author = "ProdigySim, CircleSquared",
+	description = "Pills and Adrenaline heal over time",
+	version = "0.3",
+	url = "https://bitbucket.org/ProdigySim/misc-sourcemod-plugins"
 }
 
 ConVar g_hPillCvar;
@@ -89,50 +89,50 @@ void GetCvars()
 
 public void PillHotChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-    bool bNewVal = StringToInt(newValue) != 0;
-    if(bNewVal && StringToInt(oldValue) == 0)
-        EnablePillHot();
-    else if(!bNewVal && StringToInt(oldValue) != 0)
-        DisablePillHot(true);
+	bool bNewVal = StringToInt(newValue) != 0;
+	if(bNewVal && StringToInt(oldValue) == 0)
+		EnablePillHot();
+	else if(!bNewVal && StringToInt(oldValue) != 0)
+		DisablePillHot(true);
 }
 
 public void AdrenHotChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-    bool bNewVal = StringToInt(newValue) != 0;
-    if(bNewVal && StringToInt(oldValue) == 0)
-        EnableAdrenHot();
-    else if(!bNewVal && StringToInt(oldValue) != 0)
-        DisableAdrenHot(true);
+	bool bNewVal = StringToInt(newValue) != 0;
+	if(bNewVal && StringToInt(oldValue) == 0)
+		EnableAdrenHot();
+	else if(!bNewVal && StringToInt(oldValue) != 0)
+		DisableAdrenHot(true);
 }
 
 void EnablePillHot()
 {
-    g_iOldPillValue = g_hPillCvar.IntValue;
-    g_hPillCvar.SetInt(0);
-    HookEvent("pills_used", PillsUsed_Event);
+	g_iOldPillValue = g_hPillCvar.IntValue;
+	g_hPillCvar.SetInt(0);
+	HookEvent("pills_used", PillsUsed_Event);
 }
 
 void DisablePillHot(bool bUnHook)
 {
-    if(bUnHook) 
+	if(bUnHook) 
 		UnhookEvent("pills_used", PillsUsed_Event);
 
-    g_hPillCvar.SetInt(g_iOldPillValue);
+	g_hPillCvar.SetInt(g_iOldPillValue);
 }
 
 void EnableAdrenHot()
 {
-    g_iOldAdrenValue = g_hAdrenCvar.IntValue;
-    g_hAdrenCvar.SetInt(0);
-    HookEvent("adrenaline_used", AdrenalineUsed_Event);
+	g_iOldAdrenValue = g_hAdrenCvar.IntValue;
+	g_hAdrenCvar.SetInt(0);
+	HookEvent("adrenaline_used", AdrenalineUsed_Event);
 }
 
 void DisableAdrenHot(bool bUnHook)
 {
-    if(bUnHook) 
+	if(bUnHook) 
 		UnhookEvent("adrenaline_used", AdrenalineUsed_Event);
 
-    g_hAdrenCvar.SetInt(g_iOldAdrenValue);
+	g_hAdrenCvar.SetInt(g_iOldAdrenValue);
 }
 
 
@@ -146,24 +146,24 @@ public Action AdrenalineUsed_Event(Event event, const char[] name, bool dontBroa
 	HealEntityOverTime(GetClientOfUserId(event.GetInt("userid")), g_fAdrenInterval, g_iAdrenIncrement, g_iAdrenTotal);
 }
 
-stock void HealEntityOverTime(int client, float fInterval, int iIncrement, int iTotal)
+void HealEntityOverTime(int client, float fInterval, int iIncrement, int iTotal)
 {
-	if(client == 0 || !IsClientInGame(client) || !IsPlayerAlive(client))
+	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
 		return;
 
-	int iMaxHP = GetEntProp(client, Prop_Send, "m_iMaxHealth", 2);
+	int iMaxHP = GetEntProp(client, Prop_Send, "m_iMaxHealth");
 	if(iIncrement >= iTotal)
 		HealTowardsMax(client, iTotal, iMaxHP);
 	else
-    {
+	{
 		HealTowardsMax(client, iIncrement, iMaxHP);
 		DataPack datapack = new DataPack();
 		CreateDataTimer(fInterval, __HOT_ACTION, datapack, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
-		datapack.WriteCell(client);
+		datapack.WriteCell(GetClientUserId(client));
 		datapack.WriteCell(iIncrement);
 		datapack.WriteCell(iTotal-iIncrement);
 		datapack.WriteCell(iMaxHP);
-    }
+	}
 }
 
 public Action __HOT_ACTION(Handle timer, DataPack datapack)
@@ -175,11 +175,10 @@ public Action __HOT_ACTION(Handle timer, DataPack datapack)
 	DataPackPos fPos = datapack.Position;
 	int iRemaining = datapack.ReadCell();
 	int iMaxHP = datapack.ReadCell();
-	//PrintToChatAll("HOT: %d %d %d %d", client, iIncrement, iRemaining, iMaxHP);
 
-	if(client == 0 || !IsClientInGame(client) || !IsPlayerAlive(client))
+	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
 		return Plugin_Stop;
-    
+	
 	if(iIncrement >= iRemaining)
 	{
 		HealTowardsMax(client, iRemaining, iMaxHP);
@@ -188,17 +187,17 @@ public Action __HOT_ACTION(Handle timer, DataPack datapack)
 
 	HealTowardsMax(client, iIncrement, iMaxHP);
 	datapack.Position = fPos;
-	datapack.WriteCell(iRemaining-iIncrement);
+	datapack.WriteCell(iRemaining - iIncrement);
 
 	return Plugin_Continue;
 }
 
-stock void HealTowardsMax(int client, int iAmount, int iMax)
+void HealTowardsMax(int client, int iAmount, int iMax)
 {
-    float iHB = float(iAmount) + GetEntPropFloat(client, Prop_Send, "m_healthBuffer");
-    float fOverflow = (iHB + GetClientHealth(client)) - iMax;
-    if(fOverflow > 0.0)
-        iHB -= fOverflow;
+	float iHB = float(iAmount) + GetEntPropFloat(client, Prop_Send, "m_healthBuffer");
+	float fOverflow = (iHB + GetClientHealth(client)) - iMax;
+	if(fOverflow > 0.0)
+		iHB -= fOverflow;
 
-    SetEntPropFloat(client, Prop_Send, "m_healthBuffer", iHB);
+	SetEntPropFloat(client, Prop_Send, "m_healthBuffer", iHB);
 }
