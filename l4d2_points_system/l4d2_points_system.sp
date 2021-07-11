@@ -171,6 +171,7 @@ enum struct esPlayerData
 	int iKillCount; // 生还者击杀次数
 	int iHeadShotCount; // 生还者爆头击杀次数
 	int iHurtCount; // 被感染时对幸存者造成的伤害
+	int iHealed; //购买治疗的次数
 }
 
 esPlayerData g_esPlayerData[MAXPLAYERS + 1];
@@ -279,6 +280,7 @@ void InitPlayerData(int client)
 		g_esPlayerData[client].iKillCount = 0;
 		g_esPlayerData[client].iHeadShotCount = 0;
 		g_esPlayerData[client].iHurtCount = 0;
+		g_esPlayerData[client].iHealed = 0;
 		InitPlayerData(++client);
 	}
 }
@@ -354,7 +356,7 @@ void InitPointRewards()
 	g_hPointRewards[InfecKillSurv] = CreateConVar("l4d2_points_kill", "20", "击杀一个生还者可以获得多少积分");
 }
 
-void InitItemCosts()
+void vInitItemCosts()
 {
 	g_hItemCosts[CostP220] = CreateConVar("l4d2_points_pistol", "5", "购买小手枪需要多少积分");
 	g_hItemCosts[CostMagnum] = CreateConVar("l4d2_points_magnum", "10", "购买马格南手枪需要多少积分");
@@ -366,7 +368,7 @@ void InitItemCosts()
 	g_hItemCosts[CostSCAR] = CreateConVar("l4d2_points_scar", "12", "购买SCAR-H突击步枪需要多少积分");
 	g_hItemCosts[CostSG552] = CreateConVar("l4d2_points_sg552", "12", "购买SG552突击步枪需要多少积分");
 	g_hItemCosts[CostMilitary] = CreateConVar("l4d2_points_military", "20", "购买30发连发狙击枪需要多少积分");
-	g_hItemCosts[CostAWP] = CreateConVar("l4d2_points_awp", "500", "购买awp狙击枪需要多少积分");
+	g_hItemCosts[CostAWP] = CreateConVar("l4d2_points_awp", "1000", "购买awp狙击枪需要多少积分");
 	g_hItemCosts[CostScout] = CreateConVar("l4d2_points_scout", "20", "购买侦察狙击步枪(鸟狙)需要多少积分");
 	g_hItemCosts[CostHunting] = CreateConVar("l4d2_points_hunting", "20", "购买狩猎狙击步枪(猎枪)需要多少积分");
 	g_hItemCosts[CostAuto] = CreateConVar("l4d2_points_auto", "20", "购买一代连喷需要多少积分");
@@ -374,7 +376,7 @@ void InitItemCosts()
 	g_hItemCosts[CostChrome] = CreateConVar("l4d2_points_chrome", "10", "购买二代铁喷需要多少积分");
 	g_hItemCosts[CostPump] = CreateConVar("l4d2_points_pump", "10", "购买一代木喷需要多少积分");
 	g_hItemCosts[CostGrenade] = CreateConVar("l4d2_points_grenade", "100", "购买榴弹发射器需要多少积分");
-	g_hItemCosts[CostM60] = CreateConVar("l4d2_points_m60", "500", "购买M60机枪需要多少积分");
+	g_hItemCosts[CostM60] = CreateConVar("l4d2_points_m60", "1000", "购买M60机枪需要多少积分");
 	g_hItemCosts[CostGasCan] = CreateConVar("l4d2_points_gascan", "100", "购买汽油桶需要多少积分");
 	g_hItemCosts[CostOxygen] = CreateConVar("l4d2_points_oxygen", "100", "购买氧气罐需要多少积分");
 	g_hItemCosts[CostPropane] = CreateConVar("l4d2_points_propane", "100", "购买燃气罐需要多少积分");
@@ -409,7 +411,7 @@ void InitItemCosts()
 	g_hItemCosts[CostExplosivePack] = CreateConVar("l4d2_points_explosive_ammo_pack", "20", "购买高爆弹药包需要多少积分");
 	g_hItemCosts[CostFirePack] = CreateConVar("l4d2_points_incendiary_ammo_pack", "20", "购买燃烧弹药包需要多少积分");
 	g_hItemCosts[CostLaserSight] = CreateConVar("l4d2_points_laser", "10", "购买激光瞄准器需要多少积分");
-	g_hItemCosts[CostHeal] = CreateConVar("l4d2_points_survivor_heal", "35", "购买回满血量需要多少积分");
+	g_hItemCosts[CostHeal] = CreateConVar("l4d2_points_survivor_heal", "100", "购买回满血量需要多少积分");
 	g_hItemCosts[CostAmmo] = CreateConVar("l4d2_points_refill", "10", "购买弹药补充需要多少积分");
 
 	g_hItemCosts[CostSuicide] = CreateConVar("l4d2_points_suicide", "5", "特感玩家购买自杀需要多少积分");
@@ -420,27 +422,27 @@ void InitItemCosts()
 	g_hItemCosts[CostBoomer] = CreateConVar("l4d2_points_boomer", "100", "购买一次成为boomer的机会需要多少积分");
 	g_hItemCosts[CostSpitter] = CreateConVar("l4d2_points_spitter", "100", "购买一次成为spitter的机会需要多少积分");
 	g_hItemCosts[CostInfectedHeal] = CreateConVar("l4d2_points_infected_heal", "100", "感染者治愈自己需要多少积分");
-	g_hItemCosts[CostWitch] = CreateConVar("l4d2_points_witch", "100", "购买一次witch需要多少积分");
+	g_hItemCosts[CostWitch] = CreateConVar("l4d2_points_witch", "1000", "购买一次witch需要多少积分");
 	g_hItemCosts[CostTank] = CreateConVar("l4d2_points_tank", "2000", "购买一次成为tank的机会需要多少积分");
-	g_hItemCosts[CostTankHealMultiplier] = CreateConVar("l4d2_points_tank_heal_mult", "10", "坦克玩家购买治愈相对于其他特感需要多少倍的积分消耗");
+	g_hItemCosts[CostTankHealMultiplier] = CreateConVar("l4d2_points_tank_heal_mult", "5", "坦克玩家购买治愈相对于其他特感需要多少倍的积分消耗");
 	g_hItemCosts[CostHorde] = CreateConVar("l4d2_points_horde", "200", "购买一次horde需要多少积分");
 	g_hItemCosts[CostMob] = CreateConVar("l4d2_points_mob", "200", "购买一次mob需要多少积分");
 	g_hItemCosts[CostUncommonMob] = CreateConVar("l4d2_points_umob", "200", "购买一次umob需要多少积分");
 	g_hItemCosts[CostInfectedSlot] = CreateConVar("l4d2_points_infectedslot", "50", "购买一个感染者槽位需要多少积分");
 }
 
-void InitStructures()
+void vInitStructures()
 {
 	InitPluginSettings();
 	InitCategoriesEnabled();
 	InitPointRewards();
-	InitItemCosts();
+	vInitItemCosts();
 	InitAllPlayerData();
 	InitPluginSprites();
 	InitCounterData();
 }
 
-void RegisterAdminCommands()
+void vRegisterAdminCommands()
 {
 	RegAdminCmd("sm_listmodules", ListModules, ADMFLAG_GENERIC, "列出当前加载到积分系统的模块");
 	RegAdminCmd("sm_listpoints", ListPoints, ADMFLAG_ROOT, "列出每个玩家的积分数量.");
@@ -450,7 +452,7 @@ void RegisterAdminCommands()
 	RegAdminCmd("sm_delold",	Command_DelOld,	ADMFLAG_ROOT, "sm_delold <天数> 删除超过多少天未上线的玩家记录");
 }
 
-void RegisterConsoleCommands()
+void vRegisterConsoleCommands()
 {
 	RegConsoleCmd("sm_buystuff", BuyMenu, "打开购买菜单(只能在游戏中)");
 	RegConsoleCmd("sm_repeatbuy", Command_RBuy, "重复购买上一次购买的物品");
@@ -460,8 +462,9 @@ void RegisterConsoleCommands()
 	RegConsoleCmd("sm_points", ShowPoints, "显示个人积分(只能在游戏中)");
 }
 
-void HookEvents()
+void vHookEvents()
 {
+	HookEvent("player_team", Event_PlayerTeam);
 	HookEvent("infected_death", Event_Kill);
 	HookEvent("player_incapacitated", Event_Incap);
 	HookEvent("player_death", Event_Death);
@@ -502,7 +505,7 @@ public void OnLibraryRemoved(const char[] name)
 
 native void CZ_SetSpawnablePZ(int client);
 native void CZ_ResetSpawnablePZ();
-native bool CZ_IsSpawnablePZSupport();
+native bool CZ_IsSpawnablePZSupported();
 
 public void OnPluginStart()
 {
@@ -516,10 +519,10 @@ public void OnPluginStart()
 	AddMultiTargetFilter("@i", FilterInfected, "all Infected players", true);
 	AddMultiTargetFilter("@infected", FilterInfected, "all Infected players", true);
 
-	RegisterAdminCommands();
-	RegisterConsoleCommands();
-	HookEvents();
-	InitStructures();
+	vRegisterAdminCommands();
+	vRegisterConsoleCommands();
+	vHookEvents();
+	vInitStructures();
 
 	g_hGameMode = FindConVar("mp_gamemode");
 	g_hGameMode.AddChangeHook(OnGameModeChanged);
@@ -759,6 +762,8 @@ void CreateNatives()
 	CreateNative("PS_GetCost", Native_PS_GetCost);
 	CreateNative("PS_GetItem", Native_PS_GetItem);
 	CreateNative("PS_GetBought", Native_PS_GetBought);
+	CreateNative("PS_GetHealCount", Native_PS_GetHealCount);
+	CreateNative("PS_SetHealCount", Native_PS_SetHealCount);
 	CreateNative("PS_RegisterModule", Native_PS_RegisterModule);
 	CreateNative("PS_UnregisterModule", Native_PS_UnregisterModule);
 	CreateNative("PS_RemovePoints", Native_PS_RemovePoints);
@@ -920,8 +925,19 @@ public int Native_PS_GetBought(Handle plugin, int numParams)
 	SetNativeString(2, g_esPlayerData[GetNativeCell(1)].sBought, 64);
 }
 
+public int Native_PS_GetHealCount(Handle plugin, int numParams)
+{
+	return g_esPlayerData[GetNativeCell(1)].iHealed;
+}
+
+public int Native_PS_SetHealCount(Handle plugin, int numParams)
+{
+	g_esPlayerData[GetNativeCell(1)].iHealed = GetNativeCell(2);
+}
+
 void ResetClientData(int client)
 {
+	g_esPlayerData[client].iHealed = 0;
 	g_esPlayerData[client].iKillCount = 0;
 	g_esPlayerData[client].iHurtCount = 0;
 	g_esPlayerData[client].iProtectCount = 0;
@@ -1089,6 +1105,11 @@ void EventKillSpree(int client)
 	}
 }
 
+public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
+{
+	g_esPlayerData[GetClientIndex(event)].iHealed = 0;
+}
+
 public void Event_Kill(Event event, const char[] name, bool dontBroadcast)
 {
 	int iAttackerIndex = GetAttackerIndex(event);
@@ -1121,9 +1142,10 @@ public void Event_Incap(Event event, const char[] name, bool dontBroadcast)
 public void Event_Death(Event event, const char[] name, bool dontBroadcast)
 {
 	int iAttackerIndex = GetAttackerIndex(event);
+	int iVictimIndex = GetClientIndex(event);
+	g_esPlayerData[iVictimIndex].iHealed = 0;
 	if(IsModEnabled() && IsRealClient(iAttackerIndex))
 	{
-		int iVictimIndex = GetClientIndex(event);
 		if(IsSurvivor(iAttackerIndex))
 		{
 			int iInfectedKilledReward = g_hPointRewards[SurvKillInfec].IntValue;
@@ -3271,10 +3293,16 @@ public int MenuHandler_ConfirmHealth(Menu menu, MenuAction action, int param1, i
 				{
 					if(!strcmp(g_esPlayerData[param1].sItemName, "give health", false))
 					{
-						strcopy(g_esPlayerData[param1].sBought, 64, g_esPlayerData[param1].sItemName);
-						g_esPlayerData[param1].iBoughtCost = g_esPlayerData[param1].iItemCost;
-						RemovePoints(param1, g_esPlayerData[param1].iItemCost);
-						CheatCommand(param1, g_esPlayerData[param1].sItemName);
+						if(g_esPlayerData[param1].iHealed >= 2)
+							PrintToChat(param1,  "%T", "Heal Limit", param1);
+						else
+						{
+							g_esPlayerData[param1].iHealed++;
+							strcopy(g_esPlayerData[param1].sBought, 64, g_esPlayerData[param1].sItemName);
+							g_esPlayerData[param1].iBoughtCost = g_esPlayerData[param1].iItemCost;
+							RemovePoints(param1, g_esPlayerData[param1].iItemCost);
+							CheatCommand(param1, g_esPlayerData[param1].sItemName);
+						}
 					}
 					else
 					{
@@ -3397,19 +3425,35 @@ public int MenuHandler_ConfirmI(Menu menu, MenuAction action, int param1, int pa
 
 				if(!strcmp(g_esPlayerData[param1].sItemName, "suicide", false))
 					PerformSuicide(param1, g_esPlayerData[param1].iItemCost);
+				else if(!strcmp(g_esPlayerData[param1].sItemName, "give health", false))
+				{
+					if(g_esPlayerData[param1].iHealed >= 1)
+					{
+						PrintToChat(param1,  "%T", "Heal Limit", param1);
+						return;
+					}
+					else
+						g_esPlayerData[param1].iHealed++;
+				}
 				else if(!strcmp(g_esPlayerData[param1].sItemName, "z_spawn_old mob", false))
 					g_iCounterData[iUCommonLeft] += FindConVar("z_common_limit").IntValue;
 				else if(!strcmp(g_esPlayerData[param1].sItemName, "z_spawn_old tank", false))
 				{
-					if(g_iCounterData[iTanksSpawned] == g_hPluginSettings[hTankLimit].IntValue)
+					if(g_iCounterData[iTanksSpawned] >= g_hPluginSettings[hTankLimit].IntValue)
+					{
 						PrintToChat(param1,  "%T", "Tank Limit", param1);
+						return;
+					}
 					else
-						g_iCounterData[iWitchesSpawned]++;
+						g_iCounterData[iTanksSpawned]++;
 				}
 				else if(!strcmp(g_esPlayerData[param1].sItemName, "z_spawn_old witch", false) || !strcmp(g_esPlayerData[param1].sItemName, "z_spawn_old witch_bride", false))
 				{
-					if(g_iCounterData[iWitchesSpawned] == g_hPluginSettings[hWitchLimit].IntValue)
+					if(g_iCounterData[iWitchesSpawned] >= g_hPluginSettings[hWitchLimit].IntValue)
+					{
 						PrintToChat(param1,  "%T", "Witch Limit", param1);
+						return;
+					}
 					else
 						g_iCounterData[iWitchesSpawned]++;
 				}
@@ -3468,7 +3512,7 @@ void vSpawnablePZScanProtect(int iState, int client = -1)
 	{
 		case 0: 
 		{
-			if(g_bControlZombies && CZ_IsSpawnablePZSupport())
+			if(g_bControlZombies && CZ_IsSpawnablePZSupported())
 				CZ_SetSpawnablePZ(client);
 			else
 			{
@@ -3493,7 +3537,7 @@ void vSpawnablePZScanProtect(int iState, int client = -1)
 
 		case 1: 
 		{
-			if(g_bControlZombies && CZ_IsSpawnablePZSupport())
+			if(g_bControlZombies && CZ_IsSpawnablePZSupported())
 				CZ_ResetSpawnablePZ();
 			else
 			{
