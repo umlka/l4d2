@@ -122,6 +122,23 @@ native int PS_GetItem(int iClientIndex, char[] sItem);
 native int PS_GetBought(int iClientIndex, char[] sItem);
 
 /**
+ * Gets a client's healed count
+ *
+ * @param client			client index
+ * @return					count
+ */
+native int PS_GetHealCount(int iClientIndex);
+
+/**
+ * Sets a client's healed count
+ *
+ * @param client		client index
+ * @param newval			new value of a client's healed count
+ * @return				none
+ */
+native void PS_SetHealCount(int iClientIndex, int iCount);
+
+/**
  * Registers a module for points system
  *
  * @param modulename	String that contains the module to be registered's name
