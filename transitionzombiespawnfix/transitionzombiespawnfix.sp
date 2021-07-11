@@ -1,19 +1,33 @@
-#pragma semicolon 1
-#pragma newdecls required
 #include <sourcemod>
 #include <dhooks>
 
-#define GAMEDATA	"transitionzombiespawnfix"
+#pragma semicolon 1
+#pragma newdecls required
+
+#define GAMEDATA "transitionzombiespawnfix"
 
 DynamicDetour g_dDetour[2];
 
 public Plugin myinfo = 
 {
-	name = "Transition Zombie Spawn Fix",
-	author = "sorallll",
-	description = "",
-	version = "1.0.0",
-	url = "https://steamcommunity.com/id/sorallll"
+	name = "[L4D2]Transition Zombie Spawn Fix",
+	author = "sorallll & Psyk0tik (Crasher_3637)",
+	description = "To Fix z_spawn_old/ZombieManager::GetRandomPZSpawnPosition spawn SI failed during player transition(\"could not find a XX spawn position in 5 tries\")",
+	version = "1.0.1",
+	url = "https://forums.alliedmods.net/showthread.php?t=333351"
+};
+
+bool g_bCanZombieSpawnHere;
+
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	if (GetEngineVersion() != Engine_Left4Dead2)
+	{
+		strcopy(error, err_max, "This plugin only supports Left 4 Dead 2");
+		return APLRes_SilentFailure;
+	}
+
+	return APLRes_Success;
 }
 
 public void OnPluginStart()
@@ -71,20 +85,19 @@ void vDisableDetours()
 		SetFailState("Failed to disable detour: CDirector::IsInTransition");
 }
 
-bool g_bCanZombieSpawnHere;
-public MRESReturn mreCanZombieSpawnHerePre()
+public MRESReturn mreCanZombieSpawnHerePre(DHookReturn hReturn, DHookParam hParams)
 {
 	g_bCanZombieSpawnHere = true;
 	return MRES_Ignored;
 }
 
-public MRESReturn mreCanZombieSpawnHerePost()
+public MRESReturn mreCanZombieSpawnHerePost(DHookReturn hReturn, DHookParam hParams)
 {
 	g_bCanZombieSpawnHere = false;
 	return MRES_Ignored;
 }
 
-public MRESReturn mreIsInTransitionPost(DHookReturn hReturn)
+public MRESReturn mreIsInTransitionPost(int pThis, DHookReturn hReturn, DHookParam hParams)
 {
 	if(g_bCanZombieSpawnHere)
 	{
