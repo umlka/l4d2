@@ -1608,7 +1608,7 @@ public MRESReturn mrePlayerSetModelPost(int pThis, DHookParam hParams)
 	
 	static char sModel[128];
 	hParams.GetString(1, sModel, sizeof(sModel));
-	if(StrContains(sModel, "models/infected", false) == -1)
+	if(StrContains(sModel, "survivors", false) >= 0)
 		strcopy(g_sPlayerModel[pThis], sizeof(g_sPlayerModel), sModel);
 
 	return MRES_Ignored;
