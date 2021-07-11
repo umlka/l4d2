@@ -216,8 +216,8 @@ ConVar g_hCmdCooldownTime;
 ConVar g_hCmdEnterCooling;
 ConVar g_hPZChangeTeamTo;
 ConVar g_hGlowColor[4];
-ConVar g_hAccessAdminFlags;
-ConVar g_hAdminImmunityLevels;
+ConVar g_hUserFlagBits;
+ConVar g_hImmunityLevels;
 ConVar g_hSILimit;
 ConVar g_hSpawnLimits[6];
 ConVar g_hSpawnWeights[6];
@@ -252,8 +252,8 @@ int g_iGlowColor[4];
 int g_iSpawnLimits[6];
 int g_iSpawnWeights[6];
 int g_iSpawnCounts[6];
-int g_iAccessAdminFlags[6];
-int g_iAdminImmunityLevels[6];
+int g_iUserFlagBits[5];
+int g_iImmunityLevels[5];
 
 int g_iTankBot[MAXPLAYERS + 1];
 int g_iDisplayed[MAXPLAYERS + 1];
@@ -327,8 +327,8 @@ public void OnPluginStart()
 	g_hGlowColor[COLOR_INCAPA] = CreateConVar("cz_survivor_color_incapacitated", "180 0 0" , "特感玩家看到的倒地状态生还者发光颜色", CVAR_FLAGS);
 	g_hGlowColor[COLOR_BLACKW] = CreateConVar("cz_survivor_color_blackwhite", "255 255 255" , "特感玩家看到的黑白状态生还者发光颜色", CVAR_FLAGS);
 	g_hGlowColor[COLOR_VOMITED] = CreateConVar("cz_survivor_color_nowit", "155 0 180" , "特感玩家看到的被Boomer喷或炸中过的生还者发光颜色", CVAR_FLAGS);
-	g_hAccessAdminFlags = CreateConVar("cz_admin_flags", "z;;z;;;z" , "哪些标志能绕过sm_team4,sm_team2,sm_team3,sm_bp,sm_class,鼠标中键重置冷却的使用限制(留空表示所有人都不会被限制)", CVAR_FLAGS);
-	g_hAdminImmunityLevels = CreateConVar("cz_admin_immunitylevels", "99;99;99;99;99;99" , "要达到什么免疫级别才能绕过sm_team4,sm_team2,sm_team3,sm_bp,sm_class,鼠标中键重置冷的使用限制", CVAR_FLAGS);
+	g_hUserFlagBits = CreateConVar("cz_user_flagbits", ";z;;;z" , "哪些标志能绕过sm_team2,sm_team3,sm_bp,sm_class,鼠标中键重置冷却的使用限制(留空表示所有人都不会被限制)", CVAR_FLAGS);
+	g_hImmunityLevels = CreateConVar("cz_immunity_levels", "99;99;99;99;99" , "要达到什么免疫级别才能绕过sm_team2,sm_team3,sm_bp,sm_class,鼠标中键重置冷的使用限制", CVAR_FLAGS);
 
 	//https://github.com/brxce/hardcoop/blob/master/addons/sourcemod/scripting/modules/SS_SpawnQueue.sp
 	g_hSILimit = CreateConVar("cz_si_limit", "32", "同时存在的最大特感数量", CVAR_FLAGS, true, 0.0, true, 32.0);
@@ -376,8 +376,8 @@ public void OnPluginStart()
 	for(; i < 4; i++)
 		g_hGlowColor[i].AddChangeHook(vColorConVarChanged);
 
-	g_hAccessAdminFlags.AddChangeHook(vAdminConVarChanged);
-	g_hAdminImmunityLevels.AddChangeHook(vAdminConVarChanged);
+	g_hUserFlagBits.AddChangeHook(vAccessConVarChanged);
+	g_hImmunityLevels.AddChangeHook(vAccessConVarChanged);
 
 	g_hSILimit.AddChangeHook(vSpawnConVarChanged);
 	for(i = 0; i < 6; i++)
@@ -389,7 +389,6 @@ public void OnPluginStart()
 
 	vIsAllowed();
 
-	RegConsoleCmd("sm_team4", CmdTeam4, "切换到Team 4.");
 	RegConsoleCmd("sm_team2", CmdTeam2, "切换到Team 2.");
 	RegConsoleCmd("sm_team3", CmdTeam3, "切换到Team 3.");
 	RegConsoleCmd("sm_bp", CmdBP, "叛变为坦克.");
@@ -412,7 +411,7 @@ public void OnConfigsExecuted()
 	vGetOtherCvars();
 	vGetColorCvars();
 	vGetSpawnCvars();
-	vGetAdminCvars();
+	vGetAccessCvars();
 }
 
 public void vModeConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -610,48 +609,48 @@ int iGetColor(ConVar hConVar)
 	return iColor > 0 ? iColor : 1;
 }
 
-public void vAdminConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+public void vAccessConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	vGetAdminCvars();
+	vGetAccessCvars();
 }
 
-void vGetAdminCvars()
+void vGetAccessCvars()
 {
-	vGetAccessAdminFlags();
-	vGetAdminImmunityLevels();
+	vGetUserFlagBits();
+	vGetImmunityLevels();
 }
 
-void vGetAccessAdminFlags()
+void vGetUserFlagBits()
 {
 	char sTemp[256];
-	g_hAccessAdminFlags.GetString(sTemp, sizeof(sTemp));
+	g_hUserFlagBits.GetString(sTemp, sizeof(sTemp));
 
-	char sAccessAdminFlags[6][26];
-	ExplodeString(sTemp, ";", sAccessAdminFlags, sizeof(sAccessAdminFlags), sizeof(sAccessAdminFlags[]));
+	char sUserFlagBits[5][26];
+	ExplodeString(sTemp, ";", sUserFlagBits, sizeof(sUserFlagBits), sizeof(sUserFlagBits[]));
 
-	for(int i; i < 6; i++)
-		g_iAccessAdminFlags[i] = ReadFlagString(sAccessAdminFlags[i]);
+	for(int i; i < 5; i++)
+		g_iUserFlagBits[i] = ReadFlagString(sUserFlagBits[i]);
 }
 
-void vGetAdminImmunityLevels()
+void vGetImmunityLevels()
 {
 	char sTemp[128];
-	g_hAdminImmunityLevels.GetString(sTemp, sizeof(sTemp));
+	g_hImmunityLevels.GetString(sTemp, sizeof(sTemp));
 
-	char sAdminImmunityLevels[6][8];
-	ExplodeString(sTemp, ";", sAdminImmunityLevels, sizeof(sAdminImmunityLevels), sizeof(sAdminImmunityLevels[]));
+	char sImmunityLevels[5][8];
+	ExplodeString(sTemp, ";", sImmunityLevels, sizeof(sImmunityLevels), sizeof(sImmunityLevels[]));
 
-	for(int i; i < 6; i++)
-		g_iAdminImmunityLevels[i] = StringToInt(sAdminImmunityLevels[i]);
+	for(int i; i < 5; i++)
+		g_iImmunityLevels[i] = StringToInt(sImmunityLevels[i]);
 }
 
 static bool bCheckClientAccess(int client, int iIndex)
 {
-	if(g_iAccessAdminFlags[iIndex] == 0)
+	if(g_iUserFlagBits[iIndex] == 0)
 		return true;
 
 	static int iFlagBits;
-	if((iFlagBits = GetUserFlagBits(client)) & ADMFLAG_ROOT == 0 && iFlagBits & g_iAccessAdminFlags[iIndex] == 0)
+	if((iFlagBits = GetUserFlagBits(client)) & ADMFLAG_ROOT == 0 && iFlagBits & g_iUserFlagBits[iIndex] == 0)
 		return false;
 
 	static char sSteamID[32];
@@ -660,7 +659,7 @@ static bool bCheckClientAccess(int client, int iIndex)
 	if(admin == INVALID_ADMIN_ID)
 		return true;
 
-	return admin.ImmunityLevel >= g_iAdminImmunityLevels[iIndex];
+	return admin.ImmunityLevel >= g_iImmunityLevels[iIndex];
 }
 
 public void vSpawnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -679,27 +678,6 @@ void vGetSpawnCvars()
 	g_bScaleWeights = g_hScaleWeights.BoolValue;
 }
 
-public Action CmdTeam4(int client, int args)
-{
-	if(g_bHasPlayerControlledZombies)
-	{
-		ReplyToCommand(client, "仅支持战役模式");
-		return Plugin_Handled;
-	}
-
-	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
-		return Plugin_Handled;
-
-	if(bCheckClientAccess(client, 0) == false)
-	{
-		PrintToChat(client, "无权使用该指令");
-		return Plugin_Handled;
-	}
-
-	ChangeClientTeam(client, 4);
-	return Plugin_Handled;
-}
-
 public Action CmdTeam2(int client, int args)
 {
 	if(g_bHasPlayerControlledZombies)
@@ -711,7 +689,7 @@ public Action CmdTeam2(int client, int args)
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
-	if(bCheckClientAccess(client, 1) == false)
+	if(bCheckClientAccess(client, 0) == false)
 	{
 		//PrintToChat(client, "无权使用该指令");
 		//return Plugin_Handled;
@@ -746,7 +724,7 @@ public Action CmdTeam3(int client, int args)
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 3)
 		return Plugin_Handled;
 
-	if(bCheckClientAccess(client, 2) == false)
+	if(bCheckClientAccess(client, 1) == false)
 	{
 		//PrintToChat(client, "无权使用该指令");
 		//return Plugin_Handled;
@@ -786,7 +764,7 @@ public Action CmdBP(int client, int args)
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
-	if(bCheckClientAccess(client, 3) == false)
+	if(bCheckClientAccess(client, 2) == false)
 	{
 		PrintToChat(client, "无权使用该指令");
 		return Plugin_Handled;
@@ -826,7 +804,7 @@ public Action CmdChangeClass(int client, int args)
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 	
-	if(bCheckClientAccess(client, 4) == false)
+	if(bCheckClientAccess(client, 3) == false)
 	{
 		PrintToChat(client, "无权使用该指令");
 		return Plugin_Handled;
@@ -988,7 +966,7 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	{
 		if(iFlags & IN_ZOOM)
 		{
-			if(g_iMaterialized[client] == 0 && bCheckClientAccess(client, 4) == true)
+			if(g_iMaterialized[client] == 0 && bCheckClientAccess(client, 3) == true)
 				vSelectAscendingZombieClass(client);
 		}
 		else if(iFlags & IN_ATTACK)
@@ -999,7 +977,7 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	}
 	else
 	{
-		if(iFlags & IN_ZOOM && bCheckClientAccess(client, 5) == true)
+		if(iFlags & IN_ZOOM && bCheckClientAccess(client, 4) == true)
 			vResetInfectedAbility(client, 0.1); //管理员鼠标中键重置技能冷却
 	}
 
@@ -2788,10 +2766,10 @@ void OnNextFrame_EnterGhostState(int client)
 	{
 		if(g_iDisplayed[client] == 0)
 		{
-			if(bCheckClientAccess(client, 1) == true)
+			if(bCheckClientAccess(client, 0) == true)
 				CPrintToChat(client, "{default}聊天栏输入 {olive}!team2 {default}可切换回{blue}生还者");
 				
-			if(bCheckClientAccess(client, 4) == true)
+			if(bCheckClientAccess(client, 3) == true)
 				PrintHintText(client, "灵魂状态下按下鼠标[中键]可以快速切换特感");
 		}
 
