@@ -31,15 +31,15 @@ DynamicDetour g_dDetourPlayerSetModel;
 
 ConVar g_hL4DSurvivorLimit;
 ConVar g_hSurvivorLimit;
-ConVar g_hAutoJoinSurvivor; 
+ConVar g_hAutoJoinSurvivor;
 ConVar g_hRespawnJoin;
 ConVar g_hSpecCmdLimit;
 ConVar g_hGiveWeaponType;
 ConVar g_hSlotFlags[5];
-ConVar g_hSbAllBotGame; 
+ConVar g_hSbAllBotGame;
 ConVar g_hAllowAllBotSurvivorTeam;
 
-int g_iRoundStart; 
+int g_iRoundStart;
 int g_iPlayerSpawn;
 int g_iSurvivorBot;
 int g_iSurvivorLimit;
@@ -271,7 +271,7 @@ public void OnPluginStart()
 	g_hGiveWeaponType = CreateConVar("bots_give_type", "2" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
 	g_hSlotFlags[0] = CreateConVar("bots_give_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[1] = CreateConVar("bots_give_slot1", "131068" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[2] = CreateConVar("bots_give_slot2", "7" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[2] = CreateConVar("bots_give_slot2", "0" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[3] = CreateConVar("bots_give_slot3", "3" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[4] = CreateConVar("bots_give_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
 
@@ -1331,7 +1331,7 @@ void vForceCrouch(int client)
 void vSetGhostStatus(int client, int iGhost)
 {
 	if(GetEntProp(client, Prop_Send, "m_isGhost") != iGhost)
-		SetEntProp(client, Prop_Send, "m_isGhost", iGhost); 
+		SetEntProp(client, Prop_Send, "m_isGhost", iGhost);
 }
 
 void vRemovePlayerSlot(int client, int iSlot)
