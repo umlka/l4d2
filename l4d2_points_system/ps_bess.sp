@@ -601,10 +601,13 @@ void performHeal(int iClientIndex, int iCost)
 {
 	if(iCost >= 0)
 	{
-		if(hasEnoughPoints(iClientIndex, iCost))
+		int iTeam = GetClientTeam(iClientIndex);
+		int iCount = PS_GetHealCount(iClientIndex);
+		if(hasEnoughPoints(iClientIndex, iCost) && ((iTeam == 3 && iCount < 1) || (iTeam == 2 && iCount < 2)))
 		{
 			CheatCommand(iClientIndex, "give health");
 			removePoints(iClientIndex, iCost);
+			PS_SetHealCount(iClientIndex, iCount++);
 		}
 	}
 	return;
