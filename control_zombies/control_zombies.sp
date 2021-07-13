@@ -2414,11 +2414,31 @@ void vSITypeCount()
 	for(; i < 6; i++)
 		g_iSpawnCounts[i] = 0;
 
-	int iZombieClass;
 	for(i = 1; i <= MaxClients; i++)
 	{
-		if(IsClientInGame(i) && !IsClientInKickQueue(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && 0 < (iZombieClass = GetEntProp(i, Prop_Send, "m_zombieClass")) < 7)
-			g_iSpawnCounts[iZombieClass - 1]++;
+		if(IsClientInGame(i) && !IsClientInKickQueue(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i))
+		{
+			switch(GetEntProp(i, Prop_Send, "m_zombieClass"))
+			{
+				case 1:
+					g_iSpawnCounts[SI_SMOKER]++;
+
+				case 2:
+					g_iSpawnCounts[SI_BOOMER]++;
+
+				case 3:
+					g_iSpawnCounts[SI_HUNTER]++;
+
+				case 4:
+					g_iSpawnCounts[SI_SPITTER]++;
+
+				case 5:
+					g_iSpawnCounts[SI_JOCKEY]++;
+		
+				case 6:
+					g_iSpawnCounts[SI_CHARGER]++;
+			}
+		}
 	}
 }
 
