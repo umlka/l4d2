@@ -1062,7 +1062,7 @@ void vResetClientData(int client)
 public void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
 { 
 	if(g_bHasAnySurvivorLeftSafeArea == false && bIsRoundStarted() == true && bHasAnySurvivorLeftSafeArea())
-		CreateTimer(0.1, CheckSurvivorLeftSafeArea, _, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(0.1, Timer_PlayerLeftStartArea, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 bool bIsRoundStarted()
@@ -1070,7 +1070,7 @@ bool bIsRoundStarted()
 	return g_iRoundStart && g_iPlayerSpawn;
 }
 
-public Action CheckSurvivorLeftSafeArea(Handle timer)
+public Action Timer_PlayerLeftStartArea(Handle timer)
 {
 	if(g_bHasAnySurvivorLeftSafeArea == false && bHasAnySurvivorLeftSafeArea())
 	{
