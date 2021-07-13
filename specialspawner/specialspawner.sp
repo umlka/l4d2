@@ -138,7 +138,7 @@ public Plugin myinfo =
 	name = "Special Spawner",
 	author = "Tordecybombo, breezy",
 	description = "Provides customisable special infected spawing beyond vanilla coop limits",
-	version = "",
+	version = "1.1",
 	url = ""
 };
 
@@ -927,7 +927,7 @@ public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 public void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
 { 
 	if(g_bHasAnySurvivorLeftSafeArea == false && bIsRoundStarted() == true && bHasAnySurvivorLeftSafeArea())
-		CreateTimer(0.1, Timer_CheckSurvivorLeftSafeArea, _, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(0.1, Timer_PlayerLeftStartArea, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 bool bIsRoundStarted()
@@ -935,7 +935,7 @@ bool bIsRoundStarted()
 	return g_iRoundStart && g_iPlayerSpawn;
 }
 
-public Action Timer_CheckSurvivorLeftSafeArea(Handle timer)
+public Action Timer_PlayerLeftStartArea(Handle timer)
 {
 	if(g_bHasAnySurvivorLeftSafeArea == false && bHasAnySurvivorLeftSafeArea())
 	{
@@ -1020,7 +1020,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) != 3 || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
 		return;
 
-	CreateTimer(0.1, TankSpawnCheck, userid, TIMER_FLAG_NO_MAPCHANGE);
+	CreateTimer(0.1, Timer_TankSpawn, userid, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
@@ -1039,7 +1039,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 		RequestFrame(OnNextFrame_KickBot, userid);
 }
 
-public Action TankSpawnCheck(Handle timer, int client)
+public Action Timer_TankSpawn(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8 || bFindTank(client))
 		return;
