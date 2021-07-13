@@ -952,14 +952,9 @@ public Action Timer_CheckSurvivorLeftSafeArea(Handle timer)
 
 bool bHasAnySurvivorLeftSafeArea()
 {
-	int entity = iGetResourceEntity();
+	int entity = GetPlayerResourceEntity();
 
 	return entity > -1 && GetEntProp(entity, Prop_Send, "m_hasAnySurvivorLeftSafeArea");
-}
-
-int iGetResourceEntity()
-{
-	return FindEntityByClassname(MaxClients + 1, "terror_player_manager");
 }
 
 Handle g_hUpdateTimer;
