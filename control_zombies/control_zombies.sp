@@ -1094,9 +1094,11 @@ public Action Timer_PlayerLeftStartArea(Handle timer)
 
 bool bHasAnySurvivorLeftSafeArea()
 {
-	int entity = GetPlayerResourceEntity();
+	int entity = FindEntityByClassname(-1, "terror_player_manager");
+	if(entity == INVALID_ENT_REFERENCE)
+		return false;
 
-	return entity > -1 && GetEntProp(entity, Prop_Send, "m_hasAnySurvivorLeftSafeArea");
+	return !!GetEntProp(entity, Prop_Send, "m_hasAnySurvivorLeftSafeArea");
 }
 
 void vCalculatePZRespawnTime(int client)
