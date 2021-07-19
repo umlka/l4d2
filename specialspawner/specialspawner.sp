@@ -133,6 +133,12 @@ public void OnLibraryRemoved(const char[] name)
 		g_bControlZombies = false;
 }
 
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	MarkNativeAsOptional("CZ_IsSpawnablePZSupported");
+	return APLRes_Success;
+}
+
 public Plugin myinfo =
 {
 	name = "Special Spawner",
@@ -324,7 +330,7 @@ static void vGenerateAndExecuteSpawnQueue()
 				static bool bResetGhost[MAXPLAYERS + 1];
 				static bool bResetLifeState[MAXPLAYERS + 1];
 
-				if(!bIsSpawnablePZSupported())
+				if(!(g_bControlZombies && CZ_IsSpawnablePZSupported()))
 				{
 					for(i = 1; i <= MaxClients; i++)
 					{
@@ -357,7 +363,7 @@ static void vGenerateAndExecuteSpawnQueue()
 				SetUserFlagBits(client, iFlagBits);
 				SetCommandFlags("z_spawn_old", iCmdFlags | FCVAR_CHEAT);
 				
-				if(!bIsSpawnablePZSupported())
+				if(!(g_bControlZombies && CZ_IsSpawnablePZSupported()))
 				{
 					for(i = 1; i <= MaxClients; i++)
 					{
@@ -385,14 +391,6 @@ static void vGenerateAndExecuteSpawnQueue()
 		}
 		delete aSpawnQueue;
 	}
-}
-
-static bool bIsSpawnablePZSupported()
-{
-	if(!g_bControlZombies)
-		return false;
-
-	return CZ_IsSpawnablePZSupported();
 }
 
 static void vVerifySIType(int iRusher, ArrayList aSpawnQueue, int iAllowedSI)
