@@ -789,6 +789,9 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 	CreateNatives();
 	MarkNativeAsOptional("InfoEditor_GetString");
+	MarkNativeAsOptional("CZ_SetSpawnablePZ");
+	MarkNativeAsOptional("CZ_ResetSpawnablePZ");
+	MarkNativeAsOptional("CZ_IsSpawnablePZSupported");
 	return APLRes_Success;
 }
 
