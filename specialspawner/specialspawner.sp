@@ -703,25 +703,25 @@ bool IsValidStuck(int client)
 	{
 		case 1:
 		{
-			if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
+			if(GetEntPropEnt(client, Prop_Send, "m_tongueVictim") > 0)
 				bIsValid = false; 
 		}
 		
 		case 3:
 		{
-			if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
+			if(GetEntPropEnt(client, Prop_Send, "m_pounceVictim") > 0)
 				bIsValid = false;
 		}
 		
 		case 5:
 		{
-			if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
+			if(GetEntPropEnt(client, Prop_Send, "m_jockeyVictim") > 0)
 				bIsValid = false;
 		}
 		
 		case 6:
 		{
-			if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
+			if(GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0)
 				bIsValid = false;
 	}
 		
