@@ -530,10 +530,10 @@ void vToggleConVars(bool bEnable)
 		hConVar.SetBounds(ConVarBound_Upper, true, 0.0);
 		hConVar.IntValue = 0;
 	
-		hConVar = FindConVar("z_max_player_zombies");
+		/*hConVar = FindConVar("z_max_player_zombies");
 		hConVar.SetBounds(ConVarBound_Lower, true, 32.0);
 		hConVar.SetBounds(ConVarBound_Upper, true, 32.0);
-		hConVar.IntValue = 32;
+		hConVar.IntValue = 32;*/
 	}
 	else if(bEnabled && !bEnable)
 	{
@@ -543,10 +543,10 @@ void vToggleConVars(bool bEnable)
 		hConVar.SetBounds(ConVarBound_Upper, false);
 		hConVar.RestoreDefault();
 	
-		hConVar = FindConVar("z_max_player_zombies");
+		/*hConVar = FindConVar("z_max_player_zombies");
 		hConVar.SetBounds(ConVarBound_Lower, false);
 		hConVar.SetBounds(ConVarBound_Upper, false);
-		hConVar.RestoreDefault();
+		hConVar.RestoreDefault();*/
 	}
 }
 
