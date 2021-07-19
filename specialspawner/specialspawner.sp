@@ -324,7 +324,7 @@ static void vGenerateAndExecuteSpawnQueue()
 				static bool bResetGhost[MAXPLAYERS + 1];
 				static bool bResetLifeState[MAXPLAYERS + 1];
 
-				if(!(g_bControlZombies && CZ_IsSpawnablePZSupported()))
+				if(!bIsSpawnablePZSupported())
 				{
 					for(i = 1; i <= MaxClients; i++)
 					{
@@ -357,7 +357,7 @@ static void vGenerateAndExecuteSpawnQueue()
 				SetUserFlagBits(client, iFlagBits);
 				SetCommandFlags("z_spawn_old", iCmdFlags | FCVAR_CHEAT);
 				
-				if(!(g_bControlZombies && CZ_IsSpawnablePZSupported()))
+				if(!bIsSpawnablePZSupported())
 				{
 					for(i = 1; i <= MaxClients; i++)
 					{
@@ -385,6 +385,14 @@ static void vGenerateAndExecuteSpawnQueue()
 		}
 		delete aSpawnQueue;
 	}
+}
+
+static bool bIsSpawnablePZSupported()
+{
+	if(!g_bControlZombies)
+		return false;
+
+	return CZ_IsSpawnablePZSupported();
 }
 
 static void vVerifySIType(int iRusher, ArrayList aSpawnQueue, int iAllowedSI)
