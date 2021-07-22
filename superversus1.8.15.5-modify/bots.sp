@@ -646,13 +646,13 @@ void vSpawnFakeSurvivorClient()
 	if(iBot == 0)
 		return;
 
-	ChangeClientTeam(iBot, TEAM_SURVIVOR);
-
 	if(DispatchKeyValue(iBot, "classname", "SurvivorBot") == false)
 		return;
 
 	if(DispatchSpawn(iBot) == false)
 		return;
+
+	ChangeClientTeam(iBot, TEAM_SURVIVOR);
 
 	if(!IsPlayerAlive(iBot))
 		vRoundRespawn(iBot);
