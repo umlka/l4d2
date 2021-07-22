@@ -1094,7 +1094,7 @@ public Action Timer_PlayerLeftStartArea(Handle timer)
 
 bool bHasAnySurvivorLeftSafeArea()
 {
-	int entity = FindEntityByClassname(-1, "terror_player_manager");
+	int entity = GetPlayerResourceEntity();
 	if(entity == INVALID_ENT_REFERENCE)
 		return false;
 
