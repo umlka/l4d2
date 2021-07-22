@@ -327,10 +327,11 @@ static void vGenerateAndExecuteSpawnQueue()
 
 				g_iPreferredDirection = bForward ? 3 : 4;
 
+				static bool bPZSupported;
 				static bool bResetGhost[MAXPLAYERS + 1];
 				static bool bResetLifeState[MAXPLAYERS + 1];
 
-				if(!(g_bControlZombies && CZ_IsSpawnablePZSupported()))
+				if(!(bPZSupported = g_bControlZombies && CZ_IsSpawnablePZSupported()))
 				{
 					for(i = 1; i <= MaxClients; i++)
 					{
@@ -363,7 +364,7 @@ static void vGenerateAndExecuteSpawnQueue()
 				SetUserFlagBits(client, iFlagBits);
 				SetCommandFlags("z_spawn_old", iCmdFlags | FCVAR_CHEAT);
 				
-				if(!(g_bControlZombies && CZ_IsSpawnablePZSupported()))
+				if(!bPZSupported)
 				{
 					for(i = 1; i <= MaxClients; i++)
 					{
