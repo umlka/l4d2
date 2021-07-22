@@ -144,7 +144,7 @@ public Plugin myinfo =
 	name = "Special Spawner",
 	author = "Tordecybombo, breezy",
 	description = "Provides customisable special infected spawing beyond vanilla coop limits",
-	version = "1.1",
+	version = "1.2",
 	url = ""
 };
 
