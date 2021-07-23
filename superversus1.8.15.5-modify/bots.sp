@@ -4,7 +4,7 @@
 #include <sdktools>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.8.15.5"
+#define PLUGIN_VERSION "1.9.0"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
 #define TEAM_SPECTATOR	1
