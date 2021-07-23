@@ -44,11 +44,6 @@
 
 		"Offsets"
 		{
-			"CTerrorPlayer::SetObserverTarget"
-			{
-				"linux"		"403"
-				"windows"	"402"
-			}
 			"RoundRespawn_Offset"
 			{
 				"linux"		"25" // 0x19
@@ -98,7 +93,6 @@
 				"library"	"server"
 				"linux"		"@_ZN11CBasePlayer8SetModelEPKc"
 				"windows"	"\x55\x8B\x2A\x8B\x2A\x2A\x56\x57\x50\x8B\x2A\xE8\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x2A\x2A\x8B"
-				"mac"		"@_ZN11CBasePlayer8SetModelEPKc"
 			}
 		}
     }
