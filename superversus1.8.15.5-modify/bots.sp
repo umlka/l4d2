@@ -17,7 +17,6 @@ Handle g_hSDK_Call_RoundRespawn;
 Handle g_hSDK_Call_SetHumanSpec;
 Handle g_hSDK_Call_TakeOverBot;
 Handle g_hSDK_Call_GoAwayFromKeyboard;
-//Handle g_hSDK_Call_SetObserverTarget;
 
 Handle g_hBotsUpdateTimer;
 Handle g_hGiveWeaponTimer[MAXPLAYERS + 1];
@@ -646,20 +645,18 @@ void vSpawnFakeSurvivorClient()
 	if(iBot == 0)
 		return;
 
-	ChangeClientTeam(iBot, TEAM_SURVIVOR);
+	if(DispatchKeyValue(iBot, "classname", "SurvivorBot") && DispatchSpawn(iBot))
+	{
+		ChangeClientTeam(iBot, TEAM_SURVIVOR);
 
-	if(DispatchKeyValue(iBot, "classname", "SurvivorBot") == false)
-		return;
+		if(!IsPlayerAlive(iBot))
+			vRoundRespawn(iBot);
 
-	if(DispatchSpawn(iBot) == false)
-		return;
+		//vGiveWeapon(iBot);
+		vSetGodMode(iBot, 1.0);
+		vTeleportToSurvivor(iBot);
+	}
 
-	if(!IsPlayerAlive(iBot))
-		vRoundRespawn(iBot);
-
-	//vGiveWeapon(iBot);
-	vSetGodMode(iBot, 1.0);
-	vTeleportToSurvivor(iBot);
 	KickClient(iBot, "Kicking Fake Client.");
 }
 
@@ -1447,15 +1444,7 @@ void vLoadGameData()
 	g_hSDK_Call_GoAwayFromKeyboard = EndPrepSDKCall();
 	if(g_hSDK_Call_GoAwayFromKeyboard == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard");
-/*
-	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CTerrorPlayer::SetObserverTarget") == false)
-		SetFailState("Failed to find signature: CTerrorPlayer::SetObserverTarget");
-	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
-	g_hSDK_Call_SetObserverTarget = EndPrepSDKCall();
-	if(g_hSDK_Call_SetObserverTarget == null)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::SetObserverTarget");
-*/
+
 	vSetupDetours(hGameData);
 
 	delete hGameData;
@@ -1574,9 +1563,7 @@ public MRESReturn mreGoAwayFromKeyboardPost(int pThis, DHookReturn hReturn)
 	if(g_bShouldFixAFK && g_iSurvivorBot > 0 && IsFakeClient(g_iSurvivorBot))
 	{
 		g_bShouldIgnore = true;
-		
-		//SDKCall(g_hSDK_Call_SetHumanSpec, g_iSurvivorBot, pThis);
-		//SDKCall(g_hSDK_Call_SetObserverTarget, pThis, g_iSurvivorBot);
+
 		vSetHumanIdle(g_iSurvivorBot, pThis);
 
 		vWriteTakeoverPanel(pThis, g_iSurvivorBot);
