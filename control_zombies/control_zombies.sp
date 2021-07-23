@@ -277,7 +277,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.2.1",
+	version = "3.2.2",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -1762,7 +1762,7 @@ void vCreateSurvivorModelGlow(int client)
 
 public Action Hook_SetTransmit(int entity, int client)
 {
-	if(!IsClientInGame(client) || GetClientTeam(client) == 3)
+	if(!IsFakeClient(client) && GetClientTeam(client) == 3)
 		return Plugin_Continue;
 
 	return Plugin_Handled;
