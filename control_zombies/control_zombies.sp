@@ -256,13 +256,13 @@ int g_iUserFlagBits[5];
 int g_iImmunityLevels[5];
 
 int g_iTankBot[MAXPLAYERS + 1];
-int g_iDisplayed[MAXPLAYERS + 1];
 int g_iPlayerBot[MAXPLAYERS + 1];
 int g_iBotPlayer[MAXPLAYERS + 1];
 int g_iLastTeamId[MAXPLAYERS + 1];
 int g_iModelIndex[MAXPLAYERS + 1];
 int g_iModelEntRef[MAXPLAYERS + 1];
 int g_iMaterialized[MAXPLAYERS + 1];
+int g_iEnteredGhostState[MAXPLAYERS + 1];
 int g_iPZRespawnCountdown[MAXPLAYERS + 1];
 
 float g_fSurvuivorAllowChance;
@@ -318,7 +318,7 @@ public void OnPluginStart()
 	g_hPZRespawnTime = CreateConVar("cz_pz_respawn_time", "15" , "特感玩家自动复活时间(0=插件不会接管特感玩家的复活)", CVAR_FLAGS, true, 0.0);
 	g_hPZPunishTime = CreateConVar("cz_pz_punish_time", "30" , "特感玩家在ghost状态下切换特感类型后下次复活延长的时间(0=插件不会延长复活时间)", CVAR_FLAGS, true, 0.0);
 	g_hPZPunishHealth = CreateConVar("cz_pz_punish_health", "1" , "特感玩家在ghost状态下切换特感类型后血量是否减半(0=插件不会减半血量)", CVAR_FLAGS);
-	g_hAutoDisplayMenu = CreateConVar("cz_atuo_display_menu", "1" , "在感染玩家死亡重生后向其显示更改类型的菜单?(0=不显示,-1=每次都显示,大于0=每回合总计显示的最大次数)", CVAR_FLAGS, true, -1.0);
+	g_hAutoDisplayMenu = CreateConVar("cz_atuo_display_menu", "1" , "在感染玩家进入灵魂状态后自动向其显示更改类型的菜单?(0=不显示,-1=每次都显示,大于0=每回合总计显示的最大次数)", CVAR_FLAGS, true, -1.0);
 	g_hPZTeamLimit = CreateConVar("cz_pz_team_limit", "2" , "感染玩家数量达到多少后将限制使用sm_team3命令(-1=感染玩家不能超过生还玩家,大于等于0=感染玩家不能超过该值)", CVAR_FLAGS, true, -1.0);
 	g_hCmdCooldownTime = CreateConVar("cz_cmd_cooldown_time", "120.0" , "sm_team2,sm_team3两个命令的冷却时间(0.0-无冷却)", CVAR_FLAGS, true, 0.0);
 	g_hCmdEnterCooling = CreateConVar("cz_return_enter_cooling", "31" , "什么情况下sm_team2,sm_team3命令会进入冷却(1=使用其中一个命令,2=坦克玩家掉控,4=坦克玩家死亡,8=坦克玩家未及时重生,16=特感玩家杀掉生还者玩家,31=所有)", CVAR_FLAGS);
@@ -1050,8 +1050,8 @@ void vResetClientData(int client)
 {
 	vSurvivorClean(client);
 
-	g_iDisplayed[client] = 0;
 	g_iMaterialized[client] = 0;
+	g_iEnteredGhostState[client] = 0;
 	
 	g_bIsPlayerBP[client] = false;
 	g_bUsedClassCmd[client] = false;
@@ -2781,7 +2781,7 @@ void OnNextFrame_EnterGhostState(int client)
 {
 	if(!g_bHasPlayerControlledZombies && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") != 8 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 	{
-		if(g_iDisplayed[client] == 0)
+		if(g_iEnteredGhostState[client] == 0)
 		{
 			if(bCheckClientAccess(client, 0) == true)
 				CPrintToChat(client, "{default}聊天栏输入 {olive}!team2 {default}可切换回{blue}生还者");
@@ -2791,6 +2791,7 @@ void OnNextFrame_EnterGhostState(int client)
 		}
 
 		vClassSelectionMenu(client);
+		g_iEnteredGhostState[client]++;
 	
 		if(g_fPZSuicideTime > 0.0)
 		{
@@ -2802,11 +2803,10 @@ void OnNextFrame_EnterGhostState(int client)
 
 void vClassSelectionMenu(int client)
 {
-	if((g_iAutoDisplayMenu == -1 || g_iDisplayed[client] < g_iAutoDisplayMenu) && bCheckClientAccess(client, 4) == true)
+	if((g_iAutoDisplayMenu == -1 || g_iEnteredGhostState[client] < g_iAutoDisplayMenu) && bCheckClientAccess(client, 4) == true)
 	{
 		vDisplayClassMenu(client);
 		EmitSoundToClient(client, SOUND_CLASSMENU, SOUND_FROM_PLAYER, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
-		g_iDisplayed[client]++;
 	}
 }
 
