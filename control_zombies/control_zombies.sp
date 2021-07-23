@@ -1718,7 +1718,7 @@ void OnNextFrame_CreateSurvivorModelGlow(int client)
 
 void vCreateSurvivorModelGlow(int client)
 {
-	if(bIsRoundStarted() == false || client == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client) || bIsValidEntRef(g_iModelEntRef[client]))
+	if(bIsRoundStarted() == false || client == 0 || !IsClientInGame(client) || IsClientInKickQueue(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client) || bIsValidEntRef(g_iModelEntRef[client]))
 		return;
 
 	int iEntity = CreateEntityByName("prop_dynamic_ornament");
@@ -1762,7 +1762,7 @@ void vCreateSurvivorModelGlow(int client)
 
 public Action Hook_SetTransmit(int entity, int client)
 {
-	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 3)
+	if(!IsClientInGame(client) || GetClientTeam(client) == 3)
 		return Plugin_Continue;
 
 	return Plugin_Handled;
@@ -1774,7 +1774,7 @@ public void Hook_PostThinkPost(int client)
 		return;
 
 	static int iModelIndex;
-	if(g_iModelIndex[client] && g_iModelIndex[client] != (iModelIndex = GetEntProp(client, Prop_Data, "m_nModelIndex")))
+	if(g_iModelIndex[client] != (iModelIndex = GetEntProp(client, Prop_Data, "m_nModelIndex")))
 	{
 		g_iModelIndex[client] = iModelIndex;
 
