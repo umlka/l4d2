@@ -304,12 +304,12 @@ public void OnPluginStart()
 
 	//AutoExecConfig(true, "bots");
 
-	RegConsoleCmd("sm_spec", CmdJoinSpectator, "加入旁观者");
-	RegConsoleCmd("sm_join", CmdJoinSurvivor, "加入生还者");
-	RegAdminCmd("sm_afk", CmdGoAFK, ADMFLAG_RCON, "闲置(仅存活的生还者可用)");	
-	RegConsoleCmd("sm_teams", CmdTeamMenu, "打开团队信息菜单");
-	RegAdminCmd("sm_kb", CmdKickAllSurvivorBot, ADMFLAG_RCON, "踢出所有生还者Bot");
-	RegAdminCmd("sm_botset", CmdBotSet, ADMFLAG_RCON, "设置开局Bot的数量");
+	RegConsoleCmd("sm_spec", cmdJoinSpectator, "加入旁观者");
+	RegConsoleCmd("sm_join", cmdJoinSurvivor, "加入生还者");
+	RegAdminCmd("sm_afk", cmdGoAFK, ADMFLAG_RCON, "闲置(仅存活的生还者可用)");
+	RegConsoleCmd("sm_teams", cmdTeamMenu, "打开团队信息菜单");
+	RegAdminCmd("sm_kb", cmdKickAllSurvivorBot, ADMFLAG_RCON, "踢出所有生还者Bot");
+	RegAdminCmd("sm_botset", cmdBotSet, ADMFLAG_RCON, "设置开局Bot的数量");
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_RoundEnd, EventHookMode_Pre);
@@ -342,7 +342,7 @@ public void OnPluginEnd()
 		SetFailState("Failed to disable detour: CBasePlayer::SetModel");
 }
 
-public Action CmdJoinSpectator(int client, int args)
+public Action cmdJoinSpectator(int client, int args)
 {
 	if(bIsRoundStarted() == false)
 	{
@@ -374,7 +374,7 @@ int iGetTeamSpectator()
 	return iSpectator;
 }
 
-public Action CmdJoinSurvivor(int client, int args)
+public Action cmdJoinSurvivor(int client, int args)
 {
 	if(bIsRoundStarted() == false)
 	{
@@ -440,7 +440,7 @@ public Action CmdJoinSurvivor(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action CmdGoAFK(int client, int args)
+public Action cmdGoAFK(int client, int args)
 {
 	if(bIsRoundStarted() == false)
 	{
@@ -455,7 +455,7 @@ public Action CmdGoAFK(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action CmdTeamMenu(int client, int args)
+public Action cmdTeamMenu(int client, int args)
 {
 	if(bIsRoundStarted() == false)
 	{
@@ -470,7 +470,7 @@ public Action CmdTeamMenu(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action CmdKickAllSurvivorBot(int client, int args)
+public Action cmdKickAllSurvivorBot(int client, int args)
 {
 	if(bIsRoundStarted() == false)
 	{
@@ -487,7 +487,7 @@ public Action CmdKickAllSurvivorBot(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action CmdBotSet(int client, int args)
+public Action cmdBotSet(int client, int args)
 {
 	if(bIsRoundStarted() == false)
 	{
@@ -789,7 +789,7 @@ public Action Timer_AutoJoinSurvivorTeam(Handle timer, int client)
 	if(!g_bAutoJoinSurvivor || bIsRoundStarted() == false || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || iGetBotOfIdle(client)) 
 		return;
 	
-	CmdJoinSurvivor(client, 0);
+	cmdJoinSurvivor(client, 0);
 }
 
 public void Event_SurvivorRescued(Event event, const char[] name, bool dontBroadcast)
@@ -802,7 +802,7 @@ public void Event_SurvivorRescued(Event event, const char[] name, bool dontBroad
 		vGiveWeapon(client);
 
 	if(!IsFakeClient(client) && bCanIdle(client))
-		CmdGoAFK(client, 0); //被从小黑屋救出来后闲置,避免有些玩家挂机
+		cmdGoAFK(client, 0); //被从小黑屋救出来后闲置,避免有些玩家挂机
 }
 
 bool bCanIdle(int client)
@@ -1310,9 +1310,9 @@ int iGetTeleportTarget(int client)
 	{
 		if(i != client && IsClientInGame(i) && GetClientTeam(i) == TEAM_SURVIVOR && IsPlayerAlive(i))
 		{
-			if(GetEntProp(i, Prop_Send, "m_isIncapacitated") > 0)
+			if(GetEntProp(i, Prop_Send, "m_isIncapacitated"))
 			{
-				if(GetEntProp(client, Prop_Send, "m_isHangingFromLedge") > 0)
+				if(GetEntProp(client, Prop_Send, "m_isHangingFromLedge"))
 					iHangingSurvivors[iHanging++] = i;
 				else
 					iIncapSurvivors[iIncap++] = i;
@@ -1598,7 +1598,7 @@ public MRESReturn mrePlayerSetModelPost(int pThis, DHookParam hParams)
 		return MRES_Ignored;
 	}
 	
-	static char sModel[128];
+	char sModel[128];
 	hParams.GetString(1, sModel, sizeof(sModel));
 	if(StrContains(sModel, "survivors", false) >= 0)
 		strcopy(g_sPlayerModel[pThis], sizeof(g_sPlayerModel), sModel);
