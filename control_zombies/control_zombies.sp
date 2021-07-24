@@ -1615,7 +1615,7 @@ bool bIsValidAliveSurvivorBot(int client)
 
 int iHasIdlePlayer(int client)
 {
-	static char sNetClass[64];
+	char sNetClass[64];
 	if(!GetEntityNetClass(client, sNetClass, sizeof(sNetClass)))
 		return 0;
 
