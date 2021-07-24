@@ -623,13 +623,13 @@ public void OnPluginStart()
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 
-	RegAdminCmd("sm_weight", Cmd_SetWeight, ADMFLAG_RCON, "Set spawn weights for SI classes");
-	RegAdminCmd("sm_limit", Cmd_SetLimit, ADMFLAG_RCON, "Set individual, total and simultaneous SI spawn limits");
-	RegAdminCmd("sm_timer", Cmd_SetTimer, ADMFLAG_RCON, "Set a variable or constant spawn time (seconds)");
+	RegAdminCmd("sm_weight", cmdSetWeight, ADMFLAG_RCON, "Set spawn weights for SI classes");
+	RegAdminCmd("sm_limit", cmdSetLimit, ADMFLAG_RCON, "Set individual, total and simultaneous SI spawn limits");
+	RegAdminCmd("sm_timer", cmdSetTimer, ADMFLAG_RCON, "Set a variable or constant spawn time (seconds)");
 
-	RegAdminCmd("sm_resetspawns", Cmd_ResetSpawns, ADMFLAG_RCON, "Reset by slaying all special infected and restarting the timer");
-	RegAdminCmd("sm_forcetimer", Cmd_StartSpawnTimerManually, ADMFLAG_RCON, "Manually start the spawn timer");
-	RegAdminCmd("sm_type", Cmd_Type, ADMFLAG_ROOT, "随机轮换模式");
+	RegAdminCmd("sm_resetspawns", cmdResetSpawns, ADMFLAG_RCON, "Reset by slaying all special infected and restarting the timer");
+	RegAdminCmd("sm_forcetimer", cmdStartSpawnTimerManually, ADMFLAG_RCON, "Manually start the spawn timer");
+	RegAdminCmd("sm_type", cmdType, ADMFLAG_ROOT, "随机轮换模式");
 }
 
 public void OnPluginEnd()
@@ -933,7 +933,7 @@ public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 
 public void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
 { 
-	if(g_bHasAnySurvivorLeftSafeArea == false && bIsRoundStarted() == true && bHasAnySurvivorLeftSafeArea())
+	if(g_bHasAnySurvivorLeftSafeArea == false && bIsRoundStarted() == true)
 		CreateTimer(0.1, Timer_PlayerLeftStartArea, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
@@ -951,7 +951,7 @@ public Action Timer_PlayerLeftStartArea(Handle timer)
 		else if(g_iCurrentClass > UNINITIALISED)
 			vSiTypeMode(g_iCurrentClass);
 
-		vStartCustomSpawnTimer(0.1);
+		vStartCustomSpawnTimer(0.0);
 
 		g_bHasAnySurvivorLeftSafeArea = true;
 	}
@@ -1109,7 +1109,7 @@ void vTankSpawnDeathActoin(bool bIsTankAlive)
 	}
 }
 
-public Action Cmd_SetLimit(int client, int args)
+public Action cmdSetLimit(int client, int args)
 {
 	if(args == 1)
 	{
@@ -1174,7 +1174,7 @@ public Action Cmd_SetLimit(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action Cmd_SetWeight(int client, int args)
+public Action cmdSetWeight(int client, int args)
 {
 	if(args == 1)
 	{
@@ -1232,7 +1232,7 @@ public Action Cmd_SetWeight(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action Cmd_SetTimer(int client, int args)
+public Action cmdSetTimer(int client, int args)
 {
 	if(args == 1)
 	{
@@ -1271,7 +1271,7 @@ public Action Cmd_SetTimer(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action Cmd_ResetSpawns(int client, int args)
+public Action cmdResetSpawns(int client, int args)
 {	
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -1284,7 +1284,7 @@ public Action Cmd_ResetSpawns(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action Cmd_StartSpawnTimerManually(int client, int args)
+public Action cmdStartSpawnTimerManually(int client, int args)
 {
 	if(args < 1)
 	{
@@ -1307,7 +1307,7 @@ public Action Cmd_StartSpawnTimerManually(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action Cmd_Type(int client, int args)
+public Action cmdType(int client, int args)
 {
 	if(args == 1)
 	{
