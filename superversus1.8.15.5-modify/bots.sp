@@ -318,9 +318,9 @@ public void OnPluginStart()
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("player_team", Event_PlayerTeam);
 	HookEvent("survivor_rescued", Event_SurvivorRescued);
-	HookEvent("player_bot_replace", Event_PlayerBotReplace, EventHookMode_Pre);
-	HookEvent("bot_player_replace", Event_BotPlayerReplace, EventHookMode_Pre);
-	HookEvent("player_transitioned", Event_PlayerTransitioned, EventHookMode_Pre);
+	HookEvent("player_bot_replace", Event_PlayerBotReplace);
+	HookEvent("bot_player_replace", Event_BotPlayerReplace);
+	HookEvent("player_transitioned", Event_PlayerTransitioned);
 	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving);
 
 	AddCommandListener(CommandListener_SpecNext, "spec_next");
