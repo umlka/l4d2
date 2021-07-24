@@ -999,15 +999,17 @@ void vSetMaxSpecialsCount()
 			iPlayers++;
 	}
 
-	if(iPlayers < 5)
+	iPlayers -= 4;
+
+	if(iPlayers < 1)
 	{
 		iTempLimit = g_iSIbase;
 		iTempSize = g_iGroupbase;
 	}
 	else
 	{
-		iTempLimit = g_iSIextra * (iPlayers - 4) + g_iSIbase;
-		iTempSize = g_iGroupbase + RoundFloat(1.0 * (iPlayers - 4) / g_iGroupextra);
+		iTempLimit = g_iSIbase + g_iSIextra * iPlayers;
+		iTempSize = g_iGroupbase + RoundToNearest(1.0 * iPlayers / g_iGroupextra);
 	}
 
 	if(iTempLimit == g_iSILimit && iTempSize == g_iSpawnSize)
