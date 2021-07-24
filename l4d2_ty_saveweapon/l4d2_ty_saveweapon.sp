@@ -302,7 +302,7 @@ void vSaveStatus(int client, int[][] iStatusInfo, char[][] sStatusInfo, int maxl
 	iStatusInfo[client][0] = GetEntProp(client, Prop_Send, "m_currentReviveCount");
 	iStatusInfo[client][1] = GetEntProp(client, Prop_Send, "m_bIsOnThirdStrike");
 
-	if(GetEntProp(client, Prop_Send, "m_isIncapacitated") == 1) 
+	if(GetEntProp(client, Prop_Send, "m_isIncapacitated")) 
 	{
 		iStatusInfo[client][3] = 1;	
 		iStatusInfo[client][4] = 30;
@@ -335,7 +335,7 @@ void vSetStatus(int client, int[][] iStatusInfo, char[][] sStatusInfo)
 	if(!IsPlayerAlive(client)) 
 		return;
 
-	if(GetEntProp(client, Prop_Send, "m_isIncapacitated") == 1)
+	if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 		SetEntProp(client, Prop_Send, "m_isIncapacitated", 0);
 
 	SetEntProp(client, Prop_Send, "m_currentReviveCount", iStatusInfo[client][0]);
