@@ -389,10 +389,10 @@ public void OnPluginStart()
 
 	vIsAllowed();
 
-	RegConsoleCmd("sm_team2", CmdTeam2, "切换到Team 2.");
-	RegConsoleCmd("sm_team3", CmdTeam3, "切换到Team 3.");
-	RegConsoleCmd("sm_bp", CmdBP, "叛变为坦克.");
-	RegConsoleCmd("sm_class", CmdChangeClass, "更改特感类型.");
+	RegConsoleCmd("sm_team2", cmdTeam2, "切换到Team 2.");
+	RegConsoleCmd("sm_team3", cmdTeam3, "切换到Team 3.");
+	RegConsoleCmd("sm_bp", cmdBP, "叛变为坦克.");
+	RegConsoleCmd("sm_class", cmdChangeClass, "更改特感类型.");
 }
 
 public void OnPluginEnd()
@@ -678,7 +678,7 @@ void vGetSpawnCvars()
 	g_bScaleWeights = g_hScaleWeights.BoolValue;
 }
 
-public Action CmdTeam2(int client, int args)
+public Action cmdTeam2(int client, int args)
 {
 	if(g_bHasPlayerControlledZombies)
 	{
@@ -713,7 +713,7 @@ public Action CmdTeam2(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action CmdTeam3(int client, int args)
+public Action cmdTeam3(int client, int args)
 {
 	if(g_bHasPlayerControlledZombies)
 	{
@@ -753,7 +753,7 @@ public Action CmdTeam3(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action CmdBP(int client, int args)
+public Action cmdBP(int client, int args)
 {
 	if(g_bHasPlayerControlledZombies)
 	{
@@ -793,7 +793,7 @@ public Action CmdBP(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action CmdChangeClass(int client, int args)
+public Action cmdChangeClass(int client, int args)
 {
 	if(g_bHasPlayerControlledZombies)
 	{
@@ -846,15 +846,16 @@ public Action CmdChangeClass(int client, int args)
 
 void vDisplayClassMenu(int client)
 {
-	Menu menu = new Menu(MenuHandler_DisplayClass);
+	Menu menu = new Menu(iDisplayClassMenuHandler);
 	menu.SetTitle("!class付出一定代价更改特感类型?");
 	menu.AddItem("yes", "是");
 	menu.AddItem("no", "否");
+	menu.ExitButton = false;
 	menu.ExitBackButton = false;
 	menu.Display(client, 15);
 }
 
-public int MenuHandler_DisplayClass(Menu menu, MenuAction action, int client, int param2)
+public int iDisplayClassMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -871,7 +872,7 @@ public int MenuHandler_DisplayClass(Menu menu, MenuAction action, int client, in
 void vSelectZombieClassMenu(int client)
 {
 	char sIndex[2];
-	Menu menu = new Menu(MenuHandler_SelectZombieClass);
+	Menu menu = new Menu(iSelectZombieClassMenuHandler);
 	menu.SetTitle("选择要切换的特感");
 	int iZombieClass = GetEntProp(client, Prop_Send, "m_zombieClass") - 1;
 	for(int i; i < 6; i++)
@@ -882,11 +883,12 @@ void vSelectZombieClassMenu(int client)
 			menu.AddItem(sIndex, g_sZombieClass[i]);
 		}
 	}
+	menu.ExitButton = false;
 	menu.ExitBackButton = false;
 	menu.Display(client, 30);
 }
 
-public int MenuHandler_SelectZombieClass(Menu menu, MenuAction action, int client, int param2)
+public int iSelectZombieClassMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -1061,7 +1063,7 @@ void vResetClientData(int client)
 //Event
 public void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
 { 
-	if(g_bHasAnySurvivorLeftSafeArea == false && bIsRoundStarted() == true && bHasAnySurvivorLeftSafeArea())
+	if(g_bHasAnySurvivorLeftSafeArea == false && bIsRoundStarted() == true)
 		CreateTimer(0.1, Timer_PlayerLeftStartArea, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
@@ -1549,9 +1551,9 @@ int iGetTeleportTarget(int client)
 	{
 		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 		{
-			if(GetEntProp(i, Prop_Send, "m_isIncapacitated") > 0)
+			if(GetEntProp(i, Prop_Send, "m_isIncapacitated"))
 			{
-				if(GetEntProp(client, Prop_Send, "m_isHangingFromLedge") > 0)
+				if(GetEntProp(client, Prop_Send, "m_isHangingFromLedge"))
 					iHangingSurvivors[iHanging++] = i;
 				else
 					iIncapSurvivors[iIncap++] = i;
@@ -1700,7 +1702,7 @@ bool bAllowSurvivorTakeOver()
 
 bool bIsPinned(int client)
 {
-	if(GetEntProp(client, Prop_Send, "m_isIncapacitated") > 0)
+	if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 		return true;
 	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
 		return true;
@@ -1804,7 +1806,7 @@ static int iGetColorType(int client)
 		return 2;
 	else
 	{
-		if(GetEntProp(client, Prop_Send, "m_isIncapacitated") > 0)
+		if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 			return 1;
 		else
 		{
@@ -1969,7 +1971,7 @@ void vSaveStatus(int client, int[][] iStatusInfo/*, char[][] sStatusInfo, int ma
 	iStatusInfo[client][0] = GetEntProp(client, Prop_Send, "m_currentReviveCount");
 	iStatusInfo[client][1] = GetEntProp(client, Prop_Send, "m_bIsOnThirdStrike");
 
-	if(GetEntProp(client, Prop_Send, "m_isIncapacitated") == 1)
+	if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 	{
 		iStatusInfo[client][3] = 1;	
 		iStatusInfo[client][4] = 30;
@@ -2002,7 +2004,7 @@ void vSetStatus(int client, int[][] iStatusInfo/*, char[][] sStatusInfo*/)
 	if(!IsPlayerAlive(client))
 		return;
 
-	if(GetEntProp(client, Prop_Send, "m_isIncapacitated") == 1)
+	if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 		SetEntProp(client, Prop_Send, "m_isIncapacitated", 0);
 
 	SetEntProp(client, Prop_Send, "m_currentReviveCount", iStatusInfo[client][0]);
