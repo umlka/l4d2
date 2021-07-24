@@ -45,7 +45,7 @@ public Plugin myinfo=
 	name = "l4d2 melee spawn control",
 	author = "IA/NanaNana",
 	description = "Unlock melee weapons",
-	version = "1.3",
+	version = "1.4",
 	url = "https://forums.alliedmods.net/showthread.php?p=2719531"
 }
 
