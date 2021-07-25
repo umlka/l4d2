@@ -918,6 +918,11 @@ public void OnMapEnd()
 	g_iPlayerSpawn = 0;
 	vTankSpawnDeathActoin(false);
 	g_bHasAnySurvivorLeftSafeArea = false;
+
+	if(g_iCurrentClass >= 6)
+		iSetRandomType();
+	else if(g_iCurrentClass > UNINITIALISED)
+		vSiTypeMode(g_iCurrentClass);
 }
 
 public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -933,7 +938,11 @@ public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 
 public void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
 { 
-	if(g_bHasAnySurvivorLeftSafeArea == false && bIsRoundStarted() == true)
+	if(g_bHasAnySurvivorLeftSafeArea || !bIsRoundStarted())
+		return;
+
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(client && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client))
 		CreateTimer(0.1, Timer_PlayerLeftStartArea, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
@@ -944,16 +953,19 @@ bool bIsRoundStarted()
 
 public Action Timer_PlayerLeftStartArea(Handle timer)
 {
-	if(g_bHasAnySurvivorLeftSafeArea == false && bHasAnySurvivorLeftSafeArea())
+	if(!g_bHasAnySurvivorLeftSafeArea && bIsRoundStarted() && bHasAnySurvivorLeftSafeArea())
 	{
+		g_bHasAnySurvivorLeftSafeArea = true;
+
 		if(g_iCurrentClass >= 6)
-			vSetRandomType();
+		{
+			PrintToChatAll("\x03当前轮换\x01: \n");
+			PrintToChatAll("\x01[\x05%s\x01]\x04模式\x01", g_sZombieClass[g_iCurrentClass - 6]);
+		}
 		else if(g_iCurrentClass > UNINITIALISED)
-			vSiTypeMode(g_iCurrentClass);
+			PrintToChatAll("\x01[\x05%s\x01]\x04模式\x01", g_sZombieClass[g_iCurrentClass]);
 
 		vStartCustomSpawnTimer(0.0);
-
-		g_bHasAnySurvivorLeftSafeArea = true;
 	}
 }
 
@@ -1323,8 +1335,8 @@ public Action cmdType(int client, int args)
 		}
 		else if(strcmp(sTargetClass, "random", false) == 0)
 		{
-			vSetRandomType();
-			g_iCurrentClass = 6;
+			PrintToChatAll("\x03当前轮换\x01: \n");
+			PrintToChatAll("\x01[\x05%s\x01]\x04模式\x01", g_sZombieClass[iSetRandomType()]);
 		}
 		else
 		{
@@ -1339,7 +1351,7 @@ public Action cmdType(int client, int args)
 			else
 			{
 				vSiTypeMode(iClassIndex);
-				g_iCurrentClass = iClassIndex;
+				PrintToChatAll("\x01[\x05%s\x01]\x04模式\x01", g_sZombieClass[iClassIndex]);
 			}
 		}
 	}
@@ -1362,17 +1374,22 @@ int iGetZombieClass(const char[] sClass)
 	return UNINITIALISED;
 }
 
-void vSetRandomType()
+int iSetRandomType()
 {
 	static int iClassIndex;
 	static int iZombieClass[NUM_TYPES_INFECTED] = {0, 1, 2, 3, 4, 5};
 	if(iClassIndex == 0)
 		SortIntegers(iZombieClass, NUM_TYPES_INFECTED, Sort_Random);
 
-	PrintToChatAll("\x03当前轮换\x01: \n");
 	vSiTypeMode(iZombieClass[iClassIndex]);
-	if(++iClassIndex == NUM_TYPES_INFECTED)
-		iClassIndex = 0;
+	g_iCurrentClass += 6;
+
+	static int iTemp;
+	iTemp = iClassIndex;
+
+	iClassIndex++;
+	iClassIndex -= RoundToFloor(iClassIndex / 6.0) * 6;
+	return iZombieClass[(iTemp - RoundToFloor(iTemp / 6.0) * 6)];
 }
 
 void vSiTypeMode(int iClassIndex)
@@ -1380,5 +1397,5 @@ void vSiTypeMode(int iClassIndex)
 	for(int i; i < NUM_TYPES_INFECTED; i++)		
 		g_hSpawnLimits[i].IntValue = i != iClassIndex ? 0 : g_iSILimit;
 
-	PrintToChatAll("\x01[\x05%s\x01]\x04模式\x01", g_sZombieClass[iClassIndex]);
+	g_iCurrentClass = iClassIndex;
 }
