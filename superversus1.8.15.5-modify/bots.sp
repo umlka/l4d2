@@ -1314,7 +1314,7 @@ int iGetTeleportTarget(int client)
 		{
 			if(GetEntProp(i, Prop_Send, "m_isIncapacitated"))
 			{
-				if(GetEntProp(client, Prop_Send, "m_isHangingFromLedge"))
+				if(GetEntProp(i, Prop_Send, "m_isHangingFromLedge"))
 					iHangingSurvivors[iHanging++] = i;
 				else
 					iIncapSurvivors[iIncap++] = i;
