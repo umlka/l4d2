@@ -1872,7 +1872,7 @@ void vChangeTeamToSurvivor(int client)
 
 	if(iBot)
 	{
-		vSetHumanIdle(iBot, client);
+		SDKCall(g_hSDK_Call_SetHumanSpec, iBot, client);
 		SDKCall(g_hSDK_Call_TakeOverBot, client, true);
 	}
 	else
@@ -1893,33 +1893,7 @@ void vChangeTeamToSurvivor(int client)
 	vSurvivorClean(client);
 }
 
-//------------------------------------------------------------------------------
-//保存装备状态，以便切换回生还者后还原 嫖自https://forums.alliedmods.net/showthread.php?p=2398822#post2398822
-//------------------------------------------------------------------------------
-/*static const char g_sSurvivorNames[8][] =
-{
-	"Nick",
-	"Rochelle",
-	"Coach",
-	"Ellis",
-	"Bill",
-	"Zoey",
-	"Francis",
-	"Louis"
-};
-
-static const char g_sSurvivorModels[8][] =
-{
-	"models/survivors/survivor_gambler.mdl",
-	"models/survivors/survivor_producer.mdl",
-	"models/survivors/survivor_coach.mdl",
-	"models/survivors/survivor_mechanic.mdl",
-	"models/survivors/survivor_namvet.mdl",
-	"models/survivors/survivor_teenangst.mdl",
-	"models/survivors/survivor_biker.mdl",
-	"models/survivors/survivor_manager.mdl"
-};
-*/
+//https://forums.alliedmods.net/showthread.php?p=2398822#post2398822
 void vSurvivorStatus(int client, int iType)
 {
 	static bool bRecorded[MAXPLAYERS + 1];
@@ -1994,16 +1968,7 @@ void vSaveStatus(int client, int[][] iStatusInfo/*, char[][] sStatusInfo, int ma
 void vSetStatus(int client, int[][] iStatusInfo/*, char[][] sStatusInfo*/)
 {
 	/*SetEntProp(client, Prop_Send, "m_survivorCharacter", iStatusInfo[client][6]);
-	SetEntityModel(client, sStatusInfo[client]);
-	
-	if(IsFakeClient(client))
-	{
-		for(int i; i < 8; i++)
-		{
-			if(strcmp(sStatusInfo[client], g_sSurvivorModels[i]) == 0)
-				SetClientInfo(client, "name", g_sSurvivorNames[i]);
-		}
-	}*/
+	SetEntityModel(client, sStatusInfo[client]);*/
 
 	if(!IsPlayerAlive(client))
 		return;
@@ -2660,12 +2625,6 @@ void vStatsConditionPatch(bool bPatch) // Prevents respawn command from reset th
 		bPatched = false;
 		StoreToAddress(g_pStatsCondition, 0x75, NumberType_Int8);
 	}
-}
-
-void vSetHumanIdle(int bot, int client)
-{
-	SDKCall(g_hSDK_Call_SetHumanSpec, bot, client);
-	SetEntProp(client, Prop_Send, "m_iObserverMode", 5);
 }
 
 void vToggleDetours(bool bEnable)
