@@ -44,6 +44,11 @@
 
 		"Offsets"
 		{
+			"CTerrorPlayer::SetObserverTarget"
+			{
+				"linux"		"403"
+				"windows"	"402"
+			}
 			"RoundRespawn_Offset"
 			{
 				"linux"		"25" // 0x19
