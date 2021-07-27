@@ -166,6 +166,12 @@ public void OnMapStart()
 	g_bValidMapChange = false;
 }
 
+public void OnClientDisconnect(int client)
+{
+	if(g_bSpawned[client] == true && g_bRecorded[client] == true)
+		vSurvivorClean(client);
+}
+
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	for(int i = 1; i <= MaxClients; i++)
@@ -192,13 +198,16 @@ public Action Timer_Restore(Handle timer, int client)
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
 		return;
 
-	if(g_bRecorded[client] == false && g_bSpawned[client] == false && IsFakeClient(client) && GetGameTime() < 30.0)
+	if(g_bRecorded[client] == false && g_bSpawned[client] == false && IsFakeClient(client) && GetGameTime() < 10.0)
 		vAppropriateUnusedSave(client);
 
 	if(g_bSpawned[client] == false)
 	{
 		if(g_bRecorded[client] == true)
+		{
 			vSurvivorGive(client);
+			vSurvivorClean(client);
+		}
 			
 		g_bSpawned[client] = true;
 	}
@@ -327,8 +336,8 @@ void vSetStatus(int client, int[][] iStatusInfo, char[][] sStatusInfo)
 	{
 		for(int i; i < 8; i++)
 		{
-			if(strcmp(sStatusInfo[client], g_sSurvivorModels[i]) == 0) 
-				SetClientInfo(client, "name", g_sSurvivorNames[i]);
+			if(strcmp(sStatusInfo[client], g_sSurvivorModels[i]) == 0)
+				SetClientName(client, g_sSurvivorNames[i]);
 		}
 	}
 
@@ -631,7 +640,7 @@ void vSurvivorClean(int client)
 {
 	vSurvivorStatus(client, 0);
 	vSurvivorWeapons(client, 0);
-	g_bSpawned[client] = false;
+	g_bSpawned[client] = true;
 	g_bRecorded[client] = false;
 }
 
@@ -688,12 +697,17 @@ void vSurvivorSaveAll()
 
 int iHasIdlePlayer(int client)
 {
-	if(HasEntProp(client, Prop_Send, "m_humanSpectatorUserID"))
-	{
-		client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
-		if(client > 0 && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1)
-			return client;
-	}
+	char sNetClass[64];
+	if(!GetEntityNetClass(client, sNetClass, sizeof(sNetClass)))
+		return 0;
+
+	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") < 1)
+		return 0;
+
+	client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
+	if(client && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1)
+		return client;
+
 	return 0;
 }
 
