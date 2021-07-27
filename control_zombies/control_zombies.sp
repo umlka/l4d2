@@ -1063,7 +1063,11 @@ void vResetClientData(int client)
 //Event
 public void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
 { 
-	if(g_bHasAnySurvivorLeftSafeArea == false && bIsRoundStarted() == true)
+	if(g_bHasAnySurvivorLeftSafeArea || !bIsRoundStarted())
+		return;
+
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(client && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client))
 		CreateTimer(0.1, Timer_PlayerLeftStartArea, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
@@ -1074,7 +1078,7 @@ bool bIsRoundStarted()
 
 public Action Timer_PlayerLeftStartArea(Handle timer)
 {
-	if(g_bHasAnySurvivorLeftSafeArea == false && bHasAnySurvivorLeftSafeArea())
+	if(!g_bHasAnySurvivorLeftSafeArea && bIsRoundStarted() && bHasAnySurvivorLeftSafeArea())
 	{
 		g_bHasAnySurvivorLeftSafeArea = true;
 
