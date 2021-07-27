@@ -640,7 +640,7 @@ void vSurvivorClean(int client)
 {
 	vSurvivorStatus(client, 0);
 	vSurvivorWeapons(client, 0);
-	g_bSpawned[client] = true;
+	g_bSpawned[client] = false;
 	g_bRecorded[client] = false;
 }
 
