@@ -278,7 +278,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.2.2",
+	version = "3.2.3",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -1434,7 +1434,7 @@ public Action Timer_Player(Handle timer)
 						{
 							if(bAttemptRespawnPZ(i))
 							{
-								PrintToConsole(i, "复活预设->%d秒 实际耗时->%.5f秒", g_iCurrentPZRespawnTime[i], fInterval);
+								PrintToConsole(i, "重生预设->%d秒 实际耗时->%.5f秒", g_iCurrentPZRespawnTime[i], fInterval);
 								g_fStartRespawnTime[i] = 0.0;
 							}
 						}
