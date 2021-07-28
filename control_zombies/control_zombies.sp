@@ -496,8 +496,8 @@ void vToggle(bool bEnable)
 		vToggleConVars(true);
 		vToggleDetours(true);
 
-		HookEvent("player_left_start_area", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
-		HookEvent("player_left_checkpoint", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
+		HookEvent("player_left_start_area", Event_PlayerLeftStartArea);
+		HookEvent("player_left_checkpoint", Event_PlayerLeftStartArea);
 		HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 		HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 		HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
