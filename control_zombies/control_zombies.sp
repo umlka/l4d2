@@ -214,6 +214,7 @@ ConVar g_hPZTeamLimit;
 ConVar g_hCmdCooldownTime;
 ConVar g_hCmdEnterCooling;
 ConVar g_hPZChangeTeamTo;
+ConVar g_hGlowColorEnable;
 ConVar g_hGlowColor[4];
 ConVar g_hUserFlagBits;
 ConVar g_hImmunityLevels;
@@ -227,6 +228,7 @@ bool g_bHasAnySurvivorLeftSafeArea;
 bool g_bSbAllBotGame;
 bool g_bAllowAllBotSurvivorTeam;
 bool g_bExchangeTeam;
+bool g_bGlowColorEnable;
 bool g_bPZPunishHealth;
 bool g_bScaleWeights;
 bool g_bIsSpawnablePZSupported;
@@ -278,7 +280,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.2.3",
+	version = "3.2.4",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -324,6 +326,7 @@ public void OnPluginStart()
 	g_hCmdCooldownTime = CreateConVar("cz_cmd_cooldown_time", "120.0" , "sm_team2,sm_team3两个命令的冷却时间(0.0-无冷却)", CVAR_FLAGS, true, 0.0);
 	g_hCmdEnterCooling = CreateConVar("cz_return_enter_cooling", "31" , "什么情况下sm_team2,sm_team3命令会进入冷却(1=使用其中一个命令,2=坦克玩家掉控,4=坦克玩家死亡,8=坦克玩家未及时重生,16=特感玩家杀掉生还者玩家,31=所有)", CVAR_FLAGS);
 	g_hPZChangeTeamTo = CreateConVar("cz_pz_change_team_to", "0" , "换图,过关以及任务失败时是否自动将特感玩家切换到哪个队伍?(0=不切换,1=旁观者,2=生还者)", CVAR_FLAGS, true, 0.0, true, 2.0);
+	g_hGlowColorEnable = CreateConVar("cz_survivor_color_enable", "1" , "是否给生还者创发光建模型?(0=否,1=是)", CVAR_FLAGS);
 	g_hGlowColor[COLOR_NORMAL] = CreateConVar("cz_survivor_color_normal", "0 180 0" , "特感玩家看到的正常状态生还者发光颜色", CVAR_FLAGS);
 	g_hGlowColor[COLOR_INCAPA] = CreateConVar("cz_survivor_color_incapacitated", "180 0 0" , "特感玩家看到的倒地状态生还者发光颜色", CVAR_FLAGS);
 	g_hGlowColor[COLOR_BLACKW] = CreateConVar("cz_survivor_color_blackwhite", "255 255 255" , "特感玩家看到的黑白状态生还者发光颜色", CVAR_FLAGS);
@@ -373,6 +376,7 @@ public void OnPluginStart()
 	g_hCmdEnterCooling.AddChangeHook(vOtherConVarChanged);
 	g_hPZChangeTeamTo.AddChangeHook(vOtherConVarChanged);
 
+	g_hGlowColorEnable.AddChangeHook(vColorConVarChanged);
 	int i;
 	for(; i < 4; i++)
 		g_hGlowColor[i].AddChangeHook(vColorConVarChanged);
@@ -509,7 +513,7 @@ void vToggle(bool bEnable)
 	else if(bEnabled && !bEnable)
 	{
 		bEnabled = false;
-	
+
 		vToggleConVars(false);
 		vToggleDetours(false);
 
@@ -581,11 +585,30 @@ public void vColorConVarChanged(ConVar convar, const char[] oldValue, const char
 
 void vGetColorCvars()
 {
+	bool bLast = g_bGlowColorEnable;
+	g_bGlowColorEnable = g_hGlowColorEnable.BoolValue;
 	g_iSurvivorMaxIncapacitatedCount = g_hSurvivorMaxIncapacitatedCount.IntValue;
 
 	int i;
 	for(; i < 4; i++)
 		g_iGlowColor[i] = iGetColor(g_hGlowColor[i]);
+
+	if(bLast != g_bGlowColorEnable)
+	{
+		if(g_bGlowColorEnable)
+		{
+			if(bHasPlayerZombie())
+			{
+				for(i = 1; i <= MaxClients; i++)
+					vCreateSurvivorModelGlow(i);
+			}
+		}
+		else
+		{
+			for(i = 1; i <= MaxClients; i++)
+				vRemoveSurvivorModelGlow(i);
+		}
+	}
 }
 
 int iGetColor(ConVar hConVar)
@@ -1182,11 +1205,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 
 	g_iMaterialized[client] = 0;
 	vRemoveSurvivorModelGlow(client);
-/*	
-	int team = event.GetInt("team");
-	if(team == 2)
-		RequestFrame(OnNextFrame_CreateSurvivorModelGlow, userid);
-*/
+
 	if(IsFakeClient(client))
 		return;
 
@@ -1408,17 +1427,17 @@ public Action Timer_Player(Handle timer)
 		{
 			case 2:
 			{
-				if(IsPlayerAlive(i) && bIsValidEntRef(g_iModelEntRef[i]))
-				{
-					if(g_iModelIndex[i] != (iModelIndex = GetEntProp(i, Prop_Data, "m_nModelIndex")))
-					{
-						g_iModelIndex[i] = iModelIndex;
-						GetEntPropString(i, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
-						SetEntityModel(g_iModelEntRef[i], sModelName);
-					}
+				if(!g_bGlowColorEnable || !IsPlayerAlive(i) || !bIsValidEntRef(g_iModelEntRef[i]))
+					continue;
 
-					vSetGlowColor(i);
+				if(g_iModelIndex[i] != (iModelIndex = GetEntProp(i, Prop_Data, "m_nModelIndex")))
+				{
+					g_iModelIndex[i] = iModelIndex;
+					GetEntPropString(i, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
+					SetEntityModel(g_iModelEntRef[i], sModelName);
 				}
+
+				vSetGlowColor(i);
 			}
 
 			case 3:
@@ -1530,7 +1549,7 @@ public Action Timer_ReturnToSurvivor(Handle timer, int client)
 	{
 		i = iTimes[client]--;
 		if(i > 0)
-			PrintCenterText(client, "还有%d秒变回生还者,请到掩体后面按鼠标[左键]重生.按[E]键可传送到生还者附近", i);
+			PrintCenterText(client, "还有 %d 秒变回生还者,请到掩体后面按鼠标[左键]重生.按[E]键可传送到生还者附近", i);
 		else if(i == 0)
 		{
 			if(g_iCmdEnterCooling & (1 << 3))
@@ -1776,16 +1795,10 @@ bool bIsPinned(int client)
 		return true;
 	return false;
 }
-/*
-void OnNextFrame_CreateSurvivorModelGlow(int client)
-{
-	if(!g_bHasPlayerControlledZombies && bHasPlayerZombie())
-		vCreateSurvivorModelGlow(GetClientOfUserId(client));
-}
-*/
+
 void vCreateSurvivorModelGlow(int client)
 {
-	if(bIsRoundStarted() == false || client == 0 || !IsClientInGame(client) || IsClientInKickQueue(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client) || bIsValidEntRef(g_iModelEntRef[client]))
+	if(!g_bGlowColorEnable || bIsRoundStarted() == false || !IsClientInGame(client) || IsClientInKickQueue(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client) || bIsValidEntRef(g_iModelEntRef[client]))
 		return;
 
 	int iEntity = CreateEntityByName("prop_dynamic_ornament");
@@ -1861,12 +1874,11 @@ static int iGetColorType(int client)
 
 static void vRemoveSurvivorModelGlow(int client)
 {
-	static int entity;
-	entity = g_iModelEntRef[client];
-	g_iModelEntRef[client] = 0;
+	if(!bIsValidEntRef(g_iModelEntRef[client]))
+		return;
 
-	if(bIsValidEntRef(entity))
-		RemoveEntity(entity);
+	RemoveEntity(g_iModelEntRef[client]);
+	g_iModelEntRef[client] = 0;
 }
 
 static bool bIsValidEntRef(int entity)
@@ -2293,8 +2305,8 @@ void vSurvivorGive(int client)
 
 void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
 {
-	static int iCmdFlags, iFlagBits;
-	iFlagBits = GetUserFlagBits(client), iCmdFlags = GetCommandFlags(sCommand);
+	int iFlagBits = GetUserFlagBits(client);
+	int iCmdFlags = GetCommandFlags(sCommand);
 	SetUserFlagBits(client, ADMFLAG_ROOT);
 	SetCommandFlags(sCommand, iCmdFlags & ~FCVAR_CHEAT);
 	FakeClientCommand(client, "%s %s", sCommand, sArguments);
