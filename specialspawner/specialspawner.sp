@@ -43,6 +43,8 @@ float g_fSpawnTimeMin;
 float g_fSpawnTimeMax;
 float g_fRusherDistance;
 float g_fSpawnTimes[MAXPLAYERS + 1];
+float g_fStartSpawnTime;
+float g_fCurrentSpawnInterval;
 
 static char g_sZombieClass[NUM_TYPES_INFECTED][] =
 {
@@ -117,6 +119,7 @@ int g_iCurrentClass = UNINITIALISED;
 bool g_bScaleWeights;
 bool g_bControlZombies;
 bool g_bDirectorNoSpecials;
+bool g_bOnExecuteSpawnQueue;
 bool g_bHasAnySurvivorLeftSafeArea;
 
 native bool CZ_IsSpawnablePZSupported();
@@ -144,7 +147,7 @@ public Plugin myinfo =
 	name = "Special Spawner",
 	author = "Tordecybombo, breezy",
 	description = "Provides customisable special infected spawing beyond vanilla coop limits",
-	version = "1.2",
+	version = "1.3",
 	url = ""
 };
 
@@ -208,16 +211,20 @@ void vResetWeights()
 		g_hSpawnWeights[i].RestoreDefault();
 }
 
-void vStartCustomSpawnTimer(float time)
+void vStartCustomSpawnTimer(float fTime)
 {
 	vEndSpawnTimer();
-	g_hSpawnTimer = CreateTimer(time, Timer_SpawnInfectedAuto);
+	g_fStartSpawnTime = GetEngineTime();
+	g_fCurrentSpawnInterval = fTime;
+	g_hSpawnTimer = CreateTimer(0.1, Timer_SpawnInfectedAuto, _, TIMER_REPEAT);
 }
 
 void vStartSpawnTimer()
 {
 	vEndSpawnTimer();
-	g_hSpawnTimer = CreateTimer(g_iSpawnTimeMode > 0 ? g_fSpawnTimes[iGetInfecteds()] : GetRandomFloat(g_fSpawnTimeMin, g_fSpawnTimeMax), Timer_SpawnInfectedAuto);
+	g_fStartSpawnTime = GetEngineTime();
+	g_fCurrentSpawnInterval = 0.0;
+	g_hSpawnTimer = CreateTimer(0.1, Timer_SpawnInfectedAuto, _, TIMER_REPEAT);
 }
 
 void vEndSpawnTimer()
@@ -226,12 +233,24 @@ void vEndSpawnTimer()
 }
 
 public Action Timer_SpawnInfectedAuto(Handle timer)
-{ 
-	g_hSpawnTimer = null;
+{
+	static float fTime;
 
-	vGenerateAndExecuteSpawnQueue();
+	if(g_fStartSpawnTime)
+	{
+		fTime = GetEngineTime();
+		if(fTime - g_fStartSpawnTime >= g_fCurrentSpawnInterval)
+		{
+			if(!g_bOnExecuteSpawnQueue)
+			{
+				vGenerateAndExecuteSpawnQueue();
+				g_fStartSpawnTime = fTime;
+				g_fCurrentSpawnInterval = g_iSpawnTimeMode > 0 ? g_fSpawnTimes[iGetInfecteds()] : GetRandomFloat(g_fSpawnTimeMin, g_fSpawnTimeMax);
+			}
+		}
+	}
 
-	vStartSpawnTimer();
+	return Plugin_Continue;
 }
 
 static int iGetAnyValidClient()
@@ -247,6 +266,8 @@ static int iGetAnyValidClient()
 
 static void vGenerateAndExecuteSpawnQueue()
 {
+	g_bOnExecuteSpawnQueue = true;
+
 	static int iCurrentSI;
 	iCurrentSI = iGetInfecteds();
 	if(iCurrentSI < g_iSILimit)
@@ -392,6 +413,8 @@ static void vGenerateAndExecuteSpawnQueue()
 		}
 		delete aSpawnQueue;
 	}
+
+	g_bOnExecuteSpawnQueue = false;
 }
 
 static void vVerifySIType(int iRusher, ArrayList aSpawnQueue, int iAllowedSI)
@@ -914,9 +937,11 @@ public void OnClientDisconnect(int client)
 public void OnMapEnd()
 {
 	vEndSpawnTimer();
+	vTankSpawnDeathActoin(false);
+
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
-	vTankSpawnDeathActoin(false);
+	g_fStartSpawnTime = 0.0;
 	g_bHasAnySurvivorLeftSafeArea = false;
 
 	if(g_iCurrentClass >= 6)
@@ -965,7 +990,7 @@ public Action Timer_PlayerLeftStartArea(Handle timer)
 		else if(g_iCurrentClass > UNINITIALISED)
 			PrintToChatAll("\x01[\x05%s\x01]\x04模式\x01", g_sZombieClass[g_iCurrentClass]);
 
-		vStartCustomSpawnTimer(0.0);
+		vStartSpawnTimer();
 	}
 }
 
