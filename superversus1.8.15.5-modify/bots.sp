@@ -270,7 +270,7 @@ public void OnPluginStart()
 	g_hSpecCmdLimit = CreateConVar("bots_spec_cmd_limit", "1" , "当完全旁观玩家达到多少个时禁止使用sm_spec命令", CVAR_FLAGS, true, 0.0);
 	g_hGiveWeaponType = CreateConVar("bots_give_type", "2" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
 	g_hSlotFlags[0] = CreateConVar("bots_give_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[1] = CreateConVar("bots_give_slot1", "131068" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[1] = CreateConVar("bots_give_slot1", "5160" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[2] = CreateConVar("bots_give_slot2", "0" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[3] = CreateConVar("bots_give_slot3", "3" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[4] = CreateConVar("bots_give_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
@@ -556,7 +556,7 @@ void vGetSlotInfo(int iSlot)
 {
 	for(int i; i < 17; i++)
 	{
-		if(g_sWeaponName[iSlot][i][0] == 0)
+		if(g_sWeaponName[iSlot][i][0] == '\0')
 			return;
 		
 		if((1 << i) & g_hSlotFlags[iSlot].IntValue)
@@ -585,7 +585,7 @@ public void OnClientDisconnect(int client)
 	if(IsFakeClient(client))
 		return;
 
-	if(g_iRoundStart == 1)
+	if(bIsRoundStarted() == true)
 	{
 		delete g_hBotsUpdateTimer;
 		g_hBotsUpdateTimer = CreateTimer(1.0, Timer_BotsUpdate);
@@ -604,7 +604,7 @@ public Action Timer_BotsUpdate(Handle timer)
 
 void vSpawnCheck()
 {
-	if(g_iRoundStart == 0)
+	if(bIsRoundStarted() == false)
 		return;
 
 	int iSurvivor		= iGetSurvivorTeam();
@@ -785,7 +785,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 
 public Action Timer_AutoJoinSurvivorTeam(Handle timer, int client)
 {
-	if(!g_bAutoJoinSurvivor || g_iRoundStart == 0 || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || iGetBotOfIdle(client)) 
+	if(!g_bAutoJoinSurvivor || bIsRoundStarted() == false || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || iGetBotOfIdle(client)) 
 		return;
 	
 	cmdJoinSurvivor(client, 0);
@@ -833,7 +833,7 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 	g_iBotPlayer[bot] = player_userid;
 	g_iPlayerBot[player] = bot_userid;
 
-	if(g_sPlayerModel[player][0] == 0)
+	if(g_sPlayerModel[player][0] == '\0')
 		return;
 
 	SetEntProp(bot, Prop_Send, "m_survivorCharacter", GetEntProp(player, Prop_Send, "m_survivorCharacter"));
@@ -948,6 +948,8 @@ static int iGetIdlePlayer(int client)
 static int iHasIdlePlayer(int client)
 {
 	static char sNetClass[64];
+
+	sNetClass[0] = '\0';
 	if(!GetEntityNetClass(client, sNetClass, sizeof(sNetClass)))
 		return 0;
 
@@ -1600,11 +1602,13 @@ public MRESReturn mrePlayerSetModelPost(int pThis, DHookParam hParams)
 
 	if(GetClientTeam(pThis) != TEAM_SURVIVOR)
 	{
-		g_sPlayerModel[pThis][0] = 0;
+		g_sPlayerModel[pThis][0] = '\0';
 		return MRES_Ignored;
 	}
 	
 	static char sModel[128];
+
+	sModel[0] = '\0';
 	hParams.GetString(1, sModel, sizeof(sModel));
 	if(StrContains(sModel, "survivors", false) >= 0)
 		strcopy(g_sPlayerModel[pThis], sizeof(g_sPlayerModel), sModel);
