@@ -511,7 +511,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	if(bCalculateRespawnLimit(client))
 	{
 		delete g_hRespawnTimer[client];
-		g_hRespawnTimer[client] = CreateTimer(1.0, Timer_vRespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
+		g_hRespawnTimer[client] = CreateTimer(1.0, Timer_RespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
 	}
 }
 
@@ -544,14 +544,13 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 	if(bCalculateRespawnLimit(client))
 	{
 		delete g_hRespawnTimer[client];
-		g_hRespawnTimer[client] = CreateTimer(1.0, Timer_vRespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
+		g_hRespawnTimer[client] = CreateTimer(1.0, Timer_RespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
 	}
 }
 
 int iHasIdlePlayer(int client)
 {
 	char sNetClass[64];
-	
 	if(!GetEntityNetClass(client, sNetClass, sizeof(sNetClass)))
 		return 0;
 
@@ -577,7 +576,7 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 	if(bCalculateRespawnLimit(bot))
 	{
 		delete g_hRespawnTimer[bot];
-		g_hRespawnTimer[bot] = CreateTimer(1.0, Timer_vRespawnSurvivor, GetClientUserId(bot), TIMER_REPEAT);
+		g_hRespawnTimer[bot] = CreateTimer(1.0, Timer_RespawnSurvivor, GetClientUserId(bot), TIMER_REPEAT);
 	}
 }
 
@@ -595,7 +594,7 @@ bool bCalculateRespawnLimit(int client)
 	return true;
 }
 
-public Action Timer_vRespawnSurvivor(Handle timer, int client)
+public Action Timer_RespawnSurvivor(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) == 0)
 		return Plugin_Stop;
