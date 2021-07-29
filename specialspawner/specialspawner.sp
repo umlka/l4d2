@@ -383,7 +383,7 @@ static void vGenerateAndExecuteSpawnQueue()
 					FakeClientCommand(client, "z_spawn_old %s auto", g_sZombieClass[aSpawnQueue.Get(iIndex)]);
 
 				SetUserFlagBits(client, iFlagBits);
-				SetCommandFlags("z_spawn_old", iCmdFlags | FCVAR_CHEAT);
+				SetCommandFlags("z_spawn_old", iCmdFlags);
 				
 				if(!bPZSupported)
 				{
