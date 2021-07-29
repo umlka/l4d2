@@ -714,12 +714,13 @@ int iHasIdlePlayer(int client)
 void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
 {
 	static int iCmdFlags, iFlagBits;
-	iFlagBits = GetUserFlagBits(client), iCmdFlags = GetCommandFlags(sCommand);
+	iFlagBits = GetUserFlagBits(client);
+	iCmdFlags = GetCommandFlags(sCommand);
 	SetUserFlagBits(client, ADMFLAG_ROOT);
 	SetCommandFlags(sCommand, iCmdFlags & ~FCVAR_CHEAT);
 	FakeClientCommand(client, "%s %s", sCommand, sArguments);
 	SetUserFlagBits(client, iFlagBits);
-	SetCommandFlags(sCommand, iCmdFlags | FCVAR_CHEAT);
+	SetCommandFlags(sCommand, iCmdFlags);
 }
 
 int iGetOrSetPlayerAmmo(int client, const char[] sWeapon, int iAmmo = -1)
