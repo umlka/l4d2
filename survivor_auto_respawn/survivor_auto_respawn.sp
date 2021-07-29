@@ -154,8 +154,8 @@ Handle g_hSDK_Call_RoundRespawn;
 
 Handle g_hRespawnTimer[MAXPLAYERS + 1];
 
-Address g_pRespawn;
-Address g_pResetStatCondition;
+Address g_pRoundRespawn;
+Address g_pStatsCondition;
 
 ConVar g_hRespawnTime;
 ConVar g_hRespawnLimit;
@@ -355,7 +355,7 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	LoadGameData();
+	vLoadGameData();
 
 	g_hRespawnTime = CreateConVar("sar_respawn_time", "15" , "玩家自动复活时间(秒)", CVAR_FLAGS, true, 0.0);
 	g_hRespawnLimit = CreateConVar("sar_respawn_limit", "5" , "玩家每回合自动复活次数", CVAR_FLAGS, true, 0.0);
@@ -365,19 +365,19 @@ public void OnPluginStart()
 	g_hGiveWeaponType = CreateConVar("sar_give_type", "0" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
 
 	g_hSlotFlags[0] = CreateConVar("sar_respawn_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[1] = CreateConVar("sar_respawn_slot1", "131068" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[1] = CreateConVar("sar_respawn_slot1", "5160" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[2] = CreateConVar("sar_respawn_slot2", "7" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[3] = CreateConVar("sar_respawn_slot3", "15" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[4] = CreateConVar("sar_respawn_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
 
-	g_hRespawnTime.AddChangeHook(ConVarChanged);
-	g_hRespawnLimit.AddChangeHook(ConVarChanged);
-	g_hAllowSurvivorBot.AddChangeHook(ConVarChanged);
-	g_hAllowSurvivorIdle.AddChangeHook(ConVarChanged);
-	g_hAllowSurvivorEvent.AddChangeHook(ConVarChanged);
+	g_hRespawnTime.AddChangeHook(vConVarChanged);
+	g_hRespawnLimit.AddChangeHook(vConVarChanged);
+	g_hAllowSurvivorBot.AddChangeHook(vConVarChanged);
+	g_hAllowSurvivorIdle.AddChangeHook(vConVarChanged);
+	g_hAllowSurvivorEvent.AddChangeHook(vConVarChanged);
 
 	for(int i; i < 5; i++)
-		g_hSlotFlags[i].AddChangeHook(ConVarChanged_Slot);
+		g_hSlotFlags[i].AddChangeHook(vSlotvConVarChanged);
 		
 	//AutoExecConfig(true, "survivor_auto_respawn");
 
@@ -392,26 +392,26 @@ public void OnPluginStart()
 
 public void OnPluginEnd()
 {
-	PatchAddress(false);
+	vStatsConditionPatch(false);
 }
 
 public void OnConfigsExecuted()
 {
-	GetCvars();
-	GetSlotCvars();
+	vGetCvars();
+	vGetSlotCvars();
 }
 
-public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	GetCvars();
+	vGetCvars();
 }
 
-public void ConVarChanged_Slot(ConVar convar, const char[] oldValue, const char[] newValue)
+public void vSlotvConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	GetSlotCvars();
+	vGetSlotCvars();
 }
 
-void GetCvars()
+void vGetCvars()
 {
 	g_iRespawnTime = g_hRespawnTime.IntValue;
 	g_iRespawnLimit = g_hRespawnLimit.IntValue;
@@ -420,17 +420,17 @@ void GetCvars()
 	g_bAllowSurvivorEvent = g_hAllowSurvivorEvent.BoolValue;
 }
 
-void GetSlotCvars()
+void vGetSlotCvars()
 {
 	for(int i; i < 5; i++)
 	{
 		g_iSlotCount[i] = 0;
 		if(g_hSlotFlags[i].IntValue > 0)
-			GetSlotInfo(i);
+			vGetSlotInfo(i);
 	}
 }
 
-void GetSlotInfo(int iSlot)
+void vGetSlotInfo(int iSlot)
 {
 	for(int i; i < 17; i++)
 	{
@@ -449,10 +449,10 @@ public void L4D2_OnSurvivorDeathModelCreated(int iClient, int iDeathModel)
 
 public void OnClientPutInServer(int client)
 {
-	ResetClientData(client);
+	vResetClientData(client);
 }
 
-void ResetClientData(int client)
+void vResetClientData(int client)
 {
 	g_iPlayerRespawned[client] = 0;
 }
@@ -466,7 +466,7 @@ public void OnMapEnd()
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		ResetClientData(i);
+		vResetClientData(i);
 		delete g_hRespawnTimer[i];
 	}
 }
@@ -490,7 +490,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
 	if(IsPlayerAlive(client))
 	{
-		RemoveSurvivorDeathModel(client);
+		vRemoveSurvivorDeathModel(client);
 		return;
 	}
 
@@ -508,10 +508,10 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 			return;
 	}
 
-	if(CalculateRespawnLimit(client))
+	if(bCalculateRespawnLimit(client))
 	{
 		delete g_hRespawnTimer[client];
-		g_hRespawnTimer[client] = CreateTimer(1.0, Timer_Respawn, GetClientUserId(client), TIMER_REPEAT);
+		g_hRespawnTimer[client] = CreateTimer(1.0, Timer_vRespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
 	}
 }
 
@@ -526,7 +526,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 
 	if(IsFakeClient(client))
 	{
-		int iIdlePlayer = GetIdlePlayer(client);
+		int iIdlePlayer = iHasIdlePlayer(client);
 		if(iIdlePlayer == 0)
 		{
 			if(!g_bAllowSurvivorBot)
@@ -541,21 +541,27 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 		}
 	}
 
-	if(CalculateRespawnLimit(client))
+	if(bCalculateRespawnLimit(client))
 	{
 		delete g_hRespawnTimer[client];
-		g_hRespawnTimer[client] = CreateTimer(1.0, Timer_Respawn, GetClientUserId(client), TIMER_REPEAT);
+		g_hRespawnTimer[client] = CreateTimer(1.0, Timer_vRespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
 	}
 }
 
-int GetIdlePlayer(int client)
+int iHasIdlePlayer(int client)
 {
-	if(HasEntProp(client, Prop_Send, "m_humanSpectatorUserID"))
-	{
-		client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
-		if(client > 0 && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1)
-			return client;
-	}
+	char sNetClass[64];
+	
+	if(!GetEntityNetClass(client, sNetClass, sizeof(sNetClass)))
+		return 0;
+
+	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") < 1)
+		return 0;
+
+	client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
+	if(client && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1)
+		return client;
+
 	return 0;
 }
 
@@ -568,14 +574,14 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 	if(!IsFakeClient(bot) || IsPlayerAlive(bot))
 		return;
 
-	if(CalculateRespawnLimit(bot))
+	if(bCalculateRespawnLimit(bot))
 	{
 		delete g_hRespawnTimer[bot];
-		g_hRespawnTimer[bot] = CreateTimer(1.0, Timer_Respawn, GetClientUserId(bot), TIMER_REPEAT);
+		g_hRespawnTimer[bot] = CreateTimer(1.0, Timer_vRespawnSurvivor, GetClientUserId(bot), TIMER_REPEAT);
 	}
 }
 
-bool CalculateRespawnLimit(int client)
+bool bCalculateRespawnLimit(int client)
 {
 	if(g_iPlayerRespawned[client] >= g_iRespawnLimit)
 	{
@@ -589,123 +595,66 @@ bool CalculateRespawnLimit(int client)
 	return true;
 }
 
-public Action Timer_Respawn(Handle timer, int client)
+public Action Timer_vRespawnSurvivor(Handle timer, int client)
 {
-	if((client = GetClientOfUserId(client)) && IsClientInGame(client))
+	if((client = GetClientOfUserId(client)) == 0)
+		return Plugin_Stop;
+	if(IsClientInGame(client) && GetClientTeam(client) == 2 && !IsPlayerAlive(client))
 	{
-		if(GetClientTeam(client) == 2 && !IsPlayerAlive(client))
+		if(g_iRespawnCountdown[client] > 0)
 		{
-			if(g_iRespawnCountdown[client] > 0)
-			{
-				if(!IsFakeClient(client))
-					PrintHintText(client, "%d 秒后复活", g_iRespawnCountdown[client]);
+			if(!IsFakeClient(client))
+				PrintHintText(client, "%d 秒后复活", g_iRespawnCountdown[client]);
 
-				g_iRespawnCountdown[client]--;
-			}
-			else
-			{
-				RespawnSurvivor(client);
-				g_hRespawnTimer[client] = null;
-				return Plugin_Stop;
-			}
-
-			return Plugin_Continue;
+			g_iRespawnCountdown[client]--;
+		}
+		else
+		{
+			vRespawnSurvivor(client);
+			g_hRespawnTimer[client] = null;
+			return Plugin_Stop;
 		}
 
-		g_hRespawnTimer[client] = null;
-		return Plugin_Stop;	
+		return Plugin_Continue;
 	}
 
-	return Plugin_Stop;
+	g_hRespawnTimer[client] = null;
+	return Plugin_Stop;	
 }
 
-void RespawnSurvivor(int client)
+void vRespawnSurvivor(int client)
 {
-	Respawn(client);
+	vRoundRespawn(client);
 	if(g_hGiveWeaponType.BoolValue)
-		GiveWeapon(client);
+		vGiveWeapon(client);
 
-	SetGodMode(client, 1.0);
-	TeleportToSurvivor(client);
-	Terror_SetAdrenalineTime(client, 15.0);
+	vSetGodMode(client, 1.0);
+	vTeleportToSurvivor(client);
+	vTerror_SetAdrenalineTime(client, 15.0);
 	g_iPlayerRespawned[client]++;
 
 	if(!IsFakeClient(client))
 		CPrintToChat(client, "{olive}剩余复活次数 {default}-> {blue}%d", g_iRespawnLimit - g_iPlayerRespawned[client]);
 }
 
-void RemoveSurvivorDeathModel(int client)
+void vRemoveSurvivorDeathModel(int client)
 {
-	int entity = g_iDeathModel[client];
-	g_iDeathModel[client] = 0;
+	if(!bIsValidEntRef(g_iDeathModel[client]))
+		return;
 
-	if(IsValidEntRef(entity))
-		RemoveEntity(entity);
+	RemoveEntity(g_iDeathModel[client]);
+	g_iDeathModel[client] = 0;
 }
 
-bool IsValidEntRef(int entity)
+bool bIsValidEntRef(int entity)
 {
 	if(entity && EntRefToEntIndex(entity) != INVALID_ENT_REFERENCE)
 		return true;
 	return false;
 }
 
-void CheatCmd_Give(int client, const char[] args = "")
-{
-	int bits = GetUserFlagBits(client);
-	int flags = GetCommandFlags("give");
-	SetUserFlagBits(client, ADMFLAG_ROOT);
-	SetCommandFlags("give", flags & ~FCVAR_CHEAT);			   
-	FakeClientCommand(client, "give %s", args);
-	SetCommandFlags("give", flags);
-	SetUserFlagBits(client, bits);
-}
-
-void TeleportToSurvivor(int client)
-{
-	int iTarget = GetTeleportTarget(client);
-	if(iTarget != -1)
-	{
-		ForceCrouch(client);
-
-		float vPos[3];
-		GetClientAbsOrigin(iTarget, vPos);
-		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
-	}
-}
-
-int GetTeleportTarget(int client)
-{
-	int iNormal, iIncap, iHanging;
-	int[] iNormalSurvivors = new int[MaxClients];
-	int[] iIncapSurvivors = new int[MaxClients];
-	int[] iHangingSurvivors = new int[MaxClients];
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-		{
-			if(GetEntProp(i, Prop_Send, "m_isIncapacitated") > 0)
-			{
-				if(GetEntProp(client, Prop_Send, "m_isHangingFromLedge") > 0)
-					iHangingSurvivors[iHanging++] = i;
-				else
-					iIncapSurvivors[iIncap++] = i;
-			}
-			else
-				iNormalSurvivors[iNormal++] = i;
-		}
-	}
-	return (iNormal == 0) ? (iIncap == 0 ? (iHanging == 0 ? -1 : iHangingSurvivors[GetRandomInt(0, iHanging - 1)]) : iIncapSurvivors[GetRandomInt(0, iIncap - 1)]) : iNormalSurvivors[GetRandomInt(0, iNormal - 1)];
-}
-
-void ForceCrouch(int client)
-{
-	SetEntProp(client, Prop_Send, "m_bDucked", 1);
-	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
-}
-
 //https://forums.alliedmods.net/showthread.php?t=327928
-void Terror_SetAdrenalineTime(int client, float fDuration)
+void vTerror_SetAdrenalineTime(int client, float fDuration)
 {
     // Get CountdownTimer address
     static int iTimerAddress = -1;
@@ -719,9 +668,9 @@ void Terror_SetAdrenalineTime(int client, float fDuration)
     SetEntProp(client, Prop_Send, "m_bAdrenalineActive", 1);
 } 
 
-void GiveWeapon(int client)
+void vGiveWeapon(int client)
 {
-	if(!IsPlayerAlive(client)) 
+	if(!IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
 		return;
 
 	for(int i = 4; i >= 2; i--)
@@ -729,47 +678,47 @@ void GiveWeapon(int client)
 		if(g_iSlotCount[i] == 0)
 			continue;
 
-		DeletePlayerSlot(client, i);
-		CheatCmd_Give(client, g_sWeaponName[i][g_iSlotWeapons[i][GetRandomInt(0, g_iSlotCount[i] - 1)]]);
+		vRemovePlayerSlot(client, i);
+		vCheatCommand(client, "give", g_sWeaponName[i][g_iSlotWeapons[i][GetRandomInt(0, g_iSlotCount[i] - 1)]]);
 	}
 
-	GiveSecondaryWeapon(client);
+	vGiveSecondary(client);
 
 	switch(g_hGiveWeaponType.IntValue)
 	{
 		case 1:
-			GivePresetPrimaryWeapon(client);
+			vGivePresetPrimary(client);
 		
 		case 2:
-			GiveAveragePrimaryWeapon(client);
+			vGiveAveragePrimary(client);
 	}
 }
 
-void GiveSecondaryWeapon(int client)
+void vGiveSecondary(int client)
 {
 	if(g_iSlotCount[1] != 0)
 	{
-		DeletePlayerSlot(client, 1);
+		vRemovePlayerSlot(client, 1);
 		int iRandom = g_iSlotWeapons[1][GetRandomInt(0, g_iSlotCount[1] - 1)];
 		if(iRandom > 2)
-			GiveMeleeWeapon(client, g_sWeaponName[1][iRandom]);
+			vGiveMelee(client, g_sWeaponName[1][iRandom]);
 		else
-			CheatCmd_Give(client, g_sWeaponName[1][iRandom]);
+			vCheatCommand(client, "give", g_sWeaponName[1][iRandom]);
 	}
 }
 
-void GivePresetPrimaryWeapon(int client)
+void vGivePresetPrimary(int client)
 {
 	if(g_iSlotCount[0] != 0)
 	{
-		DeletePlayerSlot(client, 0);
-		CheatCmd_Give(client, g_sWeaponName[0][g_iSlotWeapons[0][GetRandomInt(0, g_iSlotCount[0] - 1)]]);
+		vRemovePlayerSlot(client, 0);
+		vCheatCommand(client, "give", g_sWeaponName[0][g_iSlotWeapons[0][GetRandomInt(0, g_iSlotCount[0] - 1)]]);
 	}
 }
 
-bool IsWeaponTier1(int iWeapon)
+bool bIsWeaponTier1(int iWeapon)
 {
-	char sWeapon[32];
+	static char sWeapon[32];
 	GetEdictClassname(iWeapon, sWeapon, sizeof(sWeapon));
 	for(int i; i < 5; i++)
 	{
@@ -779,7 +728,7 @@ bool IsWeaponTier1(int iWeapon)
 	return false;
 }
 
-void GiveAveragePrimaryWeapon(int client)
+void vGiveAveragePrimary(int client)
 {
 	int i, iWeapon, iTier, iTotal;
 	for(i = 1; i <= MaxClients; i++)
@@ -791,28 +740,91 @@ void GiveAveragePrimaryWeapon(int client)
 			if(iWeapon <= MaxClients || !IsValidEntity(iWeapon)) 
 				continue;
 
-			if(IsWeaponTier1(iWeapon)) 
+			if(bIsWeaponTier1(iWeapon)) 
 				iTier += 1;
 			else 
 				iTier += 2;
 		}
 	}
 
-	int iAverage = iTotal > 0 ? RoundToNearest(1.0 * iTier / iTotal) : 0;
+	vRemovePlayerSlot(client, 0);
 
-	DeletePlayerSlot(client, 0);
-
-	switch(iAverage)
+	switch(iTotal > 0 ? RoundToNearest(1.0 * iTier / iTotal) : 0)
 	{
 		case 1:
-			CheatCmd_Give(client, g_sWeaponName[0][GetRandomInt(0, 4)]); //随机给一把tier1武器
+			vCheatCommand(client, "give", g_sWeaponName[0][GetRandomInt(0, 4)]); //随机给一把tier1武器
 
 		case 2:
-			CheatCmd_Give(client, g_sWeaponName[0][GetRandomInt(5, 14)]); //随机给一把tier2武器	
+			vCheatCommand(client, "give", g_sWeaponName[0][GetRandomInt(5, 14)]); //随机给一把tier2武器	
 	}
 }
 
-void SetGodMode(int client, float fDuration)
+void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
+{
+	static int iCmdFlags, iFlagBits;
+	iFlagBits = GetUserFlagBits(client);
+	iCmdFlags = GetCommandFlags(sCommand);
+	SetUserFlagBits(client, ADMFLAG_ROOT);
+	SetCommandFlags(sCommand, iCmdFlags & ~FCVAR_CHEAT);
+	FakeClientCommand(client, "%s %s", sCommand, sArguments);
+	SetUserFlagBits(client, iFlagBits);
+	SetCommandFlags(sCommand, iCmdFlags);
+}
+
+void vTeleportToSurvivor(int client)
+{
+	int iTarget = iGetTeleportTarget(client);
+	if(iTarget != -1)
+	{
+		vForceCrouch(client);
+
+		float vPos[3];
+		GetClientAbsOrigin(iTarget, vPos);
+		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
+	}
+}
+
+int iGetTeleportTarget(int client)
+{
+	int iNormal, iIncap, iHanging;
+	int[] iNormalSurvivors = new int[MaxClients];
+	int[] iIncapSurvivors = new int[MaxClients];
+	int[] iHangingSurvivors = new int[MaxClients];
+	for(int i = 1; i <= MaxClients; i++)
+	{
+		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
+		{
+			if(GetEntProp(i, Prop_Send, "m_isIncapacitated"))
+			{
+				if(GetEntProp(i, Prop_Send, "m_isHangingFromLedge"))
+					iHangingSurvivors[iHanging++] = i;
+				else
+					iIncapSurvivors[iIncap++] = i;
+			}
+			else
+				iNormalSurvivors[iNormal++] = i;
+		}
+	}
+	return (iNormal == 0) ? (iIncap == 0 ? (iHanging == 0 ? -1 : iHangingSurvivors[GetRandomInt(0, iHanging - 1)]) : iIncapSurvivors[GetRandomInt(0, iIncap - 1)]) : iNormalSurvivors[GetRandomInt(0, iNormal - 1)];
+}
+
+void vForceCrouch(int client)
+{
+	SetEntProp(client, Prop_Send, "m_bDucked", 1);
+	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
+}
+
+void vRemovePlayerSlot(int client, int iSlot)
+{
+	iSlot = GetPlayerWeaponSlot(client, iSlot);
+	if(iSlot > MaxClients)
+	{
+		RemovePlayerItem(client, iSlot);
+		RemoveEntity(iSlot);
+	}
+}
+
+void vSetGodMode(int client, float fDuration)
 {
 	if(!IsClientInGame(client))
 		return;
@@ -829,16 +841,6 @@ public Action Timer_Mortal(Handle timer, int client)
 		return;
 
 	SetEntProp(client, Prop_Data, "m_takedamage", 2);
-}
-
-void DeletePlayerSlot(int client, int iSlot)
-{
-	iSlot = GetPlayerWeaponSlot(client, iSlot);
-	if(iSlot != -1)
-	{
-		if(RemovePlayerItem(client, iSlot))
-			RemoveEntity(iSlot);
-	}
 }
 
 //给玩家近战
@@ -862,11 +864,11 @@ public void OnMapStart()
 		if(!IsGenericPrecached(sBuffer))
 			PrecacheGeneric(sBuffer, true);
 	}
-	
-	GetMeleeClasses();
+
+	vGetMeleeClasses();
 }
 
-void GetMeleeClasses()
+void vGetMeleeClasses()
 {
 	int iMeleeStringTable = FindStringTable("MeleeWeapons");
 	g_iMeleeClassCount = GetStringTableNumStrings(iMeleeStringTable);
@@ -875,7 +877,7 @@ void GetMeleeClasses()
 		ReadStringTable(iMeleeStringTable, i, g_sMeleeClass[i], sizeof(g_sMeleeClass[]));
 }
 
-void GetScriptName(const char[] sMeleeClass, char[] sScriptName, int maxlength)
+void vGetScriptName(const char[] sMeleeClass, char[] sScriptName, int maxlength)
 {
 	for(int i; i < g_iMeleeClassCount; i++)
 	{
@@ -888,14 +890,14 @@ void GetScriptName(const char[] sMeleeClass, char[] sScriptName, int maxlength)
 	strcopy(sScriptName, maxlength, g_sMeleeClass[GetRandomInt(0, g_iMeleeClassCount - 1)]);
 }
 
-void GiveMeleeWeapon(int client, const char[] sMeleeClass)
+void vGiveMelee(int client, const char[] sMeleeClass)
 {
 	char sScriptName[32];
-	GetScriptName(sMeleeClass, sScriptName, sizeof(sScriptName));
-	CheatCmd_Give(client, sScriptName);
+	vGetScriptName(sMeleeClass, sScriptName, sizeof(sScriptName));
+	vCheatCommand(client, "give", sScriptName);
 }
 
-void LoadGameData()
+void vLoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
@@ -913,12 +915,12 @@ void LoadGameData()
 	if(g_hSDK_Call_RoundRespawn == null)
 		SetFailState("Failed to create SDKCall: RoundRespawn");
 
-	RoundRespawnPatch(hGameData);
+	vRegisterStatsConditionPatch(hGameData);
 
 	delete hGameData;
 }
 
-void RoundRespawnPatch(GameData hGameData = null)
+void vRegisterStatsConditionPatch(GameData hGameData = null)
 {
 	int iOffset = hGameData.GetOffset("RoundRespawn_Offset");
 	if(iOffset == -1)
@@ -928,36 +930,36 @@ void RoundRespawnPatch(GameData hGameData = null)
 	if(iByteMatch == -1)
 		SetFailState("Failed to find byte: RoundRespawn_Byte");
 
-	g_pRespawn = hGameData.GetAddress("RoundRespawn");
-	if(!g_pRespawn)
+	g_pRoundRespawn = hGameData.GetAddress("RoundRespawn");
+	if(!g_pRoundRespawn)
 		SetFailState("Failed to find address: RoundRespawn");
 	
-	g_pResetStatCondition = g_pRespawn + view_as<Address>(iOffset);
+	g_pStatsCondition = g_pRoundRespawn + view_as<Address>(iOffset);
 	
-	int iByteOrigin = LoadFromAddress(g_pResetStatCondition, NumberType_Int8);
+	int iByteOrigin = LoadFromAddress(g_pStatsCondition, NumberType_Int8);
 	if(iByteOrigin != iByteMatch)
 		SetFailState("Failed to load, byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
 }
 
-void Respawn(int client)
+void vRoundRespawn(int client)
 {
-	PatchAddress(true);
+	vStatsConditionPatch(true);
 	SDKCall(g_hSDK_Call_RoundRespawn, client);
-	PatchAddress(false);
+	vStatsConditionPatch(false);
 }
 
 //https://forums.alliedmods.net/showthread.php?t=323220
-void PatchAddress(bool bPatch) // Prevents respawn command from reset the player's statistics
+void vStatsConditionPatch(bool bPatch) // Prevents respawn command from reset the player's statistics
 {
 	static bool bPatched;
 	if(!bPatched && bPatch)
 	{
 		bPatched = true;
-		StoreToAddress(g_pResetStatCondition, 0x79, NumberType_Int8); // if (!bool) - 0x75 JNZ => 0x78 JNS (jump short if not sign) - always not jump
+		StoreToAddress(g_pStatsCondition, 0x79, NumberType_Int8); // if (!bool) - 0x75 JNZ => 0x78 JNS (jump short if not sign) - always not jump
 	}
 	else if(bPatched && !bPatch)
 	{
 		bPatched = false;
-		StoreToAddress(g_pResetStatCondition, 0x75, NumberType_Int8);
+		StoreToAddress(g_pStatsCondition, 0x75, NumberType_Int8);
 	}
 }
