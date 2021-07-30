@@ -161,13 +161,11 @@ ConVar g_hRespawnTime;
 ConVar g_hRespawnLimit;
 ConVar g_hAllowSurvivorBot;
 ConVar g_hAllowSurvivorIdle;
-ConVar g_hAllowSurvivorEvent;
 ConVar g_hGiveWeaponType;
 ConVar g_hSlotFlags[5];
 
 bool g_bAllowSurvivorBot;
 bool g_bAllowSurvivorIdle;
-bool g_bAllowSurvivorEvent;
 
 int g_iRespawnTime;
 int g_iRespawnLimit;
@@ -361,7 +359,6 @@ public void OnPluginStart()
 	g_hRespawnLimit = CreateConVar("sar_respawn_limit", "5" , "玩家每回合自动复活次数", CVAR_FLAGS, true, 0.0);
 	g_hAllowSurvivorBot = CreateConVar("sar_respawn_bot", "1" , "是否允许Bot自动复活 \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hAllowSurvivorIdle = CreateConVar("sar_respawn_idle", "1" , "是否允许闲置玩家自动复活 \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hAllowSurvivorEvent = CreateConVar("sar_respawn_event", "1" , "是否在player_spawn事件里面检测玩家存活状态 \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
 	g_hGiveWeaponType = CreateConVar("sar_give_type", "0" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
 
 	g_hSlotFlags[0] = CreateConVar("sar_respawn_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
@@ -374,10 +371,9 @@ public void OnPluginStart()
 	g_hRespawnLimit.AddChangeHook(vConVarChanged);
 	g_hAllowSurvivorBot.AddChangeHook(vConVarChanged);
 	g_hAllowSurvivorIdle.AddChangeHook(vConVarChanged);
-	g_hAllowSurvivorEvent.AddChangeHook(vConVarChanged);
 
 	for(int i; i < 5; i++)
-		g_hSlotFlags[i].AddChangeHook(vSlotvConVarChanged);
+		g_hSlotFlags[i].AddChangeHook(vSlotConVarChanged);
 		
 	//AutoExecConfig(true, "survivor_auto_respawn");
 
@@ -387,7 +383,7 @@ public void OnPluginStart()
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
-	HookEvent("player_bot_replace", Event_PlayerBotReplace);
+	HookEvent("player_bot_replace", Event_PlayerBotReplace, EventHookMode_Pre);
 }
 
 public void OnPluginEnd()
@@ -406,7 +402,7 @@ public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] ne
 	vGetCvars();
 }
 
-public void vSlotvConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+public void vSlotConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetSlotCvars();
 }
@@ -417,7 +413,6 @@ void vGetCvars()
 	g_iRespawnLimit = g_hRespawnLimit.IntValue;
 	g_bAllowSurvivorBot = g_hAllowSurvivorBot.BoolValue;
 	g_bAllowSurvivorIdle = g_hAllowSurvivorIdle.BoolValue;
-	g_bAllowSurvivorEvent = g_hAllowSurvivorEvent.BoolValue;
 }
 
 void vGetSlotCvars()
@@ -449,11 +444,6 @@ public void L4D2_OnSurvivorDeathModelCreated(int iClient, int iDeathModel)
 
 public void OnClientPutInServer(int client)
 {
-	vResetClientData(client);
-}
-
-void vResetClientData(int client)
-{
 	g_iPlayerRespawned[client] = 0;
 }
 
@@ -466,7 +456,7 @@ public void OnMapEnd()
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		vResetClientData(i);
+		g_iPlayerRespawned[i] = 0;
 		delete g_hRespawnTimer[i];
 	}
 }
@@ -494,19 +484,8 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 		return;
 	}
 
-	if(g_hRespawnTimer[client] != null || GetClientTeam(client) != 2)
+	if(g_hRespawnTimer[client] != null || GetClientTeam(client) != 2 || (!g_bAllowSurvivorBot && IsFakeClient(client)))
 		return;
-		
-	if(IsFakeClient(client))
-	{
-		if(!g_bAllowSurvivorBot)
-			return;
-	}
-	else
-	{
-		if(!g_bAllowSurvivorEvent)
-			return;
-	}
 
 	if(bCalculateRespawnLimit(client))
 	{
@@ -585,7 +564,7 @@ bool bCalculateRespawnLimit(int client)
 	if(g_iPlayerRespawned[client] >= g_iRespawnLimit)
 	{
 		if(!IsFakeClient(client))
-			PrintHintText(client, "复活次数已耗尽，请等待救援");
+			PrintHintText(client, "复活次数已耗尽，请等待队友救援");
 
 		return false;
 	}
@@ -598,12 +577,13 @@ public Action Timer_RespawnSurvivor(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) == 0)
 		return Plugin_Stop;
+
 	if(IsClientInGame(client) && GetClientTeam(client) == 2 && !IsPlayerAlive(client))
 	{
 		if(g_iRespawnCountdown[client] > 0)
 		{
 			if(!IsFakeClient(client))
-				PrintHintText(client, "%d 秒后复活", g_iRespawnCountdown[client]);
+				PrintCenterText(client, "%d 秒后复活", g_iRespawnCountdown[client]);
 
 			g_iRespawnCountdown[client]--;
 		}
@@ -630,6 +610,7 @@ void vRespawnSurvivor(int client)
 	vSetGodMode(client, 1.0);
 	vTeleportToSurvivor(client);
 	vTerror_SetAdrenalineTime(client, 15.0);
+
 	g_iPlayerRespawned[client]++;
 
 	if(!IsFakeClient(client))
