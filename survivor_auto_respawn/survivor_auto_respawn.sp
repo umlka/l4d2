@@ -474,6 +474,9 @@ public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
+	if(g_iRespawnTime == 0 || g_iRespawnLimit == 0)
+		return;
+
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client == 0 || !IsClientInGame(client))
 		return;
@@ -545,7 +548,7 @@ int iHasIdlePlayer(int client)
 
 public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 {
-	if(!g_bAllowSurvivorBot)
+	if(g_iRespawnTime == 0 || g_iRespawnLimit == 0 || !g_bAllowSurvivorBot)
 		return;
 
 	int bot = GetClientOfUserId(event.GetInt("bot"));
