@@ -211,7 +211,7 @@ public Plugin myinfo =
 	name = "Give Item Menu",
 	description = "Gives Item Menu",
 	author = "Ryanx, sorallll",
-	version = "1.1.0",
+	version = "1.1.1",
 	url = ""
 };
 
@@ -1011,7 +1011,26 @@ void vIncapPlayer(int client)
 {
 	SetEntityHealth(client, 1);
 	SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 0.0);
-	SDKHooks_TakeDamage(client, 0, 0, 100.0, DMG_GENERIC);
+	vDamagePlayer(client, 0, 100.0);
+}
+
+void vDamagePlayer(int victim, int attacker, float damage, const char[] damagetype = "0")
+{
+	int iPointHurt = CreateEntityByName("point_hurt");
+	if(iPointHurt > MaxClients && IsValidEntity(iPointHurt))
+	{
+		char sTargetName[32];
+		FormatEx(sTargetName, sizeof(sTargetName), "target_%i", GetClientUserId(victim));
+		DispatchKeyValue(victim, "targetname", sTargetName);
+
+		DispatchKeyValueFloat(iPointHurt, "Damage", damage);
+		DispatchKeyValue(iPointHurt, "DamageTarget", sTargetName);
+		DispatchKeyValue(iPointHurt, "DamageType", damagetype);
+
+		DispatchSpawn(iPointHurt);
+		AcceptEntityInput(iPointHurt, "Hurt", attacker);
+		RemoveEdict(iPointHurt);
+	}
 }
 
 void vStripPlayerWeapon(int client, int index)
@@ -1760,7 +1779,7 @@ void vWarpAllSurvivorsToStartArea()
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-			vQuickCheat(i, "warp_to_start_area");
+			vCheatCommand(i, "warp_to_start_area");
 	}
 }
 
@@ -1768,7 +1787,7 @@ void vWarpAllSurvivorsToCheckpoint()
 {
 	int iCmdClient = iGetAnyClient();
 	if(iCmdClient)
-		vQuickCheat(iCmdClient, "warp_all_survivors_to_checkpoint");
+		vCheatCommand(iCmdClient, "warp_all_survivors_to_checkpoint");
 }
 
 int iGetAnyClient()
@@ -1779,14 +1798,6 @@ int iGetAnyClient()
 			return i;
 	}
 	return 0;
-}
-
-void vQuickCheat(int client, const char [] sCmd)
-{
-    int flags = GetCommandFlags(sCmd);
-    SetCommandFlags(sCmd, flags & ~FCVAR_CHEAT);
-    FakeClientCommand(client, "%s", sCmd);
-    SetCommandFlags(sCmd, flags);
 }
 
 void vTeamSwitch(int client, int index)
@@ -1967,7 +1978,6 @@ void vChangeTeamToSurvivor(int client, int iTeam)
 	if(iBot)
 	{
 		SDKCall(g_hSDK_Call_SetHumanSpec, iBot, client);
-		SetEntProp(client, Prop_Send, "m_iObserverMode", 5);
 		SDKCall(g_hSDK_Call_TakeOverBot, client, true);
 	}
 	else
@@ -1993,28 +2003,25 @@ int iGetBotOfIdle(int client)
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == 2 && (iGetIdlePlayer(i) == client)) 
+		if(IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == 2 && (iHasIdlePlayer(i) == client)) 
 			return i;
 	}
 	return 0;
 }
 
-int iGetIdlePlayer(int client)
-{
-	if(IsPlayerAlive(client))
-		return iHasIdlePlayer(client);
-
-	return 0;
-}
-
 int iHasIdlePlayer(int client)
 {
-	if(HasEntProp(client, Prop_Send, "m_humanSpectatorUserID"))
-	{
-		client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
-		if(client > 0 && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1)
-			return client;
-	}
+	char sNetClass[64];
+	if(!GetEntityNetClass(client, sNetClass, sizeof(sNetClass)))
+		return 0;
+
+	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") < 1)
+		return 0;
+
+	client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
+	if(client && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1)
+		return client;
+
 	return 0;
 }
 
@@ -2281,13 +2288,14 @@ void vCheatCommand(int client, const char[] sCommand)
 	if(SplitString(sCommand, " ", sCmd, sizeof(sCmd)) == -1)
 		strcopy(sCmd, sizeof(sCmd), sCommand);
 
-	int bits = GetUserFlagBits(client);
+	int iFlagBits, iCmdFlags;
+	iFlagBits = GetUserFlagBits(client);
+	iCmdFlags = GetCommandFlags(sCmd);
 	SetUserFlagBits(client, ADMFLAG_ROOT);
-	int flags = GetCommandFlags(sCmd);
-	SetCommandFlags(sCmd, flags & ~FCVAR_CHEAT);
+	SetCommandFlags(sCmd, iCmdFlags & ~FCVAR_CHEAT);
 	FakeClientCommand(client, sCommand);
-	SetCommandFlags(sCmd, flags);
-	SetUserFlagBits(client, bits);
+	SetUserFlagBits(client, iFlagBits);
+	SetCommandFlags(sCmd, iCmdFlags);
 	
 	if(strcmp(sCmd, "give") == 0)
 	{
