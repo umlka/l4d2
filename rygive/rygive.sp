@@ -380,23 +380,25 @@ public int iRygiveMenuHandler(Menu menu, MenuAction action, int client, int para
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
-			switch(sItem[0])
+			if(menu.GetItem(param2, sItem, sizeof(sItem)))
 			{
-				case 'w':
-					vWeapons(client);
-				case 'i':
-					vItems(client, 0);
-				case 'z':
-					vInfecteds(client, 0);
-				case 'm':
-					vMisc(client, 0);
-				case 't':
-					vTeamSwitch(client, 0);
-				case 'c':
-					vWeaponSpeed(client, 0);
-				case 'd':
-					vDebugMode(client);
+				switch(sItem[0])
+				{
+					case 'w':
+						vWeapons(client);
+					case 'i':
+						vItems(client, 0);
+					case 'z':
+						vInfecteds(client, 0);
+					case 'm':
+						vMisc(client, 0);
+					case 't':
+						vTeamSwitch(client, 0);
+					case 'c':
+						vWeaponSpeed(client, 0);
+					case 'd':
+						vDebugMode(client);
+				}
 			}
 		}
 		case MenuAction_End:
@@ -870,17 +872,17 @@ void vMisc(int client, int index)
 {
 	Menu menu = new Menu(iMiscMenuHandler);
 	menu.SetTitle("杂项");
-	menu.AddItem("0", "倒地");
-	menu.AddItem("1", "剥夺");
-	menu.AddItem("2", "复活");
-	menu.AddItem("3", "传送");
-	menu.AddItem("4", "友伤");
-	menu.AddItem("5", "召唤尸潮");
-	menu.AddItem("6", "剔除所有Bot");
-	menu.AddItem("7", "处死所有特感");
-	menu.AddItem("8", "处死所有生还");
-	menu.AddItem("9", "传送所有生还到起点");
-	menu.AddItem("10", "传送所有生还到终点");
+	menu.AddItem("a", "倒地");
+	menu.AddItem("b", "剥夺");
+	menu.AddItem("c", "复活");
+	menu.AddItem("d", "传送");
+	menu.AddItem("e", "友伤");
+	menu.AddItem("f", "召唤尸潮");
+	menu.AddItem("g", "剔除所有Bot");
+	menu.AddItem("h", "处死所有特感");
+	menu.AddItem("i", "处死所有生还");
+	menu.AddItem("j", "传送所有生还到起点");
+	menu.AddItem("k", "传送所有生还到终点");
 	menu.ExitBackButton = true;
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
@@ -891,33 +893,33 @@ public int iMiscMenuHandler(Menu menu, MenuAction action, int client, int param2
 	{
 		case MenuAction_Select:
 		{
-			char sItem[64];
+			char sItem[2];
 			if(menu.GetItem(param2, sItem, sizeof(sItem)))
 			{
-				switch(param2)
+				switch(sItem[0])
 				{
-					case 0:
+					case 'a':
 						vIncapSurvivor(client, 0);
-					case 1:
+					case 'b':
 						vStripPlayerWeapon(client, 0);
-					case 2:
+					case 'c':
 						vRespawnPlayer(client, 0);
-					case 3:
+					case 'd':
 						vTeleportPlayer(client, 0);
-					case 4:
+					case 'e':
 						vSetFriendlyFire(client);
-					case 5:
+					case 'f':
 						vForcePanicEvent(client);
-					case 6:
+					case 'g':
 						vKickAllSurvivorBot(client);
-					case 7:
+					case 'h':
 						vSlayAllInfected(/*client*/);
-					case 8:
+					case 'i':
 						vSlayAllSurvivor(/*client*/);
-					case 9:
+					case 'j':
 						vWarpAllSurvivorsToStartArea(/*client*/);
-					case 10:
-						vWarpAllSurvivorsToCheckpoint(/*client*/);
+					case 'k':
+						vWarpAllSurvivorsToCheckpoint();
 				}
 			}
 		}
@@ -1740,7 +1742,7 @@ int iL4D2_GetInfectedAttacker(int client)
 
 void vForcePanicEvent(int client)
 {
-	vCheatCommand(client, "director_force_panic_event");
+	vExecuteCheatCommand("director_force_panic_event");
 	vMisc(client, 0);
 }
 
@@ -1785,19 +1787,16 @@ void vWarpAllSurvivorsToStartArea()
 
 void vWarpAllSurvivorsToCheckpoint()
 {
-	int iCmdClient = iGetAnyClient();
-	if(iCmdClient)
-		vCheatCommand(iCmdClient, "warp_all_survivors_to_checkpoint");
+	vExecuteCheatCommand("warp_all_survivors_to_checkpoint");
 }
 
-int iGetAnyClient()
+void vExecuteCheatCommand(const char[] sCommand, const char[] sValue = "")
 {
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i))
-			return i;
-	}
-	return 0;
+	int iCmdFlags = GetCommandFlags(sCommand);
+	SetCommandFlags(sCommand, iCmdFlags & ~FCVAR_CHEAT);
+	ServerCommand("%s %s", sCommand, sValue);
+	ServerExecute();
+	SetCommandFlags(sCommand, iCmdFlags);
 }
 
 void vTeamSwitch(int client, int index)
