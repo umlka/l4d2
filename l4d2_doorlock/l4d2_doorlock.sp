@@ -11,37 +11,40 @@
 #define SOUND_BREAK2	"physics/metal/metal_box_break2.wav"
 #define CVAR_FLAGS		FCVAR_NOTIFY
 
-ConVar g_hCvarAllow;
-ConVar g_hCvarMPGameMode;
-ConVar g_hCvarModes;
-ConVar g_hCvarModesOff;
-ConVar g_hCvarModesTog;
-ConVar g_hCvarFreezeNodoor;
-ConVar g_hCvarDisplayMode;
-ConVar g_hCvarBreakTheDoor;
-ConVar g_hCvarPrepareTime1r;
-ConVar g_hCvarPrepareTime2r;
-ConVar g_hCvarClientTimeOut;
-ConVar g_hCvarDisplayPanel;
+ConVar
+	g_hAllow,
+	g_hGameMode,
+	g_hModes,
+	g_hModesOff,
+	g_hModesTog,
+	g_hFreezeNodoor,
+	g_hDisplayMode,
+	g_hBreakTheDoor,
+	g_hPrepareTime1r,
+	g_hPrepareTime2r,
+	g_hClientTimeOut,
+	g_hDisplayPanel;
 
-bool g_bCvarAllow;
-bool g_bMapStarted;
-bool g_bIsFirstRound;
-bool g_bIsFreezeAllowed;
-bool g_bCvarFreezeNodoor;
-bool g_bIsClientLoading[MAXPLAYERS + 1];
+bool
+	g_bCvarAllow,
+	g_bMapStarted,
+	g_bIsFirstRound,
+	g_bIsFreezeAllowed,
+	g_bCvarFreezeNodoor,
+	g_bIsClientLoading[MAXPLAYERS + 1];
 
-int g_iCountDown;
-int g_iRoundStart;
-int g_iPlayerSpawn;
-int g_iStartSafeDoor;
-int g_iCvarPrepareTime1r;
-int g_iCvarPrepareTime2r;
-int g_iCvarClientTimeOut;
-int g_iCvarBreakTheDoor;
-int g_iCvarDisplayPanel;
-int g_iCvarDisplayMode;
-int g_iClientTimeout[MAXPLAYERS + 1];
+int
+	g_iCountDown,
+	g_iRoundStart,
+	g_iPlayerSpawn,
+	g_iStartSafeDoor,
+	g_iPrepareTime1r,
+	g_iPrepareTime2r,
+	g_iClientTimeOut,
+	g_iBreakTheDoor,
+	g_iDisplayPanel,
+	g_iDisplayMode,
+	g_iClientTimeout[MAXPLAYERS + 1];
 
 public Plugin myinfo =
 {
@@ -56,33 +59,33 @@ public void OnPluginStart()
 {
 	LoadTranslations("doorlock.phrases");
 
-	g_hCvarAllow = CreateConVar("l4d2_dlock_allow", "1", "0=Plugin off, 1=Plugin on.", CVAR_FLAGS);
-	g_hCvarModes = CreateConVar("l4d2_dlock_modes", "", "Turn on the plugin in these game modes, separate by commas (no spaces). (Empty = all).", CVAR_FLAGS);
-	g_hCvarModesOff = CreateConVar("l4d2_dlock_modes_off", "", "Turn off the plugin in these game modes, separate by commas (no spaces). (Empty = none).", CVAR_FLAGS);
-	g_hCvarModesTog = CreateConVar("l4d2_dlock_modes_tog", "0", "Turn on the plugin in these game modes. 0=All, 1=Coop, 2=Survival, 4=Versus, 8=Scavenge. Add numbers together.", CVAR_FLAGS);
-	g_hCvarFreezeNodoor = CreateConVar("l4d2_dlock_freezenodoor", "1", "Freeze survivors if start saferoom door is absent");
-	g_hCvarPrepareTime1r = CreateConVar("l4d2_dlock_prepare1st", "7", "How many seconds plugin will wait after all clients have loaded before starting first round on a map", CVAR_FLAGS);
-	g_hCvarPrepareTime2r = CreateConVar("l4d2_dlock_prepare2nd", "7", "How many seconds plugin will wait after all clients have loaded before starting second round on a map", CVAR_FLAGS);
-	g_hCvarClientTimeOut = CreateConVar("l4d2_dlock_timeout", "45", "How many seconds plugin will wait after a map starts before giving up on waiting for a client", CVAR_FLAGS);
-	g_hCvarBreakTheDoor = CreateConVar("l4d2_dlock_weakdoor", "1", "Saferoom door will be breaked, once opened.", CVAR_FLAGS);
-	g_hCvarDisplayPanel = CreateConVar("l4d2_dlock_displaypanel", "2", "Display players state panel. 0-disabled, 1-hide failed, 2-full info", CVAR_FLAGS);
-	g_hCvarDisplayMode = CreateConVar("l4d2_dlock_displaymode", "1", "Set the display mode for the countdown. (0-off,1-hint, 2-center, 3-chat. any other value to hide countdown)", CVAR_FLAGS);
+	g_hAllow = CreateConVar("l4d2_dlock_allow", "1", "0=Plugin off, 1=Plugin on.", CVAR_FLAGS);
+	g_hModes = CreateConVar("l4d2_dlock_modes", "", "Turn on the plugin in these game modes, separate by commas (no spaces). (Empty = all).", CVAR_FLAGS);
+	g_hModesOff = CreateConVar("l4d2_dlock_modes_off", "", "Turn off the plugin in these game modes, separate by commas (no spaces). (Empty = none).", CVAR_FLAGS);
+	g_hModesTog = CreateConVar("l4d2_dlock_modes_tog", "0", "Turn on the plugin in these game modes. 0=All, 1=Coop, 2=Survival, 4=Versus, 8=Scavenge. Add numbers together.", CVAR_FLAGS);
+	g_hFreezeNodoor = CreateConVar("l4d2_dlock_freezenodoor", "0", "Freeze survivors if start saferoom door is absent");
+	g_hPrepareTime1r = CreateConVar("l4d2_dlock_prepare1st", "7", "How many seconds plugin will wait after all clients have loaded before starting first round on a map", CVAR_FLAGS);
+	g_hPrepareTime2r = CreateConVar("l4d2_dlock_prepare2nd", "7", "How many seconds plugin will wait after all clients have loaded before starting second round on a map", CVAR_FLAGS);
+	g_hClientTimeOut = CreateConVar("l4d2_dlock_timeout", "45", "How many seconds plugin will wait after a map starts before giving up on waiting for a client", CVAR_FLAGS);
+	g_hBreakTheDoor = CreateConVar("l4d2_dlock_weakdoor", "1", "Saferoom door will be breaked, once opened.", CVAR_FLAGS);
+	g_hDisplayPanel = CreateConVar("l4d2_dlock_displaypanel", "2", "Display players state panel. 0-disabled, 1-hide failed, 2-full info", CVAR_FLAGS);
+	g_hDisplayMode = CreateConVar("l4d2_dlock_displaymode", "1", "Set the display mode for the countdown. (0-off,1-hint, 2-center, 3-chat. any other value to hide countdown)", CVAR_FLAGS);
 	CreateConVar("l4d2_dlock_version", PLUGIN_VERSION, "Plugin version", FCVAR_SPONLY|FCVAR_NOTIFY|FCVAR_REPLICATED);
 
-	g_hCvarMPGameMode = FindConVar("mp_gamemode");
-	g_hCvarMPGameMode.AddChangeHook(vAllowConVarChanged);
-	g_hCvarModes.AddChangeHook(vAllowConVarChanged);
-	g_hCvarModesOff.AddChangeHook(vAllowConVarChanged);
-	g_hCvarModesTog.AddChangeHook(vAllowConVarChanged);
-	g_hCvarAllow.AddChangeHook(vAllowConVarChanged);
+	g_hGameMode = FindConVar("mp_gamemode");
+	g_hGameMode.AddChangeHook(vAllowConVarChanged);
+	g_hModes.AddChangeHook(vAllowConVarChanged);
+	g_hModesOff.AddChangeHook(vAllowConVarChanged);
+	g_hModesTog.AddChangeHook(vAllowConVarChanged);
+	g_hAllow.AddChangeHook(vAllowConVarChanged);
 	
-	g_hCvarFreezeNodoor.AddChangeHook(vOtherConVarChanged);
-	g_hCvarPrepareTime1r.AddChangeHook(vOtherConVarChanged);
-	g_hCvarPrepareTime2r.AddChangeHook(vOtherConVarChanged);
-	g_hCvarClientTimeOut.AddChangeHook(vOtherConVarChanged);
-	g_hCvarBreakTheDoor.AddChangeHook(vOtherConVarChanged);
-	g_hCvarDisplayPanel.AddChangeHook(vOtherConVarChanged);
-	g_hCvarDisplayMode.AddChangeHook(vOtherConVarChanged);
+	g_hFreezeNodoor.AddChangeHook(vOtherConVarChanged);
+	g_hPrepareTime1r.AddChangeHook(vOtherConVarChanged);
+	g_hPrepareTime2r.AddChangeHook(vOtherConVarChanged);
+	g_hClientTimeOut.AddChangeHook(vOtherConVarChanged);
+	g_hBreakTheDoor.AddChangeHook(vOtherConVarChanged);
+	g_hDisplayPanel.AddChangeHook(vOtherConVarChanged);
+	g_hDisplayMode.AddChangeHook(vOtherConVarChanged);
 
 	//AutoExecConfig(true, "l4d2_doorlock");
 }
@@ -104,17 +107,17 @@ public void vOtherConVarChanged(ConVar convar, const char[] oldValue, const char
 
 void vGetCvars()
 {
-	int iLast = g_iCvarBreakTheDoor;
+	int iLast = g_iBreakTheDoor;
 
-	g_bCvarFreezeNodoor = g_hCvarFreezeNodoor.BoolValue;
-	g_iCvarPrepareTime1r = g_hCvarPrepareTime1r.IntValue;
-	g_iCvarPrepareTime2r = g_hCvarPrepareTime2r.IntValue;
-	g_iCvarClientTimeOut = g_hCvarClientTimeOut.IntValue;
-	g_iCvarBreakTheDoor = g_hCvarBreakTheDoor.IntValue;
-	g_iCvarDisplayPanel = g_hCvarDisplayPanel.IntValue;
-	g_iCvarDisplayMode = g_hCvarDisplayMode.IntValue;
+	g_bCvarFreezeNodoor = g_hFreezeNodoor.BoolValue;
+	g_iPrepareTime1r = g_hPrepareTime1r.IntValue;
+	g_iPrepareTime2r = g_hPrepareTime2r.IntValue;
+	g_iClientTimeOut = g_hClientTimeOut.IntValue;
+	g_iBreakTheDoor = g_hBreakTheDoor.IntValue;
+	g_iDisplayPanel = g_hDisplayPanel.IntValue;
+	g_iDisplayMode = g_hDisplayMode.IntValue;
 
-	if(iLast != g_iCvarBreakTheDoor)
+	if(iLast != g_iBreakTheDoor)
 	{
 		if(bIsValidEntRef(g_iStartSafeDoor))
 		{
@@ -129,7 +132,7 @@ void vGetCvars()
 //Silvers
 void vIsAllowed()
 {
-	bool bCvarAllow = g_hCvarAllow.BoolValue;
+	bool bCvarAllow = g_hAllow.BoolValue;
 	bool bAllowMode = IsAllowedGameMode();
 	vGetCvars();
 
@@ -137,12 +140,18 @@ void vIsAllowed()
 	{
 		g_bCvarAllow = true;
 		vInitDoor();
-		vHookEvents(true);
+		HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+		HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+		HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_PostNoCopy);
+		HookEvent("player_team", Event_PlayerTeam);
 	}
 	else if(g_bCvarAllow == true && (bCvarAllow == false || bAllowMode == false))
 	{
 		g_bCvarAllow = false;
-		vHookEvents(false);
+		UnhookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+		UnhookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+		UnhookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_PostNoCopy);
+		UnhookEvent("player_team", Event_PlayerTeam);
 
 		if(bIsValidEntRef(g_iStartSafeDoor))
 		{
@@ -155,10 +164,10 @@ void vIsAllowed()
 int g_iCurrentMode;
 bool IsAllowedGameMode()
 {
-	if(g_hCvarMPGameMode == null)
+	if(g_hGameMode == null)
 		return false;
 
-	int iCvarModesTog = g_hCvarModesTog.IntValue;
+	int iCvarModesTog = g_hModesTog.IntValue;
 	if(iCvarModesTog != 0)
 	{
 		if(g_bMapStarted == false)
@@ -188,10 +197,10 @@ bool IsAllowedGameMode()
 	}
 
 	char sGameModes[64], sGameMode[64];
-	g_hCvarMPGameMode.GetString(sGameMode, sizeof(sGameMode));
+	g_hGameMode.GetString(sGameMode, sizeof(sGameMode));
 	Format(sGameMode, sizeof(sGameMode), ",%s,", sGameMode);
 
-	g_hCvarModes.GetString(sGameModes, sizeof(sGameModes));
+	g_hModes.GetString(sGameModes, sizeof(sGameModes));
 	if(sGameModes[0])
 	{
 		Format(sGameModes, sizeof(sGameModes), ",%s,", sGameModes);
@@ -199,7 +208,7 @@ bool IsAllowedGameMode()
 			return false;
 	}
 
-	g_hCvarModesOff.GetString(sGameModes, sizeof(sGameModes));
+	g_hModesOff.GetString(sGameModes, sizeof(sGameModes));
 	if(sGameModes[0])
 	{
 		Format(sGameModes, sizeof(sGameModes), ",%s,", sGameModes);
@@ -222,49 +231,6 @@ public void OnGamemode(const char[] output, int caller, int activator, float del
 		g_iCurrentMode = 8;
 }
 
-void vHookEvents(bool bHook)
-{
-	if(bHook)
-	{
-		HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-		HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-		HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_PostNoCopy);
-		HookEvent("player_team", Event_PlayerTeam);
-	}
-	else
-	{
-		UnhookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-		UnhookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-		UnhookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_PostNoCopy);
-		UnhookEvent("player_team", Event_PlayerTeam);
-	}
-}
-
-public void OnMapStart()
-{
-	g_bMapStarted = true;
-	g_bIsFirstRound = true;
-
-	PrecacheSound(SOUND_COUNTDOWN);
-	PrecacheSound(SOUND_MOVEOUT);
-	PrecacheSound(SOUND_BREAK1);
-	PrecacheSound(SOUND_BREAK2);
-}
-
-public void OnMapEnd()
-{
-	vReset();
-
-	g_bMapStarted = false;
-}
-
-void vReset()
-{
-	g_iRoundStart = 0;
-	g_iPlayerSpawn = 0;
-	g_bIsFreezeAllowed = false;
-}
-
 public Action OnPlayerRunCmd(int client)
 {
 	if(!g_bIsFreezeAllowed || !bIsCountDownStoppedOrRunning())
@@ -282,9 +248,31 @@ public void OnClientDisconnect(int client)
 	g_bIsClientLoading[client] = false;
 }
 
+public void OnMapStart()
+{
+	g_bMapStarted = true;
+	g_bIsFirstRound = true;
+
+	PrecacheSound(SOUND_COUNTDOWN);
+	PrecacheSound(SOUND_MOVEOUT);
+	PrecacheSound(SOUND_BREAK1);
+	PrecacheSound(SOUND_BREAK2);
+}
+
+public void OnMapEnd()
+{
+	g_iRoundStart = 0;
+	g_iPlayerSpawn = 0;
+	g_bIsFreezeAllowed = false;
+
+	g_bMapStarted = false;
+}
+
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
-	vReset();
+	g_iRoundStart = 0;
+	g_iPlayerSpawn = 0;
+	g_bIsFreezeAllowed = false;
 
 	if(g_bIsFirstRound) 
 		g_bIsFirstRound = false;
@@ -316,7 +304,7 @@ void vStart()
 	CreateTimer(1.0, Timer_StartSequence, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
-public void Event_PlayerTeam(Event event, char[] event_name, bool dontBroadcast)
+public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
 	if(!bIsCountDownStoppedOrRunning())
 		return;
@@ -332,22 +320,22 @@ public void Event_PlayerTeam(Event event, char[] event_name, bool dontBroadcast)
 public Action Timer_StartSequence(Handle timer)
 {
 	g_iCountDown = -1;
-	vSurvivorBotsStop();
+	vExecuteCheatCommand("nb_stop", "1");
 
 	if(bIsValidEntRef(g_iStartSafeDoor))
 	{
 		vLockTheDoor();
-		CreateTimer(1.0, Timer_LoadingStatus, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+		CreateTimer(1.0, Timer_LoadingStatus, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 	}
 	else if(g_bCvarFreezeNodoor)
 	{
 		g_bIsFreezeAllowed = true;
-		CreateTimer(1.0, Timer_LoadingStatus, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+		CreateTimer(1.0, Timer_LoadingStatus, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 	}
 	else
 	{
 		g_iCountDown = 0;
-		vSurvivorBotsStart();
+		vExecuteCheatCommand("nb_stop", "0");
 	}
 }
 
@@ -361,10 +349,10 @@ public Action Timer_LoadingStatus(Handle timer)
 		if(!bIsCountDownRunning())
 		{
 			if(!g_bIsFreezeAllowed)
-				vSurvivorBotsStart();
+				vExecuteCheatCommand("nb_stop", "0");
 
 			g_iCountDown = 0;
-			CreateTimer(1.0, Timer_MoveOut, _, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+			CreateTimer(1.0, Timer_MoveOut, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 		}
 
 		return Plugin_Stop;
@@ -379,14 +367,14 @@ public Action Timer_MoveOut(Handle timer)
 {
 	if(g_iCountDown == -1)
 	{
-		vSurvivorBotsStop();
+		vExecuteCheatCommand("nb_stop", "1");
 		return Plugin_Stop;
 	}
-	else if(g_iCountDown >= (g_bIsFirstRound ? g_iCvarPrepareTime1r : g_iCvarPrepareTime2r))
+	else if(g_iCountDown >= (g_bIsFirstRound ? g_iPrepareTime1r : g_iPrepareTime2r))
 	{
 		g_iCountDown = 0;
 		vPrintTextAll("%t", "DL_Moveout");
-		vSurvivorBotsStart();
+		vExecuteCheatCommand("nb_stop", "0");
 		vUnFreezePlayers();
 
 		if(bIsValidEntRef(g_iStartSafeDoor))
@@ -400,24 +388,14 @@ public Action Timer_MoveOut(Handle timer)
 	else
 	{
 		if(!g_bIsFreezeAllowed)
-			vPrintTextAll("%t", "DL_Locked", (g_bIsFirstRound ? g_iCvarPrepareTime1r : g_iCvarPrepareTime2r) - g_iCountDown);
+			vPrintTextAll("%t", "DL_Locked", (g_bIsFirstRound ? g_iPrepareTime1r : g_iPrepareTime2r) - g_iCountDown);
 		else
-			vPrintTextAll("%t", "DL_Frozen", (g_bIsFirstRound ? g_iCvarPrepareTime1r : g_iCvarPrepareTime2r) - g_iCountDown);
+			vPrintTextAll("%t", "DL_Frozen", (g_bIsFirstRound ? g_iPrepareTime1r : g_iPrepareTime2r) - g_iCountDown);
 
 		vPlaySound(SOUND_COUNTDOWN);
 		g_iCountDown++;
 	}
 	return Plugin_Continue;
-}
-
-void vSurvivorBotsStart()
-{
-	FindConVar("sb_stop").SetInt(0);
-}
-
-void vSurvivorBotsStop()
-{
-	FindConVar("sb_stop").SetInt(1);
 }
 
 void vShowStatusPanel()
@@ -432,15 +410,15 @@ void vShowStatusPanel()
 		{
 			if(g_bIsClientLoading[i]) 
 				iLoading++;
-			else if(g_iClientTimeout[i] >= g_iCvarClientTimeOut) 
+			else if(g_iClientTimeout[i] >= g_iClientTimeOut) 
 				iLoadFailed++;
 			else 
 				iConnected++;
 		}
 	}
 
-	char sInfo[256];
 	Panel panel;
+	char sInfo[256];
 
 	for(int client = 1; client <= MaxClients; client++)
 	{
@@ -482,7 +460,7 @@ void vShowStatusPanel()
 				{
 					if(IsClientConnected(i) && !IsFakeClient(i))
 					{
-						if(!g_bIsClientLoading[i] && g_iClientTimeout[i] < g_iCvarClientTimeOut)
+						if(!g_bIsClientLoading[i] && g_iClientTimeout[i] < g_iClientTimeOut)
 						{
 							iConnected++;
 							FormatEx(sInfo, sizeof(sInfo), "->%d. %N", iConnected, i);
@@ -492,7 +470,7 @@ void vShowStatusPanel()
 				}
 			}
 
-			if(g_iCvarDisplayPanel > 1)
+			if(g_iDisplayPanel > 1)
 			{
 				if(iLoadFailed)
 				{
@@ -504,7 +482,7 @@ void vShowStatusPanel()
 					{
 						if(IsClientConnected(i) && !IsFakeClient(i))
 						{
-							if(!g_bIsClientLoading[i] && g_iClientTimeout[i] >= g_iCvarClientTimeOut)
+							if(!g_bIsClientLoading[i] && g_iClientTimeout[i] >= g_iClientTimeOut)
 							{
 								iLoadFailed++;
 								FormatEx(sInfo, sizeof(sInfo), "->%d. %N", iLoadFailed, i);
@@ -515,13 +493,13 @@ void vShowStatusPanel()
 				}
 			}
 
-			panel.Send(client, PanelHandler, 5);
+			panel.Send(client, iPanelHandler, 5);
 			delete panel;
 		}
 	}
 }
 
-public int PanelHandler(Menu menu, MenuAction action, int param1, int param2)
+public int iPanelHandler(Menu menu, MenuAction action, int param1, int param2)
 {
 
 }
@@ -588,7 +566,7 @@ void vInitDoor()
 			{
 				
 				g_iStartSafeDoor = EntIndexToEntRef(entity);
-				switch(g_iCvarBreakTheDoor)
+				switch(g_iBreakTheDoor)
 				{
 					case 1:
 					{
@@ -698,7 +676,7 @@ bool bIsFinishedLoading()
 		{
 			if(!IsClientInGame(i) && !IsFakeClient(i))
 			{
-				if(++g_iClientTimeout[i] >= g_iCvarClientTimeOut) 
+				if(++g_iClientTimeout[i] >= g_iClientTimeOut) 
 					g_bIsClientLoading[i] = false;
 				else
 					g_bIsClientLoading[i] = true;
@@ -710,7 +688,7 @@ bool bIsFinishedLoading()
 			g_bIsClientLoading[i] = false;
 	}
 
-	if(g_iCvarDisplayPanel > 0 && g_bIsFirstRound)
+	if(g_iDisplayPanel > 0 && g_bIsFirstRound)
 		vShowStatusPanel();
 
 	return !bIsAnyClientLoading();
@@ -725,7 +703,7 @@ void vPrintTextAll(const char[] format, any ...)
 		{
 			SetGlobalTransTarget(i);
 			VFormat(buffer, sizeof(buffer), format, 2);
-			switch(g_iCvarDisplayMode)
+			switch(g_iDisplayMode)
 			{
 				case 1:
 					PrintHintText(i, buffer);
@@ -748,4 +726,13 @@ bool bIsValidEntRef(int entity)
 void vPlaySound(const char[] sSound)
 {
 	EmitSoundToAll(sSound, SOUND_FROM_PLAYER, SNDCHAN_STATIC, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
+}
+
+void vExecuteCheatCommand(const char[] sCommand, const char[] sValue = "")
+{
+	int iCmdFlags = GetCommandFlags(sCommand);
+	SetCommandFlags(sCommand, iCmdFlags & ~FCVAR_CHEAT);
+	ServerCommand("%s %s", sCommand, sValue);
+	ServerExecute();
+	SetCommandFlags(sCommand, iCmdFlags);
 }
