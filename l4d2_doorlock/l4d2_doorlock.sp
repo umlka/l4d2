@@ -274,7 +274,7 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 	g_iPlayerSpawn = 0;
 	g_bIsFreezeAllowed = false;
 
-	if(g_bIsFirstRound) 
+	if(g_bIsFirstRound)
 		g_bIsFirstRound = false;
 }
 
@@ -343,7 +343,7 @@ public Action Timer_LoadingStatus(Handle timer)
 {
 	if(bIsFinishedLoading())
 	{
-		if(!g_bIsFreezeAllowed) 
+		if(!g_bIsFreezeAllowed)
 			vUnFreezePlayers();
 
 		if(!bIsCountDownRunning())
@@ -357,7 +357,7 @@ public Action Timer_LoadingStatus(Handle timer)
 
 		return Plugin_Stop;
 	}
-	else 
+	else
 		g_iCountDown = -1;
 
 	return Plugin_Continue;
@@ -404,13 +404,13 @@ void vShowStatusPanel()
 	int iLoading;
 	int iConnected;
 	int iLoadFailed;
-	for(i = 1; i <= MaxClients; i++) 
+	for(i = 1; i <= MaxClients; i++)
 	{
-		if(IsClientConnected(i) && !IsFakeClient(i)) 
+		if(IsClientConnected(i) && !IsFakeClient(i))
 		{
-			if(g_bIsClientLoading[i]) 
+			if(g_bIsClientLoading[i])
 				iLoading++;
-			else if(g_iClientTimeout[i] >= g_iClientTimeOut) 
+			else if(g_iClientTimeout[i] >= g_iClientTimeOut)
 				iLoadFailed++;
 			else 
 				iConnected++;
@@ -436,7 +436,7 @@ void vShowStatusPanel()
 				panel.DrawText(sInfo);
 
 				iLoading = 0;
-				for(i = 1; i <= MaxClients; i++) 
+				for(i = 1; i <= MaxClients; i++)
 				{
 					if(IsClientConnected(i) && !IsFakeClient(i))
 					{
@@ -456,7 +456,7 @@ void vShowStatusPanel()
 				panel.DrawText(sInfo);
 
 				iConnected = 0;
-				for(i = 1; i <= MaxClients; i++) 
+				for(i = 1; i <= MaxClients; i++)
 				{
 					if(IsClientConnected(i) && !IsFakeClient(i))
 					{
@@ -478,7 +478,7 @@ void vShowStatusPanel()
 					panel.DrawText(sInfo);
 
 					iLoadFailed = 0;
-					for(i = 1; i <= MaxClients; i++) 
+					for(i = 1; i <= MaxClients; i++)
 					{
 						if(IsClientConnected(i) && !IsFakeClient(i))
 						{
@@ -516,11 +516,11 @@ void vUnvLockTheDoor()
 
 void vUnFreezePlayers()
 {
-	for(int i = 1; i <= MaxClients; i++) 
+	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(IsClientInGame(i)) 
+		if(IsClientInGame(i))
 		{
-			if(GetEntityMoveType(i) == MOVETYPE_NONE) 
+			if(GetEntityMoveType(i) == MOVETYPE_NONE)
 				SetEntityMoveType(i, MOVETYPE_WALK);
 		}
 	}
@@ -662,7 +662,7 @@ bool bIsAnyClientLoading()
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(g_bIsClientLoading[i]) 
+		if(g_bIsClientLoading[i])
 			return true;
 	}
 	return false;
@@ -676,7 +676,7 @@ bool bIsFinishedLoading()
 		{
 			if(!IsClientInGame(i) && !IsFakeClient(i))
 			{
-				if(++g_iClientTimeout[i] >= g_iClientTimeOut) 
+				if(++g_iClientTimeout[i] >= g_iClientTimeOut)
 					g_bIsClientLoading[i] = false;
 				else
 					g_bIsClientLoading[i] = true;
