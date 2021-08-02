@@ -14,129 +14,133 @@
 #define NAME_CreateTank "NextBotCreatePlayerBot<Tank>"
 #define NAME_InfectedAttackSurvivorTeam "Infected::AttackSurvivorTeam"
 
-StringMap g_aSteamIDs;
+StringMap
+	g_aSteamIDs;
 
-Handle g_hSDK_Call_RoundRespawn;
-Handle g_hSDK_Call_SetHumanSpec;
-Handle g_hSDK_Call_TakeOverBot;
-Handle g_hSDK_Call_GoAwayFromKeyboard;
-Handle g_hSDK_Call_CreateSmoker;
-Handle g_hSDK_Call_CreateBoomer;
-Handle g_hSDK_Call_CreateHunter;
-Handle g_hSDK_Call_CreateSpitter;
-Handle g_hSDK_Call_CreateJockey;
-Handle g_hSDK_Call_CreateCharger;
-Handle g_hSDK_Call_CreateTank;
-Handle g_hSDK_Call_InfectedAttackSurvivorTeam;
+Handle
+	g_hSDK_Call_RoundRespawn,
+	g_hSDK_Call_SetHumanSpec,
+	g_hSDK_Call_TakeOverBot,
+	g_hSDK_Call_GoAwayFromKeyboard,
+	g_hSDK_Call_CreateSmoker,
+	g_hSDK_Call_CreateBoomer,
+	g_hSDK_Call_CreateHunter,
+	g_hSDK_Call_CreateSpitter,
+	g_hSDK_Call_CreateJockey,
+	g_hSDK_Call_CreateCharger,
+	g_hSDK_Call_CreateTank,
+	g_hSDK_Call_InfectedAttackSurvivorTeam;
 
-Address g_pRoundRespawn;
-Address g_pStatsCondition;
+Address
+	g_pRoundRespawn,
+	g_pStatsCondition;
 
-int g_iMeleeClassCount;
-int g_iClipSize_RifleM60;
-int g_iClipSize_GrenadeLauncher;
-int g_iFunction[MAXPLAYERS + 1];
-int g_iCurrentPage[MAXPLAYERS + 1];
+int
+	g_iMeleeClassCount,
+	g_iClipSize_RifleM60,
+	g_iClipSize_GrenadeLauncher,
+	g_iFunction[MAXPLAYERS + 1],
+	g_iCurrentPage[MAXPLAYERS + 1];
 
-float g_fSpeedUp[MAXPLAYERS + 1] = 1.0;
+float
+	g_fSpeedUp[MAXPLAYERS + 1];
 
-bool g_bDebug;
-bool g_bWeaponHandling;
+bool
+	g_bDebug,
+	g_bWeaponHandling;
 
-char g_sMeleeClass[16][32];
-char g_sItemName[MAXPLAYERS + 1][64];
+char
+	g_sMeleeClass[16][32],
+	g_sItemName[MAXPLAYERS + 1][64];
 
-static const char g_sMeleeModels[][] =
-{
-	"models/weapons/melee/v_fireaxe.mdl",
-	"models/weapons/melee/w_fireaxe.mdl",
-	"models/weapons/melee/v_frying_pan.mdl",
-	"models/weapons/melee/w_frying_pan.mdl",
-	"models/weapons/melee/v_machete.mdl",
-	"models/weapons/melee/w_machete.mdl",
-	"models/weapons/melee/v_bat.mdl",
-	"models/weapons/melee/w_bat.mdl",
-	"models/weapons/melee/v_crowbar.mdl",
-	"models/weapons/melee/w_crowbar.mdl",
-	"models/weapons/melee/v_cricket_bat.mdl",
-	"models/weapons/melee/w_cricket_bat.mdl",
-	"models/weapons/melee/v_tonfa.mdl",
-	"models/weapons/melee/w_tonfa.mdl",
-	"models/weapons/melee/v_katana.mdl",
-	"models/weapons/melee/w_katana.mdl",
-	"models/weapons/melee/v_electric_guitar.mdl",
-	"models/weapons/melee/w_electric_guitar.mdl",
-	"models/v_models/v_knife_t.mdl",
-	"models/w_models/weapons/w_knife_t.mdl",
-	"models/weapons/melee/v_golfclub.mdl",
-	"models/weapons/melee/w_golfclub.mdl",
-	"models/weapons/melee/v_shovel.mdl",
-	"models/weapons/melee/w_shovel.mdl",
-	"models/weapons/melee/v_pitchfork.mdl",
-	"models/weapons/melee/w_pitchfork.mdl",
-	"models/weapons/melee/v_riotshield.mdl",
-	"models/weapons/melee/w_riotshield.mdl"
-};
-
-static const char g_sSpecialsInfectedModels[][] =
-{
-	"models/infected/smoker.mdl",
-	"models/infected/boomer.mdl",
-	"models/infected/hunter.mdl",
-	"models/infected/spitter.mdl",
-	"models/infected/jockey.mdl",
-	"models/infected/charger.mdl",
-	"models/infected/hulk.mdl",
-	"models/infected/witch.mdl",
-	"models/infected/witch_bride.mdl"
-};
-
-static const char g_sUncommonInfectedModels[][] =
-{
-	"models/infected/common_male_riot.mdl",
-	"models/infected/common_male_ceda.mdl",
-	"models/infected/common_male_clown.mdl",
-	"models/infected/common_male_mud.mdl",
-	"models/infected/common_male_roadcrew.mdl",
-	"models/infected/common_male_jimmy.mdl",
-	"models/infected/common_male_fallen_survivor.mdl",
-};
-
-static const char g_sMeleeName[][] =
-{
-	"fireaxe",			//斧头
-	"frying_pan",		//平底锅
-	"machete",			//砍刀
-	"baseball_bat",		//棒球棒
-	"crowbar",			//撬棍
-	"cricket_bat",		//球拍
-	"tonfa",			//警棍
-	"katana",			//武士刀
-	"electric_guitar",	//吉他
-	"knife",			//小刀
-	"golfclub",			//高尔夫球棍
-	"shovel",			//铁铲
-	"pitchfork",		//草叉
-	"riotshield",		//盾牌
-};
-
-static const char g_sMeleeTrans[][] =
-{
-	"斧头",
-	"平底锅",
-	"砍刀",
-	"棒球棒",
-	"撬棍",
-	"球拍",
-	"警棍",
-	"武士刀",
-	"吉他",
-	"小刀",
-	"高尔夫球棍",
-	"铁铲",
-	"草叉",
-	"盾牌"
-};
+static const char
+	g_sMeleeModels[][] =
+	{
+		"models/weapons/melee/v_fireaxe.mdl",
+		"models/weapons/melee/w_fireaxe.mdl",
+		"models/weapons/melee/v_frying_pan.mdl",
+		"models/weapons/melee/w_frying_pan.mdl",
+		"models/weapons/melee/v_machete.mdl",
+		"models/weapons/melee/w_machete.mdl",
+		"models/weapons/melee/v_bat.mdl",
+		"models/weapons/melee/w_bat.mdl",
+		"models/weapons/melee/v_crowbar.mdl",
+		"models/weapons/melee/w_crowbar.mdl",
+		"models/weapons/melee/v_cricket_bat.mdl",
+		"models/weapons/melee/w_cricket_bat.mdl",
+		"models/weapons/melee/v_tonfa.mdl",
+		"models/weapons/melee/w_tonfa.mdl",
+		"models/weapons/melee/v_katana.mdl",
+		"models/weapons/melee/w_katana.mdl",
+		"models/weapons/melee/v_electric_guitar.mdl",
+		"models/weapons/melee/w_electric_guitar.mdl",
+		"models/v_models/v_knife_t.mdl",
+		"models/w_models/weapons/w_knife_t.mdl",
+		"models/weapons/melee/v_golfclub.mdl",
+		"models/weapons/melee/w_golfclub.mdl",
+		"models/weapons/melee/v_shovel.mdl",
+		"models/weapons/melee/w_shovel.mdl",
+		"models/weapons/melee/v_pitchfork.mdl",
+		"models/weapons/melee/w_pitchfork.mdl",
+		"models/weapons/melee/v_riotshield.mdl",
+		"models/weapons/melee/w_riotshield.mdl"
+	},
+	g_sSpecialsInfectedModels[][] =
+	{
+		"models/infected/smoker.mdl",
+		"models/infected/boomer.mdl",
+		"models/infected/hunter.mdl",
+		"models/infected/spitter.mdl",
+		"models/infected/jockey.mdl",
+		"models/infected/charger.mdl",
+		"models/infected/hulk.mdl",
+		"models/infected/witch.mdl",
+		"models/infected/witch_bride.mdl"
+	},
+	g_sUncommonInfectedModels[][] =
+	{
+		"models/infected/common_male_riot.mdl",
+		"models/infected/common_male_ceda.mdl",
+		"models/infected/common_male_clown.mdl",
+		"models/infected/common_male_mud.mdl",
+		"models/infected/common_male_roadcrew.mdl",
+		"models/infected/common_male_jimmy.mdl",
+		"models/infected/common_male_fallen_survivor.mdl",
+	},
+	g_sMeleeName[][] =
+	{
+		"fireaxe",			//斧头
+		"frying_pan",		//平底锅
+		"machete",			//砍刀
+		"baseball_bat",		//棒球棒
+		"crowbar",			//撬棍
+		"cricket_bat",		//球拍
+		"tonfa",			//警棍
+		"katana",			//武士刀
+		"electric_guitar",	//吉他
+		"knife",			//小刀
+		"golfclub",			//高尔夫球棍
+		"shovel",			//铁铲
+		"pitchfork",		//草叉
+		"riotshield",		//盾牌
+	},
+	g_sMeleeTrans[][] =
+	{
+		"斧头",
+		"平底锅",
+		"砍刀",
+		"棒球棒",
+		"撬棍",
+		"球拍",
+		"警棍",
+		"武士刀",
+		"吉他",
+		"小刀",
+		"高尔夫球棍",
+		"铁铲",
+		"草叉",
+		"盾牌"
+	};
 
 enum L4D2WeaponType 
 {
@@ -211,7 +215,7 @@ public Plugin myinfo =
 	name = "Give Item Menu",
 	description = "Gives Item Menu",
 	author = "Ryanx, sorallll",
-	version = "1.1.1",
+	version = "1.1.2",
 	url = ""
 };
 
@@ -248,10 +252,13 @@ public void OnGetWeaponsInfo(int pThis, const char[] classname)
 	}
 }
 
-public void OnClientPostAdminCheck(int client)
+public void OnClientDisconnect(int client)
 {
 	g_fSpeedUp[client] = 1.0;
+}
 
+public void OnClientPostAdminCheck(int client)
+{
 	if(g_bDebug == false || IsFakeClient(client))
 		return;
 		
@@ -265,9 +272,6 @@ public void OnClientPostAdminCheck(int client)
 public void OnMapStart()
 {
 	int i;
-	for(i = 1; i <= MaxClients; i++)
-		g_fSpeedUp[i] = 1.0;
-
 	int iLen;
 
 	iLen = sizeof(g_sMeleeModels);
@@ -2419,11 +2423,11 @@ void vLoadStringFromAdddress(Address pAddr, char[] sBuffer, int iMaxlength)
 	sBuffer[iMaxlength - 1] = 0;
 }
 
-Handle hPrepCreateBotCallFromAddress(StringMap hSiFuncHashMap, const char[] sSIName)
+Handle hPrepCreateBotCallFromAddress(StringMap aSiFuncHashMap, const char[] sSIName)
 {
 	Address pAddr;
 	StartPrepSDKCall(SDKCall_Static);
-	if(!hSiFuncHashMap.GetValue(sSIName, pAddr) || !PrepSDKCall_SetAddress(pAddr))
+	if(!aSiFuncHashMap.GetValue(sSIName, pAddr) || !PrepSDKCall_SetAddress(pAddr))
 		SetFailState("Unable to find NextBotCreatePlayer<%s> address in memory.", sSIName);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
@@ -2432,7 +2436,7 @@ Handle hPrepCreateBotCallFromAddress(StringMap hSiFuncHashMap, const char[] sSIN
 
 void vPrepWindowsCreateBotCalls(Address pJumpTableAddr)
 {
-	StringMap hInfectedHashMap = new StringMap();
+	StringMap aInfectedHashMap = new StringMap();
 	// We have the address of the jump table, starting at the first PUSH instruction of the
 	// PUSH mem32 (5 bytes)
 	// CALL rel32 (5 bytes)
@@ -2454,34 +2458,34 @@ void vPrepWindowsCreateBotCalls(Address pJumpTableAddr)
 		Address pCallOffsetBase = pCaseBase + view_as<Address>(10); // first byte of next instruction after the CALL instruction
 		Address pNextBotCreatePlayerBotTAddr = pCallOffsetBase + view_as<Address>(oFuncRelOffset);
 		PrintToServer("Found NextBotCreatePlayerBot<%s>() @ %08x", sSIName, pNextBotCreatePlayerBotTAddr);
-		hInfectedHashMap.SetValue(sSIName, pNextBotCreatePlayerBotTAddr);
+		aInfectedHashMap.SetValue(sSIName, pNextBotCreatePlayerBotTAddr);
 	}
 
-	g_hSDK_Call_CreateSmoker = hPrepCreateBotCallFromAddress(hInfectedHashMap, "Smoker");
+	g_hSDK_Call_CreateSmoker = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Smoker");
 	if(g_hSDK_Call_CreateSmoker == null)
 		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateSmoker);
 
-	g_hSDK_Call_CreateBoomer = hPrepCreateBotCallFromAddress(hInfectedHashMap, "Boomer");
+	g_hSDK_Call_CreateBoomer = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Boomer");
 	if(g_hSDK_Call_CreateBoomer == null)
 		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateBoomer);
 
-	g_hSDK_Call_CreateHunter = hPrepCreateBotCallFromAddress(hInfectedHashMap, "Hunter");
+	g_hSDK_Call_CreateHunter = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Hunter");
 	if(g_hSDK_Call_CreateHunter == null)
 		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateHunter);
 
-	g_hSDK_Call_CreateTank = hPrepCreateBotCallFromAddress(hInfectedHashMap, "Tank");
+	g_hSDK_Call_CreateTank = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Tank");
 	if(g_hSDK_Call_CreateTank == null)
 		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateTank);
 	
-	g_hSDK_Call_CreateSpitter = hPrepCreateBotCallFromAddress(hInfectedHashMap, "Spitter");
+	g_hSDK_Call_CreateSpitter = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Spitter");
 	if(g_hSDK_Call_CreateSpitter == null)
 		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateSpitter);
 	
-	g_hSDK_Call_CreateJockey = hPrepCreateBotCallFromAddress(hInfectedHashMap, "Jockey");
+	g_hSDK_Call_CreateJockey = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Jockey");
 	if(g_hSDK_Call_CreateJockey == null)
 		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateJockey);
 
-	g_hSDK_Call_CreateCharger = hPrepCreateBotCallFromAddress(hInfectedHashMap, "Charger");
+	g_hSDK_Call_CreateCharger = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Charger");
 	if(g_hSDK_Call_CreateCharger == null)
 		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateCharger);
 }
