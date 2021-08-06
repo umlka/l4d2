@@ -166,114 +166,121 @@ stock void CSayText2(int client, int author, const char[] sMessage)
 #define SI_JOCKEY			4
 #define SI_CHARGER			5
 
-static const char g_sZombieClass[6][] =
-{
-	"smoker",
-	"boomer",
-	"hunter",
-	"spitter",
-	"jockey", 
-	"charger"
-};
+static const char
+	g_sZombieClass[6][] =
+	{
+		"smoker",
+		"boomer",
+		"hunter",
+		"spitter",
+		"jockey", 
+		"charger"
+	};
 
-char g_sGameMode[32];
+char
+	g_sGameMode[32];
 
-Handle g_hSDK_Call_IsInStasis;
-Handle g_hSDK_Call_LeaveStasis;
-Handle g_hSDK_Call_State_Transition;
-Handle g_hSDK_Call_MaterializeFromGhost;
-Handle g_hSDK_Call_SetClass;
-Handle g_hSDK_Call_CreateAbility;
-Handle g_hSDK_Call_TakeOverZombieBot;
-Handle g_hSDK_Call_RoundRespawn;
-Handle g_hSDK_Call_SetHumanSpec;
-Handle g_hSDK_Call_TakeOverBot;
-Handle g_hSDK_Call_HasPlayerControlledZombies;
+Handle
+	g_hTimer,
+	g_hSDK_Call_IsInStasis,
+	g_hSDK_Call_LeaveStasis,
+	g_hSDK_Call_State_Transition,
+	g_hSDK_Call_MaterializeFromGhost,
+	g_hSDK_Call_SetClass,
+	g_hSDK_Call_CreateAbility,
+	g_hSDK_Call_TakeOverZombieBot,
+	g_hSDK_Call_RoundRespawn,
+	g_hSDK_Call_SetHumanSpec,
+	g_hSDK_Call_TakeOverBot,
+	g_hSDK_Call_HasPlayerControlledZombies;
 
-Handle g_hTimer;
+Address
+	g_pRoundRespawn,
+	g_pStatsCondition;
 
-Address g_pRoundRespawn;
-Address g_pStatsCondition;
+DynamicDetour
+	g_dDetour[4];
 
-DynamicDetour g_dDetour[4];
+ConVar
+	g_hGameMode,
+	g_hMaxTankPlayer,
+	g_hAllowSurvuivorLimit,
+	g_hSurvuivorAllowChance,
+	g_hSbAllBotGame,
+	g_hAllowAllBotSurvivorTeam,
+	g_hSurvivorMaxIncapacitatedCount,
+	g_hExchangeTeam,
+	g_hPZSuicideTime,
+	g_hPZRespawnTime,
+	g_hPZPunishTime,
+	g_hPZPunishHealth,
+	g_hAutoDisplayMenu,
+	g_hPZTeamLimit,
+	g_hCmdCooldownTime,
+	g_hCmdEnterCooling,
+	g_hPZChangeTeamTo,
+	g_hGlowColorEnable,
+	g_hGlowColor[4],
+	g_hUserFlagBits,
+	g_hImmunityLevels,
+	g_hSILimit,
+	g_hSpawnLimits[6],
+	g_hSpawnWeights[6],
+	g_hScaleWeights;
 
-ConVar g_hGameMode;
-ConVar g_hMaxTankPlayer;
-ConVar g_hAllowSurvuivorLimit;
-ConVar g_hSurvuivorAllowChance;
-ConVar g_hSbAllBotGame;
-ConVar g_hAllowAllBotSurvivorTeam;
-ConVar g_hSurvivorMaxIncapacitatedCount;
-ConVar g_hExchangeTeam;
-ConVar g_hPZSuicideTime;
-ConVar g_hPZRespawnTime;
-ConVar g_hPZPunishTime;
-ConVar g_hPZPunishHealth;
-ConVar g_hAutoDisplayMenu;
-ConVar g_hPZTeamLimit;
-ConVar g_hCmdCooldownTime;
-ConVar g_hCmdEnterCooling;
-ConVar g_hPZChangeTeamTo;
-ConVar g_hGlowColorEnable;
-ConVar g_hGlowColor[4];
-ConVar g_hUserFlagBits;
-ConVar g_hImmunityLevels;
-ConVar g_hSILimit;
-ConVar g_hSpawnLimits[6];
-ConVar g_hSpawnWeights[6];
-ConVar g_hScaleWeights;
+bool
+	g_bHasPlayerControlledZombies,
+	g_bHasAnySurvivorLeftSafeArea,
+	g_bSbAllBotGame,
+	g_bAllowAllBotSurvivorTeam,
+	g_bExchangeTeam,
+	g_bGlowColorEnable,
+	g_bPZPunishHealth,
+	g_bScaleWeights,
+	g_bIsSpawnablePZSupported,
+	g_bOnMaterializeFromGhost,
+	g_bIsPlayerBP[MAXPLAYERS + 1],
+	g_bUsedClassCmd[MAXPLAYERS + 1];
 
-bool g_bHasPlayerControlledZombies;
-bool g_bHasAnySurvivorLeftSafeArea;
-bool g_bSbAllBotGame;
-bool g_bAllowAllBotSurvivorTeam;
-bool g_bExchangeTeam;
-bool g_bGlowColorEnable;
-bool g_bPZPunishHealth;
-bool g_bScaleWeights;
-bool g_bIsSpawnablePZSupported;
-bool g_bOnMaterializeFromGhost;
-bool g_bIsPlayerBP[MAXPLAYERS + 1];
-bool g_bUsedClassCmd[MAXPLAYERS + 1];
+int
+	g_iSILimit,
+	g_iRoundStart,
+	g_iPlayerSpawn,
+	g_iSpawnablePZ,
+	g_iSurvivorMaxIncapacitatedCount,
+	g_iAllowSurvuivorLimit,
+	g_iMaxTankPlayer,
+	g_iPZRespawnTime,
+	g_iPZSuicideTime,
+	g_iPZPunishTime,
+	g_iPZTeamLimit,
+	g_iPZChangeTeamTo,
+	g_iAutoDisplayMenu,
+	g_iCmdEnterCooling,
+	g_iGlowColor[4],
+	g_iSpawnLimits[6],
+	g_iSpawnWeights[6],
+	g_iSpawnCounts[6],
+	g_iUserFlagBits[5],
+	g_iImmunityLevels[5],
+	g_iTankBot[MAXPLAYERS + 1],
+	g_iPlayerBot[MAXPLAYERS + 1],
+	g_iBotPlayer[MAXPLAYERS + 1],
+	g_iLastTeamId[MAXPLAYERS + 1],
+	g_iModelIndex[MAXPLAYERS + 1],
+	g_iModelEntRef[MAXPLAYERS + 1],
+	g_iMaterialized[MAXPLAYERS + 1],
+	g_iEnteredGhostState[MAXPLAYERS + 1],
+	g_iCurrentPZRespawnTime[MAXPLAYERS + 1];
 
-int g_iSILimit;
-int g_iRoundStart;
-int g_iPlayerSpawn;
-int g_iSpawnablePZ;
-int g_iSurvivorMaxIncapacitatedCount;
-int g_iAllowSurvuivorLimit;
-int g_iMaxTankPlayer;
-int g_iPZRespawnTime;
-int g_iPZSuicideTime;
-int g_iPZPunishTime;
-int g_iPZTeamLimit;
-int g_iPZChangeTeamTo;
-int g_iAutoDisplayMenu;
-int g_iCmdEnterCooling;
-int g_iGlowColor[4];
-int g_iSpawnLimits[6];
-int g_iSpawnWeights[6];
-int g_iSpawnCounts[6];
-int g_iUserFlagBits[5];
-int g_iImmunityLevels[5];
-
-int g_iTankBot[MAXPLAYERS + 1];
-int g_iPlayerBot[MAXPLAYERS + 1];
-int g_iBotPlayer[MAXPLAYERS + 1];
-int g_iLastTeamId[MAXPLAYERS + 1];
-int g_iModelIndex[MAXPLAYERS + 1];
-int g_iModelEntRef[MAXPLAYERS + 1];
-int g_iMaterialized[MAXPLAYERS + 1];
-int g_iEnteredGhostState[MAXPLAYERS + 1];
-int g_iCurrentPZRespawnTime[MAXPLAYERS + 1];
-
-float g_fSurvuivorAllowChance;
-float g_fMapStartTime;
-float g_fCmdCooldownTime;
-float g_fCmdLastUsedTime[MAXPLAYERS + 1];
-float g_fBugExploitTime[MAXPLAYERS + 1][2];
-float g_fStartRespawnTime[MAXPLAYERS + 1];
-float g_fStartSuicideTime[MAXPLAYERS + 1];
+float
+	g_fSurvuivorAllowChance,
+	g_fMapStartTime,
+	g_fCmdCooldownTime,
+	g_fCmdLastUsedTime[MAXPLAYERS + 1],
+	g_fBugExploitTime[MAXPLAYERS + 1][2],
+	g_fStartRespawnTime[MAXPLAYERS + 1],
+	g_fStartSuicideTime[MAXPLAYERS + 1];
 
 public Plugin myinfo = 
 {
@@ -1246,7 +1253,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 	}
 }
 
-public Action Timer_LadderAndGlow(Handle timer, int client)
+public Action Timer_LadderAndGlow(Handle timer, any client)
 {
 	if(!g_bHasPlayerControlledZombies && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client))
 	{
@@ -1281,7 +1288,7 @@ public Action Timer_LadderAndGlow(Handle timer, int client)
 	}
 }
 
-void OnNextFrame_ChangeTeamTo(int client)
+void OnNextFrame_ChangeTeamTo(any client)
 {
 	if(!g_bHasPlayerControlledZombies && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3)
 	{
@@ -1319,7 +1326,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	}
 }
 
-void OnNextFrame_PlayerSpawn(int client)
+void OnNextFrame_PlayerSpawn(any client)
 {
 	if(g_bHasPlayerControlledZombies || (client = GetClientOfUserId(client))== 0 || !IsClientInGame(client) || IsClientInKickQueue(client) || !IsPlayerAlive(client))
 		return;
@@ -1540,7 +1547,7 @@ public void Event_PlayerBotReplace(Event event, const char[] name, bool dontBroa
 	}
 }
 
-public Action Timer_ReturnToSurvivor(Handle timer, int client)
+public Action Timer_ReturnToSurvivor(Handle timer, any client)
 {
 	static int i;
 	static int iTimes[MAXPLAYERS + 1] = {20, ...};
@@ -1661,7 +1668,7 @@ void vSetGodMode(int client, float fDuration)
 		CreateTimer(fDuration, Timer_Mortal, GetClientUserId(client));
 }
 
-public Action Timer_Mortal(Handle timer, int client)
+public Action Timer_Mortal(Handle timer, any client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
 		return;
@@ -1890,7 +1897,7 @@ static bool bIsValidEntRef(int entity)
 
 //------------------------------------------------------------------------------
 //切换回生还者
-void OnNextFrame_ChangeTeamToSurvivor(int client)
+void OnNextFrame_ChangeTeamToSurvivor(any client)
 {
 	if(g_bHasPlayerControlledZombies || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
 		return;
@@ -2305,7 +2312,7 @@ void vSurvivorGive(int client)
 
 void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
 {
-	static int iCmdFlags, iFlagBits;
+	int iFlagBits, iCmdFlags;
 	iFlagBits = GetUserFlagBits(client);
 	iCmdFlags = GetCommandFlags(sCommand);
 	SetUserFlagBits(client, ADMFLAG_ROOT);
@@ -2792,7 +2799,7 @@ public MRESReturn mreForEachTerrorPlayerSpawnablePZScanPost()
 	return MRES_Ignored;
 }
 
-void OnNextFrame_EnterGhostState(int client)
+void OnNextFrame_EnterGhostState(any client)
 {
 	if(!g_bHasPlayerControlledZombies && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") != 8 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 	{
