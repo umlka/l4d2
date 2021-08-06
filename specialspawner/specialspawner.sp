@@ -17,110 +17,110 @@
 #define SI_CHARGER		5
 #define UNINITIALISED	-1
 
-Handle g_hSpawnTimer;
+Handle
+	g_hSpawnTimer;
 
-ConVar g_hSILimit;
-ConVar g_hSpawnSize;
-ConVar g_hSpawnLimits[NUM_TYPES_INFECTED];
-ConVar g_hSpawnWeights[NUM_TYPES_INFECTED];
-ConVar g_hScaleWeights;
-ConVar g_hSpawnTimeMode;
-ConVar g_hSpawnTimeMin;
-ConVar g_hSpawnTimeMax;
-ConVar g_hSIbase;
-ConVar g_hSIextra;
-ConVar g_hGroupbase;
-ConVar g_hGroupextra;
-ConVar g_hRusherDistance;
-ConVar g_hTankSpawnAction;
-ConVar g_hTankSpawnLimits;
-ConVar g_hTankSpawnWeights;
-ConVar g_hSpawnRange;
-ConVar g_hDiscardRange;
-ConVar g_hDirectorNoSpecials;
+ConVar
+	g_hSILimit,
+	g_hSpawnSize,
+	g_hSpawnLimits[NUM_TYPES_INFECTED],
+	g_hSpawnWeights[NUM_TYPES_INFECTED],
+	g_hScaleWeights,
+	g_hSpawnTimeMode,
+	g_hSpawnTimeMin,
+	g_hSpawnTimeMax,
+	g_hSIbase,
+	g_hSIextra,
+	g_hGroupbase,
+	g_hGroupextra,
+	g_hRusherDistance,
+	g_hTankSpawnAction,
+	g_hTankSpawnLimits,
+	g_hTankSpawnWeights,
+	g_hSpawnRange,
+	g_hDiscardRange,
+	g_hDirectorNoSpecials;
 
-float g_fSpawnTimeMin;
-float g_fSpawnTimeMax;
-float g_fRusherDistance;
-float g_fSpawnTimes[MAXPLAYERS + 1];
-float g_fStartSpawnTime;
-float g_fCurrentSpawnInterval;
+float
+	g_fSpawnTimeMin,
+	g_fSpawnTimeMax,
+	g_fRusherDistance,
+	g_fSpawnTimes[MAXPLAYERS + 1],
+	g_fStartSpawnTime,
+	g_fCurrentSpawnInterval;
 
-static char g_sZombieClass[NUM_TYPES_INFECTED][] =
-{
-	"smoker",
-	"boomer",
-	"hunter",
-	"spitter",
-	"jockey",
-	"charger"
-};
+static const char
+	g_sZombieClass[NUM_TYPES_INFECTED][] =
+	{
+		"smoker",
+		"boomer",
+		"hunter",
+		"spitter",
+		"jockey",
+		"charger"
+	};
 
-int g_iRoundStart;
-int g_iPlayerSpawn;
-int g_iSILimit;
-int g_iSpawnSize;
-int g_iSpawnLimits[NUM_TYPES_INFECTED];
-int g_iSpawnWeights[NUM_TYPES_INFECTED];
-int g_iSpawnTimeMode;
-int g_iTankSpawnAction;
-int g_iPreferredDirection = 4;
+int
+	g_iRoundStart,
+	g_iPlayerSpawn,
+	g_iSILimit,
+	g_iSpawnSize,
+	g_iSpawnLimits[NUM_TYPES_INFECTED],
+	g_iSpawnWeights[NUM_TYPES_INFECTED],
+	g_iSpawnTimeMode,
+	g_iTankSpawnAction,
+	g_iPreferredDirection = 4,
+	g_iSILimitCache = UNINITIALISED,
+	g_iSpawnLimitsCache[NUM_TYPES_INFECTED] =
+	{	
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED
+	},
+	g_iSpawnWeightsCache[NUM_TYPES_INFECTED] =
+	{
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED
+	},
+	g_iTankSpawnLimits[NUM_TYPES_INFECTED] =
+	{	
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED
+	},
+	g_iTankSpawnWeights[NUM_TYPES_INFECTED] =
+	{	
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED,
+		UNINITIALISED
+	},
+	g_iSpawnSizeCache = UNINITIALISED,
+	g_iSpawnCounts[NUM_TYPES_INFECTED],
+	g_iSIbase,
+	g_iSIextra,
+	g_iGroupbase,
+	g_iGroupextra,
+	g_iCurrentClass = UNINITIALISED;
 
-int g_iSILimitCache = UNINITIALISED;
-int g_iSpawnLimitsCache[NUM_TYPES_INFECTED] =
-{	
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED
-};
-
-int g_iSpawnWeightsCache[NUM_TYPES_INFECTED] =
-{
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED
-};
-
-int g_iTankSpawnLimits[NUM_TYPES_INFECTED] =
-{	
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED
-};
-
-int g_iTankSpawnWeights[NUM_TYPES_INFECTED] =
-{	
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED,
-	UNINITIALISED
-};
-
-int g_iSpawnSizeCache = UNINITIALISED;
-int g_iSpawnCounts[NUM_TYPES_INFECTED];
-
-int g_iSIbase;
-int g_iSIextra;
-int g_iGroupbase;
-int g_iGroupextra;
-int g_iCurrentClass = UNINITIALISED;
-
-bool g_bScaleWeights;
-bool g_bControlZombies;
-bool g_bDirectorNoSpecials;
-bool g_bOnExecuteSpawnQueue;
-bool g_bHasAnySurvivorLeftSafeArea;
+bool
+	g_bScaleWeights,
+	g_bControlZombies,
+	g_bDirectorNoSpecials,
+	g_bOnExecuteSpawnQueue,
+	g_bHasAnySurvivorLeftSafeArea;
 
 native bool CZ_IsSpawnablePZSupported();
 
@@ -147,7 +147,7 @@ public Plugin myinfo =
 	name = "Special Spawner",
 	author = "Tordecybombo, breezy",
 	description = "Provides customisable special infected spawing beyond vanilla coop limits",
-	version = "1.3",
+	version = "1.3.1",
 	url = ""
 };
 
@@ -372,8 +372,7 @@ static void vGenerateAndExecuteSpawnQueue()
 					}
 				}
 
-				static int iCmdFlags;
-				static int iFlagBits;
+				static int iFlagBits, iCmdFlags;
 				iFlagBits = GetUserFlagBits(client);
 				iCmdFlags = GetCommandFlags("z_spawn_old");
 				SetUserFlagBits(client, ADMFLAG_ROOT);
@@ -1087,7 +1086,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 		RequestFrame(OnNextFrame_KickBot, userid);
 }
 
-public Action Timer_TankSpawn(Handle timer, int client)
+public Action Timer_TankSpawn(Handle timer, any client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8 || bFindTank(client))
 		return;
@@ -1101,7 +1100,7 @@ public Action Timer_TankSpawn(Handle timer, int client)
 	vTankSpawnDeathActoin(true);
 }
 
-public void OnNextFrame_KickBot(int client)
+void OnNextFrame_KickBot(any client)
 {
 	if((client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsClientInKickQueue(client) && IsFakeClient(client))
 		KickClient(client);
