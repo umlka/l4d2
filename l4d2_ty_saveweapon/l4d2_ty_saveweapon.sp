@@ -4,14 +4,22 @@
 #include <sdkhooks>
 #include <sdktools>
 
-#define PLUGIN_VERSION	"4.3"
+#define PLUGIN_VERSION	"4.4.1"
 #define CVAR_FLAGS		FCVAR_NOTIFY
 
-ConVar g_hCvarAllow, g_hCvarMPGameMode, g_hCvarModes, g_hCvarModesOff, g_hCvarModesTog;
-bool g_bCvarAllow, g_bMapStarted, g_bValidMapChange;
+ConVar
+	g_hAllow,
+	g_hGameMode,
+	g_hModes,
+	g_hModesOff,
+	g_hModesTog;
 
-bool g_bSpawned[MAXPLAYERS + 1];
-bool g_bRecorded[MAXPLAYERS + 1];
+bool
+	g_bAllow,
+	g_bMapStarted,
+	g_bValidMapChange,
+	g_bSpawned[MAXPLAYERS + 1],
+	g_bRecorded[MAXPLAYERS + 1];
 
 public Plugin myinfo =
 {
@@ -23,30 +31,24 @@ public Plugin myinfo =
 }
 
 public void OnPluginStart()
-{	
-	// =========================
-	// CVARS
-	// =========================
+{
 	CreateConVar("l4d2_ty_saveweapon", PLUGIN_VERSION, "L4D2 Save Weapon plugin version.", CVAR_FLAGS);
 
-	g_hCvarAllow = CreateConVar("l4d2_ty_allow", "1", "0=Plugin off, 1=Plugin on.", CVAR_FLAGS);
-	g_hCvarModes = CreateConVar("l4d2_ty_modes", "", "Turn on the plugin in these game modes, separate by commas (no spaces). (Empty = all).", CVAR_FLAGS);
-	g_hCvarModesOff = CreateConVar("l4d2_ty_modes_off", "", "Turn off the plugin in these game modes, separate by commas (no spaces). (Empty = none).", CVAR_FLAGS);
-	g_hCvarModesTog = CreateConVar("l4d2_ty_modes_tog", "1", "Turn on the plugin in these game modes. 0=All, 1=Coop, 2=Survival, 4=Versus, 8=Scavenge. Add numbers together.", CVAR_FLAGS);
+	g_hAllow = CreateConVar("l4d2_ty_allow", "1", "0=Plugin off, 1=Plugin on.", CVAR_FLAGS);
+	g_hModes = CreateConVar("l4d2_ty_modes", "", "Turn on the plugin in these game modes, separate by commas (no spaces). (Empty = all).", CVAR_FLAGS);
+	g_hModesOff = CreateConVar("l4d2_ty_modes_off", "", "Turn off the plugin in these game modes, separate by commas (no spaces). (Empty = none).", CVAR_FLAGS);
+	g_hModesTog = CreateConVar("l4d2_ty_modes_tog", "1", "Turn on the plugin in these game modes. 0=All, 1=Coop, 2=Survival, 4=Versus, 8=Scavenge. Add numbers together.", CVAR_FLAGS);
 
-	g_hCvarMPGameMode = FindConVar("mp_gamemode");
-	g_hCvarMPGameMode.AddChangeHook(vAllowConVarChanged);
-	g_hCvarModes.AddChangeHook(vAllowConVarChanged);
-	g_hCvarModesOff.AddChangeHook(vAllowConVarChanged);
-	g_hCvarModesTog.AddChangeHook(vAllowConVarChanged);
-	g_hCvarAllow.AddChangeHook(vAllowConVarChanged);
+	g_hGameMode = FindConVar("mp_gamemode");
+	g_hGameMode.AddChangeHook(vAllowConVarChanged);
+	g_hModes.AddChangeHook(vAllowConVarChanged);
+	g_hModesOff.AddChangeHook(vAllowConVarChanged);
+	g_hModesTog.AddChangeHook(vAllowConVarChanged);
+	g_hAllow.AddChangeHook(vAllowConVarChanged);
 
 	//AutoExecConfig(true, "l4d2_ty_saveweapon");
 }
 
-// ====================================================================================================
-//					CVARS
-// ====================================================================================================
 public void OnConfigsExecuted()
 {
 	vIsAllowed();
@@ -59,36 +61,36 @@ public void vAllowConVarChanged(Handle convar, const char[] oldValue, const char
 
 void vIsAllowed()
 {
-	bool bCvarAllow = g_hCvarAllow.BoolValue;
+	bool bAllow = g_hAllow.BoolValue;
 	bool bAllowMode = bIsAllowedGameMode();
 
-	if(g_bCvarAllow == false && bCvarAllow == true && bAllowMode == true)
+	if(g_bAllow == false && bAllow == true && bAllowMode == true)
 	{
 		HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 		HookEvent("map_transition", Event_MapTransition, EventHookMode_Pre);	
 		HookEvent("player_spawn", Event_PlayerSpawn);
 
-		g_bCvarAllow = true;
+		g_bAllow = true;
 	}
-	else if(g_bCvarAllow == true && (bCvarAllow == false || bAllowMode == false))
+	else if(g_bAllow == true && (bAllow == false || bAllowMode == false))
 	{
 		UnhookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 		UnhookEvent("map_transition", Event_MapTransition, EventHookMode_Pre);	
 		UnhookEvent("player_spawn", Event_PlayerSpawn);
 
 		vSurvivorCleanAll();
-		g_bCvarAllow = false;
+		g_bAllow = false;
 	}
 }
 
 int g_iCurrentMode;
 bool bIsAllowedGameMode()
 {
-	if(g_hCvarMPGameMode == null)
+	if(g_hGameMode == null)
 		return false;
 
-	int iCvarModesTog = g_hCvarModesTog.IntValue;
-	if(iCvarModesTog != 0)
+	int iModesTog = g_hModesTog.IntValue;
+	if(iModesTog != 0)
 	{
 		if(g_bMapStarted == false)
 			return false;
@@ -112,15 +114,15 @@ bool bIsAllowedGameMode()
 		if(g_iCurrentMode == 0)
 			return false;
 
-		if(!(iCvarModesTog & g_iCurrentMode))
+		if(!(iModesTog & g_iCurrentMode))
 			return false;
 	}
 
 	char sGameModes[64], sGameMode[64];
-	g_hCvarMPGameMode.GetString(sGameMode, sizeof(sGameMode));
+	g_hGameMode.GetString(sGameMode, sizeof(sGameMode));
 	Format(sGameMode, sizeof(sGameMode), ",%s,", sGameMode);
 
-	g_hCvarModes.GetString(sGameModes, sizeof(sGameModes));
+	g_hModes.GetString(sGameModes, sizeof(sGameModes));
 	if(sGameModes[0])
 	{
 		Format(sGameModes, sizeof(sGameModes), ",%s,", sGameModes);
@@ -128,7 +130,7 @@ bool bIsAllowedGameMode()
 			return false;
 	}
 
-	g_hCvarModesOff.GetString(sGameModes, sizeof(sGameModes));
+	g_hModesOff.GetString(sGameModes, sizeof(sGameModes));
 	if(sGameModes[0])
 	{
 		Format(sGameModes, sizeof(sGameModes), ",%s,", sGameModes);
@@ -193,7 +195,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 		CreateTimer(0.5, Timer_Restore, userid, TIMER_FLAG_NO_MAPCHANGE);
 }
 
-public Action Timer_Restore(Handle timer, int client)
+public Action Timer_Restore(Handle timer, any client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
 		return;
@@ -308,23 +310,45 @@ void vSaveStatus(int client, int[][] iStatusInfo, char[][] sStatusInfo, int maxl
 		return;
 	}
 
+	if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
+		vL4D2_ReviveFromIncap(client);
+
 	iStatusInfo[client][0] = GetEntProp(client, Prop_Send, "m_currentReviveCount");
 	iStatusInfo[client][1] = GetEntProp(client, Prop_Send, "m_bIsOnThirdStrike");
+	iStatusInfo[client][2] = GetEntProp(client, Prop_Send, "m_isGoingToDie");
+	iStatusInfo[client][3] = GetEntProp(client, Prop_Data, "m_iHealth");
+	iStatusInfo[client][4] = RoundToNearest(GetEntPropFloat(client, Prop_Send, "m_healthBuffer"));
+	iStatusInfo[client][5] = RoundToNearest(GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime"));
+}
 
-	if(GetEntProp(client, Prop_Send, "m_isIncapacitated")) 
+void vL4D2_ReviveFromIncap(int client) 
+{
+	vL4D2_RunScript("GetPlayerFromUserID(%d).ReviveFromIncap()", GetClientUserId(client));
+}
+
+void vL4D2_RunScript(const char[] sCode, any ...) 
+{
+	/**
+	* Run a VScript (Credit to Timocop)
+	*
+	* @param sCode		Magic
+	* @return void
+	*/
+
+	static int iScriptLogic = INVALID_ENT_REFERENCE;
+	if(iScriptLogic == INVALID_ENT_REFERENCE || !IsValidEntity(iScriptLogic)) 
 	{
-		iStatusInfo[client][3] = 1;	
-		iStatusInfo[client][4] = 30;
-		iStatusInfo[client][5] = 0;
-		iStatusInfo[client][2] = 1;
+		iScriptLogic = EntIndexToEntRef(CreateEntityByName("logic_script"));
+		if(iScriptLogic == INVALID_ENT_REFERENCE || !IsValidEntity(iScriptLogic)) 
+			SetFailState("Could not create 'logic_script'");
+
+		DispatchSpawn(iScriptLogic);
 	}
-	else 
-	{
-		iStatusInfo[client][3] = GetEntProp(client, Prop_Data, "m_iHealth");
-		iStatusInfo[client][4] = RoundToNearest(GetEntPropFloat(client, Prop_Send, "m_healthBuffer"));
-		iStatusInfo[client][5] = RoundToNearest(GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime"));
-		iStatusInfo[client][2] = GetEntProp(client, Prop_Send, "m_isGoingToDie");
-	}
+
+	char sBuffer[512];
+	VFormat(sBuffer, sizeof(sBuffer), sCode, 2);
+	SetVariantString(sBuffer);
+	AcceptEntityInput(iScriptLogic, "RunScriptCode");
 }
 
 void vSetStatus(int client, int[][] iStatusInfo, char[][] sStatusInfo)
@@ -713,7 +737,7 @@ int iHasIdlePlayer(int client)
 
 void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
 {
-	static int iCmdFlags, iFlagBits;
+	static int iFlagBits, iCmdFlags;
 	iFlagBits = GetUserFlagBits(client);
 	iCmdFlags = GetCommandFlags(sCommand);
 	SetUserFlagBits(client, ADMFLAG_ROOT);
