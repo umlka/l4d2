@@ -11,242 +11,247 @@
 #define TEAM_SURVIVOR	2
 #define TEAM_INFECTED   3
 
-StringMap g_aSteamIDs;
+StringMap
+	g_aSteamIDs;
 
-Handle g_hSDK_Call_RoundRespawn;
-Handle g_hSDK_Call_SetHumanSpec;
-Handle g_hSDK_Call_TakeOverBot;
-Handle g_hSDK_Call_SetObserverTarget;
-Handle g_hSDK_Call_GoAwayFromKeyboard;
+Handle
+	g_hBotsUpdateTimer,
+	g_hGiveWeaponTimer[MAXPLAYERS + 1],
+	g_hSDK_Call_RoundRespawn,
+	g_hSDK_Call_SetHumanSpec,
+	g_hSDK_Call_TakeOverBot,
+	g_hSDK_Call_SetObserverTarget,
+	g_hSDK_Call_GoAwayFromKeyboard;
 
-Handle g_hBotsUpdateTimer;
-Handle g_hGiveWeaponTimer[MAXPLAYERS + 1];
+Address
+	g_pRoundRespawn,
+	g_pStatsCondition;
 
-Address g_pRoundRespawn;
-Address g_pStatsCondition;
+DynamicDetour
+	g_dDetourSetHumanSpec,
+	g_dDetourGoAwayFromKeyboard,
+	g_dDetourPlayerSetModel;
 
-DynamicDetour g_dDetourSetHumanSpec;
-DynamicDetour g_dDetourGoAwayFromKeyboard;
-DynamicDetour g_dDetourPlayerSetModel;
+ConVar
+	g_hSurvivorLimit,
+	g_hBotsSurvivorLimit,
+	g_hAutoJoin,
+	g_hRespawnJoin,
+	g_hSpecCmdLimit,
+	g_hGiveWeaponType,
+	g_hSlotFlags[5],
+	g_hSbAllBotGame,
+	g_hAllowAllBotSurvivorTeam;
 
-ConVar g_hSurvivorLimit;
-ConVar g_hBotsSurvivorLimit;
-ConVar g_hAutoJoin;
-ConVar g_hRespawnJoin;
-ConVar g_hSpecCmdLimit;
-ConVar g_hGiveWeaponType;
-ConVar g_hSlotFlags[5];
-ConVar g_hSbAllBotGame;
-ConVar g_hAllowAllBotSurvivorTeam;
+int
+	g_iRoundStart,
+	g_iPlayerSpawn,
+	g_iSurvivorBot,
+	g_iBotsSurvivorLimit,
+	g_iSpecCmdLimit,
+	g_iSlotCount[5],
+	g_iSlotWeapons[5][20],
+	g_iMeleeClassCount,
+	g_iPlayerBot[MAXPLAYERS + 1],
+	g_iBotPlayer[MAXPLAYERS + 1];
 
-int g_iRoundStart;
-int g_iPlayerSpawn;
-int g_iSurvivorBot;
-int g_iBotsSurvivorLimit;
-int g_iSpecCmdLimit;
-int g_iSlotCount[5];
-int g_iSlotWeapons[5][20];
-int g_iMeleeClassCount;
-int g_iPlayerBot[MAXPLAYERS + 1];
-int g_iBotPlayer[MAXPLAYERS + 1];
+bool
+	g_bShouldFixAFK,
+	g_bShouldIgnore,
+	g_bAutoJoin,
+	g_bRespawnJoin,
+	g_bGiveWeaponType,
+	g_bSpecNotify[MAXPLAYERS + 1];
 
-bool g_bShouldFixAFK;
-bool g_bShouldIgnore;
-bool g_bAutoJoin;
-bool g_bRespawnJoin;
-bool g_bGiveWeaponType;
-bool g_bSpecNotify[MAXPLAYERS + 1];
+char
+	g_sMeleeClass[16][32],
+	g_sPlayerModel[MAXPLAYERS + 1][128];
 
-char g_sMeleeClass[16][32];
-char g_sPlayerModel[MAXPLAYERS + 1][128];
-
-static const char g_sSurvivorNames[8][] =
-{
-	"Nick",
-	"Rochelle",
-	"Coach",
-	"Ellis",
-	"Bill",
-	"Zoey",
-	"Francis",
-	"Louis"
-};
-
-static const char g_sSurvivorModels[8][] =
-{
-	"models/survivors/survivor_gambler.mdl",
-	"models/survivors/survivor_producer.mdl",
-	"models/survivors/survivor_coach.mdl",
-	"models/survivors/survivor_mechanic.mdl",
-	"models/survivors/survivor_namvet.mdl",
-	"models/survivors/survivor_teenangst.mdl",
-	"models/survivors/survivor_biker.mdl",
-	"models/survivors/survivor_manager.mdl"
-};
-
-static const char g_sWeaponName[5][17][] =
-{
-	{//slot 0(主武器)
-		"smg",						//1 UZI微冲
-		"smg_mp5",					//2 MP5
-		"smg_silenced",				//4 MAC微冲
-		"pumpshotgun",				//8 木喷
-		"shotgun_chrome",			//16 铁喷
-		"rifle",					//32 M16步枪
-		"rifle_desert",				//64 三连步枪
-		"rifle_ak47",				//128 AK47
-		"rifle_sg552",				//256 SG552
-		"autoshotgun",				//512 一代连喷
-		"shotgun_spas",				//1024 二代连喷
-		"hunting_rifle",			//2048 木狙
-		"sniper_military",			//4096 军狙
-		"sniper_scout",				//8192 鸟狙
-		"sniper_awp",				//16384 AWP
-		"rifle_m60",				//32768 M60
-		"grenade_launcher"			//65536 榴弹发射器
+static const char
+	g_sSurvivorNames[8][] =
+	{
+		"Nick",
+		"Rochelle",
+		"Coach",
+		"Ellis",
+		"Bill",
+		"Zoey",
+		"Francis",
+		"Louis"
 	},
-	{//slot 1(副武器)
-		"pistol",					//1 小手枪
-		"pistol_magnum",			//2 马格南
-		"chainsaw",					//4 电锯
-		"fireaxe",					//8 斧头
-		"frying_pan",				//16 平底锅
-		"machete",					//32 砍刀
-		"baseball_bat",				//64 棒球棒
-		"crowbar",					//128 撬棍
-		"cricket_bat",				//256 球拍
-		"tonfa",					//512 警棍
-		"katana",					//1024 武士刀
-		"electric_guitar",			//2048 吉他
-		"knife",					//4096 小刀
-		"golfclub",					//8192 高尔夫球棍
-		"shovel",					//16384 铁铲
-		"pitchfork",				//32768 草叉
-		"riotshield",				//65536 盾牌
+	g_sSurvivorModels[8][] =
+	{
+		"models/survivors/survivor_gambler.mdl",
+		"models/survivors/survivor_producer.mdl",
+		"models/survivors/survivor_coach.mdl",
+		"models/survivors/survivor_mechanic.mdl",
+		"models/survivors/survivor_namvet.mdl",
+		"models/survivors/survivor_teenangst.mdl",
+		"models/survivors/survivor_biker.mdl",
+		"models/survivors/survivor_manager.mdl"
 	},
-	{//slot 2(投掷物)
-		"molotov",					//1 燃烧瓶
-		"pipe_bomb",				//2 管制炸弹
-		"vomitjar",					//4 胆汁瓶
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		""
+	g_sWeaponName[5][17][] =
+	{
+		{//slot 0(主武器)
+			"smg",						//1 UZI微冲
+			"smg_mp5",					//2 MP5
+			"smg_silenced",				//4 MAC微冲
+			"pumpshotgun",				//8 木喷
+			"shotgun_chrome",			//16 铁喷
+			"rifle",					//32 M16步枪
+			"rifle_desert",				//64 三连步枪
+			"rifle_ak47",				//128 AK47
+			"rifle_sg552",				//256 SG552
+			"autoshotgun",				//512 一代连喷
+			"shotgun_spas",				//1024 二代连喷
+			"hunting_rifle",			//2048 木狙
+			"sniper_military",			//4096 军狙
+			"sniper_scout",				//8192 鸟狙
+			"sniper_awp",				//16384 AWP
+			"rifle_m60",				//32768 M60
+			"grenade_launcher"			//65536 榴弹发射器
+		},
+		{//slot 1(副武器)
+			"pistol",					//1 小手枪
+			"pistol_magnum",			//2 马格南
+			"chainsaw",					//4 电锯
+			"fireaxe",					//8 斧头
+			"frying_pan",				//16 平底锅
+			"machete",					//32 砍刀
+			"baseball_bat",				//64 棒球棒
+			"crowbar",					//128 撬棍
+			"cricket_bat",				//256 球拍
+			"tonfa",					//512 警棍
+			"katana",					//1024 武士刀
+			"electric_guitar",			//2048 吉他
+			"knife",					//4096 小刀
+			"golfclub",					//8192 高尔夫球棍
+			"shovel",					//16384 铁铲
+			"pitchfork",				//32768 草叉
+			"riotshield",				//65536 盾牌
+		},
+		{//slot 2(投掷物)
+			"molotov",					//1 燃烧瓶
+			"pipe_bomb",				//2 管制炸弹
+			"vomitjar",					//4 胆汁瓶
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			""
+		},
+		{//slot 3
+			"first_aid_kit",			//1 医疗包
+			"defibrillator",			//2 电击器
+			"upgradepack_incendiary",	//4 燃烧弹药包
+			"upgradepack_explosive",	//8 高爆弹药包
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			""
+		},
+		{//slot 4
+			"pain_pills",				//1 止痛药
+			"adrenaline",				//2 肾上腺素
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			""
+		}
 	},
-	{//slot 3
-		"first_aid_kit",			//1 医疗包
-		"defibrillator",			//2 电击器
-		"upgradepack_incendiary",	//4 燃烧弹药包
-		"upgradepack_explosive",	//8 高爆弹药包
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		""
-	},
-	{//slot 4
-		"pain_pills",				//1 止痛药
-		"adrenaline",				//2 肾上腺素
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		""
-	}
-};
-
-static const char g_sWeaponModels[][] =
-{
-	"models/w_models/weapons/w_smg_uzi.mdl",
-	"models/w_models/weapons/w_smg_mp5.mdl",
-	"models/w_models/weapons/w_smg_a.mdl",
-	"models/w_models/weapons/w_pumpshotgun_A.mdl",
-	"models/w_models/weapons/w_shotgun.mdl",
-	"models/w_models/weapons/w_rifle_m16a2.mdl",
-	"models/w_models/weapons/w_desert_rifle.mdl",
-	"models/w_models/weapons/w_rifle_ak47.mdl",
-	"models/w_models/weapons/w_rifle_sg552.mdl",
-	"models/w_models/weapons/w_autoshot_m4super.mdl",
-	"models/w_models/weapons/w_shotgun_spas.mdl",
-	"models/w_models/weapons/w_sniper_mini14.mdl",
-	"models/w_models/weapons/w_sniper_military.mdl",
-	"models/w_models/weapons/w_sniper_scout.mdl",
-	"models/w_models/weapons/w_sniper_awp.mdl",
-	"models/w_models/weapons/w_m60.mdl",
-	"models/w_models/weapons/w_grenade_launcher.mdl",
+	g_sWeaponModels[][] =
+	{
+		"models/w_models/weapons/w_smg_uzi.mdl",
+		"models/w_models/weapons/w_smg_mp5.mdl",
+		"models/w_models/weapons/w_smg_a.mdl",
+		"models/w_models/weapons/w_pumpshotgun_A.mdl",
+		"models/w_models/weapons/w_shotgun.mdl",
+		"models/w_models/weapons/w_rifle_m16a2.mdl",
+		"models/w_models/weapons/w_desert_rifle.mdl",
+		"models/w_models/weapons/w_rifle_ak47.mdl",
+		"models/w_models/weapons/w_rifle_sg552.mdl",
+		"models/w_models/weapons/w_autoshot_m4super.mdl",
+		"models/w_models/weapons/w_shotgun_spas.mdl",
+		"models/w_models/weapons/w_sniper_mini14.mdl",
+		"models/w_models/weapons/w_sniper_military.mdl",
+		"models/w_models/weapons/w_sniper_scout.mdl",
+		"models/w_models/weapons/w_sniper_awp.mdl",
+		"models/w_models/weapons/w_m60.mdl",
+		"models/w_models/weapons/w_grenade_launcher.mdl",
 	
-	"models/w_models/weapons/w_pistol_a.mdl",
-	"models/w_models/weapons/w_desert_eagle.mdl",
-	"models/weapons/melee/w_chainsaw.mdl",
-	"models/weapons/melee/v_fireaxe.mdl",
-	"models/weapons/melee/w_fireaxe.mdl",
-	"models/weapons/melee/v_frying_pan.mdl",
-	"models/weapons/melee/w_frying_pan.mdl",
-	"models/weapons/melee/v_machete.mdl",
-	"models/weapons/melee/w_machete.mdl",
-	"models/weapons/melee/v_bat.mdl",
-	"models/weapons/melee/w_bat.mdl",
-	"models/weapons/melee/v_crowbar.mdl",
-	"models/weapons/melee/w_crowbar.mdl",
-	"models/weapons/melee/v_cricket_bat.mdl",
-	"models/weapons/melee/w_cricket_bat.mdl",
-	"models/weapons/melee/v_tonfa.mdl",
-	"models/weapons/melee/w_tonfa.mdl",
-	"models/weapons/melee/v_katana.mdl",
-	"models/weapons/melee/w_katana.mdl",
-	"models/weapons/melee/v_electric_guitar.mdl",
-	"models/weapons/melee/w_electric_guitar.mdl",
-	"models/v_models/v_knife_t.mdl",
-	"models/w_models/weapons/w_knife_t.mdl",
-	"models/weapons/melee/v_golfclub.mdl",
-	"models/weapons/melee/w_golfclub.mdl",
-	"models/weapons/melee/v_shovel.mdl",
-	"models/weapons/melee/w_shovel.mdl",
-	"models/weapons/melee/v_pitchfork.mdl",
-	"models/weapons/melee/w_pitchfork.mdl",
-	"models/weapons/melee/v_riotshield.mdl",
-	"models/weapons/melee/w_riotshield.mdl",
+		"models/w_models/weapons/w_pistol_a.mdl",
+		"models/w_models/weapons/w_desert_eagle.mdl",
+		"models/weapons/melee/w_chainsaw.mdl",
+		"models/weapons/melee/v_fireaxe.mdl",
+		"models/weapons/melee/w_fireaxe.mdl",
+		"models/weapons/melee/v_frying_pan.mdl",
+		"models/weapons/melee/w_frying_pan.mdl",
+		"models/weapons/melee/v_machete.mdl",
+		"models/weapons/melee/w_machete.mdl",
+		"models/weapons/melee/v_bat.mdl",
+		"models/weapons/melee/w_bat.mdl",
+		"models/weapons/melee/v_crowbar.mdl",
+		"models/weapons/melee/w_crowbar.mdl",
+		"models/weapons/melee/v_cricket_bat.mdl",
+		"models/weapons/melee/w_cricket_bat.mdl",
+		"models/weapons/melee/v_tonfa.mdl",
+		"models/weapons/melee/w_tonfa.mdl",
+		"models/weapons/melee/v_katana.mdl",
+		"models/weapons/melee/w_katana.mdl",
+		"models/weapons/melee/v_electric_guitar.mdl",
+		"models/weapons/melee/w_electric_guitar.mdl",
+		"models/v_models/v_knife_t.mdl",
+		"models/w_models/weapons/w_knife_t.mdl",
+		"models/weapons/melee/v_golfclub.mdl",
+		"models/weapons/melee/w_golfclub.mdl",
+		"models/weapons/melee/v_shovel.mdl",
+		"models/weapons/melee/w_shovel.mdl",
+		"models/weapons/melee/v_pitchfork.mdl",
+		"models/weapons/melee/w_pitchfork.mdl",
+		"models/weapons/melee/v_riotshield.mdl",
+		"models/weapons/melee/w_riotshield.mdl",
 
-	"models/w_models/weapons/w_eq_molotov.mdl",
-	"models/w_models/weapons/w_eq_pipebomb.mdl",
-	"models/w_models/weapons/w_eq_bile_flask.mdl",
+		"models/w_models/weapons/w_eq_molotov.mdl",
+		"models/w_models/weapons/w_eq_pipebomb.mdl",
+		"models/w_models/weapons/w_eq_bile_flask.mdl",
 
-	"models/w_models/weapons/w_eq_medkit.mdl",
-	"models/w_models/weapons/w_eq_defibrillator.mdl",
-	"models/w_models/weapons/w_eq_incendiary_ammopack.mdl",
-	"models/w_models/weapons/w_eq_explosive_ammopack.mdl",
+		"models/w_models/weapons/w_eq_medkit.mdl",
+		"models/w_models/weapons/w_eq_defibrillator.mdl",
+		"models/w_models/weapons/w_eq_incendiary_ammopack.mdl",
+		"models/w_models/weapons/w_eq_explosive_ammopack.mdl",
 
-	"models/w_models/weapons/w_eq_adrenaline.mdl",
-	"models/w_models/weapons/w_eq_painpills.mdl"
-};
+		"models/w_models/weapons/w_eq_adrenaline.mdl",
+		"models/w_models/weapons/w_eq_painpills.mdl"
+	};
 
 public Plugin myinfo =
 {
@@ -736,7 +741,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	}
 }
 
-public Action Timer_GivePlayerWeapon(Handle timer, int client)
+public Action Timer_GivePlayerWeapon(Handle timer, any client)
 {
 	if((client = GetClientOfUserId(client)))
 	{
@@ -783,7 +788,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		CreateTimer(0.1, Timer_AutoJoinSurvivorTeam, GetClientUserId(client));
 }
 
-public Action Timer_AutoJoinSurvivorTeam(Handle timer, int client)
+public Action Timer_AutoJoinSurvivorTeam(Handle timer, any client)
 {
 	if(!g_bAutoJoin || bIsRoundStarted() == false || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || iGetBotOfIdle(client)) 
 		return;
@@ -1034,7 +1039,7 @@ void vSetGodMode(int client, float fDuration)
 		CreateTimer(fDuration, Timer_Mortal, GetClientUserId(client));
 }
 
-public Action Timer_Mortal(Handle timer, int client)
+public Action Timer_Mortal(Handle timer, any client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
 		return;
@@ -1135,7 +1140,7 @@ void vGiveAveragePrimary(int client)
 
 void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
 {
-	static int iCmdFlags, iFlagBits;
+	static int iFlagBits, iCmdFlags;
 	iFlagBits = GetUserFlagBits(client);
 	iCmdFlags = GetCommandFlags(sCommand);
 	SetUserFlagBits(client, ADMFLAG_ROOT);
