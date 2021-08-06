@@ -215,7 +215,7 @@ public Plugin myinfo =
 	name = "Give Item Menu",
 	description = "Gives Item Menu",
 	author = "Ryanx, sorallll",
-	version = "1.1.2",
+	version = "1.1.4",
 	url = ""
 };
 
@@ -670,8 +670,9 @@ public int iInfectedsMenuHandler(Menu menu, MenuAction action, int client, int p
 	}
 }
 
-void OnNextFrame_CreateInfected(DataPack datapack)
+void OnNextFrame_CreateInfected(any pack)
 {
+	DataPack datapack = pack;
 	datapack.Reset();
 	int client = datapack.ReadCell();
 	char sZombie[128];
@@ -816,7 +817,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	return iBot;
 }
 
-public Action Timer_Chase(Handle timer, int infected)
+public Action Timer_Chase(Handle timer, any infected)
 {
 	if(g_hSDK_Call_InfectedAttackSurvivorTeam == null || !IsValidEntity(infected))
 		return;
@@ -827,8 +828,9 @@ public Action Timer_Chase(Handle timer, int infected)
 		SDKCall(g_hSDK_Call_InfectedAttackSurvivorTeam, infected);
 }
 
-public void OnNextFrame_SetPos(DataPack datapack)
+public void OnNextFrame_SetPos(any pack)
 {
+	DataPack datapack = pack;
 	datapack.Reset();
 	float vPos[3], vAng[3];
 	vPos[0] = datapack.ReadFloat();
@@ -2303,7 +2305,12 @@ void vCheatCommand(int client, const char[] sCommand)
 	if(strcmp(sCmd, "give") == 0)
 	{
 		if(strcmp(sCommand[5], "health") == 0)
+		{
 			SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 0.0); //防止有虚血时give health会超过100血
+			int attacker = iL4D2_GetInfectedAttacker(client);
+			if(attacker > 0 && IsClientInGame(attacker) && IsPlayerAlive(attacker))
+				ForcePlayerSuicide(attacker);
+		}
 		else if(strcmp(sCommand[5], "ammo") == 0)
 			vReloadAmmo(client); //M60和榴弹发射器加子弹
 	}
