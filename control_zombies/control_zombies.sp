@@ -409,7 +409,6 @@ public void OnPluginStart()
 
 public void OnPluginEnd()
 {
-	vToggleConVars(false);
 	vToggleDetours(false);
 	vStatsConditionPatch(false);
 
@@ -499,8 +498,6 @@ void vToggle(bool bEnable)
 	if(!bEnabled && bEnable)
 	{
 		bEnabled = true;
-
-		vToggleConVars(true);
 		vToggleDetours(true);
 
 		HookEvent("player_left_start_area", Event_PlayerLeftStartArea);
@@ -520,8 +517,6 @@ void vToggle(bool bEnable)
 	else if(bEnabled && !bEnable)
 	{
 		bEnabled = false;
-
-		vToggleConVars(false);
 		vToggleDetours(false);
 
 		UnhookEvent("player_left_start_area", Event_PlayerLeftStartArea, EventHookMode_PostNoCopy);
@@ -537,27 +532,6 @@ void vToggle(bool bEnable)
 		UnhookEvent("player_bot_replace", Event_PlayerBotReplace);
 
 		RemoveCommandListener(CommandListener_CallVote, "callvote");
-	}
-}
-
-void vToggleConVars(bool bEnable)
-{
-	static bool bEnabled;
-	if(!bEnabled && bEnable)
-	{
-		bEnabled = true;
-		ConVar hConVar = FindConVar("z_scrimmage_sphere");
-		hConVar.SetBounds(ConVarBound_Lower, true, 0.0);
-		hConVar.SetBounds(ConVarBound_Upper, true, 0.0);
-		hConVar.IntValue = 0;
-	}
-	else if(bEnabled && !bEnable)
-	{
-		bEnabled = false;
-		ConVar hConVar = FindConVar("z_scrimmage_sphere");
-		hConVar.SetBounds(ConVarBound_Lower, false);
-		hConVar.SetBounds(ConVarBound_Upper, false);
-		hConVar.RestoreDefault();
 	}
 }
 
