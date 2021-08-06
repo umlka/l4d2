@@ -20,25 +20,27 @@
 #include <sdktools>
 #include <dhooks>
 
-#define FORCE_VALUES	0
 #define GAMEDATA		"l4d2_melee_spawn_control"
 #define MELEE_MANIFEST	"scripts\\melee\\melee_manifest.txt"
 #define DEFAULT_MELEES	"fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;golfclub;shovel;pitchfork"
 
-DynamicDetour g_dDetourMeleeAllowed;
-DynamicDetour g_dDetourGetMissionInfo;
+DynamicDetour
+	g_dDetour[2];
 
-StringMap g_aMapSetMelees;
-StringMap g_aMapInitMelees;
+StringMap
+	g_aMapSetMelees,
+	g_aMapInitMelees;
 
-Handle g_hSDK_Call_KvGetString; 
-Handle g_hSDK_Call_KvSetString; 
-Handle g_hSDK_Call_KvFindKey;
+Handle
+	g_hSDK_Call_KvGetString,
+	g_hSDK_Call_KvSetString;
 
-ConVar g_hBaseMelees;
-ConVar g_hExtraMelees;
+ConVar
+	g_hBaseMelees,
+	g_hExtraMelees;
 
-bool g_bMapStarted;
+bool
+	g_bMapStarted;
 
 public Plugin myinfo=
 {
@@ -53,19 +55,19 @@ public void OnPluginStart()
 {
 	vLoadGameData();
 
-	g_aMapSetMelees = new StringMap();
-	g_aMapInitMelees = new StringMap();
-
 	g_hBaseMelees = CreateConVar("l4d2_melee_spawn", "", "Melee weapon list for unlock, use ';' to separate between names, e.g: pitchfork;shovel. Empty for no change");
 	g_hExtraMelees = CreateConVar("l4d2_add_melee", "", "Add melee weapons to map basis melee spawn or l4d2_melee_spawn, use ';' to separate between names. Empty for don't add");
+
+	g_aMapSetMelees = new StringMap();
+	g_aMapInitMelees = new StringMap();
 }
 
 public void OnPluginEnd()
 {
-	if(!g_dDetourMeleeAllowed.Disable(Hook_Post, mreMeleeAllowedPost))
+	if(!g_dDetour[0].Disable(Hook_Post, mreMeleeAllowedPost))
 		SetFailState("Failed to disable detour: CDirectorItemManager::IsMeleeWeaponAllowedToExist");
 
-	if(!g_dDetourGetMissionInfo.Disable(Hook_Post, mreGetMissionInfoPost))
+	if(!g_dDetour[1].Disable(Hook_Post, mreGetMissionInfoPost))
 		SetFailState("Failed to disable detour: CTerrorGameRules::GetMissionInfo");
 }
 
@@ -86,13 +88,13 @@ public MRESReturn mreMeleeAllowedPost(DHookReturn hReturn, DHookParam hParams)
 	hParams.GetString(1, sScriptName, sizeof(sScriptName));
 	if(strcmp(sScriptName, "knife") == 0)
 	{
-		hReturn.Value = true;
+		hReturn.Value = 1;
 		return MRES_Override;
 	}
 	
 	return MRES_Ignored;*/
 
-	hReturn.Value = true;
+	hReturn.Value = 1;
 	return MRES_Override;
 }
 
@@ -121,7 +123,7 @@ public MRESReturn mreGetMissionInfoPost(DHookReturn hReturn)
 		else
 			vReadMeleeManifest(sMissionBaseMelees, sizeof(sMissionBaseMelees)); //darkwood, eye
 			
-		if(sMissionBaseMelees[0] == 0)
+		if(sMissionBaseMelees[0] == '\0')
 			strcopy(sMissionBaseMelees, sizeof(sMissionBaseMelees), DEFAULT_MELEES);
 
 		g_aMapInitMelees.SetString(sMissionName, sMissionBaseMelees, false);
@@ -131,18 +133,12 @@ public MRESReturn mreGetMissionInfoPost(DHookReturn hReturn)
 	if(g_aMapSetMelees.GetString(sMissionName, sMapSetMelees, sizeof(sMapSetMelees)) == false)
 		vGetMapSetMelees(sMissionName, sMissionBaseMelees, sMapSetMelees, sizeof(sMapSetMelees));
 
-	if(sMapSetMelees[0] == 0)
+	if(sMapSetMelees[0] == '\0')
 		return MRES_Ignored;
 
 	if(strcmp(sMapSetMelees, sMapCurrentMelees) == 0)
 		return MRES_Ignored;
 		
-	//l4d_info_editor https://forums.alliedmods.net/showthread.php?p=2614626
-	#if FORCE_VALUES
-		if(strcmp(sMapCurrentMelees, "N/A") == 0)
-			SDKCall(g_hSDK_Call_KvFindKey, pThis, "meleeweapons", true);
-	#endif
-
 	SDKCall(g_hSDK_Call_KvSetString, pThis, "meleeweapons", sMapSetMelees);
 	return MRES_Ignored;
 }
@@ -155,9 +151,9 @@ void vGetMapSetMelees(const char[] sMissionName, const char[] sMissionBaseMelees
 	ReplaceString(sBaseMelees, sizeof(sBaseMelees), " ", "");
 	ReplaceString(sExtraMelees, sizeof(sExtraMelees), " ", "");
 
-	if(sBaseMelees[0] == 0)
+	if(sBaseMelees[0] == '\0')
 	{
-		if(sExtraMelees[0] == 0)
+		if(sExtraMelees[0] == '\0')
 		{
 			g_aMapSetMelees.SetString(sMissionName, "", true);
 			return;
@@ -166,17 +162,17 @@ void vGetMapSetMelees(const char[] sMissionName, const char[] sMissionBaseMelees
 		strcopy(sBaseMelees, sizeof(sBaseMelees), sMissionBaseMelees);
 	}
 
-	if(sExtraMelees[0] != 0)
+	if(sExtraMelees[0] != '\0')
 	{
 		Format(sBaseMelees, sizeof(sBaseMelees), ";%s;", sBaseMelees);
 		int iCount = ReplaceString(sExtraMelees, sizeof(sExtraMelees), ";", ";") + 1;
 		char[][] sBuffer = new char[iCount][32];
 		ExplodeString(sExtraMelees, ";", sBuffer, iCount, 32);
-		sExtraMelees[0] = 0;
+		sExtraMelees[0] = '\0';
 
 		for(int i; i < iCount; i++)
 		{
-			if(sBuffer[i][0] == 0)
+			if(sBuffer[i][0] == '\0')
 				continue;
 				
 			Format(sBuffer[i], 32, ";%s;", sBuffer[i]);
@@ -184,7 +180,7 @@ void vGetMapSetMelees(const char[] sMissionName, const char[] sMissionBaseMelees
 				StrCat(sExtraMelees, sizeof(sExtraMelees), sBuffer[i][1]);
 		}
 
-		if(sExtraMelees[0] != 0)
+		if(sExtraMelees[0] != '\0')
 			StrCat(sBaseMelees, sizeof(sBaseMelees), sExtraMelees);
 
 		strcopy(sBaseMelees, sizeof(sBaseMelees), sBaseMelees[1]);
@@ -242,7 +238,7 @@ void vReadMeleeManifest(char[] sManifest, int maxlength)
 			Format(sManifest, maxlength, "%s;%s", sManifest, sLine);
 	}
 	
-	if(sManifest[0] != 0)
+	if(sManifest[0] != '\0')
 		strcopy(sManifest, maxlength, sManifest[1]);
 
 	delete hFile;
@@ -276,27 +272,23 @@ void vLoadGameData()
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	StartPrepSDKCall(SDKCall_Raw);
-	PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::GetString");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::GetString") == false)
+		SetFailState("Failed to find signature: KeyValues::GetString");
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_String, SDKPass_Pointer);
-	if((g_hSDK_Call_KvGetString = EndPrepSDKCall()) == null)
+	g_hSDK_Call_KvGetString = EndPrepSDKCall();
+	if(g_hSDK_Call_KvGetString == null)
 		SetFailState("Failed to create SDKCall: KeyValues::GetString");
 
 	StartPrepSDKCall(SDKCall_Raw);
-	PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::SetString");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::SetString") == false)
+		SetFailState("Failed to find signature: KeyValues::SetString");
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
-	if((g_hSDK_Call_KvSetString = EndPrepSDKCall()) == null)
+	g_hSDK_Call_KvSetString = EndPrepSDKCall();
+	if(g_hSDK_Call_KvSetString == null)
 		SetFailState("Failed to create SDKCall: KeyValues::SetString");
-
-	StartPrepSDKCall(SDKCall_Raw);
-	PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::FindKey");
-	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
-	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Pointer);
-	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	if((g_hSDK_Call_KvFindKey = EndPrepSDKCall()) == null)
-		SetFailState("Failed to create SDKCall: KeyValues::FindKey");
 
 	vSetupDetours(hGameData);
 
@@ -305,17 +297,17 @@ void vLoadGameData()
 
 void vSetupDetours(GameData hGameData = null)
 {
-	g_dDetourMeleeAllowed = DynamicDetour.FromConf(hGameData, "CDirectorItemManager::IsMeleeWeaponAllowedToExist");
-	if(g_dDetourMeleeAllowed == null)
+	g_dDetour[0] = DynamicDetour.FromConf(hGameData, "CDirectorItemManager::IsMeleeWeaponAllowedToExist");
+	if(g_dDetour[0] == null)
 		SetFailState("Failed to find signature: CDirectorItemManager::IsMeleeWeaponAllowedToExist");
 		
-	if(!g_dDetourMeleeAllowed.Enable(Hook_Post, mreMeleeAllowedPost))
+	if(!g_dDetour[0].Enable(Hook_Post, mreMeleeAllowedPost))
 		SetFailState("Failed to detour post: CDirectorItemManager::IsMeleeWeaponAllowedToExist");
 
-	g_dDetourGetMissionInfo = DynamicDetour.FromConf(hGameData, "CTerrorGameRules::GetMissionInfo");
-	if(g_dDetourGetMissionInfo == null)
+	g_dDetour[1] = DynamicDetour.FromConf(hGameData, "CTerrorGameRules::GetMissionInfo");
+	if(g_dDetour[1] == null)
 		SetFailState("Failed to find signature: CTerrorGameRules::GetMissionInfo");
 		
-	if(!g_dDetourGetMissionInfo.Enable(Hook_Post, mreGetMissionInfoPost))
+	if(!g_dDetour[1].Enable(Hook_Post, mreGetMissionInfoPost))
 		SetFailState("Failed to detour post: CTerrorGameRules::GetMissionInfo");
 }
