@@ -1,0 +1,65 @@
+"Games"
+{
+    "left4dead2"
+    {
+		"Addresses"
+		{
+			"TheCount"
+			{
+				"linux"
+				{
+					"signature"	"TheCount"
+					"read"		"17"
+				}
+				"windows"
+				{
+					"signature"	"TheCount"
+					"read"		"70"
+				}
+			}
+			"TheNavAreas"
+			{
+				"linux"
+				{
+					"signature"	"TheNavAreas"
+					"read"		"469"
+				}
+				"windows"
+				{
+					"signature"	"TheNavAreas"
+					"read"		"1235"
+				}
+				"read" "0"
+			}
+		}
+		"Signatures"
+		{
+			/* TerrorNavArea::ScriptGetSpawnAttributes(TerrorNavArea *__hidden this) */
+			"TerrorNavArea::ScriptGetSpawnAttributes"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK13TerrorNavArea24ScriptGetSpawnAttributesEv"
+			}
+			/* TerrorNavArea::ScriptHasSpawnAttributes(TerrorNavArea *__hidden this, int) */
+			"TerrorNavArea::ScriptHasSpawnAttributes"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK13TerrorNavArea24ScriptHasSpawnAttributesEi"
+			}
+			/* nav_update_lighting(const CCommand *) */
+			"TheCount"
+			{
+				"library"	"server"
+				"linux"		"@_ZL19nav_update_lightingRK8CCommand"
+				"windows"	"\x55\x8B\xEC\x8B\x45\x08\x57\x33\xFF\x83\x38\x02"
+			}
+			/* CNavArea::SpliceEdit(CNavArea*) */
+			"TheNavAreas"
+			{
+				"library"	"server"
+				"linux"		"@_ZN8CNavArea10SpliceEditEPS_"
+				"windows"	"\x55\x8B\xEC\x83\xEC\x38\x53\x8B\x5D\x08\xF3\x0F\x10\x6B\x10"
+			}
+		}
+	}
+}
