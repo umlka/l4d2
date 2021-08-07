@@ -18,8 +18,8 @@ GameData
 
 Handle
 	g_hTimer,
-	//g_hSDK_Call_GetSpawnAttributes,
-	g_hSDK_Call_HasSpawnAttributes;
+	g_hSDK_Call_GetSpawnAttributes,
+	g_hSDK_Call_ScriptGetDoor;
 
 Address
 	g_pTheCount,
@@ -35,6 +35,7 @@ ConVar
 	g_hRemoveInfecteds;
 
 int
+	m_flow,
 	g_iTheCount,
 	g_iCountdown,
 	g_iCurrentMap,
@@ -60,10 +61,10 @@ bool
 
 public Plugin myinfo = 
 {
-    name = 			"End Area Detcet",
+    name = 			"SafeArea Teleport",
     author = 		"sorallll",
     description = 	"",
-    version = 		"1.0.0",
+    version = 		"1.0.1",
     url = 			""
 }
 
@@ -234,22 +235,27 @@ void vFindTargetNavAreas()
 	float fMapHalfFlow = L4D2Direct_GetMapMaxFlowDistance() * 0.5;
 
 	int iArea;
+	int iFlags;
 	float fFlow;
 	for(int i; i < g_iTheCount; i++)
 	{
 		if((iArea = LoadFromAddress(g_pTheNavAreas + view_as<Address>(4 * i), NumberType_Int32)) == 0)
 			continue;
 
-		fFlow = L4D2Direct_GetTerrorNavAreaFlow(view_as<Address>(iArea));
+		fFlow = view_as<float>(LoadFromAddress(view_as<Address>(iArea) + view_as<Address>(m_flow), NumberType_Int32));
 		if(fFlow == 0.0 || fFlow == -9999.0)
 			continue;
 
+		iFlags = SDKCall(g_hSDK_Call_GetSpawnAttributes, iArea);
 		switch(g_iCurrentMap)
 		{
 			case 0:
 			{
-				if(SDKCall(g_hSDK_Call_HasSpawnAttributes, iArea, TERROR_NAV_CHECKPOINT))
+				if(iFlags & TERROR_NAV_CHECKPOINT)
 				{
+					if(SDKCall(g_hSDK_Call_ScriptGetDoor, iArea))
+						continue;
+
 					if(fFlow < fMapHalfFlow)
 						g_aStartNavArea.Push(iArea);
 					else
@@ -259,16 +265,16 @@ void vFindTargetNavAreas()
 
 			case 1:
 			{
-				if(SDKCall(g_hSDK_Call_HasSpawnAttributes, iArea, TERROR_NAV_CHECKPOINT))
+				if(iFlags & TERROR_NAV_CHECKPOINT)
 				{
-					if(SDKCall(g_hSDK_Call_HasSpawnAttributes, iArea, TERROR_NAV_MISSION_START))
+					if(iFlags & TERROR_NAV_MISSION_START)
 					{
-						if(fFlow < fMapHalfFlow)
+						if(fFlow < fMapHalfFlow && !SDKCall(g_hSDK_Call_ScriptGetDoor, iArea))
 							g_aStartNavArea.Push(iArea);
 					}
 					else
 					{
-						if(fFlow > fMapHalfFlow)
+						if(fFlow > fMapHalfFlow && !SDKCall(g_hSDK_Call_ScriptGetDoor, iArea))
 							g_aEndNavArea.Push(iArea);
 					}
 				}
@@ -276,16 +282,16 @@ void vFindTargetNavAreas()
 
 			case 2:
 			{
-				if(SDKCall(g_hSDK_Call_HasSpawnAttributes, iArea, TERROR_NAV_CHECKPOINT))
+				if(iFlags & TERROR_NAV_CHECKPOINT)
 				{
-					if(fFlow < fMapHalfFlow)
+					if(fFlow < fMapHalfFlow && !SDKCall(g_hSDK_Call_ScriptGetDoor, iArea))
 						g_aStartNavArea.Push(iArea);
 				}
 				else
 				{
-					if(SDKCall(g_hSDK_Call_HasSpawnAttributes, iArea, TERROR_NAV_RESCUE_VEHICLE))
+					if(iFlags & TERROR_NAV_RESCUE_VEHICLE)
 					{
-						if(fFlow > fMapHalfFlow)
+						if(fFlow > fMapHalfFlow && !SDKCall(g_hSDK_Call_ScriptGetDoor, iArea))
 							g_aEndNavArea.Push(iArea);
 					}
 				}
@@ -533,7 +539,7 @@ public Action Timer_Countdown(Handle timer)
 	if(g_iCountdown > 0)
 	{
 		vPrintHintToSurvivor("%d 秒后%s所有未进入终点区域的玩家", g_iCountdown--, sMethod[g_iSafeArea]);
-		vEmitSoundToTeam2(SOUND_COUNTDOWN, SOUND_FROM_PLAYER, SNDCHAN_STATIC, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
+		vEmitSoundToSurvivor(SOUND_COUNTDOWN, SOUND_FROM_PLAYER, SNDCHAN_STATIC, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
 	}
 	else if(g_iCountdown <= 0)
 	{
@@ -764,7 +770,7 @@ bool bIsValidEntRef(int entity)
 	return entity && EntRefToEntIndex(entity) != INVALID_ENT_REFERENCE;
 }
 
-void vEmitSoundToTeam2(const char[] sample,
+void vEmitSoundToSurvivor(const char[] sample,
 				 int entity = SOUND_FROM_PLAYER,
 				 int channel = SNDCHAN_AUTO,
 				 int level = SNDLEVEL_NORMAL,
@@ -803,7 +809,11 @@ void vLoadGameData()
 	g_hGameData = new GameData(GAMEDATA);
 	if(g_hGameData == null)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
-	/*
+
+	m_flow = g_hGameData.GetOffset("WitchLocomotion::IsAreaTraversable::m_flow");
+	if(m_flow == -1)
+		SetFailState("Failed to find offset: WitchLocomotion::IsAreaTraversable::m_flow");
+
 	StartPrepSDKCall(SDKCall_Raw);
 	if(PrepSDKCall_SetFromConf(g_hGameData, SDKConf_Signature, "TerrorNavArea::ScriptGetSpawnAttributes") == false)
 		SetFailState("Failed to find signature: TerrorNavArea::ScriptGetSpawnAttributes");
@@ -811,7 +821,7 @@ void vLoadGameData()
 	g_hSDK_Call_GetSpawnAttributes = EndPrepSDKCall();
 	if(g_hSDK_Call_GetSpawnAttributes == null)
 		SetFailState("Failed to create SDKCall: TerrorNavArea::ScriptGetSpawnAttributes");
-	*/
+	/*
 	StartPrepSDKCall(SDKCall_Raw);
 	if(PrepSDKCall_SetFromConf(g_hGameData, SDKConf_Signature, "TerrorNavArea::ScriptHasSpawnAttributes") == false)
 		SetFailState("Failed to find signature: TerrorNavArea::ScriptHasSpawnAttributes");
@@ -819,6 +829,13 @@ void vLoadGameData()
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
 	g_hSDK_Call_HasSpawnAttributes = EndPrepSDKCall();
 	if(g_hSDK_Call_HasSpawnAttributes == null)
-		SetFailState("Failed to create SDKCall: TerrorNavArea::ScriptHasSpawnAttributes");
-	//delete g_hGameData;
+		SetFailState("Failed to create SDKCall: TerrorNavArea::ScriptHasSpawnAttributes");*/
+	
+	StartPrepSDKCall(SDKCall_Raw);
+	if(PrepSDKCall_SetFromConf(g_hGameData, SDKConf_Signature, "TerrorNavArea::ScriptGetDoor") == false)
+		SetFailState("Failed to find signature: TerrorNavArea::ScriptGetDoor");
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	g_hSDK_Call_ScriptGetDoor = EndPrepSDKCall();
+	if(g_hSDK_Call_ScriptGetDoor == null)
+		SetFailState("Failed to create SDKCall: TerrorNavArea::ScriptGetDoor");
 }
