@@ -187,10 +187,13 @@ Handle
 	g_hSDK_Call_State_Transition,
 	g_hSDK_Call_MaterializeFromGhost,
 	g_hSDK_Call_SetClass,
-	g_hSDK_Call_CreateAbility,
+	g_hSDK_Call_CreateForPlayer,
+	g_hSDK_Call_CleanupPlayerState,
+	//g_hSDK_Call_OnCarryEnded,
+	//g_hSDK_Call_OnPummelEnded,
 	g_hSDK_Call_TakeOverZombieBot,
 	g_hSDK_Call_RoundRespawn,
-	g_hSDK_Call_SetHumanSpec,
+	g_hSDK_Call_SetHumanSpectator,
 	g_hSDK_Call_TakeOverBot,
 	g_hSDK_Call_HasPlayerControlledZombies;
 
@@ -287,7 +290,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.2.4",
+	version = "3.2.5",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -401,6 +404,7 @@ public void OnPluginStart()
 
 	vIsAllowed();
 
+	RegAdminCmd("sm_cz", cmdCz, ADMFLAG_ROOT, "测试");
 	RegConsoleCmd("sm_team2", cmdTeam2, "切换到Team 2.");
 	RegConsoleCmd("sm_team3", cmdTeam3, "切换到Team 3.");
 	RegConsoleCmd("sm_bp", cmdBP, "叛变为坦克.");
@@ -680,6 +684,17 @@ void vGetSpawnCvars()
 		g_iSpawnWeights[i] = g_hSpawnWeights[i].IntValue;
 	}
 	g_bScaleWeights = g_hScaleWeights.BoolValue;
+}
+
+public Action cmdCz(int client, int args)
+{
+	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) < 2)
+		return Plugin_Handled;
+
+	SDKCall(g_hSDK_Call_CleanupPlayerState, client);
+	//SDKCall(g_hSDK_Call_OnCarryEnded, client, false, false, true); //001转换为Pummel
+	//SDKCall(g_hSDK_Call_OnPummelEnded, client, true, client);
+	return Plugin_Handled;
 }
 
 public Action cmdTeam2(int client, int args)
@@ -1723,7 +1738,7 @@ int iTakeOverTank(int tank)
 			{
 				if(IsPlayerAlive(client))
 				{
-					SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") & ~FL_FROZEN);
+					SDKCall(g_hSDK_Call_CleanupPlayerState, client);
 					ForcePlayerSuicide(client);
 				}
 			}
@@ -1898,7 +1913,7 @@ void vChangeTeamToSurvivor(int client)
 
 	if(iBot)
 	{
-		SDKCall(g_hSDK_Call_SetHumanSpec, iBot, client);
+		SDKCall(g_hSDK_Call_SetHumanSpectator, iBot, client);
 		SDKCall(g_hSDK_Call_TakeOverBot, client, true);
 	}
 	else
@@ -2471,12 +2486,12 @@ void vLoadGameData()
 		SetFailState("Failed to create SDKCall: Tank::LeaveStasis");
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "State_Transition") == false)
-		SetFailState("Failed to find signature: State_Transition");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CCSPlayer::State_Transition") == false)
+		SetFailState("Failed to find signature: CCSPlayer::State_Transition");
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 	g_hSDK_Call_State_Transition = EndPrepSDKCall();
 	if(g_hSDK_Call_State_Transition == null)
-		SetFailState("Failed to create SDKCall: State_Transition");
+		SetFailState("Failed to create SDKCall: CCSPlayer::State_Transition");
 		
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::MaterializeFromGhost") == false)
@@ -2487,62 +2502,88 @@ void vLoadGameData()
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::MaterializeFromGhost");
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SetClass") == false)
-		SetFailState("Failed to find signature: SetClass");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::SetClass") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::SetClass");
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 	g_hSDK_Call_SetClass = EndPrepSDKCall();
 	if(g_hSDK_Call_SetClass == null)
-		SetFailState("Failed to create SDKCall: SetClass");
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::SetClass");
 	
 	StartPrepSDKCall(SDKCall_Static);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CreateAbility") == false)
-		SetFailState("Failed to find signature: CreateAbility");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CBaseAbility::CreateForPlayer") == false)
+		SetFailState("Failed to find signature: CBaseAbility::CreateForPlayer");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
-	g_hSDK_Call_CreateAbility = EndPrepSDKCall();
-	if(g_hSDK_Call_CreateAbility == null)
-		SetFailState("Failed to create SDKCall: CreateAbility");
+	g_hSDK_Call_CreateForPlayer = EndPrepSDKCall();
+	if(g_hSDK_Call_CreateForPlayer == null)
+		SetFailState("Failed to create SDKCall: CBaseAbility::CreateForPlayer");
 	
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "TakeOverZombieBot") == false)
-		SetFailState("Failed to find signature: TakeOverZombieBot");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::CleanupPlayerState") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::CleanupPlayerState");
+	g_hSDK_Call_CleanupPlayerState = EndPrepSDKCall();
+	if(g_hSDK_Call_CleanupPlayerState == null)
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::CleanupPlayerState");
+	/*
+	StartPrepSDKCall(SDKCall_Player);
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::OnCarryEnded") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::OnCarryEnded");
+	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
+	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
+	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
+	g_hSDK_Call_OnCarryEnded = EndPrepSDKCall();
+	if(g_hSDK_Call_OnCarryEnded == null)
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::OnCarryEnded");
+
+	StartPrepSDKCall(SDKCall_Player);
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::OnPummelEnded") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::OnPummelEnded");
+	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
+	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
+	g_hSDK_Call_OnPummelEnded = EndPrepSDKCall();
+	if(g_hSDK_Call_OnPummelEnded == null)
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::OnPummelEnded");
+	*/
+	StartPrepSDKCall(SDKCall_Player);
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TakeOverZombieBot") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverZombieBot");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
 	g_hSDK_Call_TakeOverZombieBot = EndPrepSDKCall();
 	if(g_hSDK_Call_TakeOverZombieBot == null)
-		SetFailState("Failed to create SDKCall: TakeOverZombieBot");
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::TakeOverZombieBot");
 	
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "RoundRespawn") == false)
-		SetFailState("Failed to find signature: RoundRespawn");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
 	g_hSDK_Call_RoundRespawn = EndPrepSDKCall();
 	if(g_hSDK_Call_RoundRespawn == null)
-		SetFailState("Failed to create SDKCall: RoundRespawn");
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
 	
 	vRegisterStatsConditionPatch(hGameData);
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SetHumanSpec") == false)
-		SetFailState("Failed to find signature: SetHumanSpec");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SurvivorBot::SetHumanSpectator") == false)
+		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDK_Call_SetHumanSpec = EndPrepSDKCall();
-	if(g_hSDK_Call_SetHumanSpec == null)
-		SetFailState("Failed to create SDKCall: SetHumanSpec");
+	g_hSDK_Call_SetHumanSpectator = EndPrepSDKCall();
+	if(g_hSDK_Call_SetHumanSpectator == null)
+		SetFailState("Failed to create SDKCall: SurvivorBot::SetHumanSpectator");
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "TakeOverBot") == false)
-		SetFailState("Failed to find signature: TakeOverBot");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TakeOverBot") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverBot");
 	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
 	g_hSDK_Call_TakeOverBot = EndPrepSDKCall();
 	if(g_hSDK_Call_TakeOverBot == null)
-		SetFailState("Failed to create SDKCall: TakeOverBot");
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::TakeOverBot");
 
 	StartPrepSDKCall(SDKCall_Static);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "HasPlayerControlledZombies") == false)
-		SetFailState("Failed to find signature: HasPlayerControlledZombies");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorGameRules::HasPlayerControlledZombies") == false)
+		SetFailState("Failed to find signature: CTerrorGameRules::HasPlayerControlledZombies");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
 	g_hSDK_Call_HasPlayerControlledZombies = EndPrepSDKCall();
 	if(g_hSDK_Call_HasPlayerControlledZombies == null)
-		SetFailState("Failed to create SDKCall: HasPlayerControlledZombies");
+		SetFailState("Failed to create SDKCall: CTerrorGameRules::HasPlayerControlledZombies");
 
 	g_dDetour[0] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::OnEnterGhostState");
 	if(g_dDetour[0] == null)
@@ -2573,9 +2614,9 @@ void vRegisterStatsConditionPatch(GameData hGameData = null)
 	if(iByteMatch == -1)
 		SetFailState("Failed to find byte: RoundRespawn_Byte");
 
-	g_pRoundRespawn = hGameData.GetAddress("RoundRespawn");
+	g_pRoundRespawn = hGameData.GetAddress("CTerrorPlayer::RoundRespawn");
 	if(!g_pRoundRespawn)
-		SetFailState("Failed to find address: RoundRespawn");
+		SetFailState("Failed to find address: CTerrorPlayer::RoundRespawn");
 	
 	g_pStatsCondition = g_pRoundRespawn + view_as<Address>(iOffset);
 	
@@ -2618,15 +2659,15 @@ void vSetZombieClass(int client, int iZombieClass)
 
 	SDKCall(g_hSDK_Call_SetClass, client, iZombieClass);
 
-	iAbility = SDKCall(g_hSDK_Call_CreateAbility, client);
+	iAbility = SDKCall(g_hSDK_Call_CreateForPlayer, client);
 	if(iAbility != -1)
 		SetEntPropEnt(client, Prop_Send, "m_customAbility", iAbility);
 }
 
-int iTakeOverZombieBot(int client, int iTarget)
+int iTakeOverZombieBot(int client, int iZombieBot)
 {
-	AcceptEntityInput(client, "clearparent");
-	SDKCall(g_hSDK_Call_TakeOverZombieBot, client, iTarget);
+	AcceptEntityInput(client, "ClearParent");
+	SDKCall(g_hSDK_Call_TakeOverZombieBot, client, iZombieBot);
 	return GetEntProp(client, Prop_Send, "m_zombieClass");
 }
 
