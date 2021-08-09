@@ -1,10 +1,9 @@
 "Games"
 {
-	"left4dead2" 
+	"left4dead2"
 	{
 		"Functions"
 		{
-			/* CTerrorPlayer::OnEnterGhostState() */
 			"CTerrorPlayer::OnEnterGhostState"
 			{
 				"signature"	"CTerrorPlayer::OnEnterGhostState"
@@ -12,7 +11,6 @@
 				"return"	"void"
 				"this"		"entity"
 			}
-			/* CTerrorPlayer::MaterializeFromGhost(void) */
 			"CTerrorPlayer::MaterializeFromGhost"
 			{
 				"signature"		"CTerrorPlayer::MaterializeFromGhost"
@@ -20,7 +18,6 @@
 				"return"		"void"
 				"this"			"entity"
 			}
-			/* CTerrorPlayer::PlayerZombieAbortControl(CTerrorPlayer *this) */
 			"CTerrorPlayer::PlayerZombieAbortControl"
 			{
 				"signature"		"CTerrorPlayer::PlayerZombieAbortControl"
@@ -28,7 +25,6 @@
 				"return"		"void"
 				"this"			"entity"
 			}
-			/* ForEachTerrorPlayer<SpawnablePZScan>(SpawnablePZScan &) */
 			"ForEachTerrorPlayer<SpawnablePZScan>"
 			{
 				"signature"		"ForEachTerrorPlayer<SpawnablePZScan>"
@@ -40,22 +36,22 @@
 
 		"Addresses"
 		{
-			"RoundRespawn"
+			"CTerrorPlayer::RoundRespawn"
 			{
 				"linux"
 				{
-					"signature"	"RoundRespawn"
+					"signature"	"CTerrorPlayer::RoundRespawn"
 				}
 				"windows"
 				{
-					"signature"	"RoundRespawn"			
+					"signature"	"CTerrorPlayer::RoundRespawn"			
 				}
 			}
 		}
 
 		"Offsets"
 		{
-			/* CBaseEntity::IsInStasis() */
+			/* CBaseEntity::IsInStasis(CBaseEntity *__hidden this) */
 			"CBaseEntity::IsInStasis"
 			{
 				"windows"	"39"
@@ -73,25 +69,26 @@
 			}
 		}
 
-		"Signatures" 
+		"Signatures" //大部分windows签名来自https://github.com/Psykotikism/L4D1-2_Signatures
 		{
-			/* CTerrorPlayer::OnEnterGhostState() */
-			"CTerrorPlayer::OnEnterGhostState" //https://forums.alliedmods.net/showthread.php?t=302140
+			/* CTerrorPlayer::OnEnterGhostState(void) */
+			"CTerrorPlayer::OnEnterGhostState"
 			{
 				"library"	"server"
 				"linux"		"@_ZN13CTerrorPlayer17OnEnterGhostStateEv"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x8B\x2A\x8B\x86\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x8D\x8E\x2A\x2A\x2A\x2A\x57"
 				/* ? ? ? ? ? ? 53 56 8B ? 8B 86 ? ? ? ? 8B ? ? 8D 8E ? ? ? ? 57 */
 			}
-			/* Tank::LeaveStasis() */
-			"Tank::LeaveStasis" //https://forums.alliedmods.net/showthread.php?t=302140
+			/* Tank::LeaveStasis(void) */
+			"Tank::LeaveStasis"
 			{
 				"library"	"server"
 				"linux"		"@_ZN4Tank11LeaveStasisEv"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8D\xB7\x2A\x2A\x2A\x2A\x74\x2A\x8B\x86\x2A\x2A\x2A\x2A\x8B\x90\x2A\x2A\x2A\x2A\x8D\x8E\x2A\x2A\x2A\x2A\x56\xFF\x2A\xC6\x2A\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x8B"
 				/* ? ? ? ? ? ? ? ? ? ? ? 8D B7 ? ? ? ? 74 ? 8B 86 ? ? ? ? 8B 90 ? ? ? ? 8D 8E ? ? ? ? 56 FF ? C6 ? ? 8B ? 8B 90 ? ? ? ? 8B */
 			}
-			"State_Transition"
+			/* CCSPlayer::State_Transition(CSPlayerState) */
+			"CCSPlayer::State_Transition"
 			{
 				"library"	"server"
 				"linux"		"@_ZN9CCSPlayer16State_TransitionE13CSPlayerState"
@@ -107,13 +104,13 @@
 				/* ? ? ? ? ? ? ? ? ? ? ? FF ? 50 E8 ? ? ? ? 83 ? ? 50 8B ? 8B 90 ? ? ? ? 8B ? FF ? 50 68 ? ? ? ? E8 */
 				/* Search "%s materialized from spawn mode as a %s" */
 			}
-			/* CTerrorPlayer::PlayerZombieAbortControl(CTerrorPlayer *this) */
+			/* CTerrorPlayer::PlayerZombieAbortControl(void) */
 			"CTerrorPlayer::PlayerZombieAbortControl"
 			{
 				"library"	"server"
 				"linux"		"@_ZN13CTerrorPlayer24PlayerZombieAbortControlEv"
-				"windows"	"\x55\x8B\xEC\x83\xEC\x30\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x83\xF8\x03\x0F\x85" // Updated by Crasher_3637
-				/* 55 8B EC 83 EC 30 56 8B F1 E8 ? ? ? ? 83 F8 03 0F 85 */ 
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x8B\x2A\xE8\x2A\x2A\x2A\x2A\x83\x2A\x2A\x0F\x85\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x8B\x2A\xFF\x2A\x84\x2A\x0F\x84\x2A\x2A\x2A\x2A\xE8"
+				/* ? ? ? ? ? ? 56 8B ? E8 ? ? ? ? 83 ? ? 0F 85 ? ? ? ? 8B ? 8B 90 ? ? ? ? 8B ? FF ? 84 ? 0F 84 ? ? ? ? E8 */
 			}
 			/* ForEachTerrorPlayer<SpawnablePZScan>(SpawnablePZScan &) */
 			"ForEachTerrorPlayer<SpawnablePZScan>"
@@ -123,50 +120,64 @@
 				"windows"	"\x55\x8B\xEC\x83\xEC\x2C\x8B\x0D\x2A\x2A\x2A\x2A\x53\x8B\x5D\x08\x56"
 				/* 55 8B EC 83 EC 2C 8B 0D ? ? ? ? 53 8B 5D 08 56 */
 			}
-			"SetClass"
+			/* CTerrorPlayer::SetClass(ZombieClassType) */
+			"CTerrorPlayer::SetClass"
 			{
 				"library"	"server"
 				"linux"		"@_ZN13CTerrorPlayer8SetClassE15ZombieClassType"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x83\x2A\x2A\x0F\x85\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x40"
 				/* ? ? ? ? ? ? E8 ? ? ? ? 83 ? ? 0F 85 ? ? ? ? A1 ? ? ? ? 40 */
 			}
-			"CreateAbility"
+			/* CBaseAbility::CreateForPlayer(CTerrorPlayer *) */
+			"CBaseAbility::CreateForPlayer"
 			{
 				"library"	"server"
 				"linux"		"@_ZN12CBaseAbility15CreateForPlayerEP13CTerrorPlayer"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x8B\x2A\x2A\x85\x2A\x0F\x84\x2A\x2A\x2A\x2A\x8B\x2A\xE8\x2A\x2A\x2A\x2A\x83"
 				/* ? ? ? ? ? ? 56 8B ? ? 85 ? 0F 84 ? ? ? ? 8B ? E8 ? ? ? ? 83 */
 			}
-			"TakeOverZombieBot"
+			/* CTerrorPlayer::CleanupPlayerState(void) */
+			"CTerrorPlayer::CleanupPlayerState"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer18CleanupPlayerStateEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x83\x2A\x2A\x55\x8B\x2A\x2A\x89\x2A\x2A\x2A\x8B\x2A\x0F\x2A\x2A\x83\x2A\x2A\x56\x8B\x2A\xC7"
+				/* ? ? ? ? ? ? 83 ? ? 83 ? ? 55 8B ? ? 89 ? ? ? 8B ? 0F ? ? 83 ? ? 56 8B ? C7 */
+			}
+			/* CTerrorPlayer::TakeOverZombieBot(CTerrorPlayer*) */
+			"CTerrorPlayer::TakeOverZombieBot"
 			{
 				"library"	"server"
 				"linux"		"@_ZN13CTerrorPlayer17TakeOverZombieBotEPS_"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x53\x8B\x2A\x2A\x80\xBB"
 				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 53 8B ? ? 80 BB */
 			}
-			"RoundRespawn"
+			/* CTerrorPlayer::RoundRespawn(void) */
+			"CTerrorPlayer::RoundRespawn"
 			{
 				"library"	"server"
 				"linux"		"@_ZN13CTerrorPlayer12RoundRespawnEv"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x84\x2A\x75\x2A\x8B\x2A\xE8\x2A\x2A\x2A\x2A\xC6\x86"
 				/* ? ? ? ? ? ? ? ? E8 ? ? ? ? 84 ? 75 ? 8B ? E8 ? ? ? ? C6 86 */
 			}
-			"SetHumanSpec"
+			/* SurvivorBot::SetHumanSpectator(SurvivorBot *__hidden this, CTerrorPlayer *) */
+			"SurvivorBot::SetHumanSpectator"
 			{
 				"library"	"server"
 				"linux"		"@_ZN11SurvivorBot17SetHumanSpectatorEP13CTerrorPlayer"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\xBE\x2A\x2A\x2A\x2A\x2A\x7E\x2A\x32\x2A\x5E\x5D\xC2\x2A\x2A\x8B\x0D"
                 /* ? ? ? ? ? ? 83 BE ? ? ? ? ? 7E ? 32 ? 5E 5D C2 ? ? 8B 0D */
 			}
-			"TakeOverBot"
+			/* CTerrorPlayer::TakeOverBot(bool) */
+			"CTerrorPlayer::TakeOverBot"
 			{
 				"library"  "server"
 				"linux"    "@_ZN13CTerrorPlayer11TakeOverBotEb"
 				"windows"  "\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x53\x56\x8D"
 				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 53 56 8D */
 			}
-			/* CTerrorGameRules::HasPlayerControlledZombies() */
-			"HasPlayerControlledZombies"
+			/* CTerrorGameRules::"CTerrorGameRules::HasPlayerControlledZombies"() */
+			"CTerrorGameRules::HasPlayerControlledZombies"
 			{
 				"library"	"server"
 				"linux"		"@_ZN16CTerrorGameRules26HasPlayerControlledZombiesEv"
