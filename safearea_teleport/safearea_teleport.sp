@@ -278,6 +278,7 @@ public void OnMapStart()
 public void OnMapEnd()
 {
 	vResetPlugin();
+	g_iCurrentMap = 0;
 }
 
 void vResetPlugin()
