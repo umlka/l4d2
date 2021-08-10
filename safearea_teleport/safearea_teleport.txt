@@ -8,12 +8,12 @@
 			{
 				"linux"
 				{
-					"signature"	"TheCount"
+					"signature"	"nav_update_lighting"
 					"read"		"17"
 				}
 				"windows"
 				{
-					"signature"	"TheCount"
+					"signature"	"nav_update_lighting"
 					"read"		"70"
 				}
 			}
@@ -21,12 +21,12 @@
 			{
 				"linux"
 				{
-					"signature"	"TheNavAreas"
+					"signature"	"CNavArea::SpliceEdit"
 					"read"		"469"
 				}
 				"windows"
 				{
-					"signature"	"TheNavAreas"
+					"signature"	"CNavArea::SpliceEdit"
 					"read"		"1235"
 				}
 				"read" "0"
@@ -35,29 +35,43 @@
 
 		"Offsets"
 		{
-			/* WitchLocomotion::IsAreaTraversable(CNavArea const*) */
-			"WitchLocomotion::IsAreaTraversable::m_flow"
+			/* CPropDoorRotatingCheckpoint::IsCheckpointDoor(CPropDoorRotatingCheckpoint *__hidden this) */
+			"CPropDoorRotatingCheckpoint::IsCheckpointDoor"
 			{
-				"windows"	"332"
-				"linux"		"340"
+				"linux"		"286"
+				"windows"	"238"
+			}
+			/* CPropDoorRotatingCheckpoint::IsCheckpointExitDoor(CPropDoorRotatingCheckpoint *__hidden this) */
+			"CPropDoorRotatingCheckpoint::IsCheckpointExitDoor"
+			{
+				"linux"		"287"
+				"windows"	"239"
 			}
 		}
 	
 		"Signatures"
 		{
 			/* nav_update_lighting(const CCommand *) */
-			"TheCount"
+			"nav_update_lighting"
 			{
 				"library"	"server"
 				"linux"		"@_ZL19nav_update_lightingRK8CCommand"
 				"windows"	"\x55\x8B\xEC\x8B\x45\x08\x57\x33\xFF\x83\x38\x02"
 			}
 			/* CNavArea::SpliceEdit(CNavArea*) */
-			"TheNavAreas"
+			"CNavArea::SpliceEdit"
 			{
 				"library"	"server"
 				"linux"		"@_ZN8CNavArea10SpliceEditEPS_"
 				"windows"	"\x55\x8B\xEC\x83\xEC\x38\x53\x8B\x5D\x08\xF3\x0F\x10\x6B\x10"
+			}
+			/* CTerrorPlayer::CleanupPlayerState(void) */
+			"CTerrorPlayer::CleanupPlayerState"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer18CleanupPlayerStateEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x83\x2A\x2A\x55\x8B\x2A\x2A\x89\x2A\x2A\x2A\x8B\x2A\x0F\x2A\x2A\x83\x2A\x2A\x56\x8B\x2A\xC7"
+				/* ? ? ? ? ? ? 83 ? ? 83 ? ? 55 8B ? ? 89 ? ? ? 8B ? 0F ? ? 83 ? ? 56 8B ? C7 */
 			}
 			/* TerrorNavArea::ScriptGetSpawnAttributes(TerrorNavArea *__hidden this) */
 			"TerrorNavArea::ScriptGetSpawnAttributes"
@@ -65,13 +79,23 @@
 				"library"	"server"
 				"linux"		"@_ZNK13TerrorNavArea24ScriptGetSpawnAttributesEv"
 				"windows"	"\x8B\x81\x28\x01\x00\x00\xC3"
+				/* 8B 81 28 01 00 00 C3 */
 			}
 			/* TerrorNavArea::ScriptHasSpawnAttributes(TerrorNavArea *__hidden this, int) */
 			"TerrorNavArea::ScriptHasSpawnAttributes"
 			{
 				"library"	"server"
 				"linux"		"@_ZNK13TerrorNavArea24ScriptHasSpawnAttributesEi"
-				"windows"	"\x55\x8B\xEC\x8B\x45\x08\x85\x81\x28\x01\x00\x00"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x85\x81\x2A\x2A\x2A\x2A\x0F\x2A\x2A\x5D"
+				/* ? ? ? ? ? ? 85 81 ? ? ? ? 0F ? ? 5D */
+			}
+			/* IsAreaConnectedToNonCheckpointArea(TerrorNavArea *) */
+			"IsAreaConnectedToNonCheckpointArea"
+			{
+				"library"	"server"
+				"linux"		"@_Z34IsAreaConnectedToNonCheckpointAreaP13TerrorNavArea"
+				"windows"	"\x55\x8B\xEC\x51\x53\x56\x8B\xD9\x8D\xB3\xD4\x13\x00\x00"
+				/* 55 8B EC 51 53 56 8B D9 8D B3 D4 13 00 00 */
 			}
 			/* TerrorNavArea::ScriptGetDoor(TerrorNavArea *__hidden this) */
 			"TerrorNavArea::ScriptGetDoor"
@@ -80,6 +104,14 @@
 				"linux"		"@_ZN13TerrorNavArea13ScriptGetDoorEv"
 				"windows"	"\x8B\x81\x6C\x01\x00\x00\x83\xF8\xFF\x74\x2A\x8B\x15\x2A\x2A\x2A\x2A\x8B\xC8\x81\xE1\xFF\x0F\x00\x00\x03\xC9\x8D\x4C\xCA\x04\x85\xC9\x74\x2A\xC1\xE8\x0C\x39\x41\x04\x75\x2A\x8B\x09"
 				/* 8B 81 6C 01 00 00 83 F8 FF 74 ? 8B 15 ? ? ? ? 8B C8 81 E1 FF 0F 00 00 03 C9 8D 4C CA 04 85 C9 74 ? C1 E8 0C 39 41 04 75 ? 8B 09 */
+			}
+			/* CBaseTrigger::IsTouching(CBaseTrigger *__hidden this, CBaseEntity *) */
+			"CBaseTrigger::IsTouching"
+			{
+				"library"	"server"
+				"linux"		"@_ZN12CBaseTrigger10IsTouchingEP11CBaseEntity"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x85\x2A\x74\x2A\x8B\x2A\x8B\x2A\x2A\xFF\x2A\x8B\x2A\x89\x2A\x2A\xEB\x2A\xC7\x45\x2A\x2A\x2A\x2A\x2A\x8D\x2A\x2A\x51\x8D\x8E\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x33"
+				/* ? ? ? ? ? ? 8B ? ? 85 ? 74 ? 8B ? 8B ? ? FF ? 8B ? 89 ? ? EB ? C7 45 ? ? ? ? ? 8D ? ? 51 8D 8E ? ? ? ? E8 ? ? ? ? 33 */
 			}
 		}
 	}
