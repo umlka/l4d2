@@ -4,15 +4,15 @@
     {
 		"Addresses"
 		{
-			"RoundRespawn"
+			"CTerrorPlayer::RoundRespawn"
 			{
 				"linux"
 				{
-					"signature"	"RoundRespawn"
+					"signature"	"CTerrorPlayer::RoundRespawn"
 				}
 				"windows"
 				{
-					"signature"	"RoundRespawn"			
+					"signature"	"CTerrorPlayer::RoundRespawn"			
 				}
 			}
 		}
@@ -34,7 +34,7 @@
 		"Signatures"
 		{
 			/* CTerrorPlayer::RoundRespawn */
-			"RoundRespawn"
+			"CTerrorPlayer::RoundRespawn"
 			{
 				"library"	"server"
 				"linux"		"@_ZN13CTerrorPlayer12RoundRespawnEv"
