@@ -196,7 +196,6 @@ Handle
 	g_hSDK_Call_HasPlayerControlledZombies;
 
 Address
-	g_pRoundRespawn,
 	g_pStatsCondition;
 
 DynamicDetour
@@ -2591,15 +2590,15 @@ void vRegisterStatsConditionPatch(GameData hGameData = null)
 	if(iByteMatch == -1)
 		SetFailState("Failed to find byte: RoundRespawn_Byte");
 
-	g_pRoundRespawn = hGameData.GetAddress("CTerrorPlayer::RoundRespawn");
-	if(!g_pRoundRespawn)
+	g_pStatsCondition = hGameData.GetAddress("CTerrorPlayer::RoundRespawn");
+	if(!g_pStatsCondition)
 		SetFailState("Failed to find address: CTerrorPlayer::RoundRespawn");
 	
-	g_pStatsCondition = g_pRoundRespawn + view_as<Address>(iOffset);
+	g_pStatsCondition += view_as<Address>(iOffset);
 	
 	int iByteOrigin = LoadFromAddress(g_pStatsCondition, NumberType_Int8);
 	if(iByteOrigin != iByteMatch)
-		SetFailState("Failed to load, byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
+		SetFailState("Failed to load 'CTerrorPlayer::RoundRespawn', byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
 }
 
 void vSetInfectedGhost(int client, bool bSavePos = false)
@@ -2656,13 +2655,13 @@ void vRoundRespawn(int client)
 }
 
 //https://forums.alliedmods.net/showthread.php?t=323220
-void vStatsConditionPatch(bool bPatch) // Prevents respawn command from reset the player's statistics
+void vStatsConditionPatch(bool bPatch)
 {
 	static bool bPatched;
 	if(!bPatched && bPatch)
 	{
 		bPatched = true;
-		StoreToAddress(g_pStatsCondition, 0x79, NumberType_Int8); // if(!bool) - 0x75 JNZ => 0x78 JNS (jump short if not sign) - always not jump
+		StoreToAddress(g_pStatsCondition, 0x79, NumberType_Int8);
 	}
 	else if(bPatched && !bPatch)
 	{
