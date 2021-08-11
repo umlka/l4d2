@@ -19,9 +19,10 @@ StringMap
 
 Handle
 	g_hSDK_Call_RoundRespawn,
-	g_hSDK_Call_SetHumanSpec,
+	g_hSDK_Call_SetHumanSpectator,
 	g_hSDK_Call_TakeOverBot,
 	g_hSDK_Call_GoAwayFromKeyboard,
+	g_hSDK_Call_CleanupPlayerState,
 	g_hSDK_Call_CreateSmoker,
 	g_hSDK_Call_CreateBoomer,
 	g_hSDK_Call_CreateHunter,
@@ -32,7 +33,6 @@ Handle
 	g_hSDK_Call_InfectedAttackSurvivorTeam;
 
 Address
-	g_pRoundRespawn,
 	g_pStatsCondition;
 
 int
@@ -215,7 +215,7 @@ public Plugin myinfo =
 	name = "Give Item Menu",
 	description = "Gives Item Menu",
 	author = "Ryanx, sorallll",
-	version = "1.1.4",
+	version = "1.1.5",
 	url = ""
 };
 
@@ -1657,21 +1657,21 @@ void vTeleportFix(int client)
 	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") & ~FL_FROZEN);
 
 	if(bIsHanging(client))
-		vL4D2_ReviveFromIncap(client);
+		vReviveFromIncap(client);
 	else
 	{
-		int attacker = iL4D2_GetInfectedAttacker(client);
+		int attacker = iGetInfectedAttacker(client);
 		if(attacker > 0 && IsClientInGame(attacker) && IsPlayerAlive(attacker))
 		{
-			SetEntProp(attacker, Prop_Send, "m_fFlags", GetEntProp(attacker, Prop_Send, "m_fFlags") & ~FL_FROZEN);
+			SDKCall(g_hSDK_Call_CleanupPlayerState, attacker);
 			ForcePlayerSuicide(attacker);
 		}
 	}
 }
 
-void vL4D2_ReviveFromIncap(int client) 
+void vReviveFromIncap(int client) 
 {
-	vL4D2_RunScript("GetPlayerFromUserID(%d).ReviveFromIncap()", GetClientUserId(client));
+	vRunScript("GetPlayerFromUserID(%d).ReviveFromIncap()", GetClientUserId(client));
 }
 
 //https://forums.alliedmods.net/showpost.php?p=2681159&postcount=10
@@ -1680,7 +1680,7 @@ bool bIsHanging(int client)
 	return !!GetEntProp(client, Prop_Send, "m_isHangingFromLedge");
 }
 
-void vL4D2_RunScript(const char[] sCode, any ...) 
+void vRunScript(const char[] sCode, any ...) 
 {
 	/**
 	* Run a VScript (Credit to Timocop)
@@ -1705,17 +1705,7 @@ void vL4D2_RunScript(const char[] sCode, any ...)
 	AcceptEntityInput(iScriptLogic, "RunScriptCode");
 }
 
-/**
- * Returns infected attacker of survivor victim.
- *
- * Note: Infected attacker means the infected player that is currently
- * pinning down the survivor. Such as hunter, smoker, charger and jockey.
- *
- * @param client        Survivor client index.
- * @return              Infected attacker index, -1 if not found.
- * @error               Invalid client index.
- */
-int iL4D2_GetInfectedAttacker(int client)
+int iGetInfectedAttacker(int client)
 {
     int attacker;
 
@@ -1982,7 +1972,7 @@ void vChangeTeamToSurvivor(int client, int iTeam)
 
 	if(iBot)
 	{
-		SDKCall(g_hSDK_Call_SetHumanSpec, iBot, client);
+		SDKCall(g_hSDK_Call_SetHumanSpectator, iBot, client);
 		SDKCall(g_hSDK_Call_TakeOverBot, client, true);
 	}
 	else
@@ -2293,6 +2283,16 @@ void vCheatCommand(int client, const char[] sCommand)
 	if(SplitString(sCommand, " ", sCmd, sizeof(sCmd)) == -1)
 		strcopy(sCmd, sizeof(sCmd), sCommand);
 
+	if(strcmp(sCmd, "give") == 0 && strcmp(sCommand[5], "health") == 0)
+	{
+		int attacker = iGetInfectedAttacker(client);
+		if(attacker > 0 && IsClientInGame(attacker) && IsPlayerAlive(attacker))
+		{
+			SDKCall(g_hSDK_Call_CleanupPlayerState, attacker);
+			ForcePlayerSuicide(attacker);
+		}
+	}
+
 	int iFlagBits, iCmdFlags;
 	iFlagBits = GetUserFlagBits(client);
 	iCmdFlags = GetCommandFlags(sCmd);
@@ -2305,12 +2305,7 @@ void vCheatCommand(int client, const char[] sCommand)
 	if(strcmp(sCmd, "give") == 0)
 	{
 		if(strcmp(sCommand[5], "health") == 0)
-		{
 			SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 0.0); //防止有虚血时give health会超过100血
-			int attacker = iL4D2_GetInfectedAttacker(client);
-			if(attacker > 0 && IsClientInGame(attacker) && IsPlayerAlive(attacker))
-				ForcePlayerSuicide(attacker);
-		}
 		else if(strcmp(sCommand[5], "ammo") == 0)
 			vReloadAmmo(client); //M60和榴弹发射器加子弹
 	}
@@ -2328,29 +2323,29 @@ void vLoadGameData()
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "RoundRespawn") == false)
-		SetFailState("Failed to find signature: RoundRespawn");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
 	g_hSDK_Call_RoundRespawn = EndPrepSDKCall();
 	if(g_hSDK_Call_RoundRespawn == null)
-		SetFailState("Failed to create SDKCall: RoundRespawn");
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
 		
 	vRegisterStatsConditionPatch(hGameData);
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SetHumanSpec") == false)
-		SetFailState("Failed to find signature: SetHumanSpec");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SurvivorBot::SetHumanSpectator") == false)
+		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDK_Call_SetHumanSpec = EndPrepSDKCall();
-	if(g_hSDK_Call_SetHumanSpec == null)
-		SetFailState("Failed to create SDKCall: SetHumanSpec");
+	g_hSDK_Call_SetHumanSpectator = EndPrepSDKCall();
+	if(g_hSDK_Call_SetHumanSpectator == null)
+		SetFailState("Failed to create SDKCall: SurvivorBot::SetHumanSpectator");
 	
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "TakeOverBot") == false)
-		SetFailState("Failed to find signature: TakeOverBot");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TakeOverBot") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverBot");
 	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
 	g_hSDK_Call_TakeOverBot = EndPrepSDKCall();
 	if(g_hSDK_Call_TakeOverBot == null)
-		SetFailState("Failed to create SDKCall: TakeOverBot");
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::TakeOverBot");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::GoAwayFromKeyboard") == false)
@@ -2359,6 +2354,13 @@ void vLoadGameData()
 	g_hSDK_Call_GoAwayFromKeyboard = EndPrepSDKCall();
 	if(g_hSDK_Call_GoAwayFromKeyboard == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard");
+
+	StartPrepSDKCall(SDKCall_Player);
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::CleanupPlayerState") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::CleanupPlayerState");
+	g_hSDK_Call_CleanupPlayerState = EndPrepSDKCall();
+	if(g_hSDK_Call_CleanupPlayerState == null)
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::CleanupPlayerState");
 
 	Address pReplaceWithBot = hGameData.GetAddress("NextBotCreatePlayerBot.jumptable");
 	if(pReplaceWithBot != Address_Null && LoadFromAddress(pReplaceWithBot, NumberType_Int8) == 0x68)
@@ -2386,25 +2388,25 @@ void vRegisterStatsConditionPatch(GameData hGameData = null)
 	if(iByteMatch == -1)
 		SetFailState("Failed to find byte: RoundRespawn_Byte");
 
-	g_pRoundRespawn = hGameData.GetAddress("RoundRespawn");
-	if(!g_pRoundRespawn)
-		SetFailState("Failed to find address: RoundRespawn");
+	g_pStatsCondition = hGameData.GetAddress("CTerrorPlayer::RoundRespawn");
+	if(!g_pStatsCondition)
+		SetFailState("Failed to find address: CTerrorPlayer::RoundRespawn");
 	
-	g_pStatsCondition = g_pRoundRespawn + view_as<Address>(iOffset);
+	g_pStatsCondition += view_as<Address>(iOffset);
 	
 	int iByteOrigin = LoadFromAddress(g_pStatsCondition, NumberType_Int8);
 	if(iByteOrigin != iByteMatch)
-		SetFailState("Failed to load, byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
+		SetFailState("Failed to load 'CTerrorPlayer::RoundRespawn', byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
 }
 
 //https://forums.alliedmods.net/showthread.php?t=323220
-void vStatsConditionPatch(bool bPatch) // Prevents respawn command from reset the player's statistics
+void vStatsConditionPatch(bool bPatch)
 {
 	static bool bPatched;
 	if(!bPatched && bPatch)
 	{
 		bPatched = true;
-		StoreToAddress(g_pStatsCondition, 0x79, NumberType_Int8); // if(!bool) - 0x75 JNZ => 0x78 JNS (jump short if not sign) - always not jump
+		StoreToAddress(g_pStatsCondition, 0x79, NumberType_Int8);
 	}
 	else if(bPatched && !bPatch)
 	{
