@@ -896,11 +896,11 @@ void vLoadGameData()
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "RoundRespawn") == false)
-		SetFailState("Failed to find signature: RoundRespawn");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
 	g_hSDK_Call_RoundRespawn = EndPrepSDKCall();
 	if(g_hSDK_Call_RoundRespawn == null)
-		SetFailState("Failed to create SDKCall: RoundRespawn");
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
 
 	vRegisterStatsConditionPatch(hGameData);
 
