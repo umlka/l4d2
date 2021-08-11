@@ -4,9 +4,9 @@
     {
 		"Functions"
 		{
-			"SetHumanSpec"
+			"SurvivorBot::SetHumanSpectator"
 			{
-				"signature"	"SetHumanSpec"
+				"signature"	"SurvivorBot::SetHumanSpectator"
 				"callconv"	"thiscall"
 				"return"	"void"
 				"this"		"entity"
@@ -29,21 +29,22 @@
 		
 		"Addresses"
 		{
-			"RoundRespawn"
+			"CTerrorPlayer::RoundRespawn"
 			{
 				"linux"
 				{
-					"signature"	"RoundRespawn"
+					"signature"	"CTerrorPlayer::RoundRespawn"
 				}
 				"windows"
 				{
-					"signature"	"RoundRespawn"			
+					"signature"	"CTerrorPlayer::RoundRespawn"			
 				}
 			}
 		}
 
 		"Offsets"
 		{
+			/* CTerrorPlayer::SetObserverTarget(CBaseEntity *) */
 			"CTerrorPlayer::SetObserverTarget"
 			{
 				"linux"		"403"
@@ -63,28 +64,31 @@
 
 		"Signatures"
 		{
-			/* CTerrorPlayer::RoundRespawn */
-			"RoundRespawn"
+			/* CTerrorPlayer::RoundRespawn(void) */
+			"CTerrorPlayer::RoundRespawn"
 			{
 				"library"	"server"
 				"linux"		"@_ZN13CTerrorPlayer12RoundRespawnEv"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x84\x2A\x75\x2A\x8B\x2A\xE8\x2A\x2A\x2A\x2A\xC6\x86"
 				/* ? ? ? ? ? ? ? ? E8 ? ? ? ? 84 ? 75 ? 8B ? E8 ? ? ? ? C6 86 */
 			}
-			"SetHumanSpec"
+			/* SurvivorBot::SetHumanSpectator(SurvivorBot *__hidden this, CTerrorPlayer *) */
+			"SurvivorBot::SetHumanSpectator"
 			{
 				"library"	"server"
 				"linux"		"@_ZN11SurvivorBot17SetHumanSpectatorEP13CTerrorPlayer"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\xBE\x2A\x2A\x2A\x2A\x2A\x7E\x2A\x32\x2A\x5E\x5D\xC2\x2A\x2A\x8B\x0D"
                 /* ? ? ? ? ? ? 83 BE ? ? ? ? ? 7E ? 32 ? 5E 5D C2 ? ? 8B 0D */
 			}
-			"TakeOverBot"
+			/* CTerrorPlayer::TakeOverBot(bool) */
+			"CTerrorPlayer::TakeOverBot"
 			{
-				"library"	"server"
-				"linux"		"@_ZN13CTerrorPlayer11TakeOverBotEb"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x53\x56\x8D"
+				"library"  "server"
+				"linux"    "@_ZN13CTerrorPlayer11TakeOverBotEb"
+				"windows"  "\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x53\x56\x8D"
 				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 53 56 8D */
 			}
+			/* CTerrorPlayer::GoAwayFromKeyboard(void) */
 			"CTerrorPlayer::GoAwayFromKeyboard"
 			{
 				"library"	"server"
@@ -92,6 +96,7 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x57\x8B\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x8B"
 				/* ? ? ? ? ? ? 53 56 57 8B ? 8B ? 8B 90 ? ? ? ? 8B */
 			}
+			/* CBasePlayer::SetModel(char const*) */
 			"CBasePlayer::SetModel"
 			{
 				"library"	"server"

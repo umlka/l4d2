@@ -18,19 +18,18 @@ Handle
 	g_hBotsUpdateTimer,
 	g_hGiveWeaponTimer[MAXPLAYERS + 1],
 	g_hSDK_Call_RoundRespawn,
-	g_hSDK_Call_SetHumanSpec,
+	g_hSDK_Call_SetHumanSpectator,
 	g_hSDK_Call_TakeOverBot,
 	g_hSDK_Call_SetObserverTarget,
 	g_hSDK_Call_GoAwayFromKeyboard;
 
 Address
-	g_pRoundRespawn,
 	g_pStatsCondition;
 
 DynamicDetour
-	g_dDetourSetHumanSpec,
-	g_dDetourGoAwayFromKeyboard,
-	g_dDetourPlayerSetModel;
+	g_dSetHumanSpectator,
+	g_dGoAwayFromKeyboard,
+	g_dPlayerSetModel;
 
 ConVar
 	g_hSurvivorLimit,
@@ -338,13 +337,13 @@ public void OnPluginEnd()
 {
 	vStatsConditionPatch(false);
 
-	if(!g_dDetourSetHumanSpec.Disable(Hook_Pre, mreSetHumanSpecPre))
+	if(!g_dSetHumanSpectator.Disable(Hook_Pre, mreSetHumanSpectator))
 		SetFailState("Failed to disable detour: SetHumanSpec");
 	
-	if(!g_dDetourGoAwayFromKeyboard.Disable(Hook_Pre, mreGoAwayFromKeyboardPre) || !g_dDetourGoAwayFromKeyboard.Disable(Hook_Post, mreGoAwayFromKeyboardPost))
+	if(!g_dGoAwayFromKeyboard.Disable(Hook_Pre, mreGoAwayFromKeyboardPre) || !g_dGoAwayFromKeyboard.Disable(Hook_Post, mreGoAwayFromKeyboardPost))
 		SetFailState("Failed to disable detour: CTerrorPlayer::GoAwayFromKeyboard");
 	
-	if(!g_dDetourPlayerSetModel.Disable(Hook_Pre, mrePlayerSetModelPre) || !g_dDetourPlayerSetModel.Disable(Hook_Post, mrePlayerSetModelPost))
+	if(!g_dPlayerSetModel.Disable(Hook_Pre, mrePlayerSetModelPre) || !g_dPlayerSetModel.Disable(Hook_Post, mrePlayerSetModelPost))
 		SetFailState("Failed to disable detour: CBasePlayer::SetModel");
 }
 
@@ -410,7 +409,7 @@ public Action cmdJoinSurvivor(int client, int args)
 
 		if(iBot)
 		{
-			SDKCall(g_hSDK_Call_SetHumanSpec, iBot, client);
+			SDKCall(g_hSDK_Call_SetHumanSpectator, iBot, client);
 			SDKCall(g_hSDK_Call_SetObserverTarget, client, iBot);
 			SDKCall(g_hSDK_Call_TakeOverBot, client, true);
 		}
@@ -437,7 +436,7 @@ public Action cmdJoinSurvivor(int client, int args)
 		if(iBot)
 		{
 			ChangeClientTeam(client, TEAM_SPECTATOR);
-			SDKCall(g_hSDK_Call_SetHumanSpec, iBot, client);
+			SDKCall(g_hSDK_Call_SetHumanSpectator, iBot, client);
 			SDKCall(g_hSDK_Call_SetObserverTarget, client, iBot);
 			SDKCall(g_hSDK_Call_TakeOverBot, client, true);
 		}
@@ -761,7 +760,7 @@ void vTakeOver(int bot)
 	int iIdlePlayer;
 	if(bot && IsClientInGame(bot) && IsFakeClient(bot) && GetClientTeam(bot) == TEAM_SURVIVOR && (iIdlePlayer = iHasIdlePlayer(bot)))
 	{
-		SDKCall(g_hSDK_Call_SetHumanSpec, bot, iIdlePlayer);
+		SDKCall(g_hSDK_Call_SetHumanSpectator, bot, iIdlePlayer);
 		SDKCall(g_hSDK_Call_SetObserverTarget, iIdlePlayer, bot);
 		SDKCall(g_hSDK_Call_TakeOverBot, iIdlePlayer, true);
 	}
@@ -1418,33 +1417,33 @@ void vLoadGameData()
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "RoundRespawn") == false)
-		SetFailState("Failed to find signature: RoundRespawn");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
 	g_hSDK_Call_RoundRespawn = EndPrepSDKCall();
 	if(g_hSDK_Call_RoundRespawn == null)
-		SetFailState("Failed to create SDKCall: RoundRespawn");
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
 
 	vRegisterStatsConditionPatch(hGameData);
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SetHumanSpec") == false)
-		SetFailState("Failed to find signature: SetHumanSpec");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SurvivorBot::SetHumanSpectator") == false)
+		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDK_Call_SetHumanSpec = EndPrepSDKCall();
-	if(g_hSDK_Call_SetHumanSpec == null)
-		SetFailState("Failed to create SDKCall: SetHumanSpec");
+	g_hSDK_Call_SetHumanSpectator = EndPrepSDKCall();
+	if(g_hSDK_Call_SetHumanSpectator == null)
+		SetFailState("Failed to create SDKCall: SurvivorBot::SetHumanSpectator");
 	
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "TakeOverBot") == false)
-		SetFailState("Failed to find signature: TakeOverBot");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TakeOverBot") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverBot");
 	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
 	g_hSDK_Call_TakeOverBot = EndPrepSDKCall();
 	if(g_hSDK_Call_TakeOverBot == null)
-		SetFailState("Failed to create SDKCall: TakeOverBot");
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::TakeOverBot");
 	
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CTerrorPlayer::SetObserverTarget") == false)
-		SetFailState("Failed to find signature: CTerrorPlayer::SetObserverTarget");
+		SetFailState("Failed to find offset: CTerrorPlayer::SetObserverTarget");
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
 	g_hSDK_Call_SetObserverTarget = EndPrepSDKCall();
 	if(g_hSDK_Call_SetObserverTarget == null)
@@ -1473,15 +1472,15 @@ void vRegisterStatsConditionPatch(GameData hGameData = null)
 	if(iByteMatch == -1)
 		SetFailState("Failed to find byte: RoundRespawn_Byte");
 
-	g_pRoundRespawn = hGameData.GetAddress("RoundRespawn");
-	if(!g_pRoundRespawn)
-		SetFailState("Failed to find address: RoundRespawn");
+	g_pStatsCondition = hGameData.GetAddress("CTerrorPlayer::RoundRespawn");
+	if(!g_pStatsCondition)
+		SetFailState("Failed to find address: CTerrorPlayer::RoundRespawn");
 	
-	g_pStatsCondition = g_pRoundRespawn + view_as<Address>(iOffset);
+	g_pStatsCondition += view_as<Address>(iOffset);
 	
 	int iByteOrigin = LoadFromAddress(g_pStatsCondition, NumberType_Int8);
 	if(iByteOrigin != iByteMatch)
-		SetFailState("Failed to load, byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
+		SetFailState("Failed to load 'CTerrorPlayer::RoundRespawn', byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
 }
 
 void vRoundRespawn(int client)
@@ -1492,13 +1491,13 @@ void vRoundRespawn(int client)
 }
 
 //https://forums.alliedmods.net/showthread.php?t=323220
-void vStatsConditionPatch(bool bPatch) // Prevents respawn command from reset the player's statistics
+void vStatsConditionPatch(bool bPatch)
 {
 	static bool bPatched;
 	if(!bPatched && bPatch)
 	{
 		bPatched = true;
-		StoreToAddress(g_pStatsCondition, 0x79, NumberType_Int8); // if (!bool) - 0x75 JNZ => 0x78 JNS (jump short if not sign) - always not jump
+		StoreToAddress(g_pStatsCondition, 0x79, NumberType_Int8);
 	}
 	else if(bPatched && !bPatch)
 	{
@@ -1509,28 +1508,28 @@ void vStatsConditionPatch(bool bPatch) // Prevents respawn command from reset th
 
 void vSetupDetours(GameData hGameData = null)
 {
-	g_dDetourSetHumanSpec = DynamicDetour.FromConf(hGameData, "SetHumanSpec");
-	if(g_dDetourSetHumanSpec == null)
-		SetFailState("Failed to find signature: SetHumanSpec");
+	g_dSetHumanSpectator = DynamicDetour.FromConf(hGameData, "SurvivorBot::SetHumanSpectator");
+	if(g_dSetHumanSpectator == null)
+		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator");
 		
-	if(!g_dDetourSetHumanSpec.Enable(Hook_Pre, mreSetHumanSpecPre))
-		SetFailState("Failed to detour pre: SetHumanSpec");
+	if(!g_dSetHumanSpectator.Enable(Hook_Pre, mreSetHumanSpectator))
+		SetFailState("Failed to detour pre: SurvivorBot::SetHumanSpectator");
 
-	g_dDetourGoAwayFromKeyboard = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GoAwayFromKeyboard");
-	if(g_dDetourGoAwayFromKeyboard == null)
+	g_dGoAwayFromKeyboard = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GoAwayFromKeyboard");
+	if(g_dGoAwayFromKeyboard == null)
 		SetFailState("Failed to find signature: CTerrorPlayer::GoAwayFromKeyboard");
 
-	if(!g_dDetourGoAwayFromKeyboard.Enable(Hook_Pre, mreGoAwayFromKeyboardPre))
+	if(!g_dGoAwayFromKeyboard.Enable(Hook_Pre, mreGoAwayFromKeyboardPre))
 		SetFailState("Failed to detour pre: CTerrorPlayer::GoAwayFromKeyboard");
 
-	if(!g_dDetourGoAwayFromKeyboard.Enable(Hook_Post, mreGoAwayFromKeyboardPost))
+	if(!g_dGoAwayFromKeyboard.Enable(Hook_Post, mreGoAwayFromKeyboardPost))
 		SetFailState("Failed to detour post: CTerrorPlayer::GoAwayFromKeyboard");
 	
-	g_dDetourPlayerSetModel = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_CBaseEntity);
-	g_dDetourPlayerSetModel.SetFromConf(hGameData, SDKConf_Signature, "CBasePlayer::SetModel");
-	g_dDetourPlayerSetModel.AddParam(HookParamType_CharPtr);
-	g_dDetourPlayerSetModel.Enable(Hook_Pre, mrePlayerSetModelPre);
-	g_dDetourPlayerSetModel.Enable(Hook_Post, mrePlayerSetModelPost);
+	g_dPlayerSetModel = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_CBaseEntity);
+	g_dPlayerSetModel.SetFromConf(hGameData, SDKConf_Signature, "CBasePlayer::SetModel");
+	g_dPlayerSetModel.AddParam(HookParamType_CharPtr);
+	g_dPlayerSetModel.Enable(Hook_Pre, mrePlayerSetModelPre);
+	g_dPlayerSetModel.Enable(Hook_Post, mrePlayerSetModelPost);
 }
 
 //AFK Fix https://forums.alliedmods.net/showthread.php?p=2714236
@@ -1545,7 +1544,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 	g_iSurvivorBot = entity;
 }
 
-public MRESReturn mreSetHumanSpecPre(int pThis, DHookParam hParams)
+public MRESReturn mreSetHumanSpectator(int pThis, DHookParam hParams)
 {
 	if(g_bShouldIgnore)
 		return MRES_Ignored;
@@ -1571,7 +1570,7 @@ public MRESReturn mreGoAwayFromKeyboardPost(int pThis, DHookReturn hReturn)
 	{
 		g_bShouldIgnore = true;
 
-		SDKCall(g_hSDK_Call_SetHumanSpec, g_iSurvivorBot, pThis);
+		SDKCall(g_hSDK_Call_SetHumanSpectator, g_iSurvivorBot, pThis);
 		SDKCall(g_hSDK_Call_SetObserverTarget, pThis, g_iSurvivorBot);
 		SetEntProp(pThis, Prop_Send, "m_iObserverMode", 5);
 
