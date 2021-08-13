@@ -1,7 +1,7 @@
 "Games"
 {
-    "left4dead2"
-    {
+	"left4dead2"
+	{
 		"Addresses"
 		{
 			"TheCount"
@@ -17,24 +17,46 @@
 					"read"		"70"
 				}
 			}
-			"TheNavAreas"
+			"TerrorNavMesh"
 			{
 				"linux"
 				{
-					"signature"	"CNavArea::SpliceEdit"
-					"read"		"469"
+					"signature"	"TheNavMesh"
 				}
 				"windows"
 				{
-					"signature"	"CNavArea::SpliceEdit"
-					"read"		"1235"
+					"signature"	"CommandNavSave"
+					"read"		"11"
 				}
 				"read" "0"
+			}
+			/**
+			 * Windows: Uses an offset of "CDirectorMusicBanks::OnRoundStart" to get the Director's address.
+			 * Linux: Uses a symbol pointing to the Director's address.
+			 **/
+			"CDirector"
+			{
+				"linux"
+				{
+					"signature"	"TheDirector"
+				}
+				"windows"
+				{
+					"signature"	"CDirectorMusicBanks::OnRoundStart"
+					"read"		"12"
+				}
+				"read"		"0"
 			}
 		}
 
 		"Offsets"
 		{
+			/* TerrorNavArea::ScriptGetSpawnAttributes(TerrorNavArea *__hidden this) */
+			"TerrorNavArea::ScriptGetSpawnAttributes"
+			{
+				"linux"		"300"	//mov	 eax, [eax+12Ch]
+				"windows"	"296"	//mov	 eax, [ecx+128h]
+			}
 			/* CPropDoorRotatingCheckpoint::IsCheckpointDoor(CPropDoorRotatingCheckpoint *__hidden this) */
 			"CPropDoorRotatingCheckpoint::IsCheckpointDoor"
 			{
@@ -47,6 +69,38 @@
 				"linux"		"287"
 				"windows"	"239"
 			}
+			/**
+			 * CTerrorPlayer::GetFlowDistance(CNavArea const*)
+			 *
+			 * How to find on Windows:
+			 * 1. Find the function's offsets with asherkin's VTable dump.
+			 * 2. Use IDA to get the VTable dump for the "CTerrorPlayer" class on Windows.
+			 * 3. Compare your dump's offsets with asherkin's dump's offsets to find the target function.
+			 * 4. Look for the target function in the Windows binary.
+			 * 5. Look for the 7-byte float (FLD) instruction.
+			 * 6. The offset at the very end of that line of code is the offset for "m_flow".
+			 *
+			 * How to find on Linux:
+			 * 1. Locate the function.
+			 * 2. Look for the 9-byte move (MOVSS) instruction.
+			 * 3. The offset at the very end of that line of code is the offset for "m_flow".
+			 **/
+			"CTerrorPlayer::GetFlowDistance::m_flow"
+			{
+				"linux"		"340"
+				"windows"	"332"
+			}
+			/**
+			 * CTerrorPlayer::GetLastKnownArea()
+			 *
+			 * How to find:
+			 * 1. Use asherkin's VTable dump.
+			 **/
+			"CTerrorPlayer::GetLastKnownArea"
+			{
+				"linux"		"331"
+				"windows"	"330"
+			}
 		}
 	
 		"Signatures"
@@ -56,14 +110,33 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZL19nav_update_lightingRK8CCommand"
-				"windows"	"\x55\x8B\xEC\x8B\x45\x08\x57\x33\xFF\x83\x38\x02"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x57\x33\x2A\x83\x2A\x2A\x75"
+				/* ? ? ? ? ? ? 57 33 ? 83 ? ? 75 */
 			}
-			/* CNavArea::SpliceEdit(CNavArea*) */
-			"CNavArea::SpliceEdit"
+			"TheNavMesh"
 			{
 				"library"	"server"
-				"linux"		"@_ZN8CNavArea10SpliceEditEPS_"
-				"windows"	"\x55\x8B\xEC\x83\xEC\x38\x53\x8B\x5D\x08\xF3\x0F\x10\x6B\x10"
+				"linux"		"@TheNavMesh"
+			}
+			/* Used solely to get the offset for TheNavMesh
+			 * Look for string "Navigation map '%s' saved.\n" in a short function
+			*/
+			"CommandNavSave"
+			{
+				"library"	"server"
+				"windows"	"\xE8\x2A\x2A\x2A\x2A\x84\xC0\x74\x2A\x8B\x0D\x2A\x2A\x2A\x2A\x8B\x01\x8B\x50\x2A\xFF\xD2\x8B\x0D\x2A\x2A\x2A\x2A\x84\xC0"
+				/* E8 ? ? ? ? 84 C0 74 ? 8B 0D ? ? ? ? 8B 01 8B 50 ? FF D2 8B 0D ? ? ? ? 84 C0 */
+			}
+			"TheDirector"
+			{
+				"library"	"server"
+				"linux"		"@TheDirector"
+			}
+			"CDirectorMusicBanks::OnRoundStart"
+			{
+				"library"	"server"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x57\x8B\x2A\x8B\x0D\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x84\x2A\x0F"
+				/* ? ? ? ? ? ? 56 57 8B ? 8B 0D ? ? ? ? E8 ? ? ? ? 84 ? 0F */
 			}
 			/* CTerrorPlayer::CleanupPlayerState(void) */
 			"CTerrorPlayer::CleanupPlayerState"
@@ -73,37 +146,60 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x83\x2A\x2A\x55\x8B\x2A\x2A\x89\x2A\x2A\x2A\x8B\x2A\x0F\x2A\x2A\x83\x2A\x2A\x56\x8B\x2A\xC7"
 				/* ? ? ? ? ? ? 83 ? ? 83 ? ? 55 8B ? ? 89 ? ? ? 8B ? 0F ? ? 83 ? ? 56 8B ? C7 */
 			}
-			/* TerrorNavArea::ScriptGetSpawnAttributes(TerrorNavArea *__hidden this) */
-			"TerrorNavArea::ScriptGetSpawnAttributes"
+			/* CTerrorGameRules::IsMissionFinalMap(void) */
+			"CTerrorGameRules::IsMissionFinalMap"
 			{
 				"library"	"server"
-				"linux"		"@_ZNK13TerrorNavArea24ScriptGetSpawnAttributesEv"
-				"windows"	"\x8B\x81\x28\x01\x00\x00\xC3"
-				/* 8B 81 28 01 00 00 C3 */
+				"linux"		"@_ZN16CTerrorGameRules17IsMissionFinalMapEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x2A\x2A\x56\xFF\x2A\x8B\x2A\x8B\x2A\x8B\x2A\x2A\x6A\x2A\xFF\x2A\x8B\x2A\x85\x2A\x75\x2A\xB0"
+				/* ? ? ? ? ? ? 8B ? 8B ? ? 56 FF ? 8B ? 8B ? 8B ? ? 6A ? FF ? 8B ? 85 ? 75 ? B0 */
 			}
-			/* TerrorNavArea::ScriptHasSpawnAttributes(TerrorNavArea *__hidden this, int) */
-			"TerrorNavArea::ScriptHasSpawnAttributes"
+			"CTerrorGameRules::GetMissionFirstMap"
 			{
 				"library"	"server"
-				"linux"		"@_ZNK13TerrorNavArea24ScriptHasSpawnAttributesEi"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x85\x81\x2A\x2A\x2A\x2A\x0F\x2A\x2A\x5D"
-				/* ? ? ? ? ? ? 85 81 ? ? ? ? 0F ? ? 5D */
+				"linux"		"@_ZN16CTerrorGameRules18GetMissionFirstMapEPP9KeyValues"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x57\x8B\x2A\x85\x2A\x0F\x84\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x8B\x2A\xFF\x2A\x84\x2A\x74\x2A\x8B\x2A\xE8\x2A\x2A\x2A\x2A\x83"
+				/* ? ? ? ? ? ? ? 57 8B ? 85 ? 0F 84 ? ? ? ? 8B ? 8B 90 ? ? ? ? 8B ? FF ? 84 ? 74 ? 8B ? E8 ? ? ? ? 83 */
 			}
-			/* IsAreaConnectedToNonCheckpointArea(TerrorNavArea *) */
-			"IsAreaConnectedToNonCheckpointArea"
+			/* KeyValues::GetString(char const*, char const*) */
+			"KeyValues::GetString"
 			{
 				"library"	"server"
-				"linux"		"@_Z34IsAreaConnectedToNonCheckpointAreaP13TerrorNavArea"
-				"windows"	"\x55\x8B\xEC\x51\x53\x56\x8B\xD9\x8D\xB3\xD4\x13\x00\x00"
-				/* 55 8B EC 51 53 56 8B D9 8D B3 D4 13 00 00 */
+				"linux"		"@_ZN9KeyValues9GetStringEPKcS1_"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x53\x8B\x2A\x2A\x56\x57\x6A\x2A\x53\x8B\x2A\xE8\x2A\x2A\x2A\x2A\x8B\x2A\x85\x2A\x0F\x84\x2A\x2A\x2A\x2A\x0F\x2A\x2A\x2A\x48\x83\x2A\x2A\x0F\x87\x2A\x2A\x2A\x2A\xFF\x24\x2A\x2A\x2A\x2A\x2A\xD9\x2A\x2A\x83\x2A\x2A\xDD\x2A\x2A\x68"
+				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 53 8B ? ? 56 57 6A ? 53 8B ? E8 ? ? ? ? 8B ? 85 ? 0F 84 ? ? ? ? 0F ? ? ? 48 83 ? ? 0F 87 ? ? ? ? FF 24 ? ? ? ? ? D9 ? ? 83 ? ? DD ? ? 68 */
 			}
-			/* TerrorNavArea::ScriptGetDoor(TerrorNavArea *__hidden this) */
-			"TerrorNavArea::ScriptGetDoor"
+			/* CTerrorGameRules::GetMissionFirstMap(KeyValues **) */
+			"CDirector::IsFirstMapInScenario"
 			{
 				"library"	"server"
-				"linux"		"@_ZN13TerrorNavArea13ScriptGetDoorEv"
-				"windows"	"\x8B\x81\x6C\x01\x00\x00\x83\xF8\xFF\x74\x2A\x8B\x15\x2A\x2A\x2A\x2A\x8B\xC8\x81\xE1\xFF\x0F\x00\x00\x03\xC9\x8D\x4C\xCA\x04\x85\xC9\x74\x2A\xC1\xE8\x0C\x39\x41\x04\x75\x2A\x8B\x09"
-				/* 8B 81 6C 01 00 00 83 F8 FF 74 ? 8B 15 ? ? ? ? 8B C8 81 E1 FF 0F 00 00 03 C9 8D 4C CA 04 85 C9 74 ? C1 E8 0C 39 41 04 75 ? 8B 09 */
+				"linux"		"@_ZNK9CDirector20IsFirstMapInScenarioEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x56\x8B\x2A\x85\x2A\x75\x2A\xBE\x2A\x2A\x2A\x2A\x6A"
+				/* ? ? ? ? ? ? ? ? 56 8B ? 85 ? 75 ? BE ? ? ? ? 6A */
+			}
+			/* TerrorNavMesh::GetLastCheckpoint(TerrorNavMesh *__hidden this) */
+			"TerrorNavMesh::GetLastCheckpoint"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK13TerrorNavMesh17GetLastCheckpointEv"
+				"windows"	"\x8B\x91\x74\x06\x00\x00"
+				/* 8B 91 74 06 00 00 */
+			}
+			/* TerrorNavMesh::GetInitialCheckpoint(void)const */
+			"TerrorNavMesh::GetInitialCheckpoint"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK13TerrorNavMesh20GetInitialCheckpointEv"
+				"windows"	"\x55\x8B\xEC\x83\xEC\x1C\x89\x4D\xFC"
+				/* 55 8B EC 83 EC 1C 89 4D FC */
+			}
+			/* Checkpoint::ContainsArea(TerrorNavArea *)const */
+			"Checkpoint::ContainsArea"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK10Checkpoint12ContainsAreaEP13TerrorNavArea"
+				"windows"	"\x55\x8B\xEC\x8B\x51\x0C\x33\xC0\x56\x85\xD2\x7E\x2A\x8B\x09"
+				/* 55 8B EC 8B 51 0C 33 C0 56 85 D2 7E ? 8B 09 */
 			}
 			/* CBaseTrigger::IsTouching(CBaseTrigger *__hidden this, CBaseEntity *) */
 			"CBaseTrigger::IsTouching"
@@ -112,6 +208,20 @@
 				"linux"		"@_ZN12CBaseTrigger10IsTouchingEP11CBaseEntity"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x85\x2A\x74\x2A\x8B\x2A\x8B\x2A\x2A\xFF\x2A\x8B\x2A\x89\x2A\x2A\xEB\x2A\xC7\x45\x2A\x2A\x2A\x2A\x2A\x8D\x2A\x2A\x51\x8D\x8E\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x33"
 				/* ? ? ? ? ? ? 8B ? ? 85 ? 74 ? 8B ? 8B ? ? FF ? 8B ? 89 ? ? EB ? C7 45 ? ? ? ? ? 8D ? ? 51 8D 8E ? ? ? ? E8 ? ? ? ? 33 */
+			}
+			/* TerrorNavArea::FindRandomSpot(TerrorNavArea *__hidden this) */
+			"TerrorNavArea::FindRandomSpot"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK13TerrorNavArea14FindRandomSpotEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x56\x8B\x2A\xF3\x2A\x2A\x2A\x2A\xF3\x2A\x2A\x2A\x2A\x0F"
+				/* ? ? ? ? ? ? ? ? ? ? ? 83 ? ? 56 8B ? F3 ? ? ? ? F3 ? ? ? ? 0F */
+			}
+			/* Script_FindRescueAreaTrigger(void) */
+			"Script_FindRescueAreaTrigger"
+			{
+				"library"	"server"
+				"linux"		"@_Z28Script_FindRescueAreaTriggerv"
 			}
 		}
 	}
