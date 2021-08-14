@@ -402,7 +402,7 @@ void vInitPlugin()
 
 	#if BENCHMARK
 	g_profiler.Stop();
-	PrintToServer("执行耗时: %f", g_profiler.Time);
+	//PrintToServer("执行耗时: %f", g_profiler.Time);
 	PrintToChatAll("执行耗时: %f", g_profiler.Time);
 	#endif
 }
@@ -1080,7 +1080,12 @@ void vLateLoadGameData()
 
 	g_iTheCount = LoadFromAddress(pTheCount, NumberType_Int32);
 	if(g_iTheCount == 0)
-		SetFailState("Failed to find address: TheCount");
+	{
+		#if DEBUG
+		//PrintToServer("当前Nav区域数量为0， 可能是某些测试地图");
+		PrintToChatAll("当前Nav区域数量为0， 可能是某些测试地图");
+		#endif
+	}
 
 	g_pTheNavAreas = view_as<Address>(LoadFromAddress(pTheCount + view_as<Address>(4), NumberType_Int32));
 	if(g_pTheNavAreas == Address_Null)
