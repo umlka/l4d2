@@ -201,6 +201,14 @@
 				"windows"	"\x55\x8B\xEC\x8B\x51\x0C\x33\xC0\x56\x85\xD2\x7E\x2A\x8B\x09"
 				/* 55 8B EC 8B 51 0C 33 C0 56 85 D2 7E ? 8B 09 */
 			}
+			/* CDirectorChallengeMode::FindRescueAreaTrigger(void) */
+			"CDirectorChallengeMode::FindRescueAreaTrigger"
+			{
+				"library"	"server"
+				"linux"		"@_ZN22CDirectorChallengeMode21FindRescueAreaTriggerEv"
+				"windows"	"\x55\x8B\xEC\xA1\x2A\x2A\x2A\x2A\x83\xEC\x24\x53\x57"
+				/* 55 8B EC A1 ? ? ? ? 83 EC 24 53 57 */
+			}
 			/* CBaseTrigger::IsTouching(CBaseTrigger *__hidden this, CBaseEntity *) */
 			"CBaseTrigger::IsTouching"
 			{
@@ -216,12 +224,6 @@
 				"linux"		"@_ZNK13TerrorNavArea14FindRandomSpotEv"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x56\x8B\x2A\xF3\x2A\x2A\x2A\x2A\xF3\x2A\x2A\x2A\x2A\x0F"
 				/* ? ? ? ? ? ? ? ? ? ? ? 83 ? ? 56 8B ? F3 ? ? ? ? F3 ? ? ? ? 0F */
-			}
-			/* Script_FindRescueAreaTrigger(void) */
-			"Script_FindRescueAreaTrigger"
-			{
-				"library"	"server"
-				"linux"		"@_Z28Script_FindRescueAreaTriggerv"
 			}
 		}
 	}
