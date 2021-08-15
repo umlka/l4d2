@@ -65,7 +65,7 @@ int
 	g_iRescueVehicle,
 	g_iTriggerFinale,
 	g_iSpawnAttributesOffset,
-	g_iFlowDistanceOffset,
+	//g_iFlowDistanceOffset,
 	g_iSafeArea,
 	g_iSafeAreaTime,
 	g_iSafeAreaMinSurvivors;
@@ -139,20 +139,20 @@ methodmap CNavArea
 		{
 			return LoadFromAddress(view_as<Address>(this) + view_as<Address>(g_iSpawnAttributesOffset), NumberType_Int32);
 		}
-
+		/*
 		public set(int value)
 		{
 			StoreToAddress(view_as<Address>(this) + view_as<Address>(g_iSpawnAttributesOffset), value, NumberType_Int32);
-		}
+		}*/
 	}
-
+	/*
 	property float Flow
 	{
 		public get()
 		{
 			return view_as<float>(LoadFromAddress(view_as<Address>(this) + view_as<Address>(g_iFlowDistanceOffset), NumberType_Int32));
 		}
-	}
+	}*/
 };
 
 //如果签名失效，请到此处更新https://github.com/Psykotikism/L4D1-2_Signatures
@@ -161,7 +161,7 @@ public Plugin myinfo =
 	name = 			"SafeArea Teleport",
 	author = 		"sorallll",
 	description = 	"",
-	version = 		"1.0.5",
+	version = 		"1.0.6",
 	url = 			""
 }
 
@@ -197,8 +197,8 @@ public void OnPluginStart()
 	RegAdminCmd("sm_finale", cmdFinale, ADMFLAG_RCON, "结局关卡强制过关");
 	RegAdminCmd("sm_est", cmdEst, ADMFLAG_ROOT, "测试");
 	
-	g_aLastDoor = new ArrayList();
-	//g_aStartDoor = new ArrayList();
+	g_aLastDoor = new ArrayList(2);
+	//g_aStartDoor = new ArrayList(2);
 	g_aEndNavArea = new ArrayList();
 	g_aStartNavArea = new ArrayList();
 	g_aRescueVehicle = new ArrayList();
@@ -253,15 +253,15 @@ public Action cmdWarpStart(int client, int args)
 		return Plugin_Handled;
 	}
 
-	float vRandom[3];
+	float vPos[3];
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 		{
 			vTeleportFix(i);
 
-			view_as<CNavArea>(g_aStartNavArea.Get(GetRandomInt(0, iLength - 1))).FindRandomSpot(vRandom);
-			TeleportEntity(i, vRandom, NULL_VECTOR, NULL_VECTOR);
+			view_as<CNavArea>(g_aStartNavArea.Get(GetRandomInt(0, iLength - 1))).FindRandomSpot(vPos);
+			TeleportEntity(i, vPos, NULL_VECTOR, NULL_VECTOR);
 		}
 	}
 
@@ -391,6 +391,9 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
 void vInitPlugin()
 {
+	if(g_iTheCount == 0)
+		return;
+
 	#if BENCHMARK
 	g_profiler = new Profiler();
 	g_profiler.Start();
@@ -411,10 +414,9 @@ void vFindTerrorNavAreas()
 {
 	g_aEndNavArea.Clear();
 	g_aStartNavArea.Clear();
-	g_aRescueVehicle.Clear();
 
-	int iFlags;
 	CNavArea area;
+	int iFlags;
 	float vCenter[3];
 
 	Address pLastCheckpoint = SDKCall(g_hSDKGetLastCheckpoint, g_pNavMesh);
@@ -484,6 +486,8 @@ void vHookEndAreaEntity()
 	g_iTriggerFinale = 0;
 	g_iRescueVehicle = 0;
 
+	g_aRescueVehicle.Clear();
+
 	g_vMins = view_as<float>({0.0, 0.0, 0.0});
 	g_vMaxs = view_as<float>({0.0, 0.0, 0.0});
 
@@ -493,8 +497,7 @@ void vHookEndAreaEntity()
 
 	if(entity != INVALID_ENT_REFERENCE)
 	{
-		vGetEntityVectors(entity);
-		g_iChangelevel = EntIndexToEntRef(entity);
+		vCalculateBoundingBoxSize((g_iChangelevel = EntIndexToEntRef(entity)));
 		HookSingleEntityOutput(entity, "OnStartTouch", OnStartTouch);
 	}
 	else
@@ -524,16 +527,13 @@ void vHookEndAreaEntity()
 			}
 
 			if(g_aRescueVehicle.Length == 1)
-			{
-				vGetEntityVectors(entity);
-				g_iRescueVehicle = EntIndexToEntRef(entity);
-			}
+				vCalculateBoundingBoxSize((g_iRescueVehicle = g_aRescueVehicle.Get(0)));
 		}
 	}
 }
 
 //https://forums.alliedmods.net/showpost.php?p=2680639&postcount=3
-void vGetEntityVectors(int entity)
+void vCalculateBoundingBoxSize(int entity)
 {
 	float vOrigin[3];
 	GetEntPropVector(entity, Prop_Send, "m_vecMins", g_vMins);
@@ -558,9 +558,6 @@ void vFindSafeRoomDoors()
 		int entity = MaxClients + 1;
 		while((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE)
 		{
-			if(!IsValidEntity(entity))
-				continue;
-
 			iFlags = GetEntProp(entity, Prop_Data, "m_spawnflags");
 			if(iFlags & 8192 == 0 || iFlags & 32768 != 0)
 				continue;
@@ -569,9 +566,9 @@ void vFindSafeRoomDoors()
 				continue;
 
 			if(!SDKCall(g_hSDKIsCheckpointExitDoor, entity))
-				g_aLastDoor.Push(EntIndexToEntRef(entity));
+				g_aLastDoor.Set(g_aLastDoor.Push(EntIndexToEntRef(entity)), GetEntPropFloat(entity, Prop_Data, "m_flSpeed"), 1);
 			/*else
-				g_aStartDoor.Push(EntIndexToEntRef(entity));*/
+				g_aStartDoor.Set(g_aStartDoor.Push(EntIndexToEntRef(entity)), GetEntPropFloat(entity, Prop_Data, "m_flSpeed"), 1);*/
 		}
 	}
 }
@@ -581,13 +578,12 @@ public void OnStartTouch(const char[] output, int caller, int activator, float d
 	if(g_bIsTriggered || g_bIsSacrificeFinale || activator < 1 || activator > MaxClients || !IsClientInGame(activator) || GetClientTeam(activator) != 2 || !IsPlayerAlive(activator))
 		return;
 	
-	if(!bIsValidEntRef(g_iChangelevel) && !bIsValidEntRef(g_iRescueVehicle))
+	if(!g_iChangelevel && !g_iRescueVehicle)
 	{
 		if(caller != SDKCall(g_hSDKFindRescueAreaTrigger))
 			return;
 
-		vGetEntityVectors(caller);
-		g_iRescueVehicle = EntIndexToEntRef(caller);
+		vCalculateBoundingBoxSize((g_iRescueVehicle = EntIndexToEntRef(caller)));
 
 		int i;
 		int iEntRef;
@@ -707,10 +703,9 @@ void vCloseAndLockLastSafeDoor()
 		if(!bIsValidEntRef((iEntRef = g_aLastDoor.Get(i))))
 			continue;
 		
+		SetEntPropFloat(iEntRef, Prop_Data, "m_flSpeed", 1000.0);
 		SetEntProp(iEntRef, Prop_Data, "m_hasUnlockSequence", 0);
 		AcceptEntityInput(iEntRef, "Unlock");
-		SetVariantFloat(1000.0);
-		AcceptEntityInput(iEntRef, "SetSpeed");
 		AcceptEntityInput(iEntRef, "Close");
 		AcceptEntityInput(iEntRef, "forceclosed");
 		AcceptEntityInput(iEntRef, "Lock");
@@ -728,9 +723,8 @@ public Action Timer_TeleportToCheckpoint(Handle timer)
 	{
 		if(!bIsValidEntRef((iEntRef = g_aLastDoor.Get(i))))
 			continue;
-		
-		SetVariantFloat(200.0); //200 default l4d speed
-		AcceptEntityInput(iEntRef, "SetSpeed");
+
+		SetEntPropFloat(iEntRef, Prop_Data, "m_flSpeed", g_aLastDoor.Get(i, 1));
 		SetVariantString("OnUser1 !self:Unlock::5.0:-1");
 		AcceptEntityInput(iEntRef, "AddOutput");
 		AcceptEntityInput(iEntRef, "FireUser1");
@@ -757,7 +751,7 @@ void vTeleportToCheckpoint()
 		}
 
 		CNavArea area;
-		float vRandom[3];
+		float vPos[3];
 		for(i = 1; i <= MaxClients; i++)
 		{
 			if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPlayerInEndArea(i))
@@ -765,8 +759,8 @@ void vTeleportToCheckpoint()
 				vTeleportFix(i);
 
 				area = g_aEndNavArea.Get(GetRandomInt(0, iLength - 1));
-				area.FindRandomSpot(vRandom);
-				TeleportEntity(i, vRandom, NULL_VECTOR, NULL_VECTOR);
+				area.FindRandomSpot(vPos);
+				TeleportEntity(i, vPos, NULL_VECTOR, NULL_VECTOR);
 				g_aTelePortTarget.Set(g_aTelePortTarget.Push(GetClientUserId(i)), area, 1);
 			}
 		}
@@ -796,15 +790,15 @@ public Action Timer_DectcetTeleport(Handle timer)
 	int iLength = g_aEndNavArea.Length;
 	if(iLength > 0)
 	{
-		float vRandom[3];
+		float vPos[3];
 		for(i = 1; i <= MaxClients; i++)
 		{
 			if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPlayerInEndArea(i))
 			{
 				vTeleportFix(i);
 
-				view_as<CNavArea>(g_aEndNavArea.Get(GetRandomInt(0, iLength - 1))).FindRandomSpot(vRandom);
-				TeleportEntity(i, vRandom, NULL_VECTOR, NULL_VECTOR);
+				view_as<CNavArea>(g_aEndNavArea.Get(GetRandomInt(0, iLength - 1))).FindRandomSpot(vPos);
+				TeleportEntity(i, vPos, NULL_VECTOR, NULL_VECTOR);
 			}
 		}
 	}
@@ -938,10 +932,10 @@ void vLoadGameData()
 	g_iSpawnAttributesOffset = hGameData.GetOffset("TerrorNavArea::ScriptGetSpawnAttributes");
 	if(g_iSpawnAttributesOffset == -1)
 		SetFailState("Failed to find offset: TerrorNavArea::ScriptGetSpawnAttributes");
-
+	/*
 	g_iFlowDistanceOffset = hGameData.GetOffset("CTerrorPlayer::GetFlowDistance::m_flow");
 	if(g_iSpawnAttributesOffset == -1)
-		SetFailState("Failed to find offset: CTerrorPlayer::GetFlowDistance::m_flow");
+		SetFailState("Failed to find offset: CTerrorPlayer::GetFlowDistance::m_flow");*/
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::CleanupPlayerState") == false)
