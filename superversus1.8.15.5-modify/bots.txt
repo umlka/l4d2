@@ -25,6 +25,20 @@
 				"return"	"void"
 				"this"		"entity"
 			}
+			"CBasePlayer::SetModel"
+			{
+				"signature"	"CBasePlayer::SetModel"
+				"callconv"	"thiscall"
+				"return"	"void"
+				"this"		"entity"
+				"arguments"
+				{
+					"modelname"
+					{
+						"type"	"charptr"
+					}
+				}
+			}
 		}
 		
 		"Addresses"
@@ -96,7 +110,7 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x57\x8B\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x8B"
 				/* ? ? ? ? ? ? 53 56 57 8B ? 8B ? 8B 90 ? ? ? ? 8B */
 			}
-			/* CBasePlayer::SetModel(char const*) */
+			/* CBasePlayer::SetModel(CBasePlayer *__hidden this, const char *) */
 			"CBasePlayer::SetModel"
 			{
 				"library"	"server"
