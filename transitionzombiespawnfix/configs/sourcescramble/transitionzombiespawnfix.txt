@@ -1,0 +1,4 @@
+"Patches"
+{
+	"transitionzombiespawnfix"	"ZombieManager::CanZombieSpawnHere_patch"
+}
