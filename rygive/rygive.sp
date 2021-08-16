@@ -37,8 +37,6 @@ Address
 
 int
 	g_iMeleeClassCount,
-	g_iClipSize_RifleM60,
-	g_iClipSize_GrenadeLauncher,
 	g_iFunction[MAXPLAYERS + 1],
 	g_iCurrentPage[MAXPLAYERS + 1];
 
@@ -189,7 +187,7 @@ enum L4D2WeaponType
 }
 
 //l4d_info_editor
-forward void OnGetWeaponsInfo(int pThis, const char[] classname);
+bool g_bInfoEditor;
 native void InfoEditor_GetString(int pThis, const char[] keyname, char[] dest, int destLen);
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -200,13 +198,17 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 public void OnLibraryAdded(const char[] name)
 {
-	if(strcmp(name, "WeaponHandling") == 0)
+	if(strcmp(name, "info_editor") == 0)
+		g_bInfoEditor = true;
+	else if(strcmp(name, "WeaponHandling") == 0)
 		g_bWeaponHandling = true;
 }
 
 public void OnLibraryRemoved(const char[] name)
 {
-	if(strcmp(name, "WeaponHandling") == 0)
+	if(strcmp(name, "info_editor") == 0)
+		g_bInfoEditor = false;
+	else if(strcmp(name, "WeaponHandling") == 0)
 		g_bWeaponHandling = false;
 }
 
@@ -215,7 +217,7 @@ public Plugin myinfo =
 	name = "Give Item Menu",
 	description = "Gives Item Menu",
 	author = "Ryanx, sorallll",
-	version = "1.1.5",
+	version = "1.1.6",
 	url = ""
 };
 
@@ -237,21 +239,6 @@ public void OnPluginEnd()
 	vStatsConditionPatch(false);
 }
 
-public void OnGetWeaponsInfo(int pThis, const char[] classname)
-{
-	static char sResult[64];
-	if(strcmp(classname, "weapon_rifle_m60") == 0)
-	{
-		InfoEditor_GetString(pThis, "clip_size", sResult, sizeof(sResult));
-		g_iClipSize_RifleM60 = StringToInt(sResult);
-	}
-	else if(strcmp(classname, "weapon_grenade_launcher") == 0)
-	{
-		InfoEditor_GetString(pThis, "clip_size", sResult, sizeof(sResult));
-		g_iClipSize_GrenadeLauncher = StringToInt(sResult);
-	}
-}
-
 public void OnClientDisconnect(int client)
 {
 	g_fSpeedUp[client] = 1.0;
@@ -259,9 +246,9 @@ public void OnClientDisconnect(int client)
 
 public void OnClientPostAdminCheck(int client)
 {
-	if(g_bDebug == false || IsFakeClient(client))
+	if(g_bDebug == false || IsFakeClient(client) || CheckCommandAccess(client, "", ADMFLAG_ROOT) == true)
 		return;
-		
+
 	char sSteamID[32];
 	GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID));
 	bool bAllowed;
@@ -2248,28 +2235,41 @@ void vReloadAmmo(int client)
 	int iWeapon = GetPlayerWeaponSlot(client, 0);
 	if(iWeapon > MaxClients && IsValidEntity(iWeapon))
 	{
-
 		char sWeapon[32];
 		GetEdictClassname(iWeapon, sWeapon, sizeof(sWeapon));
 		if(strcmp(sWeapon, "weapon_rifle_m60") == 0)
 		{
-			if(g_iClipSize_RifleM60 <= 0)
-				g_iClipSize_RifleM60 = 150;
-
-			SetEntProp(iWeapon, Prop_Send, "m_iClip1", g_iClipSize_RifleM60);
+			int iClipSize = 150;
+		
+			if(g_bInfoEditor)
+			{
+				char sTemp[64];
+				InfoEditor_GetString(0, "weapon_rifle_m60/clip_size", sTemp, sizeof(sTemp));
+				if(strcmp(sTemp, "N/A") != 0)
+					iClipSize = StringToInt(sTemp);
+			}
+	
+			SetEntProp(iWeapon, Prop_Send, "m_iClip1", iClipSize);
 		}
 		else if(strcmp(sWeapon, "weapon_grenade_launcher") == 0)
 		{
-			if(g_iClipSize_GrenadeLauncher <= 0)
-				g_iClipSize_GrenadeLauncher = 1;
+			int iClipSize = 1;
+
+			if(g_bInfoEditor)
+			{
+				char sTemp[64];
+				InfoEditor_GetString(0, "weapon_grenade_launcher/clip_size", sTemp, sizeof(sTemp));
+				if(strcmp(sTemp, "N/A") != 0)
+					iClipSize = StringToInt(sTemp);
+			}
 			
-			SetEntProp(iWeapon, Prop_Send, "m_iClip1", g_iClipSize_GrenadeLauncher);
+			SetEntProp(iWeapon, Prop_Send, "m_iClip1", iClipSize);
 
-			int iAmmo_Max = FindConVar("ammo_grenadelauncher_max").IntValue;
-			if(iAmmo_Max <= 0)
-				iAmmo_Max = 30;
+			int iAmmoMax = FindConVar("ammo_grenadelauncher_max").IntValue;
+			if(iAmmoMax < 1)
+				iAmmoMax = 30;
 
-			SetEntData(client, FindSendPropInfo("CTerrorPlayer", "m_iAmmo") + 68, iAmmo_Max);
+			SetEntData(client, FindSendPropInfo("CTerrorPlayer", "m_iAmmo") + 68, iAmmoMax);
 		}
 	}
 }
