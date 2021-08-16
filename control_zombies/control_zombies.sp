@@ -282,6 +282,7 @@ float
 	g_fStartRespawnTime[MAXPLAYERS + 1],
 	g_fStartSuicideTime[MAXPLAYERS + 1];
 
+//如果签名失效，请到此处更新https://github.com/Psykotikism/L4D1-2_Signatures
 public Plugin myinfo = 
 {
 	name = "Control Zombies In Co-op",
@@ -1933,32 +1934,31 @@ void vChangeTeamToSurvivor(int client)
 void vSurvivorStatus(int client, int iType)
 {
 	static bool bRecorded[MAXPLAYERS + 1];
-	static int iStatusInfo[MAXPLAYERS + 1][7];
-	//static char sStatusInfo[MAXPLAYERS + 1][128];
+	static int iStatusInfo[MAXPLAYERS + 1][6];
 	
 	switch(iType)
 	{
 		case 0:
 		{
 			bRecorded[client] = false;
-			vCleanStatus(client, iStatusInfo/*, sStatusInfo*/);
+			vCleanStatus(client, iStatusInfo);
 		}
 			
 		case 1:
 		{
 			bRecorded[client] = true;
-			vSaveStatus(client, iStatusInfo/*, sStatusInfo, sizeof(sStatusInfo)*/);
+			vSaveStatus(client, iStatusInfo);
 		}
 			
 		case 2:
 		{
-			if(bRecorded[client])
-				vSetStatus(client, iStatusInfo/*, sStatusInfo*/);
+			if(bRecorded[client] && IsPlayerAlive(client))
+				vSetStatus(client, iStatusInfo);
 		}
 	}
 }
 
-void vCleanStatus(int client, int[][] iStatusInfo/*, char[][] sStatusInfo*/)
+void vCleanStatus(int client, int[][] iStatusInfo)
 {
 	iStatusInfo[client][0] = 0;
 	iStatusInfo[client][1] = 0;
@@ -1967,15 +1967,10 @@ void vCleanStatus(int client, int[][] iStatusInfo/*, char[][] sStatusInfo*/)
 	iStatusInfo[client][4] = 0;
 	iStatusInfo[client][5] = 0;
 	iStatusInfo[client][6] = -1;
-	
-	//sStatusInfo[client][0] = '\0';
 }
 
-void vSaveStatus(int client, int[][] iStatusInfo/*, char[][] sStatusInfo, int maxlength*/)
+void vSaveStatus(int client, int[][] iStatusInfo)
 {
-	//GetClientModel(client, sStatusInfo[client], maxlength);
-	//iStatusInfo[client][6] = GetEntProp(client, Prop_Send, "m_survivorCharacter");	
-
 	if(!IsPlayerAlive(client))
 	{
 		iStatusInfo[client][3] = 50;
@@ -2001,14 +1996,8 @@ void vSaveStatus(int client, int[][] iStatusInfo/*, char[][] sStatusInfo, int ma
 	}
 }
 
-void vSetStatus(int client, int[][] iStatusInfo/*, char[][] sStatusInfo*/)
+void vSetStatus(int client, int[][] iStatusInfo)
 {
-	/*SetEntProp(client, Prop_Send, "m_survivorCharacter", iStatusInfo[client][6]);
-	SetEntityModel(client, sStatusInfo[client]);*/
-
-	if(!IsPlayerAlive(client))
-		return;
-
 	if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 		SetEntProp(client, Prop_Send, "m_isIncapacitated", 0);
 
@@ -2085,7 +2074,7 @@ void vSurvivorWeapons(int client, int iType)
 			
 		case 2:
 		{
-			if(IsPlayerAlive(client) && bRecorded[client] == true)
+			if(bRecorded[client] == true && IsPlayerAlive(client))
 			{
 				vRemoveWeapons(client);
 				vGiveWeapons(client, iWeaponInfo, sWeaponInfo);
@@ -2114,10 +2103,10 @@ void vCleanWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
 
 bool bSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int maxlength)
 {
-	bool bSaved = false;
-
+	bool bSaved;
 	char sWeapon[32];
 	int iSlot = GetPlayerWeaponSlot(client, 0);
+
 	if(iSlot > MaxClients)
 	{
 		GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
@@ -2196,9 +2185,9 @@ bool bSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int m
 
 void vGiveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
 {
-	bool bGived = false;
-
 	int iSlot;
+	bool bGiven;
+
 	if(sWeaponInfo[client][0][0] != '\0')
 	{
 		vCheatCommand(client, "give", sWeaponInfo[client][0]);
@@ -2218,7 +2207,7 @@ void vGiveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
 			if(iWeaponInfo[client][4] > 0)
 				SetEntProp(iSlot, Prop_Send, "m_nSkin", iWeaponInfo[client][4]);
 				
-			bGived = true;
+			bGiven = true;
 		}
 	}
 
@@ -2241,7 +2230,7 @@ void vGiveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
 			if(iWeaponInfo[client][6] > 0)
 				SetEntProp(iSlot, Prop_Send, "m_nSkin", iWeaponInfo[client][6]);
 				
-			bGived = true;
+			bGiven = true;
 		}
 	}
 
@@ -2251,7 +2240,7 @@ void vGiveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
 
 		iSlot = GetPlayerWeaponSlot(client, 2);
 		if(iSlot > MaxClients)
-			bGived = true;
+			bGiven = true;
 	}
 
 	if(sWeaponInfo[client][3][0] != '\0')
@@ -2260,7 +2249,7 @@ void vGiveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
 
 		iSlot = GetPlayerWeaponSlot(client, 3);
 		if(iSlot > MaxClients)
-			bGived = true;
+			bGiven = true;
 	}
 
 	if(sWeaponInfo[client][4][0] != '\0')
@@ -2269,10 +2258,10 @@ void vGiveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
 
 		iSlot = GetPlayerWeaponSlot(client, 4);
 		if(iSlot > MaxClients)
-			bGived = true;
+			bGiven = true;
 	}
 		
-	if(bGived == true && sWeaponInfo[client][5][0] != '\0')
+	if(bGiven == true && sWeaponInfo[client][5][0] != '\0')
 		FakeClientCommand(client, "use %s", sWeaponInfo[client][5]);
 }
 
