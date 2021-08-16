@@ -343,7 +343,7 @@ public void OnPluginEnd()
 	if(!g_dGoAwayFromKeyboard.Disable(Hook_Pre, mreGoAwayFromKeyboardPre) || !g_dGoAwayFromKeyboard.Disable(Hook_Post, mreGoAwayFromKeyboardPost))
 		SetFailState("Failed to disable detour: CTerrorPlayer::GoAwayFromKeyboard");
 	
-	if(!g_dPlayerSetModel.Disable(Hook_Pre, mrePlayerSetModelPre) || !g_dPlayerSetModel.Disable(Hook_Post, mrePlayerSetModelPost))
+	if(!g_dPlayerSetModel.Disable(Hook_Post, mrePlayerSetModelPost))
 		SetFailState("Failed to disable detour: CBasePlayer::SetModel");
 }
 
@@ -1524,12 +1524,13 @@ void vSetupDetours(GameData hGameData = null)
 
 	if(!g_dGoAwayFromKeyboard.Enable(Hook_Post, mreGoAwayFromKeyboardPost))
 		SetFailState("Failed to detour post: CTerrorPlayer::GoAwayFromKeyboard");
-	
-	g_dPlayerSetModel = new DynamicDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_CBaseEntity);
-	g_dPlayerSetModel.SetFromConf(hGameData, SDKConf_Signature, "CBasePlayer::SetModel");
-	g_dPlayerSetModel.AddParam(HookParamType_CharPtr);
-	g_dPlayerSetModel.Enable(Hook_Pre, mrePlayerSetModelPre);
-	g_dPlayerSetModel.Enable(Hook_Post, mrePlayerSetModelPost);
+
+	g_dPlayerSetModel = DynamicDetour.FromConf(hGameData, "CBasePlayer::SetModel");
+	if(g_dPlayerSetModel == null)
+		SetFailState("Failed to find signature: CBasePlayer::SetModel");
+		
+	if(!g_dPlayerSetModel.Enable(Hook_Post, mrePlayerSetModelPost))
+		SetFailState("Failed to detour pre: CBasePlayer::SetModel");
 }
 
 //AFK Fix https://forums.alliedmods.net/showthread.php?p=2714236
@@ -1585,14 +1586,9 @@ public MRESReturn mreGoAwayFromKeyboardPost(int pThis, DHookReturn hReturn)
 }
 
 //Identity Fix https://forums.alliedmods.net/showpost.php?p=2718792&postcount=36
-public MRESReturn mrePlayerSetModelPre(int pThis, DHookParam hParams)
-{
-	// We need this pre hook even though it's empty, or else the post hook will crash the game.
-}
-
 public MRESReturn mrePlayerSetModelPost(int pThis, DHookParam hParams)
 {
-	if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis) || IsFakeClient(pThis))
+	if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis))
 		return MRES_Ignored;
 
 	if(GetClientTeam(pThis) != TEAM_SURVIVOR)
@@ -1601,9 +1597,7 @@ public MRESReturn mrePlayerSetModelPost(int pThis, DHookParam hParams)
 		return MRES_Ignored;
 	}
 	
-	static char sModel[128];
-
-	sModel[0] = '\0';
+	char sModel[128];
 	hParams.GetString(1, sModel, sizeof(sModel));
 	if(StrContains(sModel, "survivors", false) >= 0)
 		strcopy(g_sPlayerModel[pThis], sizeof(g_sPlayerModel), sModel);
