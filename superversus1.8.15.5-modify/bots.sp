@@ -4,7 +4,7 @@
 #include <sdktools>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.9.0"
+#define PLUGIN_VERSION "1.9.1"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
 #define TEAM_SPECTATOR	1
@@ -16,7 +16,6 @@ StringMap
 
 Handle
 	g_hBotsUpdateTimer,
-	g_hGiveWeaponTimer[MAXPLAYERS + 1],
 	g_hSDK_Call_RoundRespawn,
 	g_hSDK_Call_SetHumanSpectator,
 	g_hSDK_Call_TakeOverBot,
@@ -29,7 +28,9 @@ Address
 DynamicDetour
 	g_dSetHumanSpectator,
 	g_dGoAwayFromKeyboard,
-	g_dPlayerSetModel;
+	g_dPlayerSetModel,
+	g_dTakeOverBot,
+	g_dGiveDefaultItems;
 
 ConVar
 	g_hSurvivorLimit,
@@ -292,11 +293,6 @@ public void OnPluginStart()
 	hConVar.SetBounds(ConVarBound_Upper, true, 999999999.0);
 	hConVar.IntValue = 999999999;
 
-	hConVar = FindConVar("survivor_respawn_with_guns");
-	hConVar.SetBounds(ConVarBound_Lower, true, 0.0);
-	hConVar.SetBounds(ConVarBound_Upper, true, 0.0);
-	hConVar.IntValue = 0;
-
 	g_hAutoJoin.AddChangeHook(vOtherConVarChanged);
 	g_hRespawnJoin.AddChangeHook(vOtherConVarChanged);
 	g_hSpecCmdLimit.AddChangeHook(vOtherConVarChanged);
@@ -325,7 +321,6 @@ public void OnPluginStart()
 	HookEvent("survivor_rescued", Event_SurvivorRescued);
 	HookEvent("player_bot_replace", Event_PlayerBotReplace);
 	HookEvent("bot_player_replace", Event_BotPlayerReplace);
-	HookEvent("player_transitioned", Event_PlayerTransitioned);
 	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving);
 
 	AddCommandListener(CommandListener_SpecNext, "spec_next");
@@ -337,7 +332,7 @@ public void OnPluginEnd()
 {
 	vStatsConditionPatch(false);
 
-	if(!g_dSetHumanSpectator.Disable(Hook_Pre, mreSetHumanSpectator))
+	if(!g_dSetHumanSpectator.Disable(Hook_Pre, mreSetHumanSpectatorPre))
 		SetFailState("Failed to disable detour: SetHumanSpec");
 	
 	if(!g_dGoAwayFromKeyboard.Disable(Hook_Pre, mreGoAwayFromKeyboardPre) || !g_dGoAwayFromKeyboard.Disable(Hook_Post, mreGoAwayFromKeyboardPost))
@@ -422,7 +417,6 @@ public Action cmdJoinSurvivor(int client, int args)
 			if(bCanRespawn && !IsPlayerAlive(client))
 			{
 				vRoundRespawn(client);
-				//vGiveWeapon(client);
 				vSetGodMode(client, 1.0);
 				vTeleportToSurvivor(client);
 			} 
@@ -596,8 +590,6 @@ void vGetSurvivorLimitCvars()
 
 public void OnClientDisconnect(int client)
 {
-	delete g_hGiveWeaponTimer[client];
-
 	if(IsFakeClient(client))
 		return;
 
@@ -666,7 +658,6 @@ void vSpawnFakeSurvivorClient()
 			if(!IsPlayerAlive(iBot))
 				vRoundRespawn(iBot);
 
-			//vGiveWeapon(iBot);
 			vSetGodMode(iBot, 1.0);
 			vTeleportToSurvivor(iBot);
 		}
@@ -678,8 +669,6 @@ void vSpawnFakeSurvivorClient()
 public void OnMapEnd()
 {
 	vResetPlugin();
-	for(int i = 1; i <= MaxClients; i++)
-		delete g_hGiveWeaponTimer[i];
 }
 
 void vResetPlugin()
@@ -698,10 +687,7 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 		vResetPlugin();
 
 	for(int i = 1; i <= MaxClients; i++)
-	{
 		vTakeOver(i);
-		delete g_hGiveWeaponTimer[i];
-	}
 }
 
 bool bIsRoundStarted()
@@ -728,25 +714,6 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 			vRecordSteamID(client);
 
 		vSetGhostStatus(client, 0);
-
-		if(g_bGiveWeaponType == true && g_iRoundStart == 1 && IsPlayerAlive(client))
-		{
-			if(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon") > MaxClients)
-			{
-				delete g_hGiveWeaponTimer[client];
-				g_hGiveWeaponTimer[client] = CreateTimer(0.1, Timer_GivePlayerWeapon, GetClientUserId(client));
-			}
-		}
-	}
-}
-
-public Action Timer_GivePlayerWeapon(Handle timer, any client)
-{
-	if((client = GetClientOfUserId(client)))
-	{
-		g_hGiveWeaponTimer[client] = null;
-		if(IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client))
-			vGiveWeapon(client);
 	}
 }
 
@@ -801,9 +768,6 @@ public void Event_SurvivorRescued(Event event, const char[] name, bool dontBroad
 	if(client == 0 || !IsClientInGame(client))
 		return;
 
-	if(g_bGiveWeaponType == true)
-		vGiveWeapon(client);
-
 	if(!IsFakeClient(client) && bCanIdle(client))
 		cmdGoAFK(client, 0); //被从小黑屋救出来后闲置,避免有些玩家挂机
 }
@@ -832,8 +796,6 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 	int bot_userid = event.GetInt("bot");
 	int bot = GetClientOfUserId(bot_userid);
 
-	delete g_hGiveWeaponTimer[bot];
-
 	g_iBotPlayer[bot] = player_userid;
 	g_iPlayerBot[player] = bot_userid;
 
@@ -855,19 +817,12 @@ public void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroa
 	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || GetClientTeam(player) != TEAM_SURVIVOR)
 		return;
 
-	delete g_hGiveWeaponTimer[player];
-
 	int bot = GetClientOfUserId(event.GetInt("bot"));
 
 	char sModel[128];
 	GetClientModel(bot, sModel, sizeof(sModel));
 	SetEntityModel(player, sModel);
 	SetEntProp(player, Prop_Send, "m_survivorCharacter", GetEntProp(bot, Prop_Send, "m_survivorCharacter"));
-}
-
-public void Event_PlayerTransitioned(Event event, const char[] name, bool dontBroadcast)
-{
-	delete g_hGiveWeaponTimer[GetClientOfUserId(event.GetInt("userid"))];
 }
 
 public void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadcast)
@@ -1046,11 +1001,8 @@ public Action Timer_Mortal(Handle timer, any client)
 	SetEntProp(client, Prop_Data, "m_takedamage", 2);
 }
 
-void vGiveWeapon(int client)
+void vGiveDefaultItems(int client)
 {
-	if(!IsClientInGame(client) || GetClientTeam(client) != TEAM_SURVIVOR || !IsPlayerAlive(client))
-		return;
-
 	for(int i = 4; i >= 2; i--)
 	{
 		if(g_iSlotCount[i] == 0)
@@ -1512,7 +1464,7 @@ void vSetupDetours(GameData hGameData = null)
 	if(g_dSetHumanSpectator == null)
 		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator");
 		
-	if(!g_dSetHumanSpectator.Enable(Hook_Pre, mreSetHumanSpectator))
+	if(!g_dSetHumanSpectator.Enable(Hook_Pre, mreSetHumanSpectatorPre))
 		SetFailState("Failed to detour pre: SurvivorBot::SetHumanSpectator");
 
 	g_dGoAwayFromKeyboard = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GoAwayFromKeyboard");
@@ -1531,6 +1483,23 @@ void vSetupDetours(GameData hGameData = null)
 		
 	if(!g_dPlayerSetModel.Enable(Hook_Post, mrePlayerSetModelPost))
 		SetFailState("Failed to detour pre: CBasePlayer::SetModel");
+
+	g_dTakeOverBot = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::TakeOverBot");
+	if(g_dTakeOverBot == null)
+		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverBot");
+		
+	if(!g_dTakeOverBot.Enable(Hook_Pre, mreTakeOverBotPre))
+		SetFailState("Failed to detour pre: CTerrorPlayer::TakeOverBot");
+
+	if(!g_dTakeOverBot.Enable(Hook_Post, mreTakeOverBotPost))
+		SetFailState("Failed to detour post: CTerrorPlayer::TakeOverBot");
+
+	g_dGiveDefaultItems = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GiveDefaultItems");
+	if(g_dGiveDefaultItems == null)
+		SetFailState("Failed to find signature: CTerrorPlayer::GiveDefaultItems");
+		
+	if(!g_dGiveDefaultItems.Enable(Hook_Post, mreGiveDefaultItemsPost))
+		SetFailState("Failed to detour post: CTerrorPlayer::GiveDefaultItems");
 }
 
 //AFK Fix https://forums.alliedmods.net/showthread.php?p=2714236
@@ -1545,7 +1514,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 	g_iSurvivorBot = entity;
 }
 
-public MRESReturn mreSetHumanSpectator(int pThis, DHookParam hParams)
+public MRESReturn mreSetHumanSpectatorPre(int pThis, DHookParam hParams)
 {
 	if(g_bShouldIgnore)
 		return MRES_Ignored;
@@ -1616,4 +1585,31 @@ void vWriteTakeoverPanel(int client, int bot)
 	bf.WriteString("character");
 	bf.WriteString(sBuffer);
 	EndMessage();
+}
+
+bool g_bTakingOverBot[MAXPLAYERS + 1];
+public MRESReturn mreTakeOverBotPre(int pThis, DHookParam hParams)
+{
+	g_bTakingOverBot[pThis] = true;
+}
+
+public MRESReturn mreTakeOverBotPost(int pThis, DHookParam hParams)
+{
+	g_bTakingOverBot[pThis] = false;
+}
+
+public MRESReturn mreGiveDefaultItemsPost(int pThis)
+{
+	if(!g_bGiveWeaponType || !g_iRoundStart || g_bTakingOverBot[pThis])
+		return MRES_Ignored;
+
+	if(g_bShouldFixAFK && g_iSurvivorBot > 0 && IsFakeClient(g_iSurvivorBot))
+		return MRES_Ignored;
+
+	if(!IsClientInGame(pThis) || GetClientTeam(pThis) != TEAM_SURVIVOR || !IsPlayerAlive(pThis))
+		return MRES_Ignored;
+
+	vGiveDefaultItems(pThis);
+
+	return MRES_Ignored;
 }
