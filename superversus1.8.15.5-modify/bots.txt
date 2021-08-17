@@ -39,6 +39,27 @@
 					}
 				}
 			}
+			"CTerrorPlayer::TakeOverBot"
+			{
+				"signature"	"CTerrorPlayer::TakeOverBot"
+				"callconv"	"thiscall"
+				"return"	"void"
+				"this"		"entity"
+				"arguments"
+				{
+					"a1"
+					{
+						"type"	"bool"
+					}
+				}
+			}
+			"CTerrorPlayer::GiveDefaultItems"
+			{
+				"signature"	"CTerrorPlayer::GiveDefaultItems"
+				"callconv"	"thiscall"
+				"return"	"void"
+				"this"		"entity"
+			}
 		}
 		
 		"Addresses"
@@ -116,6 +137,14 @@
 				"library"	"server"
 				"linux"		"@_ZN11CBasePlayer8SetModelEPKc"
 				"windows"	"\x55\x8B\x2A\x8B\x2A\x2A\x56\x57\x50\x8B\x2A\xE8\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x2A\x2A\x8B"
+			}
+			/* CTerrorPlayer::GiveDefaultItems(CTerrorPlayer *__hidden this) */
+			"CTerrorPlayer::GiveDefaultItems"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer16GiveDefaultItemsEv"
+				"windows"	"\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x50\xE8\x2A\x2A\x2A\x2A\x83\xC4\x04\x84\xC0\x0F\x84\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A"
+				/* 56 8B F1 E8 ? ? ? ? 50 E8 ? ? ? ? 83 C4 04 84 C0 0F 84 ? ? ? ? A1 ? ? ? ? */
 			}
 		}
     }
