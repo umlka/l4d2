@@ -411,7 +411,6 @@ public void OnPluginStart()
 
 public void OnPluginEnd()
 {
-	vToggleDetours(false);
 	vStatsConditionPatch(false);
 
 	for(int i = 1; i <= MaxClients; i++)
