@@ -25,13 +25,6 @@ Handle
 Address
 	g_pStatsCondition;
 
-DynamicDetour
-	g_dSetHumanSpectator,
-	g_dGoAwayFromKeyboard,
-	g_dPlayerSetModel,
-	g_dTakeOverBot,
-	g_dGiveDefaultItems;
-
 ConVar
 	g_hSurvivorLimit,
 	g_hBotsSurvivorLimit,
@@ -331,21 +324,6 @@ public void OnPluginStart()
 public void OnPluginEnd()
 {
 	vStatsConditionPatch(false);
-
-	if(!g_dSetHumanSpectator.Disable(Hook_Pre, mreSetHumanSpectatorPre))
-		SetFailState("Failed to disable detour: SetHumanSpec");
-	
-	if(!g_dGoAwayFromKeyboard.Disable(Hook_Pre, mreGoAwayFromKeyboardPre) || !g_dGoAwayFromKeyboard.Disable(Hook_Post, mreGoAwayFromKeyboardPost))
-		SetFailState("Failed to disable detour: CTerrorPlayer::GoAwayFromKeyboard");
-	
-	if(!g_dPlayerSetModel.Disable(Hook_Post, mrePlayerSetModelPost))
-		SetFailState("Failed to disable detour: CBasePlayer::SetModel");
-
-	if(!g_dTakeOverBot.Disable(Hook_Pre, mreTakeOverBotPre) || !g_dTakeOverBot.Disable(Hook_Post, mreTakeOverBotPost))
-		SetFailState("Failed to disable detour: CTerrorPlayer::TakeOverBot");
-	
-	if(!g_dGiveDefaultItems.Disable(Hook_Post, mreGiveDefaultItemsPost))
-		SetFailState("Failed to disable detour: CTerrorPlayer::GiveDefaultItems");
 }
 
 public Action cmdJoinSpectator(int client, int args)
@@ -1464,45 +1442,45 @@ void vStatsConditionPatch(bool bPatch)
 
 void vSetupDetours(GameData hGameData = null)
 {
-	g_dSetHumanSpectator = DynamicDetour.FromConf(hGameData, "SurvivorBot::SetHumanSpectator");
-	if(g_dSetHumanSpectator == null)
+	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "SurvivorBot::SetHumanSpectator");
+	if(dDetour == null)
 		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator");
 		
-	if(!g_dSetHumanSpectator.Enable(Hook_Pre, mreSetHumanSpectatorPre))
+	if(!dDetour.Enable(Hook_Pre, mreSetHumanSpectatorPre))
 		SetFailState("Failed to detour pre: SurvivorBot::SetHumanSpectator");
 
-	g_dGoAwayFromKeyboard = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GoAwayFromKeyboard");
-	if(g_dGoAwayFromKeyboard == null)
+	dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GoAwayFromKeyboard");
+	if(dDetour == null)
 		SetFailState("Failed to find signature: CTerrorPlayer::GoAwayFromKeyboard");
 
-	if(!g_dGoAwayFromKeyboard.Enable(Hook_Pre, mreGoAwayFromKeyboardPre))
+	if(!dDetour.Enable(Hook_Pre, mreGoAwayFromKeyboardPre))
 		SetFailState("Failed to detour pre: CTerrorPlayer::GoAwayFromKeyboard");
 
-	if(!g_dGoAwayFromKeyboard.Enable(Hook_Post, mreGoAwayFromKeyboardPost))
+	if(!dDetour.Enable(Hook_Post, mreGoAwayFromKeyboardPost))
 		SetFailState("Failed to detour post: CTerrorPlayer::GoAwayFromKeyboard");
 
-	g_dPlayerSetModel = DynamicDetour.FromConf(hGameData, "CBasePlayer::SetModel");
-	if(g_dPlayerSetModel == null)
+	dDetour = DynamicDetour.FromConf(hGameData, "CBasePlayer::SetModel");
+	if(dDetour == null)
 		SetFailState("Failed to find signature: CBasePlayer::SetModel");
 		
-	if(!g_dPlayerSetModel.Enable(Hook_Post, mrePlayerSetModelPost))
+	if(!dDetour.Enable(Hook_Post, mrePlayerSetModelPost))
 		SetFailState("Failed to detour pre: CBasePlayer::SetModel");
 
-	g_dTakeOverBot = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::TakeOverBot");
-	if(g_dTakeOverBot == null)
+	dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::TakeOverBot");
+	if(dDetour == null)
 		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverBot");
 		
-	if(!g_dTakeOverBot.Enable(Hook_Pre, mreTakeOverBotPre))
+	if(!dDetour.Enable(Hook_Pre, mreTakeOverBotPre))
 		SetFailState("Failed to detour pre: CTerrorPlayer::TakeOverBot");
 
-	if(!g_dTakeOverBot.Enable(Hook_Post, mreTakeOverBotPost))
+	if(!dDetour.Enable(Hook_Post, mreTakeOverBotPost))
 		SetFailState("Failed to detour post: CTerrorPlayer::TakeOverBot");
 
-	g_dGiveDefaultItems = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GiveDefaultItems");
-	if(g_dGiveDefaultItems == null)
+	dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GiveDefaultItems");
+	if(dDetour == null)
 		SetFailState("Failed to find signature: CTerrorPlayer::GiveDefaultItems");
 		
-	if(!g_dGiveDefaultItems.Enable(Hook_Post, mreGiveDefaultItemsPost))
+	if(!dDetour.Enable(Hook_Post, mreGiveDefaultItemsPost))
 		SetFailState("Failed to detour post: CTerrorPlayer::GiveDefaultItems");
 }
 
