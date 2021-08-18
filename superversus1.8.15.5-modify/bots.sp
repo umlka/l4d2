@@ -16,11 +16,11 @@ StringMap
 
 Handle
 	g_hBotsUpdateTimer,
-	g_hSDK_Call_RoundRespawn,
-	g_hSDK_Call_SetHumanSpectator,
-	g_hSDK_Call_TakeOverBot,
-	g_hSDK_Call_SetObserverTarget,
-	g_hSDK_Call_GoAwayFromKeyboard;
+	g_hSDKRoundRespawn,
+	g_hSDKSetHumanSpectator,
+	g_hSDKTakeOverBot,
+	g_hSDKSetObserverTarget,
+	g_hSDKGoAwayFromKeyboard;
 
 Address
 	g_pStatsCondition;
@@ -269,15 +269,15 @@ public void OnPluginStart()
 	g_hSurvivorLimit = FindConVar("survivor_limit");
 	g_hBotsSurvivorLimit = CreateConVar("bots_survivor_limit", "4", "开局Bot的数量", CVAR_FLAGS, true, 1.00, true, 31.0);
 
-	g_hAutoJoin = CreateConVar("bots_auto_join_survivor", "1" , "玩家连接后,是否自动加入生还者? \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hRespawnJoin = CreateConVar("bots_respawn_on_join", "1" , "玩家第一次进服时如果没有存活的Bot可以接管是否复活? \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hSpecCmdLimit = CreateConVar("bots_spec_cmd_limit", "1" , "当完全旁观玩家达到多少个时禁止使用sm_spec命令", CVAR_FLAGS, true, 0.0);
-	g_hGiveWeaponType = CreateConVar("bots_give_type", "2" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
-	g_hSlotFlags[0] = CreateConVar("bots_give_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[1] = CreateConVar("bots_give_slot1", "5160" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[2] = CreateConVar("bots_give_slot2", "0" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[3] = CreateConVar("bots_give_slot3", "3" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[4] = CreateConVar("bots_give_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
+	g_hAutoJoin = CreateConVar("bots_auto_join_survivor", "1", "玩家连接后,是否自动加入生还者? \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hRespawnJoin = CreateConVar("bots_respawn_on_join", "1", "玩家第一次进服时如果没有存活的Bot可以接管是否复活? \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hSpecCmdLimit = CreateConVar("bots_spec_cmd_limit", "1", "当完全旁观玩家达到多少个时禁止使用sm_spec命令", CVAR_FLAGS, true, 0.0);
+	g_hGiveWeaponType = CreateConVar("bots_give_type", "2", "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
+	g_hSlotFlags[0] = CreateConVar("bots_give_slot0", "131071", "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[1] = CreateConVar("bots_give_slot1", "5160", "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[2] = CreateConVar("bots_give_slot2", "0", "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[3] = CreateConVar("bots_give_slot3", "3", "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[4] = CreateConVar("bots_give_slot4", "3", "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
 
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品Flags参考源码g_sWeaponName中的武器名处的数字,多个武器里面随机则数字取和)", CVAR_FLAGS | FCVAR_DONTRECORD);
 	
@@ -296,10 +296,10 @@ public void OnPluginStart()
 	g_hAutoJoin.AddChangeHook(vOtherConVarChanged);
 	g_hRespawnJoin.AddChangeHook(vOtherConVarChanged);
 	g_hSpecCmdLimit.AddChangeHook(vOtherConVarChanged);
-	g_hGiveWeaponType.AddChangeHook(vOtherConVarChanged);
 
 	for(int i; i < 5; i++)
 		g_hSlotFlags[i].AddChangeHook(vSlotConVarChanged);
+	g_hGiveWeaponType.AddChangeHook(vSlotConVarChanged);
 
 	g_hBotsSurvivorLimit.AddChangeHook(vSurvivorLimitConVarChanged);
 
@@ -340,6 +340,12 @@ public void OnPluginEnd()
 	
 	if(!g_dPlayerSetModel.Disable(Hook_Post, mrePlayerSetModelPost))
 		SetFailState("Failed to disable detour: CBasePlayer::SetModel");
+
+	if(!g_dTakeOverBot.Disable(Hook_Pre, mreTakeOverBotPre) || !g_dTakeOverBot.Disable(Hook_Post, mreTakeOverBotPost))
+		SetFailState("Failed to disable detour: CTerrorPlayer::TakeOverBot");
+	
+	if(!g_dGiveDefaultItems.Disable(Hook_Post, mreGiveDefaultItemsPost))
+		SetFailState("Failed to disable detour: CTerrorPlayer::GiveDefaultItems");
 }
 
 public Action cmdJoinSpectator(int client, int args)
@@ -357,7 +363,7 @@ public Action cmdJoinSpectator(int client, int args)
 		return Plugin_Handled;
 
 	if(iGetBotOfIdle(client))
-		SDKCall(g_hSDK_Call_TakeOverBot, client, true);
+		SDKCall(g_hSDKTakeOverBot, client, true);
 
 	ChangeClientTeam(client, TEAM_SPECTATOR);
 	return Plugin_Handled;
@@ -394,7 +400,7 @@ public Action cmdJoinSurvivor(int client, int args)
 			ChangeClientTeam(client, TEAM_SPECTATOR);
 		else if(iGetBotOfIdle(client))
 		{
-			SDKCall(g_hSDK_Call_TakeOverBot, client, true);
+			SDKCall(g_hSDKTakeOverBot, client, true);
 			return Plugin_Handled;
 		}
 		
@@ -404,9 +410,9 @@ public Action cmdJoinSurvivor(int client, int args)
 
 		if(iBot)
 		{
-			SDKCall(g_hSDK_Call_SetHumanSpectator, iBot, client);
-			SDKCall(g_hSDK_Call_SetObserverTarget, client, iBot);
-			SDKCall(g_hSDK_Call_TakeOverBot, client, true);
+			SDKCall(g_hSDKSetHumanSpectator, iBot, client);
+			SDKCall(g_hSDKSetObserverTarget, client, iBot);
+			SDKCall(g_hSDKTakeOverBot, client, true);
 		}
 		else
 		{
@@ -430,9 +436,9 @@ public Action cmdJoinSurvivor(int client, int args)
 		if(iBot)
 		{
 			ChangeClientTeam(client, TEAM_SPECTATOR);
-			SDKCall(g_hSDK_Call_SetHumanSpectator, iBot, client);
-			SDKCall(g_hSDK_Call_SetObserverTarget, client, iBot);
-			SDKCall(g_hSDK_Call_TakeOverBot, client, true);
+			SDKCall(g_hSDKSetHumanSpectator, iBot, client);
+			SDKCall(g_hSDKSetObserverTarget, client, iBot);
+			SDKCall(g_hSDKTakeOverBot, client, true);
 		}
 		else
 			ReplyToCommand(client, "\x01你已经\x04死亡\x01. 没有\x05电脑Bot\x01可以接管.");
@@ -452,7 +458,7 @@ public Action cmdGoAFK(int client, int args)
 	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) != TEAM_SURVIVOR || !IsPlayerAlive(client))
 		return Plugin_Handled;
 
-	SDKCall(g_hSDK_Call_GoAwayFromKeyboard, client);
+	SDKCall(g_hSDKGoAwayFromKeyboard, client);
 	return Plugin_Handled;
 }
 
@@ -548,7 +554,6 @@ void vGetOtherCvars()
 	g_bAutoJoin = g_hAutoJoin.BoolValue;
 	g_bRespawnJoin = g_hRespawnJoin.BoolValue;
 	g_iSpecCmdLimit = g_hSpecCmdLimit.IntValue;
-	g_bGiveWeaponType = g_hGiveWeaponType.BoolValue;
 }
 
 public void vSlotConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -558,24 +563,31 @@ public void vSlotConVarChanged(ConVar convar, const char[] oldValue, const char[
 
 void vGetSlotCvars()
 {
+	int iNullSlot;
 	for(int i; i < 5; i++)
 	{
 		g_iSlotCount[i] = 0;
 		if(g_hSlotFlags[i].IntValue > 0)
-			vGetSlotInfo(i);
+		{
+			if(bGetSlotInfo(i) == false)
+				iNullSlot++;
+		}	
 	}
+
+	g_bGiveWeaponType = iNullSlot != 5 ? g_hGiveWeaponType.BoolValue : false;
 }
 
-void vGetSlotInfo(int iSlot)
+bool bGetSlotInfo(int iSlot)
 {
 	for(int i; i < 17; i++)
 	{
 		if(g_sWeaponName[iSlot][i][0] == '\0')
-			return;
-		
+			break;
+
 		if((1 << i) & g_hSlotFlags[iSlot].IntValue)
 			g_iSlotWeapons[iSlot][g_iSlotCount[iSlot]++] = i;
 	}
+	return g_iSlotCount[iSlot] != 0;
 }
 
 public void vSurvivorLimitConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -638,7 +650,7 @@ void vKickUnusedSurvivorBot()
 	int iBot = iGetAnyValidSurvivorBot(); //优先踢出没有对应真实玩家且后生成的Bot
 	if(iBot)
 	{
-		vRemoveWeapons(iBot);
+		vRemovePlayerWeapons(iBot);
 		KickClient(iBot, "Kicking Useless Client.");
 	}
 }
@@ -727,9 +739,9 @@ void vTakeOver(int bot)
 	int iIdlePlayer;
 	if(bot && IsClientInGame(bot) && IsFakeClient(bot) && GetClientTeam(bot) == TEAM_SURVIVOR && (iIdlePlayer = iHasIdlePlayer(bot)))
 	{
-		SDKCall(g_hSDK_Call_SetHumanSpectator, bot, iIdlePlayer);
-		SDKCall(g_hSDK_Call_SetObserverTarget, iIdlePlayer, bot);
-		SDKCall(g_hSDK_Call_TakeOverBot, iIdlePlayer, true);
+		SDKCall(g_hSDKSetHumanSpectator, bot, iIdlePlayer);
+		SDKCall(g_hSDKSetObserverTarget, iIdlePlayer, bot);
+		SDKCall(g_hSDKTakeOverBot, iIdlePlayer, true);
 	}
 }
 
@@ -765,11 +777,10 @@ public Action Timer_AutoJoinSurvivorTeam(Handle timer, any client)
 public void Event_SurvivorRescued(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("victim"));
-	if(client == 0 || !IsClientInGame(client))
+	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client) || !bCanIdle(client))
 		return;
 
-	if(!IsFakeClient(client) && bCanIdle(client))
-		cmdGoAFK(client, 0); //被从小黑屋救出来后闲置,避免有些玩家挂机
+	cmdGoAFK(client, 0); //被从小黑屋救出来后闲置,避免有些玩家挂机
 }
 
 bool bCanIdle(int client)
@@ -1003,12 +1014,13 @@ public Action Timer_Mortal(Handle timer, any client)
 
 void vGiveDefaultItems(int client)
 {
+	vRemovePlayerWeapons(client);
+
 	for(int i = 4; i >= 2; i--)
 	{
 		if(g_iSlotCount[i] == 0)
 			continue;
 
-		vRemovePlayerSlot(client, i);
 		vCheatCommand(client, "give", g_sWeaponName[i][g_iSlotWeapons[i][GetRandomInt(0, g_iSlotCount[i] - 1)]]);
 	}
 
@@ -1028,7 +1040,6 @@ void vGiveSecondary(int client)
 {
 	if(g_iSlotCount[1] != 0)
 	{
-		vRemovePlayerSlot(client, 1);
 		int iRandom = g_iSlotWeapons[1][GetRandomInt(0, g_iSlotCount[1] - 1)];
 		if(iRandom > 2)
 			vGiveMelee(client, g_sWeaponName[1][iRandom]);
@@ -1040,15 +1051,12 @@ void vGiveSecondary(int client)
 void vGivePresetPrimary(int client)
 {
 	if(g_iSlotCount[0] != 0)
-	{
-		vRemovePlayerSlot(client, 0);
 		vCheatCommand(client, "give", g_sWeaponName[0][g_iSlotWeapons[0][GetRandomInt(0, g_iSlotCount[0] - 1)]]);
-	}
 }
 
 bool bIsWeaponTier1(int iWeapon)
 {
-	static char sWeapon[32];
+	char sWeapon[32];
 	GetEntityClassname(iWeapon, sWeapon, sizeof(sWeapon));
 	for(int i; i < 5; i++)
 	{
@@ -1077,8 +1085,6 @@ void vGiveAveragePrimary(int client)
 		}
 	}
 
-	vRemovePlayerSlot(client, 0);
-
 	switch(iTotal > 0 ? RoundToNearest(1.0 * iTier / iTotal) : 0)
 	{
 		case 1:
@@ -1086,6 +1092,20 @@ void vGiveAveragePrimary(int client)
 
 		case 2:
 			vCheatCommand(client, "give", g_sWeaponName[0][GetRandomInt(5, 14)]); //随机给一把tier2武器	
+	}
+}
+
+void vRemovePlayerWeapons(int client)
+{
+	int iWeapon;
+	for(int i; i < 5; i++)
+	{
+		iWeapon = GetPlayerWeaponSlot(client, i);
+		if(iWeapon > MaxClients)
+		{
+			RemovePlayerItem(client, iWeapon);
+			RemoveEntity(iWeapon);
+		}
 	}
 }
 
@@ -1148,22 +1168,6 @@ void vSetGhostStatus(int client, int iGhost)
 {
 	if(GetEntProp(client, Prop_Send, "m_isGhost") != iGhost)
 		SetEntProp(client, Prop_Send, "m_isGhost", iGhost);
-}
-
-void vRemovePlayerSlot(int client, int iSlot)
-{
-	iSlot = GetPlayerWeaponSlot(client, iSlot);
-	if(iSlot > MaxClients)
-	{
-		RemovePlayerItem(client, iSlot);
-		RemoveEntity(iSlot);
-	}
-}
-
-void vRemoveWeapons(int client)
-{
-	for(int i; i < 5; i++)
-		vRemovePlayerSlot(client, i);
 }
 
 //给玩家近战
@@ -1371,8 +1375,8 @@ void vLoadGameData()
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
-	g_hSDK_Call_RoundRespawn = EndPrepSDKCall();
-	if(g_hSDK_Call_RoundRespawn == null)
+	g_hSDKRoundRespawn = EndPrepSDKCall();
+	if(g_hSDKRoundRespawn == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
 
 	vRegisterStatsConditionPatch(hGameData);
@@ -1381,32 +1385,32 @@ void vLoadGameData()
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SurvivorBot::SetHumanSpectator") == false)
 		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDK_Call_SetHumanSpectator = EndPrepSDKCall();
-	if(g_hSDK_Call_SetHumanSpectator == null)
+	g_hSDKSetHumanSpectator = EndPrepSDKCall();
+	if(g_hSDKSetHumanSpectator == null)
 		SetFailState("Failed to create SDKCall: SurvivorBot::SetHumanSpectator");
 	
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TakeOverBot") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverBot");
 	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_Call_TakeOverBot = EndPrepSDKCall();
-	if(g_hSDK_Call_TakeOverBot == null)
+	g_hSDKTakeOverBot = EndPrepSDKCall();
+	if(g_hSDKTakeOverBot == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::TakeOverBot");
 	
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CTerrorPlayer::SetObserverTarget") == false)
 		SetFailState("Failed to find offset: CTerrorPlayer::SetObserverTarget");
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
-	g_hSDK_Call_SetObserverTarget = EndPrepSDKCall();
-	if(g_hSDK_Call_SetObserverTarget == null)
+	g_hSDKSetObserverTarget = EndPrepSDKCall();
+	if(g_hSDKSetObserverTarget == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::SetObserverTarget");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::GoAwayFromKeyboard") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::GoAwayFromKeyboard");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_Call_GoAwayFromKeyboard = EndPrepSDKCall();
-	if(g_hSDK_Call_GoAwayFromKeyboard == null)
+	g_hSDKGoAwayFromKeyboard = EndPrepSDKCall();
+	if(g_hSDKGoAwayFromKeyboard == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard");
 
 	vSetupDetours(hGameData);
@@ -1438,7 +1442,7 @@ void vRegisterStatsConditionPatch(GameData hGameData = null)
 void vRoundRespawn(int client)
 {
 	vStatsConditionPatch(true);
-	SDKCall(g_hSDK_Call_RoundRespawn, client);
+	SDKCall(g_hSDKRoundRespawn, client);
 	vStatsConditionPatch(false);
 }
 
@@ -1540,8 +1544,8 @@ public MRESReturn mreGoAwayFromKeyboardPost(int pThis, DHookReturn hReturn)
 	{
 		g_bShouldIgnore = true;
 
-		SDKCall(g_hSDK_Call_SetHumanSpectator, g_iSurvivorBot, pThis);
-		SDKCall(g_hSDK_Call_SetObserverTarget, pThis, g_iSurvivorBot);
+		SDKCall(g_hSDKSetHumanSpectator, g_iSurvivorBot, pThis);
+		SDKCall(g_hSDKSetObserverTarget, pThis, g_iSurvivorBot);
 		SetEntProp(pThis, Prop_Send, "m_iObserverMode", 5);
 
 		vWriteTakeoverPanel(pThis, g_iSurvivorBot);
@@ -1600,16 +1604,12 @@ public MRESReturn mreTakeOverBotPost(int pThis, DHookParam hParams)
 
 public MRESReturn mreGiveDefaultItemsPost(int pThis)
 {
-	if(!g_bGiveWeaponType || !g_iRoundStart || g_bTakingOverBot[pThis])
-		return MRES_Ignored;
-
-	if(g_bShouldFixAFK && g_iSurvivorBot > 0 && IsFakeClient(g_iSurvivorBot))
+	if(!g_bGiveWeaponType || g_bShouldFixAFK || g_bTakingOverBot[pThis])
 		return MRES_Ignored;
 
 	if(!IsClientInGame(pThis) || GetClientTeam(pThis) != TEAM_SURVIVOR || !IsPlayerAlive(pThis))
 		return MRES_Ignored;
 
 	vGiveDefaultItems(pThis);
-
 	return MRES_Ignored;
 }
