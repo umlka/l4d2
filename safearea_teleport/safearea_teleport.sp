@@ -161,7 +161,7 @@ public Plugin myinfo =
 	name = 			"SafeArea Teleport",
 	author = 		"sorallll",
 	description = 	"",
-	version = 		"1.0.6",
+	version = 		"1.0.7",
 	url = 			""
 }
 
@@ -195,7 +195,7 @@ public void OnPluginStart()
 	RegAdminCmd("sm_warpstart", cmdWarpStart, ADMFLAG_RCON, "传送所有生还者到起点安全区域");
 	RegAdminCmd("sm_warpend", cmdWarpEnd, ADMFLAG_RCON, "传送所有生还者到终点安全区域");
 	RegAdminCmd("sm_finale", cmdFinale, ADMFLAG_RCON, "结局关卡强制过关");
-	RegAdminCmd("sm_est", cmdEst, ADMFLAG_ROOT, "测试");
+	RegAdminCmd("sm_st", cmdSt, ADMFLAG_ROOT, "测试");
 	
 	g_aLastDoor = new ArrayList(2);
 	//g_aStartDoor = new ArrayList(2);
@@ -311,7 +311,7 @@ public Action cmdFinale(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdEst(int client, int args)
+public Action cmdSt(int client, int args)
 {
 	ReplyToCommand(client, "过图触发器->%d 救援触发器->%d 起始Nav区域数量->%d 终点Nav区域数量->%d", g_iChangelevel ? EntRefToEntIndex(g_iChangelevel) : -1, SDKCall(g_hSDKFindRescueAreaTrigger), g_aStartNavArea.Length, g_aEndNavArea.Length);
 	return Plugin_Handled;
@@ -355,12 +355,12 @@ public void OnMapStart()
 public void OnMapEnd()
 {
 	vResetPlugin();
+	delete g_hTimer;
 	g_iCurrentMap = 0;
 }
 
 void vResetPlugin()
 {
-	delete g_hTimer;
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
 	g_bFirstRound = false;
@@ -370,7 +370,10 @@ void vResetPlugin()
 
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
-	vResetPlugin();
+	if(strcmp(name, "round_end") == 0)
+		vResetPlugin();
+
+	delete g_hTimer;
 }
 
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
