@@ -4,18 +4,21 @@
 #include <sdktools>
 #include <sdkhooks>
 
-#define GAMEDATA "rygive"
-#define NAME_CreateSmoker "NextBotCreatePlayerBot<Smoker>"
-#define NAME_CreateBoomer "NextBotCreatePlayerBot<Boomer>"
-#define NAME_CreateHunter "NextBotCreatePlayerBot<Hunter>"
-#define NAME_CreateSpitter "NextBotCreatePlayerBot<Spitter>"
-#define NAME_CreateJockey "NextBotCreatePlayerBot<Jockey>"
-#define NAME_CreateCharger "NextBotCreatePlayerBot<Charger>"
-#define NAME_CreateTank "NextBotCreatePlayerBot<Tank>"
-#define NAME_InfectedAttackSurvivorTeam "Infected::AttackSurvivorTeam"
+#define GAMEDATA			"rygive"
+#define NAME_CreateSmoker	"NextBotCreatePlayerBot<Smoker>"
+#define NAME_CreateBoomer	"NextBotCreatePlayerBot<Boomer>"
+#define NAME_CreateHunter	"NextBotCreatePlayerBot<Hunter>"
+#define NAME_CreateSpitter	"NextBotCreatePlayerBot<Spitter>"
+#define NAME_CreateJockey	"NextBotCreatePlayerBot<Jockey>"
+#define NAME_CreateCharger	"NextBotCreatePlayerBot<Charger>"
+#define NAME_CreateTank		"NextBotCreatePlayerBot<Tank>"
 
 StringMap
 	g_aSteamIDs;
+
+ArrayList
+	g_aByteSaved,
+	g_aBytePatch;
 
 Handle
 	g_hSDK_Call_RoundRespawn,
@@ -29,13 +32,14 @@ Handle
 	g_hSDK_Call_CreateSpitter,
 	g_hSDK_Call_CreateJockey,
 	g_hSDK_Call_CreateCharger,
-	g_hSDK_Call_CreateTank,
-	g_hSDK_Call_InfectedAttackSurvivorTeam;
+	g_hSDK_Call_CreateTank;
 
 Address
-	g_pStatsCondition;
+	g_pStatsCondition,
+	g_pIsFallenSurvivorAllowed;
 
 int
+	g_iClipSize[2],
 	g_iMeleeClassCount,
 	g_iFunction[MAXPLAYERS + 1],
 	g_iCurrentPage[MAXPLAYERS + 1];
@@ -186,29 +190,15 @@ enum L4D2WeaponType
 	L4D2WeaponType_Gnome
 }
 
-//l4d_info_editor
-bool g_bInfoEditor;
-native void InfoEditor_GetString(int pThis, const char[] keyname, char[] dest, int destLen);
-
-public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
-{
-	MarkNativeAsOptional("InfoEditor_GetString");
-	return APLRes_Success;
-}
-
 public void OnLibraryAdded(const char[] name)
 {
-	if(strcmp(name, "info_editor") == 0)
-		g_bInfoEditor = true;
-	else if(strcmp(name, "WeaponHandling") == 0)
+	if(strcmp(name, "WeaponHandling") == 0)
 		g_bWeaponHandling = true;
 }
 
 public void OnLibraryRemoved(const char[] name)
 {
-	if(strcmp(name, "info_editor") == 0)
-		g_bInfoEditor = false;
-	else if(strcmp(name, "WeaponHandling") == 0)
+	if(strcmp(name, "WeaponHandling") == 0)
 		g_bWeaponHandling = false;
 }
 
@@ -217,7 +207,7 @@ public Plugin myinfo =
 	name = "Give Item Menu",
 	description = "Gives Item Menu",
 	author = "Ryanx, sorallll",
-	version = "1.1.6",
+	version = "1.1.7",
 	url = ""
 };
 
@@ -259,39 +249,51 @@ public void OnClientPostAdminCheck(int client)
 public void OnMapStart()
 {
 	int i;
-	int iLen;
-
-	iLen = sizeof(g_sMeleeModels);
-	for(i = 0; i < iLen; i++)
+	int iLength = sizeof(g_sMeleeModels);
+	for(i = 0; i < iLength; i++)
 	{
 		if(!IsModelPrecached(g_sMeleeModels[i]))
 			PrecacheModel(g_sMeleeModels[i], true);
 	}
 
-	iLen = sizeof(g_sSpecialsInfectedModels);
-	for(i = 0; i < iLen; i++)
+	iLength = sizeof(g_sSpecialsInfectedModels);
+	for(i = 0; i < iLength; i++)
 	{
 		if(!IsModelPrecached(g_sSpecialsInfectedModels[i]))
 			PrecacheModel(g_sSpecialsInfectedModels[i], true);
 	}
 	
-	iLen = sizeof(g_sUncommonInfectedModels);
-	for(i = 0; i < iLen; i++)
+	iLength = sizeof(g_sUncommonInfectedModels);
+	for(i = 0; i < iLength; i++)
 	{
 		if(!IsModelPrecached(g_sUncommonInfectedModels[i]))
 			PrecacheModel(g_sUncommonInfectedModels[i], true);
 	}
 	
-	iLen = sizeof(g_sMeleeName);
+	iLength = sizeof(g_sMeleeName);
 	char sBuffer[64];
-	for(i = 0; i < iLen; i++)
+	for(i = 0; i < iLength; i++)
 	{
 		FormatEx(sBuffer, sizeof(sBuffer), "scripts/melee/%s.txt", g_sMeleeName[i]);
 		if(!IsGenericPrecached(sBuffer))
 			PrecacheGeneric(sBuffer, true);
 	}
 
+	vGetMaxClipSize();
 	vGetMeleeClasses();
+}
+
+void vGetMaxClipSize()
+{
+	int entity = CreateEntityByName("weapon_rifle_m60");
+	DispatchSpawn(entity);
+	g_iClipSize[0] = GetEntProp(entity, Prop_Send, "m_iClip1");
+	RemoveEdict(entity);
+
+	entity = CreateEntityByName("weapon_grenade_launcher");
+	DispatchSpawn(entity);
+	g_iClipSize[1] = GetEntProp(entity, Prop_Send, "m_iClip1");
+	RemoveEdict(entity);
 }
 
 void vGetMeleeClasses()
@@ -607,7 +609,7 @@ void vInfecteds(int client, int index)
 	menu.AddItem("Tank", "Tank");
 	menu.AddItem("Witch", "Witch");
 	menu.AddItem("Witch_Bride", "Bride Witch");
-	menu.AddItem("Common", "Common");
+	menu.AddItem("7", "Common");
 	menu.AddItem("0", "Riot");
 	menu.AddItem("1", "Ceda");
 	menu.AddItem("2", "Clown");
@@ -628,15 +630,15 @@ public int iInfectedsMenuHandler(Menu menu, MenuAction action, int client, int p
 			char sItem[128];
 			if(menu.GetItem(param2, sItem, sizeof(sItem)))
 			{
-				int iKick;
+				int iKicked;
 				if(GetClientCount(false) >= (MaxClients - 1))
 				{
 					PrintToChat(client, "尝试踢出死亡的感染机器人...");
-					iKick = iKickDeadInfectedBots(client);
+					iKicked = iKickDeadInfectedBots(client);
 				}
-	
-				if(iKick <= 0)
-					iCreateInfectedWithParams(client, sItem, 0, 5);
+
+				if(iKicked == 0)
+					iCreateInfectedWithParams(client, sItem);
 				else
 				{
 					DataPack datapack = new DataPack();
@@ -657,190 +659,14 @@ public int iInfectedsMenuHandler(Menu menu, MenuAction action, int client, int p
 	}
 }
 
-void OnNextFrame_CreateInfected(any pack)
-{
-	DataPack datapack = pack;
-	datapack.Reset();
-	int client = datapack.ReadCell();
-	char sZombie[128];
-	datapack.ReadString(sZombie, sizeof(sZombie));
-	delete datapack;
-	
-	iCreateInfectedWithParams(client, sZombie, 0, 5);
-}
-
-//https://github.com/ProdigySim/DirectInfectedSpawn
-int iCreateInfectedWithParams(int client, const char[] sZombie, int iMode = 0, int iNumber = 1)
-{
-	float vPos[3];
-	float vAng[3];
-	GetClientAbsOrigin(client, vPos);
-	GetClientAbsAngles(client, vAng);
-	if(iMode <= 0)
-	{
-		GetClientEyePosition(client, vPos);
-		GetClientEyeAngles(client, vAng);
-		TR_TraceRayFilter(vPos, vAng, MASK_OPAQUE, RayType_Infinite, bTraceRayDontHitPlayers, client);
-		if(TR_DidHit())
-			TR_GetEndPosition(vPos);
-	}
-	
-	vAng[0] = 0.0;
-	vAng[2] = 0.0;
-
-	int iInfected;
-	for(int i;i < iNumber;i++)
-	{
-		iInfected = iCreateInfected(sZombie, vPos, vAng);
-		if(IsValidEntity(iInfected))
-			break;
-	}
-
-	return iInfected;
-}
-
-bool bTraceRayDontHitPlayers(int entity, int contentsMask, any data)
-{
-	if(bIsValidClient(data))
-		return false;
-
-	return true;
-}
-
-int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[3])
-{
-	int iBot = -1;
-	if(strcmp(sZombie, "witch", false) == 0 || strcmp(sZombie, "witch_bride", false) == 0)
-	{
-		int witch = CreateEntityByName("witch");
-		TeleportEntity(witch, vPos, vAng, NULL_VECTOR);
-		DispatchSpawn(witch);
-		ActivateEntity(witch);
-
-		if(strcmp(sZombie, "witch_bride", false) == 0)
-			SetEntityModel(witch, g_sSpecialsInfectedModels[8]);
-
-		return witch;
-	}
-	else if(strcmp(sZombie, "smoker", false) == 0)
-	{
-		iBot = SDKCall(g_hSDK_Call_CreateSmoker, "Smoker");
-		if(bIsValidClient(iBot))
-			SetEntityModel(iBot, g_sSpecialsInfectedModels[0]);
-	}
-	else if(strcmp(sZombie, "boomer", false) == 0)
-	{
-		iBot = SDKCall(g_hSDK_Call_CreateBoomer, "Boomer");
-		if(bIsValidClient(iBot))
-			SetEntityModel(iBot, g_sSpecialsInfectedModels[1]);
-	}
-	else if(strcmp(sZombie, "hunter", false) == 0)
-	{
-		iBot = SDKCall(g_hSDK_Call_CreateHunter, "Hunter");
-		if(bIsValidClient(iBot))
-			SetEntityModel(iBot, g_sSpecialsInfectedModels[2]);
-	}
-	else if(strcmp(sZombie, "spitter", false) == 0)
-	{
-		iBot = SDKCall(g_hSDK_Call_CreateSpitter, "Spitter");
-		if(bIsValidClient(iBot))
-			SetEntityModel(iBot, g_sSpecialsInfectedModels[3]);
-	}
-	else if(strcmp(sZombie, "jockey", false) == 0)
-	{
-		iBot = SDKCall(g_hSDK_Call_CreateJockey, "Jockey");
-		if(bIsValidClient(iBot))
-			SetEntityModel(iBot, g_sSpecialsInfectedModels[4]);
-	}
-	else if(strcmp(sZombie, "charger", false) == 0)
-	{
-		iBot = SDKCall(g_hSDK_Call_CreateCharger, "Charger");
-		if(bIsValidClient(iBot))
-			SetEntityModel(iBot, g_sSpecialsInfectedModels[5]);
-	}
-	else if(strcmp(sZombie, "tank", false) == 0)
-	{
-		iBot = SDKCall(g_hSDK_Call_CreateTank, "Tank");
-		if(bIsValidClient(iBot))
-			SetEntityModel(iBot, g_sSpecialsInfectedModels[6]);
-	}
-	else
-	{
-		int iInfected = CreateEntityByName("infected");
-		if(strcmp(sZombie, "common", false) != 0)
-			SetEntityModel(iInfected, g_sUncommonInfectedModels[StringToInt(sZombie)]);
-			
-		TeleportEntity(iInfected, vPos, vAng, NULL_VECTOR);
-		DispatchSpawn(iInfected);
-		ActivateEntity(iInfected);
-		CreateTimer(0.4, Timer_Chase, iInfected);
-	
-		return iInfected;
-	}
-	
-	if(bIsValidClient(iBot))
-	{
-		ChangeClientTeam(iBot, 3);
-		SetEntProp(iBot, Prop_Send, "m_usSolidFlags", 16);
-		SetEntProp(iBot, Prop_Send, "movetype", 2);
-		SetEntProp(iBot, Prop_Send, "deadflag", 0);
-		SetEntProp(iBot, Prop_Send, "m_lifeState", 0);
-		//SetEntProp(iBot, Prop_Send, "m_fFlags", 129);
-		SetEntProp(iBot, Prop_Send, "m_iObserverMode", 0);
-		SetEntProp(iBot, Prop_Send, "m_iPlayerState", 0);
-		SetEntProp(iBot, Prop_Send, "m_zombieState", 0);
-		DispatchSpawn(iBot);
-		ActivateEntity(iBot);
-		
-		DataPack datapack = new DataPack();
-		datapack.WriteFloat(vPos[0]);
-		datapack.WriteFloat(vPos[1]);
-		datapack.WriteFloat(vPos[2]);
-		datapack.WriteFloat(vAng[1]);
-		datapack.WriteCell(iBot);
-		RequestFrame(OnNextFrame_SetPos, datapack);
-	}
-	
-	return iBot;
-}
-
-public Action Timer_Chase(Handle timer, any infected)
-{
-	if(g_hSDK_Call_InfectedAttackSurvivorTeam == null || !IsValidEntity(infected))
-		return;
-
-	char sClassName[9];
-	GetEntityClassname(infected, sClassName, sizeof(sClassName));
-	if(strcmp(sClassName, "infected", false) == 0)
-		SDKCall(g_hSDK_Call_InfectedAttackSurvivorTeam, infected);
-}
-
-public void OnNextFrame_SetPos(any pack)
-{
-	DataPack datapack = pack;
-	datapack.Reset();
-	float vPos[3], vAng[3];
-	vPos[0] = datapack.ReadFloat();
-	vPos[1] = datapack.ReadFloat();
-	vPos[2] = datapack.ReadFloat();
-	vAng[1] = datapack.ReadFloat();
-	int iBot = datapack.ReadCell();
-	delete datapack;
-
-	TeleportEntity(iBot, vPos, vAng, NULL_VECTOR);
-}
-
 int iKickDeadInfectedBots(int client)
 {
 	int iKickedBots;
 	for(int iLoopClient = 1; iLoopClient <= MaxClients; iLoopClient++)
 	{
-		if(!bIsValidClient(iLoopClient))
+		if(!IsClientInGame(iLoopClient) || GetClientTeam(client) != 3 || !IsFakeClient(iLoopClient) || IsPlayerAlive(iLoopClient))
 			continue;
 
-		if(!bIsInfected(iLoopClient) || !IsFakeClient(iLoopClient) || IsPlayerAlive(iLoopClient))
-			continue;
-	
 		KickClient(iLoopClient);
 		iKickedBots++;
 	}
@@ -851,9 +677,151 @@ int iKickDeadInfectedBots(int client)
 	return iKickedBots;
 }
 
-bool bIsInfected(int client)
+void OnNextFrame_CreateInfected(any pack)
 {
-	return bIsValidClient(client) && GetClientTeam(client) == 3;
+	DataPack datapack = pack;
+	datapack.Reset();
+	int client = datapack.ReadCell();
+	char sZombie[128];
+	datapack.ReadString(sZombie, sizeof(sZombie));
+	delete datapack;
+
+	iCreateInfectedWithParams(client, sZombie);
+}
+
+//https://github.com/ProdigySim/DirectInfectedSpawn
+int iCreateInfectedWithParams(int client, const char[] sZombie)
+{
+	float vPos[3];
+	float vAng[3];
+	GetClientAbsAngles(client, vAng);
+	GetClientEyePosition(client, vPos);
+	bGetSpawnEndPoint(client, 3, vPos);
+
+	vAng[0] = 0.0;
+	vAng[2] = 0.0;
+	return iCreateInfected(sZombie, vPos, vAng);
+}
+
+int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[3])
+{
+	int iZombie = -1;
+	bool bSuccessed;
+	if(strncmp(sZombie, "Witch", 5) == 0)
+	{
+		iZombie = CreateEntityByName("witch");
+		if(iZombie != -1)
+		{
+			TeleportEntity(iZombie, vPos, vAng, NULL_VECTOR);
+			DispatchSpawn(iZombie);
+			ActivateEntity(iZombie);
+
+			if(strlen(sZombie) > 5)
+				SetEntityModel(iZombie, g_sSpecialsInfectedModels[8]);
+		}
+	}
+	else if(strcmp(sZombie, "Smoker") == 0)
+	{
+		iZombie = SDKCall(g_hSDK_Call_CreateSmoker, "Smoker");
+		if(bIsValidClient(iZombie))
+		{
+			SetEntityModel(iZombie, g_sSpecialsInfectedModels[0]);
+			bSuccessed = true;
+		}
+	}
+	else if(strcmp(sZombie, "Boomer") == 0)
+	{
+		iZombie = SDKCall(g_hSDK_Call_CreateBoomer, "Boomer");
+		if(bIsValidClient(iZombie))
+		{
+			SetEntityModel(iZombie, g_sSpecialsInfectedModels[1]);
+			bSuccessed = true;
+		}
+	}
+	else if(strcmp(sZombie, "Hunter") == 0)
+	{
+		iZombie = SDKCall(g_hSDK_Call_CreateHunter, "Hunter");
+		if(bIsValidClient(iZombie))
+		{
+			SetEntityModel(iZombie, g_sSpecialsInfectedModels[2]);
+			bSuccessed = true;
+		}
+	}
+	else if(strcmp(sZombie, "Spitter") == 0)
+	{
+		iZombie = SDKCall(g_hSDK_Call_CreateSpitter, "Spitter");
+		if(bIsValidClient(iZombie))
+		{
+			SetEntityModel(iZombie, g_sSpecialsInfectedModels[3]);
+			bSuccessed = true;
+		}
+	}
+	else if(strcmp(sZombie, "Jockey") == 0)
+	{
+		iZombie = SDKCall(g_hSDK_Call_CreateJockey, "Jockey");
+		if(bIsValidClient(iZombie))
+		{
+			SetEntityModel(iZombie, g_sSpecialsInfectedModels[4]);
+			bSuccessed = true;
+		}
+	}
+	else if(strcmp(sZombie, "Charger") == 0)
+	{
+		iZombie = SDKCall(g_hSDK_Call_CreateCharger, "Charger");
+		if(bIsValidClient(iZombie))
+		{
+			SetEntityModel(iZombie, g_sSpecialsInfectedModels[5]);
+			bSuccessed = true;
+		}
+	}
+	else if(strcmp(sZombie, "Tank") == 0)
+	{
+		iZombie = SDKCall(g_hSDK_Call_CreateTank, "Tank");
+		if(bIsValidClient(iZombie))
+		{
+			SetEntityModel(iZombie, g_sSpecialsInfectedModels[6]);
+			bSuccessed = true;
+		}
+	}
+	else
+	{
+		iZombie = CreateEntityByName("infected");
+		if(iZombie != -1)
+		{
+			int iPos = StringToInt(sZombie);
+			if(iPos < 7)
+				SetEntityModel(iZombie, g_sUncommonInfectedModels[iPos]);
+
+			int iTickTime = RoundToNearest(GetGameTime() / GetTickInterval()) + 5;
+			SetEntProp(iZombie, Prop_Data, "m_nNextThinkTick", iTickTime);
+
+			if(iPos == 6)
+				vIsFallenSurvivorAllowedPatch(true);
+			DispatchSpawn(iZombie);
+			if(iPos == 6)
+				vIsFallenSurvivorAllowedPatch(false);
+			ActivateEntity(iZombie);
+			TeleportEntity(iZombie, vPos, vAng, NULL_VECTOR);
+		}
+	}
+	
+	if(bSuccessed)
+	{
+		ChangeClientTeam(iZombie, 3);
+		SetEntProp(iZombie, Prop_Send, "m_usSolidFlags", 16);
+		SetEntProp(iZombie, Prop_Send, "movetype", 2);
+		SetEntProp(iZombie, Prop_Send, "deadflag", 0);
+		SetEntProp(iZombie, Prop_Send, "m_lifeState", 0);
+		//SetEntProp(iZombie, Prop_Send, "m_fFlags", 129);
+		SetEntProp(iZombie, Prop_Send, "m_iObserverMode", 0);
+		SetEntProp(iZombie, Prop_Send, "m_iPlayerState", 0);
+		SetEntProp(iZombie, Prop_Send, "m_zombieState", 0);
+		DispatchSpawn(iZombie);
+		ActivateEntity(iZombie);
+		TeleportEntity(iZombie, vPos, vAng, NULL_VECTOR);
+	}
+
+	return iZombie;
 }
 
 bool bIsValidClient(int client)
@@ -935,7 +903,7 @@ void vIncapSurvivor(int client, int index)
 	menu.AddItem("allplayer", "所有");
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsIncapacitated(i))
+		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 		{
 			FormatEx(sUserId, sizeof(sUserId), "%d", GetClientUserId(i));
 			FormatEx(sName, sizeof(sName), "%N", i);
@@ -958,7 +926,7 @@ public int iIncapSurvivorMenuHandler(Menu menu, MenuAction action, int client, i
 				if(strcmp(sItem, "allplayer") == 0)
 				{
 					for(int i = 1; i <= MaxClients; i++)
-						IncapCheck(i);
+						vIncapCheck(i);
 						
 					vMisc(client, 0);
 				}
@@ -966,7 +934,7 @@ public int iIncapSurvivorMenuHandler(Menu menu, MenuAction action, int client, i
 				{
 					int iTarget = GetClientOfUserId(StringToInt(sItem));
 					if(iTarget && IsClientInGame(iTarget))
-						IncapCheck(iTarget);
+						vIncapCheck(iTarget);
 						
 					vIncapSurvivor(client, menu.Selection);
 				}
@@ -987,7 +955,7 @@ bool bIsIncapacitated(int client)
 	return !!GetEntProp(client, Prop_Send, "m_isIncapacitated");
 }
 
-void IncapCheck(int client)
+void vIncapCheck(int client)
 {
 	if(IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client) && !bIsIncapacitated(client))
 	{
@@ -2238,32 +2206,10 @@ void vReloadAmmo(int client)
 		char sWeapon[32];
 		GetEdictClassname(iWeapon, sWeapon, sizeof(sWeapon));
 		if(strcmp(sWeapon, "weapon_rifle_m60") == 0)
-		{
-			int iClipSize = 150;
-		
-			if(g_bInfoEditor)
-			{
-				char sTemp[64];
-				InfoEditor_GetString(0, "weapon_rifle_m60/clip_size", sTemp, sizeof(sTemp));
-				if(strcmp(sTemp, "N/A") != 0)
-					iClipSize = StringToInt(sTemp);
-			}
-	
-			SetEntProp(iWeapon, Prop_Send, "m_iClip1", iClipSize);
-		}
+			SetEntProp(iWeapon, Prop_Send, "m_iClip1", g_iClipSize[0]);
 		else if(strcmp(sWeapon, "weapon_grenade_launcher") == 0)
 		{
-			int iClipSize = 1;
-
-			if(g_bInfoEditor)
-			{
-				char sTemp[64];
-				InfoEditor_GetString(0, "weapon_grenade_launcher/clip_size", sTemp, sizeof(sTemp));
-				if(strcmp(sTemp, "N/A") != 0)
-					iClipSize = StringToInt(sTemp);
-			}
-			
-			SetEntProp(iWeapon, Prop_Send, "m_iClip1", iClipSize);
+			SetEntProp(iWeapon, Prop_Send, "m_iClip1", g_iClipSize[1]);
 
 			int iAmmoMax = FindConVar("ammo_grenadelauncher_max").IntValue;
 			if(iAmmoMax < 1)
@@ -2368,12 +2314,7 @@ void vLoadGameData()
 	else
 		vPrepLinuxCreateBotCalls(hGameData);
 
-	StartPrepSDKCall(SDKCall_Entity);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_InfectedAttackSurvivorTeam) == false)
-		SetFailState("Failed to find signature: %s", NAME_InfectedAttackSurvivorTeam); 
-	g_hSDK_Call_InfectedAttackSurvivorTeam = EndPrepSDKCall();
-	if(g_hSDK_Call_InfectedAttackSurvivorTeam == null)
-		LogError("Failed to create SDKCall: %s", NAME_InfectedAttackSurvivorTeam);
+	vRegisterIsFallenSurvivorAllowedPatch(hGameData);
 
 	delete hGameData;
 }
@@ -2412,6 +2353,70 @@ void vStatsConditionPatch(bool bPatch)
 	{
 		bPatched = false;
 		StoreToAddress(g_pStatsCondition, 0x75, NumberType_Int8);
+	}
+}
+
+void vRegisterIsFallenSurvivorAllowedPatch(GameData hGameData = null)
+{
+	int iOffset = hGameData.GetOffset("IsFallenSurvivorAllowed_Offset");
+	if(iOffset == -1)
+		LogError("Failed to load offset: IsFallenSurvivorAllowed_Offset");
+
+	int iByteMatch = hGameData.GetOffset("IsFallenSurvivorAllowed_Byte");
+	if(iByteMatch == -1)
+		LogError("Failed to load byte: IsFallenSurvivorAllowed_Byte");
+
+	int iByteCount = hGameData.GetOffset("IsFallenSurvivorAllowed_Count");
+	if(iByteCount == -1)
+		LogError("Failed to load count: IsFallenSurvivorAllowed_Count");
+
+	g_pIsFallenSurvivorAllowed = hGameData.GetAddress("IsFallenSurvivorAllowed");
+	if(!g_pIsFallenSurvivorAllowed)
+		LogError("Failed to load address: IsFallenSurvivorAllowed");
+	
+	g_pIsFallenSurvivorAllowed += view_as<Address>(iOffset);
+
+	g_aByteSaved = new ArrayList();
+	g_aBytePatch = new ArrayList();
+
+	for(int i; i < iByteCount; i++)
+		g_aByteSaved.Push(LoadFromAddress(g_pIsFallenSurvivorAllowed + view_as<Address>(i), NumberType_Int8));
+	
+	if(g_aByteSaved.Get(0) != iByteMatch)
+		LogError("Failed to load 'IsFallenSurvivorAllowed', byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, g_aByteSaved.Get(0), iByteMatch);
+
+	switch(iByteMatch)
+	{
+		case 0x0F:
+		{
+			g_aBytePatch.Push(0x90);
+			g_aBytePatch.Push(0xE9);
+		}
+
+		case 0x74:
+		{
+			g_aBytePatch.Push(0x90);
+			g_aBytePatch.Push(0x90);
+		}
+	}
+}
+
+void vIsFallenSurvivorAllowedPatch(bool bPatch)
+{
+	static bool bPatched;
+	if(!bPatched && bPatch)
+	{
+		bPatched = true;
+		int iLength = g_aBytePatch.Length;
+		for(int i; i < iLength; i++)
+			StoreToAddress(g_pIsFallenSurvivorAllowed + view_as<Address>(i), g_aBytePatch.Get(i), NumberType_Int8);
+	}
+	else if(bPatched && !bPatch)
+	{
+		bPatched = false;
+		int iLength = g_aByteSaved.Length;
+		for(int i; i < iLength; i++)
+			StoreToAddress(g_pIsFallenSurvivorAllowed + view_as<Address>(i), g_aByteSaved.Get(i), NumberType_Int8);
 	}
 }
 
