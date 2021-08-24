@@ -214,8 +214,6 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	vLoadGameData();
-	
-	CreateConVar("rygive_version", "1.0.0", "rygive功能插件", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
 	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 
@@ -227,6 +225,7 @@ public void OnPluginStart()
 public void OnPluginEnd()
 {
 	vStatsConditionPatch(false);
+	vIsFallenSurvivorAllowedPatch(false);
 }
 
 public void OnClientDisconnect(int client)
@@ -796,10 +795,14 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 			SetEntProp(iZombie, Prop_Data, "m_nNextThinkTick", iTickTime);
 
 			if(iPos == 6)
+			{
 				vIsFallenSurvivorAllowedPatch(true);
-			DispatchSpawn(iZombie);
-			if(iPos == 6)
+				DispatchSpawn(iZombie);
 				vIsFallenSurvivorAllowedPatch(false);
+			}
+			else
+				DispatchSpawn(iZombie);
+
 			ActivateEntity(iZombie);
 			TeleportEntity(iZombie, vPos, vAng, NULL_VECTOR);
 		}
@@ -812,7 +815,6 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 		SetEntProp(iZombie, Prop_Send, "movetype", 2);
 		SetEntProp(iZombie, Prop_Send, "deadflag", 0);
 		SetEntProp(iZombie, Prop_Send, "m_lifeState", 0);
-		//SetEntProp(iZombie, Prop_Send, "m_fFlags", 129);
 		SetEntProp(iZombie, Prop_Send, "m_iObserverMode", 0);
 		SetEntProp(iZombie, Prop_Send, "m_iPlayerState", 0);
 		SetEntProp(iZombie, Prop_Send, "m_zombieState", 0);
@@ -1488,10 +1490,10 @@ bool bGetSpawnEndPoint(int client, int team, float vSpawnVec[3]) // Returns the 
 
 void vScaleVectorDirection(float vStart[3], float vEnd[3], float fMultiple) // lengthens the line which built from vStart to vEnd in vEnd direction and returns new vEnd position
 {
-    float dir[3];
-    SubtractVectors(vEnd, vStart, dir);
-    ScaleVector(dir, fMultiple);
-    AddVectors(vEnd, dir, vEnd);
+    float vDir[3];
+    SubtractVectors(vEnd, vStart, vDir);
+    ScaleVector(vDir, fMultiple);
+    AddVectors(vEnd, vDir, vEnd);
 }
 
 bool bGetDirectionEndPoint(int client, float vEndPos[3]) // builds simple ray from the client's eyes origin to vEndPos position and returns new vEndPos of non-collide position
@@ -1575,9 +1577,8 @@ bool bIsTeamStuckPos(int team, float vPos[3], bool bDuck = false) // check if th
 		vMax[2] -= 18.0;
 
 	bool bHit;
-	Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vPos, vPos, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, bTraceRayNoPlayers);
-	if(hTrace)
+	Handle hTrace = TR_TraceHullFilterEx(vPos, vPos, vMin, vMax, MASK_PLAYERSOLID_BRUSHONLY, bTraceRayNoPlayers);
+	if(hTrace != null)
 	{
 		bHit = TR_DidHit(hTrace);
 		delete hTrace;
@@ -1599,7 +1600,6 @@ bool bTraceRayNoPlayers(int entity, int contentsMask)
 				return false;
 		}
 	}
-
 	return true;
 }
 
@@ -1612,7 +1612,7 @@ void vTeleportFix(int client)
 	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") & ~FL_FROZEN);
 
 	if(bIsHanging(client))
-		vReviveFromIncap(client);
+		vRunScript("GetPlayerFromUserID(%d).ReviveFromIncap()", GetClientUserId(client));
 	else
 	{
 		int attacker = iGetInfectedAttacker(client);
@@ -1622,11 +1622,6 @@ void vTeleportFix(int client)
 			ForcePlayerSuicide(attacker);
 		}
 	}
-}
-
-void vReviveFromIncap(int client) 
-{
-	vRunScript("GetPlayerFromUserID(%d).ReviveFromIncap()", GetClientUserId(client));
 }
 
 //https://forums.alliedmods.net/showpost.php?p=2681159&postcount=10
@@ -2360,19 +2355,19 @@ void vRegisterIsFallenSurvivorAllowedPatch(GameData hGameData = null)
 {
 	int iOffset = hGameData.GetOffset("IsFallenSurvivorAllowed_Offset");
 	if(iOffset == -1)
-		LogError("Failed to load offset: IsFallenSurvivorAllowed_Offset");
+		SetFailState("Failed to load offset: IsFallenSurvivorAllowed_Offset");
 
 	int iByteMatch = hGameData.GetOffset("IsFallenSurvivorAllowed_Byte");
 	if(iByteMatch == -1)
-		LogError("Failed to load byte: IsFallenSurvivorAllowed_Byte");
+		SetFailState("Failed to load byte: IsFallenSurvivorAllowed_Byte");
 
 	int iByteCount = hGameData.GetOffset("IsFallenSurvivorAllowed_Count");
 	if(iByteCount == -1)
-		LogError("Failed to load count: IsFallenSurvivorAllowed_Count");
+		SetFailState("Failed to load count: IsFallenSurvivorAllowed_Count");
 
 	g_pIsFallenSurvivorAllowed = hGameData.GetAddress("IsFallenSurvivorAllowed");
 	if(!g_pIsFallenSurvivorAllowed)
-		LogError("Failed to load address: IsFallenSurvivorAllowed");
+		SetFailState("Failed to load address: IsFallenSurvivorAllowed");
 	
 	g_pIsFallenSurvivorAllowed += view_as<Address>(iOffset);
 
