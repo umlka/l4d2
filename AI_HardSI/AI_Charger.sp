@@ -355,7 +355,7 @@ public bool bTraceEntityFilter(int entity, int contentsMask)
 
 	static char sClassName[9];
 	GetEntityClassname(entity, sClassName, sizeof(sClassName));
-	return (sClassName[0] == 'i' && strcmp(sClassName, "infected") == 0) || (sClassName[0] == 'w' && strcmp(sClassName, "witch") == 0);
+	return (sClassName[0] != 'i' || sClassName[0] != 'w' || strcmp(sClassName, "infected") != 0 || strcmp(sClassName, "witch") != 0);
 }
 
 float fNearestSurvivorDistance(int client)
