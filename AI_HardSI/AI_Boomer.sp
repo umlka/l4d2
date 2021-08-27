@@ -3,12 +3,15 @@
 #include <sourcemod>
 #include <sdktools>
 
-ConVar g_hBoomerBhop;
-ConVar g_hVomitRange;
+ConVar
+	g_hBoomerBhop,
+	g_hVomitRange;
 
-bool g_bBoomerBhop;
+bool
+	g_bBoomerBhop;
 
-float g_fVomitRange;
+float
+	g_fVomitRange;
 
 public Plugin myinfo =
 {
@@ -25,14 +28,14 @@ public void OnPluginStart()
 
 	g_hVomitRange = FindConVar("z_vomit_range");
 	
-	g_hBoomerBhop.AddChangeHook(ConVarChanged);
-	g_hVomitRange.AddChangeHook(ConVarChanged);
+	g_hBoomerBhop.AddChangeHook(vConVarChanged);
+	g_hVomitRange.AddChangeHook(vConVarChanged);
 	
 
 	FindConVar("z_vomit_fatigue").SetInt(0);
 	FindConVar("z_boomer_near_dist").SetInt(1);
-	FindConVar("boomer_vomit_delay").SetFloat(0.1);
-	FindConVar("boomer_exposed_time_tolerance").SetFloat(10000.0);
+	//FindConVar("boomer_vomit_delay").SetFloat(0.1);
+	//FindConVar("boomer_exposed_time_tolerance").SetFloat(10000.0);
 
 	HookEvent("ability_use", Event_AbilityUse);
 }
@@ -41,21 +44,21 @@ public void OnPluginEnd()
 {
 	FindConVar("z_vomit_fatigue").RestoreDefault();
 	FindConVar("z_boomer_near_dist").RestoreDefault();
-	FindConVar("boomer_vomit_delay").RestoreDefault();
-	FindConVar("boomer_exposed_time_tolerance").RestoreDefault();
+	//FindConVar("boomer_vomit_delay").RestoreDefault();
+	//FindConVar("boomer_exposed_time_tolerance").RestoreDefault();
 }
 
 public void OnConfigsExecuted()
 {
-	GetCvars();
+	vGetCvars();
 }
 
-public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	GetCvars();
+	vGetCvars();
 }
 
-void GetCvars()
+void vGetCvars()
 {
 	g_bBoomerBhop = g_hBoomerBhop.BoolValue;
 	g_fVomitRange = g_hVomitRange.FloatValue;
@@ -70,7 +73,7 @@ public void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
 	char sAbility[16];
 	event.GetString("ability", sAbility, sizeof(sAbility));
 	if(strcmp(sAbility, "ability_vomit") == 0)
-		Boomer_OnVomit(client);
+		vBoomer_OnVomit(client);
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
@@ -78,17 +81,17 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 2 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
-	if(g_bBoomerBhop && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && (GetEntProp(client, Prop_Send, "m_hasVisibleThreats") || TargetSurvivor(client)))
+	if(g_bBoomerBhop && GetEntityFlags(client) & FL_ONGROUND != 0 && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && (GetEntProp(client, Prop_Send, "m_hasVisibleThreats") || bTargetSurvivor(client)))
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
 		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
 		{
-			if(0.50 * g_fVomitRange < NearestSurvivorDistance(client) < 1000.0)
+			if(0.50 * g_fVomitRange < fNearestSurvivorDistance(client) < 1000.0)
 			{
 				static float vEyeAngles[3];
 				GetClientEyeAngles(client, vEyeAngles);
-				if(Bhop(client, buttons, vEyeAngles))
+				if(bBhop(client, buttons, vEyeAngles))
 					return Plugin_Changed;
 			}
 		}
@@ -97,49 +100,49 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return Plugin_Continue;
 }
 
-int TargetSurvivor(int client)
+int bTargetSurvivor(int client)
 {
 	static int iTarget;
 	iTarget = GetClientAimTarget(client, true);
-	return IsAliveSurvivor(iTarget) ? iTarget : 0;
+	return bIsAliveSurvivor(iTarget) ? iTarget : 0;
 }
 /*
-bool Bhop(int client, int &buttons, float vAng[3])
+bool bBhop(int client, int &buttons, float vAng[3])
 {
 	static bool bJumped;
 	bJumped = false;
 
 	if(buttons & IN_FORWARD)
 	{
-		if(Client_Push(client, buttons, vAng, 180.0))
+		if(bClient_Push(client, buttons, vAng, 180.0))
 			bJumped = true;
 	}
 		
 	if(buttons & IN_BACK)
 	{
 		vAng[1] += 180.0;
-		if(Client_Push(client, buttons, vAng, 90.0))
+		if(bClient_Push(client, buttons, vAng, 90.0))
 			bJumped = true;
 	}
 	
 	if(buttons & IN_MOVELEFT)
 	{
 		vAng[1] += 90.0;
-		if(Client_Push(client, buttons, vAng, 90.0))
+		if(bClient_Push(client, buttons, vAng, 90.0))
 			bJumped = true;
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		vAng[1] -= 90.0;
-		if(Client_Push(client, buttons, vAng, 90.0))
+		if(bClient_Push(client, buttons, vAng, 90.0))
 			bJumped = true;
 	}
 	
 	return bJumped;
 }
 
-bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
+bool bClient_Push(int client, int &buttons, const float vAng[3], float fForce)
 {
 	static float vVec[3];
 	GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
@@ -150,7 +153,7 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
 
-	if(WontFall(client, vVel))
+	if(bWontFall(client, vVel))
 	{
 		buttons |= IN_DUCK;
 		buttons |= IN_JUMP;
@@ -161,31 +164,31 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 	return false;
 }
 */
-bool Bhop(int client, int &buttons, const float vAng[3])
+bool bBhop(int client, int &buttons, const float vAng[3])
 {
 	static bool bJumped;
-	bJumped = false;
-
 	static float vVec[3];
+	
+	bJumped = false;
 
 	if(buttons & IN_FORWARD || buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if(Client_Push(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
+		if(bClient_Push(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
 			bJumped = true;
 	}
 
 	if(buttons & IN_MOVELEFT || buttons & IN_MOVERIGHT)
 	{
 		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		if(Client_Push(client, buttons, vVec, buttons & IN_MOVELEFT ? -90.0 : 90.0))
+		if(bClient_Push(client, buttons, vVec, buttons & IN_MOVELEFT ? -90.0 : 90.0))
 			bJumped = true;
 	}
 
 	return bJumped;
 }
 
-bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
+bool bClient_Push(int client, int &buttons, float vVec[3], float fForce)
 {
 	NormalizeVector(vVec, vVec);
 	ScaleVector(vVec, fForce);
@@ -194,7 +197,7 @@ bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
 
-	if(WontFall(client, vVel, vVec))
+	if(bWontFall(client, vVel, vVec))
 	{
 		buttons |= IN_DUCK;
 		buttons |= IN_JUMP;
@@ -206,7 +209,7 @@ bool Client_Push(int client, int &buttons, float vVec[3], float fForce)
 }
 
 #define JUMP_HEIGHT 56.0
-bool WontFall(int client, const float vVel[3], const float vVec[3])
+bool bWontFall(int client, const float vVel[3], const float vVec[3])
 {
 	static float vStart[3];
 	static float vEnd[3];
@@ -225,7 +228,7 @@ bool WontFall(int client, const float vVel[3], const float vVec[3])
 
 	vEnd[2] += fHeight;
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	vEnd[2] -= fHeight;
 
 	static bool bDidHit;
@@ -248,7 +251,7 @@ bool WontFall(int client, const float vVel[3], const float vVec[3])
 			static float fAngle;
 			static float vNormal[3];
 			TR_GetPlaneNormal(hTrace, vNormal);
-			fAngle = GetAngleBetweenVectors(vVel, vNormal, vVec);
+			fAngle = fGetAngleBetweenVectors(vVel, vNormal, vVec);
 			if(fAngle == 90.0 || fAngle > 135.0)
 			{
 				delete hTrace;
@@ -266,7 +269,7 @@ bool WontFall(int client, const float vVel[3], const float vVec[3])
 	vDown[1] = vEndNonCol[1];
 	vDown[2] = vEndNonCol[2] - 100000.0;
 
-	hTrace = TR_TraceHullFilterEx(vEndNonCol, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vEndNonCol, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if(hTrace != null)
 	{
 		if(TR_DidHit(hTrace))
@@ -302,41 +305,33 @@ bool WontFall(int client, const float vVel[3], const float vVec[3])
 // the direction will be used to determine the sign of angle (right hand rule)
 // all of the 3 vectors have to be normalized
 //---------------------------------------------------------
-float GetAngleBetweenVectors(const float vector1[3], const float vector2[3], const float direction[3])
+float fGetAngleBetweenVectors(const float vVec1[3], const float vVec2[3], const float vDirection[3])
 {
-	static float vector1_n[3], vector2_n[3], direction_n[3], cross[3];
-	NormalizeVector(direction, direction_n);
-	NormalizeVector(vector1, vector1_n);
-	NormalizeVector(vector2, vector2_n);
-	static float degree;
-	degree = ArcCosine(GetVectorDotProduct(vector1_n, vector2_n )) * 57.29577951;   // 180/Pi
-	GetVectorCrossProduct(vector1_n, vector2_n, cross);
+	static float vVec1_n[3], vVec2_n[3], vDirection_n[3], vCross[3];
+	NormalizeVector(vDirection, vDirection_n);
+	NormalizeVector(vVec1, vVec1_n);
+	NormalizeVector(vVec2, vVec2_n);
 
-	if(GetVectorDotProduct(cross, direction_n ) < 0.0)
-		degree *= -1.0;
+	static float fDegree;
+	fDegree = ArcCosine(GetVectorDotProduct(vVec1_n, vVec2_n )) * 57.29577951;   // 180/Pi
+	GetVectorCrossProduct(vVec1_n, vVec2_n, vCross);
+	if(GetVectorDotProduct(vCross, vDirection_n ) < 0.0)
+		fDegree *= -1.0;
 
-	return degree;
+	return fDegree;
 }
 
-public bool TraceEntityFilter(int entity, int contentsMask)
+public bool bTraceEntityFilter(int entity, int contentsMask)
 {
 	if(entity <= MaxClients)
 		return false;
-	else
-	{
-		static char sClassName[9];
-		GetEntityClassname(entity, sClassName, sizeof(sClassName));
-		if(sClassName[0] == 'i' || sClassName[0] == 'w')
-		{
-			if(strcmp(sClassName, "infected") == 0 || strcmp(sClassName, "witch") == 0)
-				return false;
-		}
-	}
 
-	return true;
+	static char sClassName[9];
+	GetEntityClassname(entity, sClassName, sizeof(sClassName));
+	return (sClassName[0] == 'i' && strcmp(sClassName, "infected") == 0) || (sClassName[0] == 'w' && strcmp(sClassName, "witch") == 0);
 }
 
-float NearestSurvivorDistance(int client)
+float fNearestSurvivorDistance(int client)
 {
 	static int i;
 	static int iNum;
@@ -365,15 +360,15 @@ float NearestSurvivorDistance(int client)
 }
 
 #define CROUCHING_HEIGHT 56.0
-void Boomer_OnVomit(int client)
+void vBoomer_OnVomit(int client)
 {
 	static int iAimTarget;
 
 	iAimTarget = GetClientAimTarget(client, true);
-	if(!IsAliveSurvivor(iAimTarget))
+	if(!bIsAliveSurvivor(iAimTarget))
 	{
 		static int iNewTarget;
-		iNewTarget = GetClosestSurvivor(client, iAimTarget, g_fVomitRange + 260.0);
+		iNewTarget = iGetClosestSurvivor(client, iAimTarget, g_fVomitRange + 260.0);
 		if(iNewTarget != -1)
 			iAimTarget = iNewTarget;
 	}
@@ -387,7 +382,7 @@ void Boomer_OnVomit(int client)
 	vLength = GetVectorLength(vVelocity);
 	vLength = vLength < g_fVomitRange ? g_fVomitRange : vLength;
 
-	if(IsAliveSurvivor(iAimTarget))
+	if(bIsAliveSurvivor(iAimTarget))
 	{
 		static float vOrigin[3];
 		static float vTarget[3];
@@ -411,7 +406,7 @@ void Boomer_OnVomit(int client)
 		vVectors[1] = Sine(DegToRad(vAngles[1])) * Cosine(DegToRad(vAngles[0]));
 		vVectors[2] = Sine(DegToRad(vAngles[0]));
 
-		vLength += NearestSurvivorDistance(client);
+		vLength += fNearestSurvivorDistance(client);
 	}
 	
 	NormalizeVector(vVectors, vVectors);
@@ -419,17 +414,17 @@ void Boomer_OnVomit(int client)
 	TeleportEntity(client, NULL_VECTOR, vAngles, vVectors);
 }
 
-bool IsAliveSurvivor(int client)
+bool bIsAliveSurvivor(int client)
 {
-	return IsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
+	return bIsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
 }
 
-bool IsValidClient(int client)
+bool bIsValidClient(int client)
 {
 	return client > 0 && client <= MaxClients && IsClientInGame(client);
 }
 
-int GetClosestSurvivor(int client, int iAimTarget = -1, float fDistance)
+int iGetClosestSurvivor(int client, int iAimTarget = -1, float fDistance)
 {
 	static int i;
 	static int iNum;

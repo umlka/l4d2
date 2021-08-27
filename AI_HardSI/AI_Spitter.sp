@@ -3,9 +3,11 @@
 #include <sourcemod>
 #include <sdktools>
 
-ConVar g_hSpitterBhop;
+ConVar
+	g_hSpitterBhop;
 
-bool g_bSpitterBhop;
+bool
+	g_bSpitterBhop;
 
 public Plugin myinfo =
 {
@@ -20,20 +22,20 @@ public void OnPluginStart()
 {
 	g_hSpitterBhop = CreateConVar("ai_spitter_bhop", "1", "Flag to enable bhop facsimile on AI spitters");
 
-	g_hSpitterBhop.AddChangeHook(ConVarChanged);
+	g_hSpitterBhop.AddChangeHook(vConVarChanged);
 }
 
 public void OnConfigsExecuted()
 {
-	GetCvars();
+	vGetCvars();
 }
 
-public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	GetCvars();
+	vGetCvars();
 }
 
-void GetCvars()
+void vGetCvars()
 {
 	g_bSpitterBhop = g_hSpitterBhop.BoolValue;
 }
@@ -49,14 +51,14 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
 		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
 		{
-			if(150.0 < NearestSurvivorDistance(client) < 1000.0)
+			if(150.0 < fNearestSurvivorDistance(client) < 1000.0)
 			{
 				buttons |= IN_DUCK;
 				buttons |= IN_JUMP;
 				
 				static float vEyeAngles[3];
 				GetClientEyeAngles(client, vEyeAngles);
-				Bhop(client, buttons, vEyeAngles);
+				vBhop(client, buttons, vEyeAngles);
 				return Plugin_Changed;
 			}
 		}
@@ -65,31 +67,31 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return Plugin_Continue;
 }
 
-void Bhop(int client, int &buttons, float vAng[3])
+void vBhop(int client, int &buttons, float vAng[3])
 {
 	if(buttons & IN_FORWARD)
-		Client_Push(client, vAng, 120.0);
+		vClient_Push(client, vAng, 120.0);
 		
 	if(buttons & IN_BACK)
 	{
 		vAng[1] += 180.0;
-		Client_Push(client, vAng, 60.0);
+		vClient_Push(client, vAng, 60.0);
 	}
 	
 	if(buttons & IN_MOVELEFT)
 	{
 		vAng[1] += 90.0;
-		Client_Push(client, vAng, 60.0);
+		vClient_Push(client, vAng, 60.0);
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		vAng[1] -= 90.0;
-		Client_Push(client, vAng, 60.0);
+		vClient_Push(client, vAng, 60.0);
 	}
 }
 
-void Client_Push(int client, const float vAng[3], float fForce)
+void vClient_Push(int client, const float vAng[3], float fForce)
 {
 	static float vVec[3];
 	GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
@@ -102,7 +104,7 @@ void Client_Push(int client, const float vAng[3], float fForce)
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 }
 
-float NearestSurvivorDistance(int client)
+float fNearestSurvivorDistance(int client)
 {
 	static int i;
 	static int iNum;

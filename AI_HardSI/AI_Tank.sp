@@ -5,12 +5,16 @@
 
 #define BoostForward 80.0
 
-ConVar g_hTankBhop;
-ConVar g_hTankAttackRange;
+ConVar
+	g_hTankBhop;
+ConVar
+	g_hTankAttackRange;
 
-bool g_bTankBhop;
+bool
+	g_bTankBhop;
 
-float g_fTankAttackRange;
+float
+	g_fTankAttackRange;
 
 public Plugin myinfo =
 {
@@ -27,21 +31,21 @@ public void OnPluginStart()
 
 	g_hTankAttackRange = FindConVar("tank_attack_range");
 	
-	g_hTankBhop.AddChangeHook(ConVarChanged);
-	g_hTankAttackRange.AddChangeHook(ConVarChanged);
+	g_hTankBhop.AddChangeHook(vConVarChanged);
+	g_hTankAttackRange.AddChangeHook(vConVarChanged);
 }
 
 public void OnConfigsExecuted()
 {
-	GetCvars();
+	vGetCvars();
 }
 
-public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	GetCvars();
+	vGetCvars();
 }
 
-void GetCvars()
+void vGetCvars()
 {
 	g_bTankBhop = g_hTankBhop.BoolValue;
 	g_fTankAttackRange = g_hTankAttackRange.FloatValue;
@@ -56,13 +60,13 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		static float vVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		if(GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0 < SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) < 770.0)
+		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
 		{
-			if(g_fTankAttackRange + 45.0 < NearestSurvivorDistance(client) < 1000.0)
+			if(g_fTankAttackRange + 45.0 < fNearestSurvivorDistance(client) < 1000.0)
 			{
 				static float vEyeAngles[3];
 				GetClientEyeAngles(client, vEyeAngles);
-				if(Bhop(client, buttons, vEyeAngles))
+				if(bBhop(client, buttons, vEyeAngles))
 					return Plugin_Changed;
 			}
 		}
@@ -71,42 +75,42 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return Plugin_Continue;
 }
 
-bool Bhop(int client, int &buttons, float vAng[3])
+bool bBhop(int client, int &buttons, float vAng[3])
 {
 	static bool bJumped;
 	bJumped = false;
 
 	if(buttons & IN_FORWARD)
 	{
-		if(Client_Push(client, buttons, vAng, BoostForward))
+		if(bClient_Push(client, buttons, vAng, BoostForward))
 			bJumped = true;
 	}
 		
 	if(buttons & IN_BACK)
 	{
 		vAng[1] += 180.0;
-		if(Client_Push(client, buttons, vAng, BoostForward))
+		if(bClient_Push(client, buttons, vAng, BoostForward))
 			bJumped = true;
 	}
 	
 	if(buttons & IN_MOVELEFT)
 	{
 		vAng[1] += 90.0;
-		if(Client_Push(client, buttons, vAng, BoostForward))
+		if(bClient_Push(client, buttons, vAng, BoostForward))
 			bJumped = true;
 	}
 
 	if(buttons & IN_MOVERIGHT)
 	{
 		vAng[1] -= 90.0;
-		if(Client_Push(client, buttons, vAng, BoostForward))
+		if(bClient_Push(client, buttons, vAng, BoostForward))
 			bJumped = true;
 	}
 	
 	return bJumped;
 }
 
-bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
+bool bClient_Push(int client, int &buttons, const float vAng[3], float fForce)
 {
 	static float vVec[3];
 	GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
@@ -117,7 +121,7 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
 
-	if(WontFall(client, vVel))
+	if(bWontFall(client, vVel))
 	{
 		buttons |= IN_DUCK;
 		buttons |= IN_JUMP;
@@ -129,7 +133,7 @@ bool Client_Push(int client, int &buttons, const float vAng[3], float fForce)
 }
 
 #define JUMP_HEIGHT 56.0
-bool WontFall(int client, const float vVel[3])
+bool bWontFall(int client, const float vVel[3])
 {
 	static float vStart[3];
 	static float vEnd[3];
@@ -148,7 +152,7 @@ bool WontFall(int client, const float vVel[3])
 
 	vEnd[2] += fHeight;
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	vEnd[2] -= fHeight;
 
 	static bool bDidHit;
@@ -179,7 +183,7 @@ bool WontFall(int client, const float vVel[3])
 	vDown[1] = vEndNonCol[1];
 	vDown[2] = vEndNonCol[2] - 100000.0;
 
-	hTrace = TR_TraceHullFilterEx(vEndNonCol, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vEndNonCol, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if(hTrace != null)
 	{
 		if(TR_DidHit(hTrace))
@@ -209,26 +213,18 @@ bool WontFall(int client, const float vVel[3])
 	}
 	return false;
 }
-
-public bool TraceEntityFilter(int entity, int contentsMask)
+ 
+public bool bTraceEntityFilter(int entity, int contentsMask)
 {
 	if(entity <= MaxClients)
 		return false;
-	else
-	{
-		static char sClassName[9];
-		GetEntityClassname(entity, sClassName, sizeof(sClassName));
-		if(sClassName[0] == 'i' || sClassName[0] == 'w')
-		{
-			if(strcmp(sClassName, "infected") == 0 || strcmp(sClassName, "witch") == 0)
-				return false;
-		}
-	}
 
-	return true;
+	static char sClassName[9];
+	GetEntityClassname(entity, sClassName, sizeof(sClassName));
+	return (sClassName[0] == 'i' && strcmp(sClassName, "infected") == 0) || (sClassName[0] == 'w' && strcmp(sClassName, "witch") == 0);
 }
 
-float NearestSurvivorDistance(int client)
+float fNearestSurvivorDistance(int client)
 {
 	static int i;
 	static int iNum;

@@ -4,16 +4,19 @@
 #include <sdktools>
 #include <left4dhooks>
 
-ConVar g_hJockeyLeapAgain;
-ConVar g_hJockeyStumbleRadius;
-ConVar g_hHopActivationProximity;
+ConVar
+	g_hJockeyLeapAgain,
+	g_hJockeyStumbleRadius,
+	g_hHopActivationProximity;
 
-float g_fJockeyLeapAgain;
-float g_fJockeyStumbleRadius;
-float g_fHopActivationProximity;
+float
+	g_fJockeyLeapAgain,
+	g_fJockeyStumbleRadius,
+	g_fHopActivationProximity;
 	
-bool g_bCanLeap[MAXPLAYERS + 1];
-bool g_bDoNormalJump[MAXPLAYERS + 1];
+bool
+	g_bCanLeap[MAXPLAYERS + 1],
+	g_bDoNormalJump[MAXPLAYERS + 1];
 
 public Plugin myinfo =
 {
@@ -32,15 +35,15 @@ public void OnPluginStart()
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("jockey_ride", Event_JockeyRide, EventHookMode_Pre);
 	
+	g_hJockeyLeapAgain = FindConVar("z_jockey_leap_again_timer");
+	g_hJockeyLeapAgain.SetFloat(0.25);
+
 	FindConVar("z_jockey_leap_range").SetFloat(1000.0);
 
-	g_hJockeyLeapAgain = FindConVar("z_jockey_leap_again_timer");
-	g_hJockeyLeapAgain.SetFloat(0.1);
-
-	g_hJockeyLeapAgain.AddChangeHook(ConVarChanged);
-	g_hJockeyStumbleRadius.AddChangeHook(ConVarChanged);
-	g_hHopActivationProximity.AddChangeHook(ConVarChanged);
-	FindConVar("mp_gamemode").AddChangeHook(OnGameModeChanged);
+	g_hJockeyLeapAgain.AddChangeHook(vConVarChanged);
+	g_hJockeyStumbleRadius.AddChangeHook(vConVarChanged);
+	g_hHopActivationProximity.AddChangeHook(vConVarChanged);
+	FindConVar("mp_gamemode").AddChangeHook(vGameModeChanged);
 }
 
 public void OnPluginEnd()
@@ -50,25 +53,25 @@ public void OnPluginEnd()
 
 public void OnConfigsExecuted()
 {
-	GetCvars();
-	GetCurrentMode();
+	vGetCvars();
+	vGetCurrentMode();
 }
 
-public void ConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	GetCvars();
+	vGetCvars();
 }
 
-void GetCvars()
+void vGetCvars()
 {
 	g_fJockeyLeapAgain = g_hJockeyLeapAgain.FloatValue;
 	g_fJockeyStumbleRadius = g_hJockeyStumbleRadius.FloatValue;
 	g_fHopActivationProximity = g_hHopActivationProximity.FloatValue;
 }
 
-public void OnGameModeChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+public void vGameModeChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	GetCurrentMode();
+	vGetCurrentMode();
 }
 
 bool g_bMapStarted;
@@ -83,7 +86,7 @@ public void OnMapEnd()
 }
 
 int g_iCurrentMode;
-void GetCurrentMode()
+void vGetCurrentMode()
 {
 	if(g_bMapStarted == false)
 		return;
@@ -125,22 +128,22 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 public void Event_PlayerShoved(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(IsBotJockey(client))
-		Jockey_OnShoved(client);
+	if(bIsBotJockey(client))
+		vJockey_OnShoved(client);
 }
 
-void Jockey_OnShoved(int client)
+void vJockey_OnShoved(int client)
 {
 	g_bCanLeap[client] = false;
 	CreateTimer(g_fJockeyLeapAgain, Timer_LeapCooldown, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 }
 
-bool IsBotJockey(int client)
+bool bIsBotJockey(int client)
 {
 	return client && IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 5;
 }
 
-public Action Timer_LeapCooldown(Handle timer, int client)
+public Action Timer_LeapCooldown(Handle timer, any client)
 {
 	g_bCanLeap[GetClientOfUserId(client)] = true;
 }
@@ -153,10 +156,10 @@ public void Event_JockeyRide(Event event, const char[] name, bool dontBroadcast)
 	int attacker = GetClientOfUserId(event.GetInt("userid"));
 	int victim = GetClientOfUserId(event.GetInt("victim"));
 	if(attacker > 0 && victim > 0)
-		StumbleByStanders(victim, attacker);
+		vStumbleByStanders(victim, attacker);
 }
 
-void StumbleByStanders(int iPinnedSurvivor, int iPinner)
+void vStumbleByStanders(int iPinnedSurvivor, int iPinner)
 {
 	static float vOrigin[3];
 	static float vPos[3];
@@ -167,7 +170,7 @@ void StumbleByStanders(int iPinnedSurvivor, int iPinner)
 	{
 		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 		{
-			if(i != iPinnedSurvivor && i != iPinner && !IsPinned(i))
+			if(i != iPinnedSurvivor && i != iPinner && !bIsPinned(i))
 			{
 				GetClientAbsOrigin(i, vPos);
 				SubtractVectors(vPos, vOrigin, vDir);
@@ -181,7 +184,7 @@ void StumbleByStanders(int iPinnedSurvivor, int iPinner)
 	}
 }
 
-bool IsPinned(int client)
+bool bIsPinned(int client)
 {
 	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
 		return true;
@@ -201,7 +204,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
-	if(GetEntProp(client, Prop_Send, "m_hasVisibleThreats") && NearestSurvivorDistance(client) < g_fHopActivationProximity)
+	if((GetEntProp(client, Prop_Send, "m_hasVisibleThreats") || bTargetSurvivor(client)) && fNearestSurvivorDistance(client) < g_fHopActivationProximity)
 	{
 		if(GetEntityFlags(client) & FL_ONGROUND)
 		{
@@ -226,14 +229,31 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		{
 			buttons &= ~IN_JUMP;
 			buttons &= ~IN_ATTACK;
-		}	
+		}
 		return Plugin_Changed;
 	} 
 
 	return Plugin_Continue;
 }
 
-float NearestSurvivorDistance(int client)
+int bTargetSurvivor(int client)
+{
+	static int iTarget;
+	iTarget = GetClientAimTarget(client, true);
+	return bIsAliveSurvivor(iTarget) ? iTarget : 0;
+}
+
+bool bIsAliveSurvivor(int client)
+{
+	return bIsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
+}
+
+bool bIsValidClient(int client)
+{
+	return client > 0 && client <= MaxClients && IsClientInGame(client);
+}
+
+float fNearestSurvivorDistance(int client)
 {
 	static int i;
 	static int iNum;
