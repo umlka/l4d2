@@ -161,14 +161,44 @@ public Plugin myinfo =
 	name = 			"SafeArea Teleport",
 	author = 		"sorallll",
 	description = 	"",
-	version = 		"1.0.7",
+	version = 		"1.0.8",
 	url = 			""
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
+	CreateNative("ST_GetRandomEndSpot", aNative_ST_GetRandomEndSpot);
+	CreateNative("ST_GetRandomStartSpot", aNative_ST_GetRandomStartSpot);
+
 	g_bLateLoad = late;
 	return APLRes_Success;
+}
+
+public any aNative_ST_GetRandomEndSpot(Handle plugin, int numParams)
+{
+	int iLength = g_aEndNavArea.Length;
+	if(iLength == 0)
+		return false;
+	
+	float vPos[3];
+	CNavArea area = g_aEndNavArea.Get(GetRandomInt(0, iLength - 1));
+	area.FindRandomSpot(vPos);
+
+	SetNativeArray(1, vPos, sizeof(vPos));
+	return true;
+}
+
+public any aNative_ST_GetRandomStartSpot(Handle plugin, int numParams)
+{
+	int iLength = g_aStartNavArea.Length;
+	if(iLength == 0)
+		return false;
+
+	float vPos[3];
+	CNavArea area = g_aStartNavArea.Get(GetRandomInt(0, iLength - 1));
+	area.FindRandomSpot(vPos);
+	SetNativeArray(1, vPos, sizeof(vPos));
+	return true;
 }
 
 public void OnPluginStart()
@@ -183,7 +213,7 @@ public void OnPluginStart()
 	g_hSafeAreaTime.AddChangeHook(vConVarChanged);
 	g_hSafeAreaMinSurvivors.AddChangeHook(vConVarChanged);
 
-	//AutoExecConfig(true, "end_safezone_detcet");
+	//AutoExecConfig(true, "safearea_teleport");
 	//想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
@@ -700,8 +730,8 @@ void vTeleportOrSuicide(int iType)
 void vCloseAndLockLastSafeDoor()
 {
 	int iEntRef;
-	int iDoorCount = g_aLastDoor.Length;
-	for(int i; i < iDoorCount; i++)
+	int iLength = g_aLastDoor.Length;
+	for(int i; i < iLength; i++)
 	{
 		if(!bIsValidEntRef((iEntRef = g_aLastDoor.Get(i))))
 			continue;
