@@ -5,7 +5,7 @@
 #include <binhooks>
 #include <left4dhooks>
 
-#define SPAWN_DEBUG 1
+#define SPAWN_DEBUG 0
 
 #define NUM_TYPES_INFECTED	6
 
@@ -69,7 +69,7 @@ int
 	g_iSpawnWeights[NUM_TYPES_INFECTED],
 	g_iSpawnTimeMode,
 	g_iTankSpawnAction,
-	g_iPreferredDirection = 4,
+	g_iPreferredDirection = 9,
 	g_iSILimitCache = UNINITIALISED,
 	g_iSpawnLimitsCache[NUM_TYPES_INFECTED] =
 	{	
@@ -346,7 +346,7 @@ static void vGenerateAndExecuteSpawnQueue()
 
 				delete aList;
 
-				g_iPreferredDirection = bForward ? 3 : 4;
+				g_iPreferredDirection = bForward ? 7 : 0;
 
 				static bool bPZSupported;
 				static bool bResetGhost[MAXPLAYERS + 1];
@@ -398,7 +398,7 @@ static void vGenerateAndExecuteSpawnQueue()
 					}
 				}
 
-				g_iPreferredDirection = 4;
+				g_iPreferredDirection = 9;
 
 				if(iRusher > 0)
 					vVerifySIType(iRusher, aSpawnQueue, iCurrentSI + iSize);
@@ -445,8 +445,8 @@ static void vVerifySIType(int iRusher, ArrayList aSpawnQueue, int iAllowedSI)
 		if(iAllowedSI > iQueueLength)
 			iAllowedSI = iQueueLength;
 		
-		g_hSpawnRange.IntValue += 500;
-		g_hDiscardRange.IntValue += 500;
+		//g_hSpawnRange.IntValue = 1500;
+		//g_hDiscardRange.IntValue = 1650;
 		static float fSpawnPos[3];
 		for(i = 0; i < iAllowedSI; i++)
 		{
@@ -454,7 +454,7 @@ static void vVerifySIType(int iRusher, ArrayList aSpawnQueue, int iAllowedSI)
 			#if SPAWN_DEBUG
 			PrintToServer("[SS] %s产生失败", g_sZombieClass[iIndex]);
 			#endif
-			if(L4D_GetRandomPZSpawnPosition(iRusher, iIndex + 1, 10, fSpawnPos))
+			if(L4D_GetRandomPZSpawnPosition(iRusher, iIndex + 1, 15, fSpawnPos))
 			{
 				L4D2_SpawnSpecial(iIndex + 1, fSpawnPos, NULL_VECTOR);
 				#if SPAWN_DEBUG
@@ -468,8 +468,8 @@ static void vVerifySIType(int iRusher, ArrayList aSpawnQueue, int iAllowedSI)
 				#endif
 			}
 		}
-		g_hSpawnRange.IntValue -= 500;
-		g_hDiscardRange.IntValue -= 500;
+		//g_hSpawnRange.IntValue = 1000;
+		//g_hDiscardRange.IntValue = 1250;
 	}
 }
 
@@ -763,7 +763,7 @@ public void OnConfigsExecuted()
 	vGetTankCustomCvars();
 	vSetDirectorConvars();
 
-	g_iPreferredDirection = 4;
+	g_iPreferredDirection = 9;
 }
 
 public void vLimitsConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -1060,14 +1060,11 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 {
 	g_iPlayerSpawn = 1;
 
-	static int userid;
-	static int client;
-	userid = event.GetInt("userid");
-	client = GetClientOfUserId(userid);
+	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) != 3 || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
 		return;
 
-	CreateTimer(0.1, Timer_TankSpawn, userid, TIMER_FLAG_NO_MAPCHANGE);
+	CreateTimer(0.1, Timer_TankSpawn, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
