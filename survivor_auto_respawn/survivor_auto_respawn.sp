@@ -151,7 +151,8 @@ stock void CSayText2(int client, int author, const char[] sMessage)
 #define CVAR_FLAGS	FCVAR_NOTIFY
 
 Handle
-	g_hSDK_Call_RoundRespawn,
+	g_hSDKRoundRespawn,
+	g_hSDKGoAwayFromKeyboard,
 	g_hRespawnTimer[MAXPLAYERS + 1];
 
 Address
@@ -163,7 +164,9 @@ ConVar
 	g_hAllowSurvivorBot,
 	g_hAllowSurvivorIdle,
 	g_hGiveWeaponType,
-	g_hSlotFlags[5];
+	g_hSlotFlags[5],
+	g_hSbAllBotGame,
+	g_hAllowAllBotSurvivorTeam;
 
 bool
 	g_bAllowSurvivorBot,
@@ -359,17 +362,20 @@ public void OnPluginStart()
 {
 	vLoadGameData();
 
-	g_hRespawnTime = CreateConVar("sar_respawn_time", "15" , "玩家自动复活时间(秒)", CVAR_FLAGS, true, 0.0);
-	g_hRespawnLimit = CreateConVar("sar_respawn_limit", "5" , "玩家每回合自动复活次数", CVAR_FLAGS, true, 0.0);
-	g_hAllowSurvivorBot = CreateConVar("sar_respawn_bot", "1" , "是否允许Bot自动复活 \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hAllowSurvivorIdle = CreateConVar("sar_respawn_idle", "1" , "是否允许闲置玩家自动复活 \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hGiveWeaponType = CreateConVar("sar_give_type", "0" , "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
+	g_hRespawnTime = CreateConVar("sar_respawn_time", "15", "玩家自动复活时间(秒)", CVAR_FLAGS, true, 0.0);
+	g_hRespawnLimit = CreateConVar("sar_respawn_limit", "5", "玩家每回合自动复活次数", CVAR_FLAGS, true, 0.0);
+	g_hAllowSurvivorBot = CreateConVar("sar_respawn_bot", "1", "是否允许Bot自动复活 \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hAllowSurvivorIdle = CreateConVar("sar_respawn_idle", "1", "是否允许闲置玩家自动复活 \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hGiveWeaponType = CreateConVar("sar_give_type", "0", "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
 
-	g_hSlotFlags[0] = CreateConVar("sar_respawn_slot0", "131071" , "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[1] = CreateConVar("sar_respawn_slot1", "5160" , "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[2] = CreateConVar("sar_respawn_slot2", "7" , "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[3] = CreateConVar("sar_respawn_slot3", "15" , "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[4] = CreateConVar("sar_respawn_slot4", "3" , "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[0] = CreateConVar("sar_respawn_slot0", "131071", "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[1] = CreateConVar("sar_respawn_slot1", "5160", "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[2] = CreateConVar("sar_respawn_slot2", "7", "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[3] = CreateConVar("sar_respawn_slot3", "15", "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
+	g_hSlotFlags[4] = CreateConVar("sar_respawn_slot4", "3", "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
+
+	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
+	g_hAllowAllBotSurvivorTeam = FindConVar("allow_all_bot_survivor_team");
 
 	g_hRespawnTime.AddChangeHook(vConVarChanged);
 	g_hRespawnLimit.AddChangeHook(vConVarChanged);
@@ -616,12 +622,29 @@ void vRespawnSurvivor(int client)
 
 	vSetGodMode(client, 1.0);
 	vTeleportToSurvivor(client);
-	vTerror_SetAdrenalineTime(client, 15.0);
-
 	g_iPlayerRespawned[client]++;
 
 	if(!IsFakeClient(client))
+	{
+		if(bCanIdle(client))
+			SDKCall(g_hSDKGoAwayFromKeyboard, client);
+
 		CPrintToChat(client, "{olive}剩余复活次数 {default}-> {blue}%d", g_iRespawnLimit - g_iPlayerRespawned[client]);
+	}	
+}
+
+bool bCanIdle(int client)
+{
+	if(g_hSbAllBotGame.BoolValue || g_hAllowAllBotSurvivorTeam.BoolValue)
+		return true;
+
+	int iSurvivor;
+	for(int i = 1; i <= MaxClients; i++)
+	{
+		if(i != client && IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
+			iSurvivor++;
+	}
+	return iSurvivor > 0;
 }
 
 void vRemoveSurvivorDeathModel(int client)
@@ -639,7 +662,7 @@ bool bIsValidEntRef(int entity)
 		return true;
 	return false;
 }
-
+/*
 //https://forums.alliedmods.net/showthread.php?t=327928
 void vTerror_SetAdrenalineTime(int client, float fDuration)
 {
@@ -654,7 +677,7 @@ void vTerror_SetAdrenalineTime(int client, float fDuration)
     SetEntDataFloat(client, iTimerAddress + 8, GetGameTime() + fDuration);
     SetEntProp(client, Prop_Send, "m_bAdrenalineActive", 1);
 } 
-
+*/
 void vGiveWeapon(int client)
 {
 	if(!IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
@@ -804,10 +827,10 @@ void vForceCrouch(int client)
 void vRemovePlayerSlot(int client, int iSlot)
 {
 	iSlot = GetPlayerWeaponSlot(client, iSlot);
-	if(iSlot > MaxClients)
+	if(iSlot > MaxClients && IsValidEntity(iSlot))
 	{
-		RemovePlayerItem(client, iSlot);
-		RemoveEntity(iSlot);
+		if(RemovePlayerItem(client, iSlot))
+			RemoveEdict(iSlot);
 	}
 }
 
@@ -898,9 +921,17 @@ void vLoadGameData()
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
-	g_hSDK_Call_RoundRespawn = EndPrepSDKCall();
-	if(g_hSDK_Call_RoundRespawn == null)
+	g_hSDKRoundRespawn = EndPrepSDKCall();
+	if(g_hSDKRoundRespawn == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
+
+	StartPrepSDKCall(SDKCall_Player);
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::GoAwayFromKeyboard") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::GoAwayFromKeyboard");
+	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
+	g_hSDKGoAwayFromKeyboard = EndPrepSDKCall();
+	if(g_hSDKGoAwayFromKeyboard == null)
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard");
 
 	vRegisterStatsConditionPatch(hGameData);
 
@@ -931,7 +962,7 @@ void vRegisterStatsConditionPatch(GameData hGameData = null)
 void vRoundRespawn(int client)
 {
 	vStatsConditionPatch(true);
-	SDKCall(g_hSDK_Call_RoundRespawn, client);
+	SDKCall(g_hSDKRoundRespawn, client);
 	vStatsConditionPatch(false);
 }
 
