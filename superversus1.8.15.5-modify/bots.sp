@@ -246,6 +246,7 @@ static const char
 		"models/w_models/weapons/w_eq_painpills.mdl"
 	};
 
+//如果签名失效，请到此处更新https://github.com/Psykotikism/L4D1-2_Signatures
 public Plugin myinfo =
 {
 	name		= "bots(coop)",
@@ -1079,10 +1080,10 @@ void vRemovePlayerWeapons(int client)
 	for(int i; i < 5; i++)
 	{
 		iWeapon = GetPlayerWeaponSlot(client, i);
-		if(iWeapon > MaxClients)
+		if(iWeapon > MaxClients && IsValidEntity(iWeapon))
 		{
-			RemovePlayerItem(client, iWeapon);
-			RemoveEntity(iWeapon);
+			if(RemovePlayerItem(client, iWeapon))
+				RemoveEdict(iWeapon);
 		}
 	}
 }
