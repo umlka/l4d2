@@ -11,6 +11,12 @@
 #define SOUND_BREAK2	"physics/metal/metal_box_break2.wav"
 #define CVAR_FLAGS		FCVAR_NOTIFY
 
+Handle
+	g_hTimer;
+
+Panel
+	g_hPanel;
+
 ConVar
 	g_hAllow,
 	g_hGameMode,
@@ -46,6 +52,9 @@ int
 	g_iDisplayMode,
 	g_iClientTimeout[MAXPLAYERS + 1];
 
+char
+	g_sInfo[256];
+
 public Plugin myinfo =
 {
 	name = "L4D2 Door Lock",
@@ -59,6 +68,8 @@ public void OnPluginStart()
 {
 	LoadTranslations("doorlock.phrases");
 
+	CreateConVar("l4d2_dlock_version", PLUGIN_VERSION, "Plugin version", FCVAR_SPONLY|FCVAR_NOTIFY|FCVAR_REPLICATED);
+
 	g_hAllow = CreateConVar("l4d2_dlock_allow", "1", "0=Plugin off, 1=Plugin on.", CVAR_FLAGS);
 	g_hModes = CreateConVar("l4d2_dlock_modes", "", "Turn on the plugin in these game modes, separate by commas (no spaces). (Empty = all).", CVAR_FLAGS);
 	g_hModesOff = CreateConVar("l4d2_dlock_modes_off", "", "Turn off the plugin in these game modes, separate by commas (no spaces). (Empty = none).", CVAR_FLAGS);
@@ -70,7 +81,6 @@ public void OnPluginStart()
 	g_hBreakTheDoor = CreateConVar("l4d2_dlock_weakdoor", "1", "Saferoom door will be breaked, once opened.", CVAR_FLAGS);
 	g_hDisplayPanel = CreateConVar("l4d2_dlock_displaypanel", "2", "Display players state panel. 0-disabled, 1-hide failed, 2-full info", CVAR_FLAGS);
 	g_hDisplayMode = CreateConVar("l4d2_dlock_displaymode", "1", "Set the display mode for the countdown. (0-off,1-hint, 2-center, 3-chat. any other value to hide countdown)", CVAR_FLAGS);
-	CreateConVar("l4d2_dlock_version", PLUGIN_VERSION, "Plugin version", FCVAR_SPONLY|FCVAR_NOTIFY|FCVAR_REPLICATED);
 
 	g_hGameMode = FindConVar("mp_gamemode");
 	g_hGameMode.AddChangeHook(vAllowConVarChanged);
@@ -158,6 +168,10 @@ void vIsAllowed()
 			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnOpen", vOnFirstOpen);
 			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnFullyOpen", vOnFullyOpen);
 		}
+
+		delete g_hTimer;
+		vUnFreezeBots();
+		vUnFreezePlayers();
 	}
 }
 
@@ -233,7 +247,7 @@ public void OnGamemode(const char[] output, int caller, int activator, float del
 
 public Action OnPlayerRunCmd(int client)
 {
-	if(!g_bIsFreezeAllowed || !bIsCountDownStoppedOrRunning())
+	if(!g_bIsFreezeAllowed || g_iCountDown == 0)
 		return Plugin_Continue;
 
 	if(GetClientTeam(client) == 2)
@@ -253,14 +267,17 @@ public void OnMapStart()
 	g_bMapStarted = true;
 	g_bIsFirstRound = true;
 
-	PrecacheSound(SOUND_COUNTDOWN);
-	PrecacheSound(SOUND_MOVEOUT);
 	PrecacheSound(SOUND_BREAK1);
 	PrecacheSound(SOUND_BREAK2);
+	PrecacheSound(SOUND_MOVEOUT);
+	PrecacheSound(SOUND_COUNTDOWN);
 }
 
 public void OnMapEnd()
 {
+	delete g_hTimer;
+
+	g_iCountDown = 0;
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
 	g_bIsFreezeAllowed = false;
@@ -270,6 +287,9 @@ public void OnMapEnd()
 
 public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
+	delete g_hTimer;
+
+	g_iCountDown = 0;
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
 	g_bIsFreezeAllowed = false;
@@ -281,120 +301,111 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 0 && g_iPlayerSpawn == 1)
-		vStart();
+		vInitPlugin();
 	g_iRoundStart = 1;
 }
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
-		vStart();
+		vInitPlugin();
 	g_iPlayerSpawn = 1;
 }
 
-void vStart()
+void vInitPlugin()
 {
+	delete g_hTimer;
+
 	for(int i = 1; i <= MaxClients; i++)
-	{
-		g_iClientTimeout[i] = 0;
-		g_bIsClientLoading[i] = true;
-	}
+		vResetLoading(i);
 
 	vInitDoor();
-	CreateTimer(1.0, Timer_StartSequence, _, TIMER_FLAG_NO_MAPCHANGE);
+	vStartSequence();
 }
 
 public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
-	if(!bIsCountDownStoppedOrRunning())
+	if(g_iCountDown == 0)
 		return;
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return;
 		
+	vResetLoading(client);
+}
+
+void vResetLoading(int client)
+{
 	g_iClientTimeout[client] = 0;
 	g_bIsClientLoading[client] = false;
 }
 
-public Action Timer_StartSequence(Handle timer)
+void vStartSequence()
 {
-	g_iCountDown = -1;
-	vExecuteCheatCommand("nb_stop", "1");
-
 	if(bIsValidEntRef(g_iStartSafeDoor))
 	{
-		vLockTheDoor();
-		CreateTimer(1.0, Timer_LoadingStatus, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
-	}
-	else if(g_bCvarFreezeNodoor)
-	{
-		g_bIsFreezeAllowed = true;
-		CreateTimer(1.0, Timer_LoadingStatus, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
-	}
-	else
-	{
-		g_iCountDown = 0;
-		vExecuteCheatCommand("nb_stop", "0");
-	}
-}
-
-public Action Timer_LoadingStatus(Handle timer)
-{
-	if(bIsFinishedLoading())
-	{
-		if(!g_bIsFreezeAllowed)
-			vUnFreezePlayers();
-
-		if(!bIsCountDownRunning())
-		{
-			if(!g_bIsFreezeAllowed)
-				vExecuteCheatCommand("nb_stop", "0");
-
-			g_iCountDown = 0;
-			CreateTimer(1.0, Timer_MoveOut, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
-		}
-
-		return Plugin_Stop;
-	}
-	else
 		g_iCountDown = -1;
 
-	return Plugin_Continue;
-}
-
-public Action Timer_MoveOut(Handle timer)
-{
-	if(g_iCountDown == -1)
-	{
-		vExecuteCheatCommand("nb_stop", "1");
-		return Plugin_Stop;
-	}
-	else if(g_iCountDown >= (g_bIsFirstRound ? g_iPrepareTime1r : g_iPrepareTime2r))
-	{
-		g_iCountDown = 0;
-		vPrintTextAll("%t", "DL_Moveout");
-		vExecuteCheatCommand("nb_stop", "0");
-		vUnFreezePlayers();
-
-		if(bIsValidEntRef(g_iStartSafeDoor))
-			vUnvLockTheDoor();
-
-		vPlaySound(SOUND_MOVEOUT);
-
-		g_bIsFirstRound = false;
-		return Plugin_Stop;
+		vLockDoor();
+		vFreezeBots();
+		g_hTimer = CreateTimer(1.0, Timer_Loading, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 	}
 	else
 	{
-		if(!g_bIsFreezeAllowed)
-			vPrintTextAll("%t", "DL_Locked", (g_bIsFirstRound ? g_iPrepareTime1r : g_iPrepareTime2r) - g_iCountDown);
-		else
-			vPrintTextAll("%t", "DL_Frozen", (g_bIsFirstRound ? g_iPrepareTime1r : g_iPrepareTime2r) - g_iCountDown);
+		if(g_bCvarFreezeNodoor)
+		{
+			g_iCountDown = -1;
 
-		vPlaySound(SOUND_COUNTDOWN);
-		g_iCountDown++;
+			g_bIsFreezeAllowed = true;
+			vExecuteCheatCommand("nb_stop", "1");
+			g_hTimer = CreateTimer(1.0, Timer_Loading, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
+		}
 	}
+}
+
+public Action Timer_Loading(Handle timer)
+{
+	if(g_iCountDown >= 0)
+	{
+		if(g_iCountDown >= (g_bIsFirstRound ? g_iPrepareTime1r : g_iPrepareTime2r))
+		{
+			g_iCountDown = 0;
+
+			vPrintTextAll("%t", "DL_Moveout");
+
+			if(!g_bIsFreezeAllowed)
+				vUnFreezeBots();
+			else
+				vUnFreezePlayers();
+
+			if(bIsValidEntRef(g_iStartSafeDoor))
+				vUnLockDoor();
+
+			vPlaySound(SOUND_MOVEOUT);
+
+			g_hTimer = null;
+			return Plugin_Stop;
+		}
+		else
+		{
+			if(!g_bIsFreezeAllowed)
+				vPrintTextAll("%t", "DL_Locked", (g_bIsFirstRound ? g_iPrepareTime1r : g_iPrepareTime2r) - g_iCountDown);
+			else
+				vPrintTextAll("%t", "DL_Frozen", (g_bIsFirstRound ? g_iPrepareTime1r : g_iPrepareTime2r) - g_iCountDown);
+
+			vPlaySound(SOUND_COUNTDOWN);
+			g_iCountDown++;
+		}
+	}
+	else
+	{
+		if(bIsFinishedLoading())
+			g_iCountDown = 0;
+		else
+			g_iCountDown = -1;
+	}
+
 	return Plugin_Continue;
 }
 
@@ -417,23 +428,20 @@ void vShowStatusPanel()
 		}
 	}
 
-	Panel panel;
-	char sInfo[256];
-
 	for(int client = 1; client <= MaxClients; client++)
 	{
 		if(IsClientInGame(client) && !IsFakeClient(client))
 		{
-			panel = new Panel();
+			g_hPanel = new Panel();
 			SetGlobalTransTarget(client);
 
-			FormatEx(sInfo, sizeof(sInfo), "%t", "DL_Menu_Header");
-			panel.DrawText(sInfo);
+			FormatEx(g_sInfo, sizeof(g_sInfo), "%t", "DL_Menu_Header");
+			g_hPanel.DrawText(g_sInfo);
 
 			if(iLoading)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%t", "DL_Menu_Connecting");
-				panel.DrawText(sInfo);
+				FormatEx(g_sInfo, sizeof(g_sInfo), "%t", "DL_Menu_Connecting");
+				g_hPanel.DrawText(g_sInfo);
 
 				iLoading = 0;
 				for(i = 1; i <= MaxClients; i++)
@@ -443,8 +451,8 @@ void vShowStatusPanel()
 						if(g_bIsClientLoading[i])
 						{
 							iLoading++;
-							FormatEx(sInfo, sizeof(sInfo), "->%d. %N", iLoading, i);
-							panel.DrawText(sInfo);
+							FormatEx(g_sInfo, sizeof(g_sInfo), "->%d. %N", iLoading, i);
+							g_hPanel.DrawText(g_sInfo);
 						}
 					}
 				}
@@ -452,8 +460,8 @@ void vShowStatusPanel()
 
 			if(iConnected)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%t", "DL_Menu_Ingame");
-				panel.DrawText(sInfo);
+				FormatEx(g_sInfo, sizeof(g_sInfo), "%t", "DL_Menu_Ingame");
+				g_hPanel.DrawText(g_sInfo);
 
 				iConnected = 0;
 				for(i = 1; i <= MaxClients; i++)
@@ -463,8 +471,8 @@ void vShowStatusPanel()
 						if(!g_bIsClientLoading[i] && g_iClientTimeout[i] < g_iClientTimeOut)
 						{
 							iConnected++;
-							FormatEx(sInfo, sizeof(sInfo), "->%d. %N", iConnected, i);
-							panel.DrawText(sInfo);
+							FormatEx(g_sInfo, sizeof(g_sInfo), "->%d. %N", iConnected, i);
+							g_hPanel.DrawText(g_sInfo);
 						}
 					}
 				}
@@ -474,8 +482,8 @@ void vShowStatusPanel()
 			{
 				if(iLoadFailed)
 				{
-					FormatEx(sInfo, sizeof(sInfo), "%t", "DL_Menu_Fail");
-					panel.DrawText(sInfo);
+					FormatEx(g_sInfo, sizeof(g_sInfo), "%t", "DL_Menu_Fail");
+					g_hPanel.DrawText(g_sInfo);
 
 					iLoadFailed = 0;
 					for(i = 1; i <= MaxClients; i++)
@@ -485,16 +493,16 @@ void vShowStatusPanel()
 							if(!g_bIsClientLoading[i] && g_iClientTimeout[i] >= g_iClientTimeOut)
 							{
 								iLoadFailed++;
-								FormatEx(sInfo, sizeof(sInfo), "->%d. %N", iLoadFailed, i);
-								panel.DrawText(sInfo);
+								FormatEx(g_sInfo, sizeof(g_sInfo), "->%d. %N", iLoadFailed, i);
+								g_hPanel.DrawText(g_sInfo);
 							}
 						}
 					}
 				}
 			}
 
-			panel.Send(client, iPanelHandler, 5);
-			delete panel;
+			g_hPanel.Send(client, iPanelHandler, 5);
+			delete g_hPanel;
 		}
 	}
 }
@@ -504,14 +512,24 @@ public int iPanelHandler(Menu menu, MenuAction action, int param1, int param2)
 
 }
 
-void vLockTheDoor()
+void vLockDoor()
 {
 	DispatchKeyValue(g_iStartSafeDoor, "spawnflags", "585728");
 }
 
-void vUnvLockTheDoor()
+void vUnLockDoor()
 {
 	DispatchKeyValue(g_iStartSafeDoor, "spawnflags", "8192");
+}
+
+void vFreezeBots()
+{
+	vExecuteCheatCommand("sb_stop", "1");
+}
+
+void vUnFreezeBots()
+{
+	vExecuteCheatCommand("sb_stop", "0");
 }
 
 void vUnFreezePlayers()
@@ -524,6 +542,8 @@ void vUnFreezePlayers()
 				SetEntityMoveType(i, MOVETYPE_WALK);
 		}
 	}
+
+	vExecuteCheatCommand("nb_stop", "0");
 }
 
 void vInitDoor()
@@ -599,6 +619,11 @@ public void vOnFirstOpen(const char[] output, int entity, int activator, float d
 	GetEntPropVector(entity, Prop_Send, "m_angRotation", vAng);
 
 	SetEntProp(entity, Prop_Send, "m_nSolidType", 0);
+	SetEntProp(entity, Prop_Send, "m_usSolidFlags", 4);
+
+	AcceptEntityInput(entity, "DisableCollision");
+	SetEntProp(entity, Prop_Data, "m_iEFlags", 0);
+	SetEntProp(entity, Prop_Data, "m_fEffects", 0x020);
 
 	int door = CreateEntityByName("prop_physics");
 	DispatchKeyValue(door, "spawnflags", "4");
@@ -609,10 +634,6 @@ public void vOnFirstOpen(const char[] output, int entity, int activator, float d
 
 	SetVariantString("unlock");
 	AcceptEntityInput(entity, "SetAnimation");
-
-	AcceptEntityInput(entity, "DisableCollision");
-	SetEntProp(entity, Prop_Data, "m_iEFlags", 0);
-	SetEntProp(entity, Prop_Data, "m_fEffects", 0x020);
 
 	entity = EntRefToEntIndex(entity);
 	for(int att; att < 2048; att++)
@@ -645,17 +666,7 @@ public void vOnFirstOpen(const char[] output, int entity, int activator, float d
 
 public void vOnFullyOpen(const char[] output, int entity, int activator, float delay)
 {
-	vLockTheDoor();
-}
-
-bool bIsCountDownRunning()
-{
-	return g_iCountDown > 0;
-}
-
-bool bIsCountDownStoppedOrRunning()
-{
-	return g_iCountDown != 0;
+	vLockDoor();
 }
 
 bool bIsAnyClientLoading()
