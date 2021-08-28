@@ -2043,10 +2043,10 @@ void vRemoveWeapons(int client)
 	for(int iSlot; iSlot < 5; iSlot++)
 	{
 		iWeapon = GetPlayerWeaponSlot(client, iSlot);
-		if(iWeapon > MaxClients)
+		if(iWeapon > MaxClients && IsValidEntity(iWeapon))
 		{
-			RemovePlayerItem(client, iWeapon);
-			RemoveEntity(iWeapon);
+			if(RemovePlayerItem(client, iWeapon))
+				RemoveEdict(iWeapon);
 		}
 	}
 }
@@ -2613,13 +2613,13 @@ void vSetZombieClass(int client, int iZombieClass)
 	int iWeapon = GetPlayerWeaponSlot(client, 0);
 	if(iWeapon != -1)
 	{
-		RemovePlayerItem(client, iWeapon);
-		RemoveEntity(iWeapon);
+		if(RemovePlayerItem(client, iWeapon))
+			RemoveEdict(iWeapon);
 	}
 
 	int iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 	if(iAbility != -1)
-		RemoveEntity(iAbility);
+		RemoveEdict(iAbility);
 
 	SDKCall(g_hSDK_Call_SetClass, client, iZombieClass);
 
