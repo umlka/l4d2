@@ -288,7 +288,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.2.5",
+	version = "3.2.6",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -512,6 +512,7 @@ void vToggle(bool bEnable)
 		HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 		HookEvent("tank_frustrated", Event_TankFrustrated);
 		HookEvent("player_bot_replace", Event_PlayerBotReplace);
+		HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 
 		AddCommandListener(CommandListener_CallVote, "callvote");
 	}
@@ -531,6 +532,7 @@ void vToggle(bool bEnable)
 		UnhookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 		UnhookEvent("tank_frustrated", Event_TankFrustrated);
 		UnhookEvent("player_bot_replace", Event_PlayerBotReplace);
+		UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 
 		RemoveCommandListener(CommandListener_CallVote, "callvote");
 	}
@@ -1531,6 +1533,27 @@ public void Event_PlayerBotReplace(Event event, const char[] name, bool dontBroa
 	}
 }
 
+public void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(client == 0 || !IsClientInGame(client) || (!IsFakeClient(client) && !IsClientInKickQueue(client)) || GetClientTeam(client) != 2)
+		return;
+
+	int jockey = iGetJockeyAttacker(client);
+	if(jockey != -1)
+		vCheatCommand(jockey, "dismount", "");
+}
+
+int iGetJockeyAttacker(int client)
+{
+	for(int i = 1; i <= MaxClients; i++)
+	{
+		if(IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && GetEntProp(i, Prop_Send, "m_zombieClass") == 5 && GetEntPropEnt(i, Prop_Send, "m_jockeyVictim") == client)
+			return i;
+	}
+	return -1;
+}
+
 public Action Timer_ReturnToSurvivor(Handle timer, any client)
 {
 	static int i;
@@ -1565,7 +1588,6 @@ static bool bHasPlayerZombie()
 		if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3)
 			return true;
 	}
-
 	return false;
 }
 
@@ -1582,7 +1604,6 @@ int iGetTeamPlayers(int iTeam=-1)
 				iTeamPlayers++;
 		}
 	}
-
 	return iTeam == -1 ? iPlayers : iTeamPlayers;
 }
 
@@ -1594,7 +1615,6 @@ int iGetTankPlayers()
 		if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && GetEntProp(i, Prop_Send, "m_zombieClass") == 8)
 			iTankPlayers++;
 	}
-
 	return iTankPlayers;
 }
 
