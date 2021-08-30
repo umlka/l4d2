@@ -1536,22 +1536,12 @@ public void Event_PlayerBotReplace(Event event, const char[] name, bool dontBroa
 public void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !IsClientInGame(client) || (!IsFakeClient(client) && !IsClientInKickQueue(client)) || GetClientTeam(client) != 2)
+	if(client == 0 || !IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 2)
 		return;
 
-	int jockey = iGetJockeyAttacker(client);
+	int jockey = GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker");
 	if(jockey != -1)
 		vCheatCommand(jockey, "dismount", "");
-}
-
-int iGetJockeyAttacker(int client)
-{
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && GetEntProp(i, Prop_Send, "m_zombieClass") == 5 && GetEntPropEnt(i, Prop_Send, "m_jockeyVictim") == client)
-			return i;
-	}
-	return -1;
 }
 
 public Action Timer_ReturnToSurvivor(Handle timer, any client)
