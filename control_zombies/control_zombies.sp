@@ -1812,19 +1812,10 @@ void vCreateSurvivorModelGlow(int client)
 	static char sModelName[128];
 	GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
 	DispatchKeyValue(iEntity, "model", sModelName);
-
-	DispatchKeyValue(iEntity, "solid", "0");
-	DispatchKeyValue(iEntity, "rendermode", "0");
-	DispatchKeyValueFloat(iEntity, "fademindist", 20000.0);
-	DispatchKeyValueFloat(iEntity, "fademaxdist", 22000.0);
-	DispatchKeyValue(iEntity, "disableshadows", "1");
-	DispatchKeyValue(iEntity, "disablereceiveshadows", "1");
-	DispatchKeyValue(iEntity, "mingpulevel", "1");
-	DispatchKeyValue(iEntity, "maxgpulevel", "1");
-	DispatchKeyValue(iEntity, "MoveType", "0");
-	DispatchKeyValue(iEntity, "CollisionGroup", "0");
 	DispatchSpawn(iEntity);
 
+	SetEntProp(iEntity, Prop_Send, "m_nSolidType", 0);
+	SetEntProp(iEntity, Prop_Send, "m_usSolidFlags", 4);
 	SetEntProp(iEntity, Prop_Data, "m_iEFlags", 0);
 	SetEntProp(iEntity, Prop_Data, "m_fEffects", 0x020); //don't draw entity
 
