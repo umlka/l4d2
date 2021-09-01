@@ -130,10 +130,7 @@ void vGetCvars()
 	if(iLast != g_iBreakTheDoor)
 	{
 		if(bIsValidEntRef(g_iStartSafeDoor))
-		{
 			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnOpen", vOnFirstOpen);
-			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnFullyOpen", vOnFullyOpen);
-		}
 
 		vInitDoor();
 	}
@@ -164,10 +161,7 @@ void vIsAllowed()
 		UnhookEvent("player_team", Event_PlayerTeam);
 
 		if(bIsValidEntRef(g_iStartSafeDoor))
-		{
 			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnOpen", vOnFirstOpen);
-			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnFullyOpen", vOnFullyOpen);
-		}
 
 		delete g_hTimer;
 		vUnFreezeBots();
@@ -514,12 +508,12 @@ public int iPanelHandler(Menu menu, MenuAction action, int param1, int param2)
 
 void vLockDoor()
 {
-	DispatchKeyValue(g_iStartSafeDoor, "spawnflags", "585728");
+	SetEntProp(g_iStartSafeDoor, Prop_Send, "m_spawnflags", 585728);
 }
 
 void vUnLockDoor()
 {
-	DispatchKeyValue(g_iStartSafeDoor, "spawnflags", "8192");
+	SetEntProp(g_iStartSafeDoor, Prop_Send, "m_spawnflags", 8192);
 }
 
 void vFreezeBots()
@@ -586,17 +580,8 @@ void vInitDoor()
 			{
 				
 				g_iStartSafeDoor = EntIndexToEntRef(entity);
-				switch(g_iBreakTheDoor)
-				{
-					case 1:
-					{
-						HookSingleEntityOutput(entity, "OnOpen", vOnFirstOpen, true);
-						HookSingleEntityOutput(entity, "OnFullyOpen", vOnFullyOpen, true);
-					}
-					
-					case 2:
-						HookSingleEntityOutput(entity, "OnFullyOpen", vOnFullyOpen, true);
-				}
+				if(g_iBreakTheDoor == 1)
+					HookSingleEntityOutput(entity, "OnOpen", vOnFirstOpen, true);
 				break;
 			}
 		}
@@ -635,6 +620,8 @@ public void vOnFirstOpen(const char[] output, int entity, int activator, float d
 	SetVariantString("unlock");
 	AcceptEntityInput(entity, "SetAnimation");
 
+	SetEntProp(entity, Prop_Send, "m_spawnflags", 585728);
+
 	entity = EntRefToEntIndex(entity);
 	for(int att; att < 2048; att++)
 	{
@@ -662,11 +649,6 @@ public void vOnFirstOpen(const char[] output, int entity, int activator, float d
 	TeleportEntity(door, vPos, vAng, vDir);
 
 	EmitSoundToAll(GetRandomInt(0, 1) ? SOUND_BREAK1 : SOUND_BREAK2, door);
-}
-
-public void vOnFullyOpen(const char[] output, int entity, int activator, float delay)
-{
-	vLockDoor();
 }
 
 bool bIsAnyClientLoading()
