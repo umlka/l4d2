@@ -130,7 +130,10 @@ void vGetCvars()
 	if(iLast != g_iBreakTheDoor)
 	{
 		if(bIsValidEntRef(g_iStartSafeDoor))
+		{
 			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnOpen", vOnFirstOpen);
+			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnFullyOpen", vOnFullyOpen);
+		}
 
 		vInitDoor();
 	}
@@ -161,7 +164,10 @@ void vIsAllowed()
 		UnhookEvent("player_team", Event_PlayerTeam);
 
 		if(bIsValidEntRef(g_iStartSafeDoor))
+		{
 			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnOpen", vOnFirstOpen);
+			UnhookSingleEntityOutput(g_iStartSafeDoor, "OnFullyOpen", vOnFullyOpen);
+		}
 
 		delete g_hTimer;
 		vUnFreezeBots();
@@ -578,10 +584,10 @@ void vInitDoor()
 			GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vOrigin);
 			if(iChangelevel == 0 || !bIsDotInEndArea(vOrigin, vMins, vMaxs))
 			{
-				
 				g_iStartSafeDoor = EntIndexToEntRef(entity);
 				if(g_iBreakTheDoor == 1)
 					HookSingleEntityOutput(entity, "OnOpen", vOnFirstOpen, true);
+				HookSingleEntityOutput(entity, "OnFullyOpen", vOnFullyOpen, true);
 				break;
 			}
 		}
@@ -605,6 +611,7 @@ public void vOnFirstOpen(const char[] output, int entity, int activator, float d
 
 	SetEntProp(entity, Prop_Send, "m_nSolidType", 0);
 	SetEntProp(entity, Prop_Send, "m_usSolidFlags", 4);
+	SetEntProp(entity, Prop_Send, "m_CollisionGroup", 0);
 
 	AcceptEntityInput(entity, "DisableCollision");
 	SetEntProp(entity, Prop_Data, "m_iEFlags", 0);
@@ -619,8 +626,6 @@ public void vOnFirstOpen(const char[] output, int entity, int activator, float d
 
 	SetVariantString("unlock");
 	AcceptEntityInput(entity, "SetAnimation");
-
-	SetEntProp(entity, Prop_Send, "m_spawnflags", 585728);
 
 	entity = EntRefToEntIndex(entity);
 	for(int att; att < 2048; att++)
@@ -649,6 +654,11 @@ public void vOnFirstOpen(const char[] output, int entity, int activator, float d
 	TeleportEntity(door, vPos, vAng, vDir);
 
 	EmitSoundToAll(GetRandomInt(0, 1) ? SOUND_BREAK1 : SOUND_BREAK2, door);
+}
+
+public void vOnFullyOpen(const char[] output, int entity, int activator, float delay)
+{
+	vLockDoor();
 }
 
 bool bIsAnyClientLoading()
