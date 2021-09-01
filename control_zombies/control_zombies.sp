@@ -1816,6 +1816,9 @@ void vCreateSurvivorModelGlow(int client)
 
 	SetEntProp(iEntity, Prop_Send, "m_nSolidType", 0);
 	SetEntProp(iEntity, Prop_Send, "m_usSolidFlags", 4);
+	SetEntProp(iEntity, Prop_Send, "m_CollisionGroup", 0);
+
+	AcceptEntityInput(iEntity, "DisableCollision");
 	SetEntProp(iEntity, Prop_Data, "m_iEFlags", 0);
 	SetEntProp(iEntity, Prop_Data, "m_fEffects", 0x020); //don't draw entity
 
