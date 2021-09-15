@@ -297,7 +297,7 @@ public void OnPluginStart()
 
 	g_hBotsSurvivorLimit.AddChangeHook(vSurvivorLimitConVarChanged);
 
-	//AutoExecConfig(true, "bots");
+	AutoExecConfig(true, "bots");
 
 	RegConsoleCmd("sm_spec", cmdJoinSpectator, "加入旁观者");
 	RegConsoleCmd("sm_join", cmdJoinSurvivor, "加入生还者");
@@ -696,16 +696,16 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	g_iPlayerSpawn = 1;
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(GetClientTeam(client) == TEAM_SURVIVOR)
-	{
-		delete g_hBotsUpdateTimer;
-		g_hBotsUpdateTimer = CreateTimer(2.0, Timer_BotsUpdate);
-		
-		if(!IsFakeClient(client) && bIsFirstTime(client))
-			vRecordSteamID(client);
+	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) != TEAM_SURVIVOR)
+		return;
 
-		vSetGhostStatus(client, 0);
-	}
+	delete g_hBotsUpdateTimer;
+	g_hBotsUpdateTimer = CreateTimer(2.0, Timer_BotsUpdate);
+		
+	if(!IsFakeClient(client) && bIsFirstTime(client))
+		vRecordSteamID(client);
+
+	vSetGhostStatus(client, 0);
 }
 
 public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
