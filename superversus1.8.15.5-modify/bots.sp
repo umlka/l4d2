@@ -584,7 +584,7 @@ public void OnClientDisconnect(int client)
 	if(IsFakeClient(client))
 		return;
 
-	if(bIsRoundStarted() == true)
+	if(g_iRoundStart == 1)
 	{
 		delete g_hBotsUpdateTimer;
 		g_hBotsUpdateTimer = CreateTimer(1.0, Timer_BotsUpdate);
@@ -603,7 +603,7 @@ public Action Timer_BotsUpdate(Handle timer)
 
 void vSpawnCheck()
 {
-	if(bIsRoundStarted() == false)
+	if(g_iRoundStart == 0)
 		return;
 
 	int iSurvivor		= iGetTeamPlayers(TEAM_SURVIVOR, true);
@@ -689,6 +689,8 @@ bool bIsRoundStarted()
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	g_iRoundStart = 1;
+
+	delete g_hBotsUpdateTimer;
 }
 
 public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
@@ -747,7 +749,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 
 public Action Timer_AutoJoinSurvivorTeam(Handle timer, any client)
 {
-	if(!g_bAutoJoin || bIsRoundStarted() == false || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || iGetBotOfIdle(client)) 
+	if(!g_bAutoJoin || g_iRoundStart == 0 || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || iGetBotOfIdle(client)) 
 		return;
 	
 	cmdJoinSurvivor(client, 0);
