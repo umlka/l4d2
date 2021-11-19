@@ -288,7 +288,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.2.6",
+	version = "3.2.7",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -302,17 +302,19 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	return APLRes_Success;
 }
 
-public any aNative_SetSpawnablePZ(Handle plugin, int numParams)
+any aNative_SetSpawnablePZ(Handle plugin, int numParams)
 {
 	g_iSpawnablePZ = GetNativeCell(1);
+	return true;
 }
 
-public any aNative_ResetSpawnablePZ(Handle plugin, int numParams)
+any aNative_ResetSpawnablePZ(Handle plugin, int numParams)
 {
 	g_iSpawnablePZ = 0;
+	return true;
 }
 
-public any aNative_IsSpawnablePZSupported(Handle plugin, int numParams)
+any aNative_IsSpawnablePZSupported(Handle plugin, int numParams)
 {
 	return g_bIsSpawnablePZSupported;
 }
@@ -358,7 +360,7 @@ public void OnPluginStart()
 	g_hSpawnWeights[SI_CHARGER] = CreateConVar("cz_charger_weight", "50", "charger产生比重", CVAR_FLAGS, true, 0.0);
 	g_hScaleWeights = CreateConVar("cz_scale_weights", "1",	"[ 0 = 关闭 | 1 = 开启 ] 缩放相应特感的产生比重", _, true, 0.0, true, 1.0);
 
-	//AutoExecConfig(true, "controll_zombies");
+	AutoExecConfig(true, "controll_zombies");
 	//想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
 	g_hGameMode = FindConVar("mp_gamemode");
@@ -426,7 +428,7 @@ public void OnConfigsExecuted()
 	vGetAccessCvars();
 }
 
-public void vModeConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vModeConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vIsAllowed();
 }
@@ -538,7 +540,7 @@ void vToggle(bool bEnable)
 	}
 }
 
-public void vOtherConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vOtherConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetOtherCvars();
 }
@@ -562,7 +564,7 @@ void vGetOtherCvars()
 	g_iPZChangeTeamTo = g_hPZChangeTeamTo.IntValue;
 }
 
-public void vColorConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vColorConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetColorCvars();
 }
@@ -616,7 +618,7 @@ int iGetColor(ConVar hConVar)
 	return iColor > 0 ? iColor : 1;
 }
 
-public void vAccessConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vAccessConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetAccessCvars();
 }
@@ -669,7 +671,7 @@ static bool bCheckClientAccess(int client, int iIndex)
 	return admin.ImmunityLevel >= g_iImmunityLevels[iIndex];
 }
 
-public void vSpawnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vSpawnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetSpawnCvars();
 }
@@ -685,7 +687,7 @@ void vGetSpawnCvars()
 	g_bScaleWeights = g_hScaleWeights.BoolValue;
 }
 
-public Action cmdCz(int client, int args)
+Action cmdCz(int client, int args)
 {
 	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) < 2)
 		return Plugin_Handled;
@@ -694,7 +696,7 @@ public Action cmdCz(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdTeam2(int client, int args)
+Action cmdTeam2(int client, int args)
 {
 	if(g_bHasPlayerControlledZombies)
 	{
@@ -729,7 +731,7 @@ public Action cmdTeam2(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdTeam3(int client, int args)
+Action cmdTeam3(int client, int args)
 {
 	if(g_bHasPlayerControlledZombies)
 	{
@@ -769,7 +771,7 @@ public Action cmdTeam3(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdBP(int client, int args)
+Action cmdBP(int client, int args)
 {
 	if(g_bHasPlayerControlledZombies)
 	{
@@ -809,7 +811,7 @@ public Action cmdBP(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdChangeClass(int client, int args)
+Action cmdChangeClass(int client, int args)
 {
 	if(g_bHasPlayerControlledZombies)
 	{
@@ -871,7 +873,7 @@ void vDisplayClassMenu(int client)
 	menu.Display(client, 15);
 }
 
-public int iDisplayClassMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iDisplayClassMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -883,6 +885,8 @@ public int iDisplayClassMenuHandler(Menu menu, MenuAction action, int client, in
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vSelectZombieClassMenu(int client)
@@ -904,7 +908,7 @@ void vSelectZombieClassMenu(int client)
 	menu.Display(client, 30);
 }
 
-public int iSelectZombieClassMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iSelectZombieClassMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -923,6 +927,8 @@ public int iSelectZombieClassMenuHandler(Menu menu, MenuAction action, int clien
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vSetZombieClassAndPunish(int client, int iZombieClass)
@@ -943,7 +949,7 @@ int iGetZombieClass(const char[] sClass)
 	return -1;
 }
 
-public Action CommandListener_CallVote(int client, const char[] command, int argc)
+Action CommandListener_CallVote(int client, const char[] command, int argc)
 {
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Continue;
@@ -1071,7 +1077,7 @@ void vResetClientData(int client)
 
 //------------------------------------------------------------------------------
 //Event
-public void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
 { 
 	if(g_bHasAnySurvivorLeftSafeArea || !bIsRoundStarted())
 		return;
@@ -1086,7 +1092,7 @@ bool bIsRoundStarted()
 	return g_iRoundStart && g_iPlayerSpawn;
 }
 
-public Action Timer_PlayerLeftStartArea(Handle timer)
+Action Timer_PlayerLeftStartArea(Handle timer)
 {
 	if(!g_bHasAnySurvivorLeftSafeArea && bIsRoundStarted() && bHasAnySurvivorLeftSafeArea())
 	{
@@ -1111,6 +1117,8 @@ public Action Timer_PlayerLeftStartArea(Handle timer)
 			g_hTimer = CreateTimer(0.1, Timer_Player, _, TIMER_REPEAT);
 		}
 	}
+
+	return Plugin_Continue;
 }
 
 bool bHasAnySurvivorLeftSafeArea()
@@ -1132,7 +1140,7 @@ void vCalculatePZRespawnTime(int client)
 	g_bUsedClassCmd[client] = false;
 }
 
-public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 0 && g_iPlayerSpawn == 1)
 		vRemoveInfectedClips();
@@ -1158,7 +1166,7 @@ void vRemoveInfectedClips()
 		RemoveEntity(entity);
 }
 
-public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
@@ -1189,7 +1197,7 @@ void vForceChangeTeamTo()
 	}
 }
 
-public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
 	int userid = event.GetInt("userid");
 	int client = GetClientOfUserId(userid);
@@ -1239,7 +1247,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 	}
 }
 
-public Action Timer_LadderAndGlow(Handle timer, any client)
+Action Timer_LadderAndGlow(Handle timer, int client)
 {
 	if(!g_bHasPlayerControlledZombies && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client))
 	{
@@ -1272,6 +1280,8 @@ public Action Timer_LadderAndGlow(Handle timer, any client)
 			}
 		}
 	}
+
+	return Plugin_Continue;
 }
 
 void OnNextFrame_ChangeTeamTo(any client)
@@ -1289,7 +1299,7 @@ void OnNextFrame_ChangeTeamTo(any client)
 	}
 }
 
-public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
 		vRemoveInfectedClips();
@@ -1312,7 +1322,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	}
 }
 
-void OnNextFrame_PlayerSpawn(any client)
+void OnNextFrame_PlayerSpawn(int client)
 {
 	if(g_bHasPlayerControlledZombies || (client = GetClientOfUserId(client))== 0 || !IsClientInGame(client) || IsClientInKickQueue(client) || !IsPlayerAlive(client))
 		return;
@@ -1343,7 +1353,7 @@ void OnNextFrame_PlayerSpawn(any client)
 	}
 }
 
-public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
 	int userid = event.GetInt("userid");
 	int client = GetClientOfUserId(userid);
@@ -1396,7 +1406,7 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 	}
 }
 
-public Action Timer_Player(Handle timer)
+Action Timer_Player(Handle timer)
 {
 	if(g_bHasPlayerControlledZombies)
 		return Plugin_Continue;
@@ -1502,7 +1512,7 @@ bool bRespawnPZ(int client, int iZombieClass)
 	return IsPlayerAlive(client);
 }
 
-public void Event_TankFrustrated(Event event, const char[] name, bool dontBroadcast)
+void Event_TankFrustrated(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(g_iLastTeamId[client] != 2 || IsFakeClient(client))
@@ -1514,7 +1524,7 @@ public void Event_TankFrustrated(Event event, const char[] name, bool dontBroadc
 	CPrintToChat(client, "{green}★ {default}丢失 {olive}Tank控制权 {default}后自动切换回 {blue}生还者队伍");
 }
 
-public void Event_PlayerBotReplace(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerBotReplace(Event event, const char[] name, bool dontBroadcast)
 {
 	int bot_userid = event.GetInt("bot");
 	int player_userid = event.GetInt("player");
@@ -1533,7 +1543,7 @@ public void Event_PlayerBotReplace(Event event, const char[] name, bool dontBroa
 	}
 }
 
-public void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client == 0 || !IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 2)
@@ -1544,7 +1554,7 @@ public void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroa
 		vCheatCommand(jockey, "dismount", "");
 }
 
-public Action Timer_ReturnToSurvivor(Handle timer, any client)
+Action Timer_ReturnToSurvivor(Handle timer, int client)
 {
 	static int i;
 	static int iTimes[MAXPLAYERS + 1] = {20, ...};
@@ -1662,12 +1672,13 @@ void vSetGodMode(int client, float fDuration)
 		CreateTimer(fDuration, Timer_Mortal, GetClientUserId(client));
 }
 
-public Action Timer_Mortal(Handle timer, any client)
+Action Timer_Mortal(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
-		return;
+		return Plugin_Stop;
 
 	SetEntProp(client, Prop_Data, "m_takedamage", 2);
+	return Plugin_Continue;
 }
 
 int iGetAnyValidAliveSurvivorBot()
@@ -1833,7 +1844,7 @@ void vCreateSurvivorModelGlow(int client)
 	SDKHook(iEntity, SDKHook_SetTransmit, Hook_SetTransmit);
 }
 
-public Action Hook_SetTransmit(int entity, int client)
+Action Hook_SetTransmit(int entity, int client)
 {
 	if(!IsFakeClient(client) && GetClientTeam(client) == 3)
 		return Plugin_Continue;
@@ -1885,7 +1896,7 @@ static bool bIsValidEntRef(int entity)
 
 //------------------------------------------------------------------------------
 //切换回生还者
-void OnNextFrame_ChangeTeamToSurvivor(any client)
+void OnNextFrame_ChangeTeamToSurvivor(int client)
 {
 	if(g_bHasPlayerControlledZombies || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
 		return;
@@ -2026,7 +2037,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 		SDKHook(entity, SDKHook_SpawnPost, Hook_SpawnPost);
 }
 
-public void Hook_SpawnPost(int entity)
+void Hook_SpawnPost(int entity)
 {
 	SDKUnhook(entity, SDKHook_SpawnPost, Hook_SpawnPost);
 	if(entity <= MaxClients || !IsValidEntity(entity))
@@ -2713,7 +2724,7 @@ void vToggleDetours(bool bEnable)
 	}
 }
 
-public MRESReturn mreOnEnterGhostStatePre(int pThis)
+MRESReturn mreOnEnterGhostStatePre(int pThis)
 {
 	if(bIsRoundStarted() == false)
 		return MRES_Supercede; //阻止死亡状态下的特感玩家在团灭后下一回合开始前进入Ghost State
@@ -2721,7 +2732,7 @@ public MRESReturn mreOnEnterGhostStatePre(int pThis)
 	return MRES_Ignored;
 }
 
-public MRESReturn mreOnEnterGhostStatePost(int pThis)
+MRESReturn mreOnEnterGhostStatePost(int pThis)
 {
 	if(g_iMaterialized[pThis] == 0 && !IsFakeClient(pThis))
 		RequestFrame(OnNextFrame_EnterGhostState, GetClientUserId(pThis));
@@ -2729,7 +2740,7 @@ public MRESReturn mreOnEnterGhostStatePost(int pThis)
 	return MRES_Ignored;
 }
 
-public MRESReturn mreMaterializeFromGhostPre(int pThis)
+MRESReturn mreMaterializeFromGhostPre(int pThis)
 {
 	g_bOnMaterializeFromGhost = true;
 
@@ -2739,7 +2750,7 @@ public MRESReturn mreMaterializeFromGhostPre(int pThis)
 	return MRES_Ignored;
 }
 
-public MRESReturn mreMaterializeFromGhostPost(int pThis)
+MRESReturn mreMaterializeFromGhostPost(int pThis)
 {
 	g_iMaterialized[pThis]++;
 	g_bOnMaterializeFromGhost = false;
@@ -2754,7 +2765,7 @@ public MRESReturn mreMaterializeFromGhostPost(int pThis)
 	return MRES_Ignored;
 }
 
-public MRESReturn mrePlayerZombieAbortControlPre(int pThis)
+MRESReturn mrePlayerZombieAbortControlPre(int pThis)
 {
 	if(!IsFakeClient(pThis) && GetGameTime() - g_fBugExploitTime[pThis][0] < 1.5)
 		return MRES_Supercede;
@@ -2762,7 +2773,7 @@ public MRESReturn mrePlayerZombieAbortControlPre(int pThis)
 	return MRES_Ignored;
 }
 
-public MRESReturn mrePlayerZombieAbortControlPost(int pThis)
+MRESReturn mrePlayerZombieAbortControlPost(int pThis)
 {
 	if(!IsFakeClient(pThis))
 		g_fBugExploitTime[pThis][1] = GetGameTime();
@@ -2770,19 +2781,19 @@ public MRESReturn mrePlayerZombieAbortControlPost(int pThis)
 	return MRES_Ignored;
 }
 
-public MRESReturn mreForEachTerrorPlayerSpawnablePZScanPre()
+MRESReturn mreForEachTerrorPlayerSpawnablePZScanPre()
 {
 	vSpawnablePZScanProtect(0);
 	return MRES_Ignored;
 }
 
-public MRESReturn mreForEachTerrorPlayerSpawnablePZScanPost()
+MRESReturn mreForEachTerrorPlayerSpawnablePZScanPost()
 {
 	vSpawnablePZScanProtect(1);
 	return MRES_Ignored;
 }
 
-void OnNextFrame_EnterGhostState(any client)
+void OnNextFrame_EnterGhostState(int client)
 {
 	if(!g_bHasPlayerControlledZombies && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") != 8 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 	{
