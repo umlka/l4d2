@@ -174,7 +174,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	return APLRes_Success;
 }
 
-public any aNative_ST_GetRandomEndSpot(Handle plugin, int numParams)
+any aNative_ST_GetRandomEndSpot(Handle plugin, int numParams)
 {
 	int iLength = g_aEndNavArea.Length;
 	if(iLength == 0)
@@ -183,12 +183,11 @@ public any aNative_ST_GetRandomEndSpot(Handle plugin, int numParams)
 	float vPos[3];
 	CNavArea area = g_aEndNavArea.Get(GetRandomInt(0, iLength - 1));
 	area.FindRandomSpot(vPos);
-
 	SetNativeArray(1, vPos, sizeof(vPos));
 	return true;
 }
 
-public any aNative_ST_GetRandomStartSpot(Handle plugin, int numParams)
+any aNative_ST_GetRandomStartSpot(Handle plugin, int numParams)
 {
 	int iLength = g_aStartNavArea.Length;
 	if(iLength == 0)
@@ -213,7 +212,7 @@ public void OnPluginStart()
 	g_hSafeAreaTime.AddChangeHook(vConVarChanged);
 	g_hSafeAreaMinSurvivors.AddChangeHook(vConVarChanged);
 
-	//AutoExecConfig(true, "safearea_teleport");
+	AutoExecConfig(true, "safearea_teleport");
 	//想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
@@ -245,7 +244,7 @@ public void OnPluginStart()
 	}
 }
 
-public void OnFinaleStart(const char[] output, int caller, int activator, float delay)
+void OnFinaleStart(const char[] output, int caller, int activator, float delay)
 {
 	if(!bIsValidEntRef(g_iTriggerFinale)) //c5m5, c13m4
 	{
@@ -268,7 +267,7 @@ public void OnFinaleStart(const char[] output, int caller, int activator, float 
 	}
 }
 
-public Action cmdWarpStart(int client, int args)
+Action cmdWarpStart(int client, int args)
 {
 	if(g_iRoundStart == 0 || g_iPlayerSpawn == 0)
 	{
@@ -298,7 +297,7 @@ public Action cmdWarpStart(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdWarpEnd(int client, int args)
+Action cmdWarpEnd(int client, int args)
 {
 	if(g_iRoundStart == 0 || g_iPlayerSpawn == 0)
 	{
@@ -316,7 +315,7 @@ public Action cmdWarpEnd(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdFinale(int client, int args)
+Action cmdFinale(int client, int args)
 {
 	if(g_iRoundStart == 0 || g_iPlayerSpawn == 0)
 	{
@@ -341,7 +340,7 @@ public Action cmdFinale(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdSt(int client, int args)
+Action cmdSt(int client, int args)
 {
 	ReplyToCommand(client, "过图触发器->%d 救援触发器->%d 起始Nav区域数量->%d 终点Nav区域数量->%d", g_iChangelevel ? EntRefToEntIndex(g_iChangelevel) : -1, SDKCall(g_hSDKFindRescueAreaTrigger), g_aStartNavArea.Length, g_aEndNavArea.Length);
 	return Plugin_Handled;
@@ -352,7 +351,7 @@ public void OnConfigsExecuted()
 	vGetCvars();
 }
 
-public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetCvars();
 }
@@ -398,7 +397,7 @@ void vResetPlugin()
 	g_bIsSacrificeFinale = false;
 }
 
-public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
 	if(strcmp(name, "round_end") == 0)
 		vResetPlugin();
@@ -406,7 +405,7 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 	delete g_hTimer;
 }
 
-public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	delete g_hTimer;
 
@@ -415,7 +414,7 @@ public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 	g_iRoundStart = 1;
 }
 
-public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
 		vInitPlugin();
@@ -457,7 +456,8 @@ void vFindTerrorNavAreas()
 
 	for(int i; i < g_iTheCount; i++)
 	{
-		if((area = LoadFromAddress(g_pTheNavAreas + view_as<Address>(i * 4), NumberType_Int32)).IsNull() == true)
+		area = LoadFromAddress(g_pTheNavAreas + view_as<Address>(i * 4), NumberType_Int32);
+		if(area.IsNull() == true)
 			continue;
 
 		iFlags = area.SpawnAttributes;
@@ -606,7 +606,7 @@ void vFindSafeRoomDoors()
 	}
 }
 
-public void OnStartTouch(const char[] output, int caller, int activator, float delay)
+void OnStartTouch(const char[] output, int caller, int activator, float delay)
 {
 	if(g_bIsTriggered || g_bIsSacrificeFinale || activator < 1 || activator > MaxClients || !IsClientInGame(activator) || GetClientTeam(activator) != 2 || !IsPlayerAlive(activator))
 		return;
@@ -667,7 +667,7 @@ int iGetEndAreaSurvivors()
 	return iSurvivors;
 }
 
-public Action Timer_Countdown(Handle timer)
+Action Timer_Countdown(Handle timer)
 {
 	if(g_iCountdown > 0)
 	{
@@ -746,7 +746,7 @@ void vCloseAndLockLastSafeDoor()
 	}
 }
 
-public Action Timer_TeleportToCheckpoint(Handle timer)
+Action Timer_TeleportToCheckpoint(Handle timer)
 {
 	g_aTelePortTarget.Clear();
 
@@ -764,6 +764,7 @@ public Action Timer_TeleportToCheckpoint(Handle timer)
 	}
 
 	vTeleportToCheckpoint();
+	return Plugin_Continue;
 }
 
 void vTeleportToCheckpoint()
@@ -802,7 +803,7 @@ void vTeleportToCheckpoint()
 	}
 }
 
-public Action Timer_DectcetTeleport(Handle timer)
+Action Timer_DectcetTeleport(Handle timer)
 {
 	int i = 1;
 	int iIndex;
@@ -835,6 +836,8 @@ public Action Timer_DectcetTeleport(Handle timer)
 			}
 		}
 	}
+
+	return Plugin_Continue;
 }
 
 void vTeleportFix(int client)
