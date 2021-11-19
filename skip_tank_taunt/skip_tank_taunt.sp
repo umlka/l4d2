@@ -11,10 +11,10 @@ bool
 
 public Plugin myinfo =
 {
-	name = "Skip Tank Taunt", 
-	author = "sorallll", 
-	description = "", 
-	version = "1.0.0", 
+	name = "Skip Tank Taunt",
+	author = "sorallll",
+	description = "",
+	version = "1.0.1",
 	url = ""
 }
 
@@ -66,14 +66,14 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client)
-		SDKUnhook(GetClientOfUserId(event.GetInt("userid")), SDKHook_PostThinkPost, Hook_PostThinkPost);
+		SDKUnhook(client, SDKHook_PostThinkPost, Hook_PostThinkPost);
 }
 
 void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client)
-		SDKUnhook(GetClientOfUserId(event.GetInt("userid")), SDKHook_PostThinkPost, Hook_PostThinkPost);
+		SDKUnhook(client, SDKHook_PostThinkPost, Hook_PostThinkPost);
 }
 
 void Hook_PostThinkPost(int client)
