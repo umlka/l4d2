@@ -43,7 +43,7 @@ public void OnPluginStart()
 	}
 }
 
-public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -52,7 +52,7 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 	}
 }
 
-public void Event_TankSpawn(Event event, const char[] name, bool dontBroadcast)
+void Event_TankSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(!IsFakeClient(client))
@@ -62,21 +62,21 @@ public void Event_TankSpawn(Event event, const char[] name, bool dontBroadcast)
 	SDKHook(client, SDKHook_PostThinkPost, Hook_PostThinkPost);
 }
 
-public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client)
 		SDKUnhook(GetClientOfUserId(event.GetInt("userid")), SDKHook_PostThinkPost, Hook_PostThinkPost);
 }
 
-public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client)
 		SDKUnhook(GetClientOfUserId(event.GetInt("userid")), SDKHook_PostThinkPost, Hook_PostThinkPost);
 }
 
-public void Hook_PostThinkPost(int client)
+void Hook_PostThinkPost(int client)
 {
 	switch(IsPlayerAlive(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 8)
 	{
@@ -120,7 +120,7 @@ void vSetupDetours(GameData hGameData = null)
 		SetFailState("Failed to detour post: CTerrorPlayer::SelectWeightedSequence");
 }
 
-public MRESReturn mreSelectWeightedSequencePost(int pThis, DHookReturn hReturn, DHookParam hParams)
+MRESReturn mreSelectWeightedSequencePost(int pThis, DHookReturn hReturn, DHookParam hParams)
 {
 	if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis) || GetClientTeam(pThis) != 3 || !IsPlayerAlive(pThis) || GetEntProp(pThis, Prop_Send, "m_zombieClass") != 8 || GetEntProp(pThis, Prop_Send, "m_isGhost") == 1)
 		return MRES_Ignored;
