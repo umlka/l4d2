@@ -1,10 +1,9 @@
 #pragma semicolon 1
 #pragma newdecls required
 #include <sourcemod>
-#include <sdktools>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.9.1"
+#define PLUGIN_VERSION "1.9.2"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
 #define TEAM_SPECTATOR	1
@@ -327,7 +326,7 @@ public void OnPluginEnd()
 	vStatsConditionPatch(false);
 }
 
-public Action cmdJoinSpectator(int client, int args)
+Action cmdJoinSpectator(int client, int args)
 {
 	if(bIsRoundStarted() == false)
 	{
@@ -359,7 +358,7 @@ int iGetTeamSpectator()
 	return iSpectator;
 }
 
-public Action cmdJoinSurvivor(int client, int args)
+Action cmdJoinSurvivor(int client, int args)
 {
 	if(bIsRoundStarted() == false)
 	{
@@ -426,7 +425,7 @@ public Action cmdJoinSurvivor(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdGoAFK(int client, int args)
+Action cmdGoAFK(int client, int args)
 {
 	if(bIsRoundStarted() == false)
 	{
@@ -441,7 +440,7 @@ public Action cmdGoAFK(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdTeamMenu(int client, int args)
+Action cmdTeamMenu(int client, int args)
 {
 	if(bIsRoundStarted() == false)
 	{
@@ -456,7 +455,7 @@ public Action cmdTeamMenu(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdKickAllSurvivorBot(int client, int args)
+Action cmdKickAllSurvivorBot(int client, int args)
 {
 	if(bIsRoundStarted() == false)
 	{
@@ -473,7 +472,7 @@ public Action cmdKickAllSurvivorBot(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdBotSet(int client, int args)
+Action cmdBotSet(int client, int args)
 {
 	if(bIsRoundStarted() == false)
 	{
@@ -504,7 +503,7 @@ public Action cmdBotSet(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action CommandListener_SpecNext(int client, char[] command, int argc)
+Action CommandListener_SpecNext(int client, char[] command, int argc)
 {
 	if(client == 0 || !g_bSpecNotify[client] || !IsClientInGame(client) || GetClientTeam(client) != TEAM_SPECTATOR || iGetBotOfIdle(client))
 		return Plugin_Continue;
@@ -523,7 +522,7 @@ public void OnConfigsExecuted()
 	vGetSurvivorLimitCvars();
 }
 
-public void vOtherConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vOtherConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetOtherCvars();
 }
@@ -535,7 +534,7 @@ void vGetOtherCvars()
 	g_iSpecCmdLimit = g_hSpecCmdLimit.IntValue;
 }
 
-public void vSlotConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vSlotConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetSlotCvars();
 }
@@ -569,7 +568,7 @@ bool bGetSlotInfo(int iSlot)
 	return g_iSlotCount[iSlot] != 0;
 }
 
-public void vSurvivorLimitConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vSurvivorLimitConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetSurvivorLimitCvars();
 }
@@ -591,7 +590,7 @@ public void OnClientDisconnect(int client)
 	}
 }
 
-public Action Timer_BotsUpdate(Handle timer)
+Action Timer_BotsUpdate(Handle timer)
 {
 	g_hBotsUpdateTimer = null;
 
@@ -599,6 +598,8 @@ public Action Timer_BotsUpdate(Handle timer)
 		vSpawnCheck();
 	else
 		g_hBotsUpdateTimer = CreateTimer(1.0, Timer_BotsUpdate);
+
+	return Plugin_Continue;
 }
 
 void vSpawnCheck()
@@ -672,7 +673,7 @@ void vResetPlugin()
 	delete g_hBotsUpdateTimer;
 }
 
-public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
 	if(strcmp(name, "round_end") == 0)
 		vResetPlugin();
@@ -686,14 +687,14 @@ bool bIsRoundStarted()
 	return g_iRoundStart && g_iPlayerSpawn;
 }
 
-public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	g_iRoundStart = 1;
 
 	delete g_hBotsUpdateTimer;
 }
 
-public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	g_iPlayerSpawn = 1;
 
@@ -710,7 +711,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	vSetGhostStatus(client, 0);
 }
 
-public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
 	vTakeOver(GetClientOfUserId(event.GetInt("userid")));
 }
@@ -726,7 +727,7 @@ void vTakeOver(int bot)
 	}
 }
 
-public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
@@ -747,15 +748,16 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		CreateTimer(0.1, Timer_AutoJoinSurvivorTeam, GetClientUserId(client));
 }
 
-public Action Timer_AutoJoinSurvivorTeam(Handle timer, any client)
+Action Timer_AutoJoinSurvivorTeam(Handle timer, int client)
 {
 	if(!g_bAutoJoin || g_iRoundStart == 0 || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || iGetBotOfIdle(client)) 
-		return;
+		return Plugin_Stop;
 	
 	cmdJoinSurvivor(client, 0);
+	return Plugin_Continue;
 }
 
-public void Event_SurvivorRescued(Event event, const char[] name, bool dontBroadcast)
+void Event_SurvivorRescued(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("victim"));
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client) || !bCanIdle(client))
@@ -778,7 +780,7 @@ bool bCanIdle(int client)
 	return iSurvivor > 0;
 }
 
-public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
+void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 {
 	int player_userid = event.GetInt("player");
 	int player = GetClientOfUserId(player_userid);
@@ -803,7 +805,7 @@ public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 	}
 }
 
-public void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast)
+void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast)
 {
 	int player = GetClientOfUserId(event.GetInt("player"));
 	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || GetClientTeam(player) != TEAM_SURVIVOR)
@@ -817,7 +819,7 @@ public void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroa
 	SetEntProp(player, Prop_Send, "m_survivorCharacter", GetEntProp(bot, Prop_Send, "m_survivorCharacter"));
 }
 
-public void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadcast)
+void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadcast)
 {
 	for(int i = 1; i <= MaxClients; i++)
 		vTakeOver(i);
@@ -985,12 +987,13 @@ void vSetGodMode(int client, float fDuration)
 		CreateTimer(fDuration, Timer_Mortal, GetClientUserId(client));
 }
 
-public Action Timer_Mortal(Handle timer, any client)
+Action Timer_Mortal(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
-		return;
+		return Plugin_Stop;
 
 	SetEntProp(client, Prop_Data, "m_takedamage", 2);
+	return Plugin_Continue;
 }
 
 void vGiveDefaultItems(int client)
@@ -1306,7 +1309,7 @@ void vDisplayTeamMenu(int client)
 	delete TeamPanel;
 }
 
-public int iTeamMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iTeamMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -1317,6 +1320,8 @@ public int iTeamMenuHandler(Menu menu, MenuAction action, int client, int param2
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 int iCountAvailableSurvivorBots()
@@ -1499,7 +1504,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 	g_iSurvivorBot = entity;
 }
 
-public MRESReturn mreSetHumanSpectatorPre(int pThis, DHookParam hParams)
+MRESReturn mreSetHumanSpectatorPre(int pThis, DHookParam hParams)
 {
 	if(g_bShouldIgnore)
 		return MRES_Ignored;
@@ -1513,13 +1518,13 @@ public MRESReturn mreSetHumanSpectatorPre(int pThis, DHookParam hParams)
 	return MRES_Supercede;
 }
 
-public MRESReturn mreGoAwayFromKeyboardPre(int pThis, DHookReturn hReturn)
+MRESReturn mreGoAwayFromKeyboardPre(int pThis, DHookReturn hReturn)
 {
 	g_bShouldFixAFK = true;
 	return MRES_Ignored;
 }
 
-public MRESReturn mreGoAwayFromKeyboardPost(int pThis, DHookReturn hReturn)
+MRESReturn mreGoAwayFromKeyboardPost(int pThis, DHookReturn hReturn)
 {
 	if(g_bShouldFixAFK && g_iSurvivorBot > 0 && IsFakeClient(g_iSurvivorBot))
 	{
@@ -1540,7 +1545,7 @@ public MRESReturn mreGoAwayFromKeyboardPost(int pThis, DHookReturn hReturn)
 }
 
 //Identity Fix https://forums.alliedmods.net/showpost.php?p=2718792&postcount=36
-public MRESReturn mrePlayerSetModelPost(int pThis, DHookParam hParams)
+MRESReturn mrePlayerSetModelPost(int pThis, DHookParam hParams)
 {
 	if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis))
 		return MRES_Ignored;
@@ -1573,17 +1578,19 @@ void vWriteTakeoverPanel(int client, int bot)
 }
 
 bool g_bTakingOverBot[MAXPLAYERS + 1];
-public MRESReturn mreTakeOverBotPre(int pThis, DHookParam hParams)
+MRESReturn mreTakeOverBotPre(int pThis, DHookParam hParams)
 {
 	g_bTakingOverBot[pThis] = true;
+	return MRES_Ignored;
 }
 
-public MRESReturn mreTakeOverBotPost(int pThis, DHookParam hParams)
+MRESReturn mreTakeOverBotPost(int pThis, DHookParam hParams)
 {
 	g_bTakingOverBot[pThis] = false;
+	return MRES_Ignored;
 }
 
-public MRESReturn mreGiveDefaultItemsPost(int pThis)
+MRESReturn mreGiveDefaultItemsPost(int pThis)
 {
 	if(!g_bGiveWeaponType || g_bShouldFixAFK || g_bTakingOverBot[pThis])
 		return MRES_Ignored;
