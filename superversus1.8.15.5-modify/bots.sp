@@ -690,8 +690,6 @@ bool bIsRoundStarted()
 void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	g_iRoundStart = 1;
-
-	delete g_hBotsUpdateTimer;
 }
 
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
