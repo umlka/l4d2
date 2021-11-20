@@ -105,12 +105,12 @@ public void OnConfigsExecuted()
 	vIsAllowed();
 }
 
-public void vAllowConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vAllowConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vIsAllowed();
 }
 
-public void vOtherConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vOtherConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetCvars();
 }
@@ -233,7 +233,7 @@ bool IsAllowedGameMode()
 	return true;
 }
 
-public void OnGamemode(const char[] output, int caller, int activator, float delay)
+void OnGamemode(const char[] output, int caller, int activator, float delay)
 {
 	if(strcmp(output, "OnCoop") == 0)
 		g_iCurrentMode = 1;
@@ -285,7 +285,7 @@ public void OnMapEnd()
 	g_bMapStarted = false;
 }
 
-public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
 	delete g_hTimer;
 
@@ -298,14 +298,14 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 		g_bIsFirstRound = false;
 }
 
-public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 0 && g_iPlayerSpawn == 1)
 		vInitPlugin();
 	g_iRoundStart = 1;
 }
 
-public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
 		vInitPlugin();
@@ -323,7 +323,7 @@ void vInitPlugin()
 	vStartSequence();
 }
 
-public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iCountDown == 0)
 		return;
@@ -364,7 +364,7 @@ void vStartSequence()
 	}
 }
 
-public Action Timer_Loading(Handle timer)
+Action Timer_Loading(Handle timer)
 {
 	if(g_iCountDown >= 0)
 	{
@@ -507,9 +507,9 @@ void vShowStatusPanel()
 	}
 }
 
-public int iPanelHandler(Menu menu, MenuAction action, int param1, int param2)
+int iPanelHandler(Menu menu, MenuAction action, int param1, int param2)
 {
-
+	return 0;
 }
 
 void vLockDoor()
@@ -600,7 +600,7 @@ bool bIsDotInEndArea(const float vDot[3], const float vMins[3], const float vMax
 }
 
 //https://forums.alliedmods.net/showthread.php?p=2700212
-public void vOnFirstOpen(const char[] output, int entity, int activator, float delay)
+void vOnFirstOpen(const char[] output, int entity, int activator, float delay)
 {
 	char sModel[64];
 	GetEntPropString(entity, Prop_Data, "m_ModelName", sModel, sizeof(sModel));
@@ -656,7 +656,7 @@ public void vOnFirstOpen(const char[] output, int entity, int activator, float d
 	EmitSoundToAll(GetRandomInt(0, 1) ? SOUND_BREAK1 : SOUND_BREAK2, door);
 }
 
-public void vOnFullyOpen(const char[] output, int entity, int activator, float delay)
+void vOnFullyOpen(const char[] output, int entity, int activator, float delay)
 {
 	vLockDoor();
 }
