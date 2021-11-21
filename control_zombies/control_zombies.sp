@@ -1267,8 +1267,8 @@ Action Timer_LadderAndGlow(Handle timer, int client)
 		{
 			SendConVarValue(client, g_hGameMode, g_sGameMode);
 			
-			int i;
-			for(i = 1; i <= MaxClients; i++)
+			int i = 1;
+			for(; i <= MaxClients; i++)
 				vRemoveSurvivorModelGlow(i);
 
 			if(!bHasPlayerZombie())
