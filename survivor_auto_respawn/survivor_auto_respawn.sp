@@ -385,7 +385,7 @@ public void OnPluginStart()
 	for(int i; i < 5; i++)
 		g_hSlotFlags[i].AddChangeHook(vSlotConVarChanged);
 		
-	//AutoExecConfig(true, "survivor_auto_respawn");
+	AutoExecConfig(true, "survivor_auto_respawn");
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
@@ -407,12 +407,12 @@ public void OnConfigsExecuted()
 	vGetSlotCvars();
 }
 
-public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetCvars();
 }
 
-public void vSlotConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vSlotConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetSlotCvars();
 }
@@ -471,18 +471,18 @@ public void OnMapEnd()
 	}
 }
 
-public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
 	OnMapEnd();
 }
 
-public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	for(int i = 1; i <= MaxClients; i++)
 		delete g_hRespawnTimer[i];
 }
 
-public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRespawnTime == 0 || g_iRespawnLimit == 0)
 		return;
@@ -507,7 +507,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	}
 }
 
-public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
 	if(g_iRespawnTime == 0 || g_iRespawnLimit == 0)
 		return;
@@ -556,7 +556,7 @@ int iHasIdlePlayer(int client)
 	return 0;
 }
 
-public void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
+void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 {
 	if(g_iRespawnTime == 0 || g_iRespawnLimit == 0 || !g_bAllowSurvivorBot)
 		return;
@@ -586,7 +586,7 @@ bool bCalculateRespawnLimit(int client)
 	return true;
 }
 
-public Action Timer_RespawnSurvivor(Handle timer, any client)
+Action Timer_RespawnSurvivor(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) == 0)
 		return Plugin_Stop;
@@ -845,12 +845,13 @@ void vSetGodMode(int client, float fDuration)
 		CreateTimer(fDuration, Timer_Mortal, GetClientUserId(client));
 }
 
-public Action Timer_Mortal(Handle timer, any client)
+Action Timer_Mortal(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
-		return;
+		return Plugin_Stop;
 
 	SetEntProp(client, Prop_Data, "m_takedamage", 2);
+	return Plugin_Continue;
 }
 
 //给玩家近战
