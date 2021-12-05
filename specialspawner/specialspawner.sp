@@ -232,7 +232,7 @@ void vEndSpawnTimer()
 	delete g_hSpawnTimer;
 }
 
-public Action Timer_SpawnInfectedAuto(Handle timer)
+Action Timer_SpawnInfectedAuto(Handle timer)
 {
 	static float fTime;
 
@@ -717,6 +717,8 @@ public Action OnPlayerStuck(int client)
 		#endif
 		KickClient(client, "感染者卡住踢出");
 	}
+
+	return Plugin_Continue;
 }
 
 bool IsValidStuck(int client)
@@ -766,7 +768,7 @@ public void OnConfigsExecuted()
 	g_iPreferredDirection = 9;
 }
 
-public void vLimitsConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vLimitsConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetLimitsCvars();
 }
@@ -778,7 +780,7 @@ void vGetLimitsCvars()
 		g_iSpawnLimits[i] = g_hSpawnLimits[i].IntValue;
 }
 
-public void vTimesConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vTimesConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetTimesCvars();
 }
@@ -822,7 +824,7 @@ void vCalculateSpawnTimes()
 		g_fSpawnTimes[0] = g_fSpawnTimeMax;
 }
 
-public void vOthersConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vOthersConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetOthersCvars();
 }
@@ -842,7 +844,7 @@ void vGetOthersCvars()
 	g_bDirectorNoSpecials = g_hDirectorNoSpecials.BoolValue;
 }
 
-public void vTankSpawnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vTankSpawnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	int iLast = g_iTankSpawnAction;
 
@@ -857,7 +859,7 @@ void vGetTankSpawnCvars()
 	g_iTankSpawnAction = g_hTankSpawnAction.IntValue;
 }
 
-public void vTankCustomConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vTankCustomConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetTankCustomCvars();
 }
@@ -949,18 +951,18 @@ public void OnMapEnd()
 		vSiTypeMode(g_iCurrentClass);
 }
 
-public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
 	OnMapEnd();
 }
 
-public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	vEndSpawnTimer();
 	g_iRoundStart = 1;
 }
 
-public void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
 { 
 	if(g_bHasAnySurvivorLeftSafeArea || !bIsRoundStarted())
 		return;
@@ -975,7 +977,7 @@ bool bIsRoundStarted()
 	return g_iRoundStart && g_iPlayerSpawn;
 }
 
-public Action Timer_PlayerLeftStartArea(Handle timer)
+Action Timer_PlayerLeftStartArea(Handle timer)
 {
 	if(!g_bHasAnySurvivorLeftSafeArea && bIsRoundStarted() && bHasAnySurvivorLeftSafeArea())
 	{
@@ -991,6 +993,8 @@ public Action Timer_PlayerLeftStartArea(Handle timer)
 
 		vStartSpawnTimer();
 	}
+
+	return Plugin_Continue;
 }
 
 bool bHasAnySurvivorLeftSafeArea()
@@ -1003,7 +1007,7 @@ bool bHasAnySurvivorLeftSafeArea()
 }
 
 Handle g_hUpdateTimer;
-public Action Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
 	static int client;
 	client = GetClientOfUserId(event.GetInt("userid"));
@@ -1017,11 +1021,13 @@ public Action Event_PlayerTeam(Event event, const char[] name, bool dontBroadcas
 	}
 }
 
-public Action Timer_SpecialsUpdate(Handle timer)
+Action Timer_SpecialsUpdate(Handle timer)
 {
 	g_hUpdateTimer = null;
 
 	vSetMaxSpecialsCount();
+
+	return Plugin_Continue;
 }
 
 void vSetMaxSpecialsCount()
@@ -1056,7 +1062,7 @@ void vSetMaxSpecialsCount()
 	PrintToChatAll("\x01[\x05%d特\x01/\x05次\x01] \x05%d特 \x01[\x03%.1f\x01~\x03%.1f\x01]\x04秒", iTempSize, iTempLimit, g_fSpawnTimeMin, g_fSpawnTimeMax);
 }
 
-public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	g_iPlayerSpawn = 1;
 
@@ -1067,7 +1073,7 @@ public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	CreateTimer(0.1, Timer_TankSpawn, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 }
 
-public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
 	static int userid;
 	static int client;
@@ -1083,10 +1089,10 @@ public void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast
 		RequestFrame(OnNextFrame_KickBot, userid);
 }
 
-public Action Timer_TankSpawn(Handle timer, any client)
+Action Timer_TankSpawn(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8 || bFindTank(client))
-		return;
+		return Plugin_Stop;
 
 	for(int i; i < NUM_TYPES_INFECTED; i++)
 	{
@@ -1095,6 +1101,8 @@ public Action Timer_TankSpawn(Handle timer, any client)
 	}
 
 	vTankSpawnDeathActoin(true);
+
+	return Plugin_Continue;
 }
 
 void OnNextFrame_KickBot(any client)
@@ -1114,12 +1122,14 @@ bool bFindTank(int client)
 	return false;
 }
 
-public Action Timer_TankDisconnectCheck(Handle timer)
+Action Timer_TankDisconnectCheck(Handle timer)
 {
 	if(bFindTank(-1))
-		return;
+		return Plugin_Stop;
 
 	vTankSpawnDeathActoin(false);
+
+	return Plugin_Continue;
 }
 
 void vTankSpawnDeathActoin(bool bIsTankAlive)
@@ -1144,7 +1154,7 @@ void vTankSpawnDeathActoin(bool bIsTankAlive)
 	}
 }
 
-public Action cmdSetLimit(int client, int args)
+Action cmdSetLimit(int client, int args)
 {
 	if(args == 1)
 	{
@@ -1209,7 +1219,7 @@ public Action cmdSetLimit(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdSetWeight(int client, int args)
+Action cmdSetWeight(int client, int args)
 {
 	if(args == 1)
 	{
@@ -1267,7 +1277,7 @@ public Action cmdSetWeight(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdSetTimer(int client, int args)
+Action cmdSetTimer(int client, int args)
 {
 	if(args == 1)
 	{
@@ -1306,7 +1316,7 @@ public Action cmdSetTimer(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdResetSpawns(int client, int args)
+Action cmdResetSpawns(int client, int args)
 {	
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -1319,7 +1329,7 @@ public Action cmdResetSpawns(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdStartSpawnTimerManually(int client, int args)
+Action cmdStartSpawnTimerManually(int client, int args)
 {
 	if(args < 1)
 	{
@@ -1342,7 +1352,7 @@ public Action cmdStartSpawnTimerManually(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action cmdType(int client, int args)
+Action cmdType(int client, int args)
 {
 	if(args == 1)
 	{
