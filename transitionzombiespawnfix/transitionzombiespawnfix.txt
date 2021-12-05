@@ -1,0 +1,68 @@
+"Games"
+{
+	"left4dead2" 
+	{
+		"Functions"
+		{
+			/* ZombieManager::CanZombieSpawnHere(Vector const&,TerrorNavArea *,ZombieClassType,bool,CBaseCombatCharacter *) */
+			"ZombieManager::CanZombieSpawnHere"
+			{
+				"signature"		"ZombieManager::CanZombieSpawnHere"
+				"callconv"		"thiscall"
+				"return"		"int"
+				"this"			"ignore"
+				"arguments"
+				{
+					"spawnpos"
+					{
+						"type"		"vectorptr"
+					}
+					"navarea"
+					{
+						"type"		"objectptr"
+					}
+					"zombieclass"
+					{
+						"type"		"int"
+					}
+					"mobrush"
+					{
+						"type"		"bool"
+					}
+					"entity"
+					{
+						"type"		"cbaseentity"
+					}
+				}
+			}
+			/* CDirector::IsInTransition() */
+			"CDirector::IsInTransition"
+			{
+				"signature"		"CDirector::IsInTransition"
+				"callconv"		"thiscall"
+				"return"		"bool"
+				"this"			"address"
+			}
+		}
+
+		"Signatures"
+		{
+			/* ZombieManager::CanZombieSpawnHere(Vector const&,TerrorNavArea *,ZombieClassType,bool,CBaseCombatCharacter *) */
+			"ZombieManager::CanZombieSpawnHere"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK13ZombieManager18CanZombieSpawnHereERK6VectorP13TerrorNavArea15ZombieClassTypebP20CBaseCombatCharacter"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x8B\x2A\x2A\x8B\x0D\x2A\x2A\x2A\x2A\x53\x8B\x2A\x2A\x56\x8B\x2A\x2A\x57"
+				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 8B ? ? 8B 0D ? ? ? ? 53 8B ? ? 56 8B ? ? 57 */
+			}
+			/* CDirector::IsInTransition() */
+			"CDirector::IsInTransition"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK9CDirector14IsInTransitionEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x75\x2A\x80\xB9\xCC"
+				/* ? ? ? ? ? ? ? 75 ? 80 B9 CC */
+			}
+		}
+	}
+}
