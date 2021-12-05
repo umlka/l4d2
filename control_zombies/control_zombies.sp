@@ -1253,7 +1253,8 @@ Action Timer_LadderAndGlow(Handle timer, int client)
 	{
 		if(GetClientTeam(client) == 3)
 		{
-			SendConVarValue(client, g_hGameMode, "versus");
+			//SendConVarValue(client, g_hGameMode, "versus");
+			g_hGameMode.ReplicateToClient(client, "versus");
 			if(iGetTeamPlayers(3) == 1)
 			{
 				for(int i = 1; i <= MaxClients; i++)
@@ -1265,7 +1266,8 @@ Action Timer_LadderAndGlow(Handle timer, int client)
 		}
 		else
 		{
-			SendConVarValue(client, g_hGameMode, g_sGameMode);
+			//SendConVarValue(client, g_hGameMode, g_sGameMode);
+			g_hGameMode.ReplicateToClient(client, g_sGameMode);
 			
 			int i = 1;
 			for(; i <= MaxClients; i++)
