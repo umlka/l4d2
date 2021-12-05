@@ -456,8 +456,7 @@ void vFindTerrorNavAreas()
 
 	for(int i; i < g_iTheCount; i++)
 	{
-		area = LoadFromAddress(g_pTheNavAreas + view_as<Address>(i * 4), NumberType_Int32);
-		if(area.IsNull() == true)
+		if(view_as<CNavArea>(LoadFromAddress(g_pTheNavAreas + view_as<Address>(i * 4), NumberType_Int32)).IsNull() == true)
 			continue;
 
 		iFlags = area.SpawnAttributes;
