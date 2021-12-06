@@ -1286,7 +1286,7 @@ Action Timer_LadderAndGlow(Handle timer, int client)
 	return Plugin_Continue;
 }
 
-void OnNextFrame_ChangeTeamTo(any client)
+void OnNextFrame_ChangeTeamTo(int client)
 {
 	if(!g_bHasPlayerControlledZombies && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3)
 	{
