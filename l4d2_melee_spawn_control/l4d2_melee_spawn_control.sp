@@ -17,9 +17,9 @@
 #pragma semicolon 1
 #pragma newdecls required
 #include <sourcemod>
-#include <sdktools>
 #include <dhooks>
 
+#define MAX_MELEE		16
 #define GAMEDATA		"l4d2_melee_spawn_control"
 #define MELEE_MANIFEST	"scripts\\melee\\melee_manifest.txt"
 #define DEFAULT_MELEES	"fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;golfclub;shovel;pitchfork"
@@ -82,7 +82,7 @@ public void OnMapEnd()
 	g_aMapSetMelees.Clear();
 }
 
-public MRESReturn mreMeleeAllowedPost(DHookReturn hReturn, DHookParam hParams)
+MRESReturn mreMeleeAllowedPost(DHookReturn hReturn, DHookParam hParams)
 {
 	/*char sScriptName[32];
 	hParams.GetString(1, sScriptName, sizeof(sScriptName));
@@ -98,7 +98,7 @@ public MRESReturn mreMeleeAllowedPost(DHookReturn hReturn, DHookParam hParams)
 	return MRES_Override;
 }
 
-public MRESReturn mreGetMissionInfoPost(DHookReturn hReturn)
+MRESReturn mreGetMissionInfoPost(DHookReturn hReturn)
 {
 	if(g_bMapStarted == true)
 		return MRES_Ignored;
@@ -188,18 +188,18 @@ void vGetMapSetMelees(const char[] sMissionName, const char[] sMissionBaseMelees
 		sBaseMelees[strlen(sBaseMelees) - 1] = 0;
 	}
 	
-	int pos = iGetCharPosInString(sBaseMelees , ';', 16);
+	int pos = iGetCharPosInString(sBaseMelees , ';', MAX_MELEE);
 	if(pos != -1)
-		sBaseMelees[pos] = 0;
+		sBaseMelees[pos] = '\0';
 
 	strcopy(sMapSetMelees, maxlength, sBaseMelees);
 	g_aMapSetMelees.SetString(sMissionName, sBaseMelees, true);
 }
 
-int iGetCharPosInString(const char[] str, char c, int which)
+int iGetCharPosInString(const char[] str, char c, int position)
 {
 	int len = strlen(str);
-	if(which > len)
+	if(position > len)
 		return -1;
 
 	int total;
@@ -207,7 +207,7 @@ int iGetCharPosInString(const char[] str, char c, int which)
 	{
 		if(str[i] == c)
 		{
-			if(++total == which)
+			if(++total == position)
 				return i;
 		}
 	}
