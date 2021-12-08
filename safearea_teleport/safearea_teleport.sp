@@ -24,7 +24,6 @@ Handle
 	g_hTimer,
 	g_hSDKCleanupPlayerState,
 	g_hSDKIsMissionFinalMap,
-	g_hSDKGetMissionFirstMap,
 	g_hSDKKeyValuesGetString,
 	g_hSDKIsFirstMapInScenario,
 	g_hSDKGetLastCheckpoint,
@@ -161,7 +160,7 @@ public Plugin myinfo =
 	name = 			"SafeArea Teleport",
 	author = 		"sorallll",
 	description = 	"",
-	version = 		"1.0.8",
+	version = 		"1.0.9",
 	url = 			""
 }
 
@@ -704,7 +703,7 @@ void vTeleportOrSuicide(int iType)
 		case 0:
 		{
 			vCloseAndLockLastSafeDoor();
-			CreateTimer(0.1, Timer_TeleportToCheckpoint, _, TIMER_FLAG_NO_MAPCHANGE);
+			CreateTimer(0.2, Timer_TeleportToCheckpoint, _, TIMER_FLAG_NO_MAPCHANGE);
 		}
 		
 		case 1:
@@ -741,6 +740,9 @@ void vCloseAndLockLastSafeDoor()
 		AcceptEntityInput(iEntRef, "Close");
 		AcceptEntityInput(iEntRef, "forceclosed");
 		AcceptEntityInput(iEntRef, "Lock");
+		SetVariantString("OnUser1 !self:Unlock::5.0:-1");
+		AcceptEntityInput(iEntRef, "AddOutput");
+		AcceptEntityInput(iEntRef, "FireUser1");
 		SetEntProp(iEntRef, Prop_Data, "m_hasUnlockSequence", 1);
 	}
 }
@@ -757,9 +759,6 @@ Action Timer_TeleportToCheckpoint(Handle timer)
 			continue;
 
 		SetEntPropFloat(iEntRef, Prop_Data, "m_flSpeed", g_aLastDoor.Get(i, 1));
-		SetVariantString("OnUser1 !self:Unlock::5.0:-1");
-		AcceptEntityInput(iEntRef, "AddOutput");
-		AcceptEntityInput(iEntRef, "FireUser1");
 	}
 
 	vTeleportToCheckpoint();
@@ -798,7 +797,7 @@ void vTeleportToCheckpoint()
 			}
 		}
 
-		CreateTimer(0.2, Timer_DectcetTeleport, _, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(1.0, Timer_DectcetTeleport, _, TIMER_FLAG_NO_MAPCHANGE);
 	}
 }
 
@@ -988,15 +987,6 @@ void vLoadGameData()
 	if(g_hSDKIsMissionFinalMap == null)
 		SetFailState("Failed to create SDKCall: CTerrorGameRules::IsMissionFinalMap");
 
-	StartPrepSDKCall(SDKCall_Static);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorGameRules::GetMissionFirstMap") == false)
-		SetFailState("Failed to find signature: CTerrorGameRules::GetMissionFirstMap");
-	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain, VDECODE_FLAG_ALLOWWORLD);
-	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	g_hSDKGetMissionFirstMap = EndPrepSDKCall();
-	if(g_hSDKGetMissionFirstMap == null)
-		SetFailState("Failed to create SDKCall: CTerrorGameRules::GetMissionFirstMap");
-		
 	StartPrepSDKCall(SDKCall_Raw);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::GetString") == false)
 		SetFailState("Failed to find signature: KeyValues::GetString");
@@ -1141,14 +1131,5 @@ bool bIsFinalMap()
 
 bool bIsFirstMap()
 {
-	int iKeyvalue = SDKCall(g_hSDKGetMissionFirstMap, 0);
-	if(iKeyvalue > 0)
-	{
-		char sMap[128], sCheck[128];
-		GetCurrentMap(sMap, sizeof(sMap));
-		SDKCall(g_hSDKKeyValuesGetString, iKeyvalue, sCheck, sizeof(sCheck), "map", "N/A");
-		return strcmp(sMap, sCheck) == 0;
-	}
-
 	return SDKCall(g_hSDKIsFirstMapInScenario, g_pDirector);
 }
