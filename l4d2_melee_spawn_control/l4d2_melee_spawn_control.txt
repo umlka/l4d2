@@ -47,6 +47,7 @@
 				/* ? ? ? ? ? ? 56 6A ? 50 E8 ? ? ? ? 8B ? 85 ? 74 ? 8B ? ? 53 57 51 E8 ? ? ? ? 8B ? ? 52 E8 ? ? ? ? 8B ? ? 83 ? ? C7 46 ? ? ? ? ? 85 ? 75 ? BB ? ? ? ? 53 */
 				/* Search: "victimname" - below is call */
 			}
+			/* CDirectorItemManager::IsMeleeWeaponAllowedToExist(CDirectorItemManager *__hidden this, const char *) */
 			"CDirectorItemManager::IsMeleeWeaponAllowedToExist"
 			{
 				"library"	"server"
@@ -55,12 +56,21 @@
 				/* ? ? ? ? ? ? ? ? ? 8B ? 8B 90 ? ? ? ? FF ? 84 ? 75 ? 8B ? ? 6A */
 				/* Updated by Silvers. Search "scripts/melee/%s.txt". Call above. */
 			}
+			/* CTerrorGameRules::GetMissionInfo(CTerrorGameRules *__hidden this) */
 			"CTerrorGameRules::GetMissionInfo" // Found by V10
 			{
 				"library"	"server"
 				"linux"		"@_ZN16CTerrorGameRules14GetMissionInfoEv"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x2A\x2A\x56\xFF\x2A\x8B\x2A\x8B\x2A\x8B\x2A\x2A\x6A\x2A\xFF\x2A\x8B\x2A\x85\x2A\x75\x2A\x5E"
 				/* ? ? ? ? ? ? ? ? ? ? 8B ? 8B ? ? 56 FF ? 8B ? 8B ? 8B ? ? 6A ? FF ? 8B ? 85 ? 75 ? 5E */
+			}
+			/* CTerrorGameRules::GetMissionFirstMap(KeyValues **) */
+			"CTerrorGameRules::GetMissionFirstMap"
+			{
+				"library"	"server"
+				"linux"		"@_ZN16CTerrorGameRules18GetMissionFirstMapEPP9KeyValues"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x57\x8B\x2A\x85\x2A\x0F\x84\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x8B\x2A\xFF\x2A\x84\x2A\x74\x2A\x8B\x2A\xE8\x2A\x2A\x2A\x2A\x83"
+				/* ? ? ? ? ? ? ? 57 8B ? 85 ? 0F 84 ? ? ? ? 8B ? 8B 90 ? ? ? ? 8B ? FF ? 84 ? 74 ? 8B ? E8 ? ? ? ? 83 */
 			}
 		}
 	}
