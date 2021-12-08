@@ -32,8 +32,9 @@ StringMap
 	g_aMapInitMelees;
 
 Handle
-	g_hSDK_Call_KvGetString,
-	g_hSDK_Call_KvSetString;
+	g_hSDKKeyValuesGetString,
+	g_hSDKKeyValuesSetString,
+	g_hSDKGetMissionFirstMap;
 
 ConVar
 	g_hBaseMelees,
@@ -107,16 +108,15 @@ MRESReturn mreGetMissionInfoPost(DHookReturn hReturn)
 	if(pThis == 0)
 		return MRES_Ignored;
 
-	char sMissionName[64];
-	SDKCall(g_hSDK_Call_KvGetString, pThis, sMissionName, sizeof(sMissionName), "Name", "N/A");
-	if(strcmp(sMissionName, "N/A") == 0)
+	char sMissionFirstMap[64];
+	if(bGetMissionFirstMap(sMissionFirstMap, sizeof(sMissionFirstMap)) == false)
 		return MRES_Ignored;
 
 	char sMapCurrentMelees[512];
-	SDKCall(g_hSDK_Call_KvGetString, pThis, sMapCurrentMelees, sizeof(sMapCurrentMelees), "meleeweapons", "N/A");
+	SDKCall(g_hSDKKeyValuesGetString, pThis, sMapCurrentMelees, sizeof(sMapCurrentMelees), "meleeweapons", "N/A");
 
 	char sMissionBaseMelees[512];
-	if(g_aMapInitMelees.GetString(sMissionName, sMissionBaseMelees, sizeof(sMissionBaseMelees)) == false)
+	if(g_aMapInitMelees.GetString(sMissionFirstMap, sMissionBaseMelees, sizeof(sMissionBaseMelees)) == false)
 	{
 		if(strcmp(sMapCurrentMelees, "N/A") != 0)
 			strcopy(sMissionBaseMelees, sizeof(sMissionBaseMelees), sMapCurrentMelees);
@@ -126,12 +126,12 @@ MRESReturn mreGetMissionInfoPost(DHookReturn hReturn)
 		if(sMissionBaseMelees[0] == '\0')
 			strcopy(sMissionBaseMelees, sizeof(sMissionBaseMelees), DEFAULT_MELEES);
 
-		g_aMapInitMelees.SetString(sMissionName, sMissionBaseMelees, false);
+		g_aMapInitMelees.SetString(sMissionFirstMap, sMissionBaseMelees, false);
 	}
 
 	char sMapSetMelees[512];
-	if(g_aMapSetMelees.GetString(sMissionName, sMapSetMelees, sizeof(sMapSetMelees)) == false)
-		vGetMapSetMelees(sMissionName, sMissionBaseMelees, sMapSetMelees, sizeof(sMapSetMelees));
+	if(g_aMapSetMelees.GetString(sMissionFirstMap, sMapSetMelees, sizeof(sMapSetMelees)) == false)
+		vGetMapSetMelees(sMissionFirstMap, sMissionBaseMelees, sMapSetMelees, sizeof(sMapSetMelees));
 
 	if(sMapSetMelees[0] == '\0')
 		return MRES_Ignored;
@@ -139,11 +139,11 @@ MRESReturn mreGetMissionInfoPost(DHookReturn hReturn)
 	if(strcmp(sMapSetMelees, sMapCurrentMelees) == 0)
 		return MRES_Ignored;
 		
-	SDKCall(g_hSDK_Call_KvSetString, pThis, "meleeweapons", sMapSetMelees);
+	SDKCall(g_hSDKKeyValuesSetString, pThis, "meleeweapons", sMapSetMelees);
 	return MRES_Ignored;
 }
 
-void vGetMapSetMelees(const char[] sMissionName, const char[] sMissionBaseMelees, char[] sMapSetMelees, int maxlength)
+void vGetMapSetMelees(const char[] sMissionFirstMap, const char[] sMissionBaseMelees, char[] sMapSetMelees, int maxlength)
 {
 	char sBaseMelees[512], sExtraMelees[512];
 	g_hBaseMelees.GetString(sBaseMelees, sizeof(sBaseMelees));
@@ -155,7 +155,7 @@ void vGetMapSetMelees(const char[] sMissionName, const char[] sMissionBaseMelees
 	{
 		if(sExtraMelees[0] == '\0')
 		{
-			g_aMapSetMelees.SetString(sMissionName, "", true);
+			g_aMapSetMelees.SetString(sMissionFirstMap, "", true);
 			return;
 		}
 
@@ -193,7 +193,7 @@ void vGetMapSetMelees(const char[] sMissionName, const char[] sMissionBaseMelees
 		sBaseMelees[pos] = '\0';
 
 	strcopy(sMapSetMelees, maxlength, sBaseMelees);
-	g_aMapSetMelees.SetString(sMissionName, sBaseMelees, true);
+	g_aMapSetMelees.SetString(sMissionFirstMap, sBaseMelees, true);
 }
 
 int iGetCharPosInString(const char[] str, char c, int position)
@@ -277,8 +277,8 @@ void vLoadGameData()
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_String, SDKPass_Pointer);
-	g_hSDK_Call_KvGetString = EndPrepSDKCall();
-	if(g_hSDK_Call_KvGetString == null)
+	g_hSDKKeyValuesGetString = EndPrepSDKCall();
+	if(g_hSDKKeyValuesGetString == null)
 		SetFailState("Failed to create SDKCall: KeyValues::GetString");
 
 	StartPrepSDKCall(SDKCall_Raw);
@@ -286,13 +286,33 @@ void vLoadGameData()
 		SetFailState("Failed to find signature: KeyValues::SetString");
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
-	g_hSDK_Call_KvSetString = EndPrepSDKCall();
-	if(g_hSDK_Call_KvSetString == null)
+	g_hSDKKeyValuesSetString = EndPrepSDKCall();
+	if(g_hSDKKeyValuesSetString == null)
 		SetFailState("Failed to create SDKCall: KeyValues::SetString");
+
+	StartPrepSDKCall(SDKCall_Static);
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorGameRules::GetMissionFirstMap") == false)
+		SetFailState("Failed to find signature: CTerrorGameRules::GetMissionFirstMap");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain, VDECODE_FLAG_ALLOWWORLD);
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	g_hSDKGetMissionFirstMap = EndPrepSDKCall();
+	if(g_hSDKGetMissionFirstMap == null)
+		SetFailState("Failed to create SDKCall: CTerrorGameRules::GetMissionFirstMap");
 
 	vSetupDetours(hGameData);
 
 	delete hGameData;
+}
+
+bool bGetMissionFirstMap(char[] sBuffer, int maxlength)
+{
+	int iKeyvalue = SDKCall(g_hSDKGetMissionFirstMap, 0);
+	if(iKeyvalue > 0)
+	{
+		SDKCall(g_hSDKKeyValuesGetString, iKeyvalue, sBuffer, maxlength, "map", "N/A");
+		return strcmp(sBuffer, "N/A") != 0;
+	}
+	return false;
 }
 
 void vSetupDetours(GameData hGameData = null)
