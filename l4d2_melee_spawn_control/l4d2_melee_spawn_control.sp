@@ -61,6 +61,8 @@ public void OnPluginStart()
 
 	g_aMapSetMelees = new StringMap();
 	g_aMapInitMelees = new StringMap();
+
+	//RegAdminCmd("sm_ms", cmdMs, ADMFLAG_ROOT, "测试");
 }
 
 public void OnPluginEnd()
@@ -71,7 +73,15 @@ public void OnPluginEnd()
 	if(!g_dDetour[1].Disable(Hook_Post, mreGetMissionInfoPost))
 		SetFailState("Failed to disable detour: CTerrorGameRules::GetMissionInfo");
 }
-
+/*
+Action cmdMs(int client, int args)
+{
+	char sBuffer[512];
+	bReadMeleeManifest(sBuffer, sizeof(sBuffer));
+	ReplyToCommand(client, "melee_manifest->%s", sBuffer);
+	return Plugin_Handled;
+}
+*/
 public void OnMapStart()
 {
 	g_bMapStarted = true;
@@ -121,7 +131,7 @@ MRESReturn mreGetMissionInfoPost(DHookReturn hReturn)
 		if(strcmp(sMapCurrentMelees, "N/A") != 0)
 			strcopy(sMissionBaseMelees, sizeof(sMissionBaseMelees), sMapCurrentMelees);
 		else
-			vReadMeleeManifest(sMissionBaseMelees, sizeof(sMissionBaseMelees)); //darkwood, eye
+			bReadMeleeManifest(sMissionBaseMelees, sizeof(sMissionBaseMelees)); //darkwood, eye
 			
 		if(sMissionBaseMelees[0] == '\0')
 			strcopy(sMissionBaseMelees, sizeof(sMissionBaseMelees), DEFAULT_MELEES);
@@ -148,8 +158,8 @@ void vGetMapSetMelees(const char[] sMissionFirstMap, const char[] sMissionBaseMe
 	char sBaseMelees[512], sExtraMelees[512];
 	g_hBaseMelees.GetString(sBaseMelees, sizeof(sBaseMelees));
 	g_hExtraMelees.GetString(sExtraMelees, sizeof(sExtraMelees));
-	ReplaceString(sBaseMelees, sizeof(sBaseMelees), " ", "");
-	ReplaceString(sExtraMelees, sizeof(sExtraMelees), " ", "");
+	TrimString(sBaseMelees);
+	TrimString(sExtraMelees);
 
 	if(sBaseMelees[0] == '\0')
 	{
@@ -184,8 +194,7 @@ void vGetMapSetMelees(const char[] sMissionFirstMap, const char[] sMissionBaseMe
 			StrCat(sBaseMelees, sizeof(sBaseMelees), sExtraMelees);
 
 		strcopy(sBaseMelees, sizeof(sBaseMelees), sBaseMelees[1]);
-		
-		sBaseMelees[strlen(sBaseMelees) - 1] = 0;
+		sBaseMelees[strlen(sBaseMelees) - 1] = '\0';
 	}
 	
 	int pos = iGetCharPosInString(sBaseMelees , ';', MAX_MELEE);
@@ -214,12 +223,78 @@ int iGetCharPosInString(const char[] str, char c, int position)
 	return -1;
 }
 
-void vReadMeleeManifest(char[] sManifest, int maxlength)
+bool bReadMeleeManifest(char[] sManifest, int maxlength)
 {
-	File hFile = OpenFile(MELEE_MANIFEST, "r");
+	File hFile = OpenFile(MELEE_MANIFEST, "r", true, NULL_STRING);
 	if(hFile == null)
-		hFile = OpenFile(MELEE_MANIFEST, "r", true, NULL_STRING);
+		return false;
 
+	char sLine[PLATFORM_MAX_PATH], sScriptPath[PLATFORM_MAX_PATH];
+
+	while(!hFile.EndOfFile())
+	{
+		if(!hFile.ReadLine(sLine, sizeof(sLine)))
+			break;
+
+		TrimString(sLine);
+		if(KV_GetValue(sLine, "file", sScriptPath) && FileExists(sScriptPath, true, NULL_STRING))
+		{
+			if(bSplitStringRight(sScriptPath, "scripts/melee/", sScriptPath, sizeof(sScriptPath)) && SplitString(sScriptPath, ".txt", sScriptPath, sizeof(sScriptPath)) != -1)
+				Format(sManifest, maxlength, "%s;%s", sManifest, sScriptPath);
+		}
+	}
+	
+	delete hFile;
+
+	if(sManifest[0] == '\0')
+		return false;
+	
+	strcopy(sManifest, maxlength, sManifest[1]);
+	return true;
+}
+
+//https://forums.alliedmods.net/showthread.php?t=311161
+bool KV_GetValue(char[] str, char[] key, char buffer[PLATFORM_MAX_PATH])
+{
+	buffer[0] = '\0';
+	int posKey, posComment, sizeKey;
+	char substr[64];
+	FormatEx(substr, sizeof(substr), "\"%s\"", key);
+	
+	posKey = StrContains(str, substr, false);
+	if( posKey != -1 )
+	{
+		posComment = StrContains(str, "//", true);
+		
+		if( posComment == -1 || posComment > posKey )
+		{
+			sizeKey = strlen(substr);
+			buffer = UnQuote(str[posKey + sizeKey]);
+			return true;
+		}
+	}
+	return false;
+}
+
+char[] UnQuote(char[] Str)
+{
+	int pos;
+	static char buf[64];
+	strcopy(buf, sizeof(buf), Str);
+	TrimString(buf);
+	if (buf[0] == '\"') {
+		strcopy(buf, sizeof(buf), buf[1]);
+	}
+	pos = FindCharInString(buf, '\"');
+	if( pos != -1 ) {
+		buf[pos] = '\x0';
+	}
+	return buf;
+}
+/*
+void bReadMeleeManifest(char[] sManifest, int maxlength)
+{
+	File hFile = OpenFile(MELEE_MANIFEST, "r", true, NULL_STRING);
 	if(hFile == null)
 		return;
 
@@ -238,12 +313,12 @@ void vReadMeleeManifest(char[] sManifest, int maxlength)
 			Format(sManifest, maxlength, "%s;%s", sManifest, sLine);
 	}
 	
+	delete hFile;
+
 	if(sManifest[0] != '\0')
 		strcopy(sManifest, maxlength, sManifest[1]);
-
-	delete hFile;
 }
-
+*/
 bool bSplitStringRight(const char[] source, const char[] split, char[] part, int partLen)
 {
 	int index = StrContains(source, split); // get start index of split string 
