@@ -291,34 +291,7 @@ char[] UnQuote(char[] Str)
 	}
 	return buf;
 }
-/*
-void bReadMeleeManifest(char[] sManifest, int maxlength)
-{
-	File hFile = OpenFile(MELEE_MANIFEST, "r", true, NULL_STRING);
-	if(hFile == null)
-		return;
 
-	char sLine[255];
-	while(!hFile.EndOfFile())
-	{
-		if(!hFile.ReadLine(sLine, sizeof(sLine)))
-			break;
-
-		ReplaceString(sLine, sizeof(sLine), " ", "");
-
-		if(strlen(sLine) < 27)
-			continue;
-
-		if(bSplitStringRight(sLine, "scripts/melee/", sLine, sizeof(sLine)) && SplitString(sLine, ".txt", sLine, sizeof(sLine)) != -1)
-			Format(sManifest, maxlength, "%s;%s", sManifest, sLine);
-	}
-	
-	delete hFile;
-
-	if(sManifest[0] != '\0')
-		strcopy(sManifest, maxlength, sManifest[1]);
-}
-*/
 bool bSplitStringRight(const char[] source, const char[] split, char[] part, int partLen)
 {
 	int index = StrContains(source, split); // get start index of split string 
