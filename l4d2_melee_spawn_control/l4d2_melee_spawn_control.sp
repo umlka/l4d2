@@ -131,7 +131,7 @@ MRESReturn mreGetMissionInfoPost(DHookReturn hReturn)
 		if(strcmp(sMapCurrentMelees, "N/A") != 0)
 			strcopy(sMissionBaseMelees, sizeof(sMissionBaseMelees), sMapCurrentMelees);
 		else
-			bReadMeleeManifest(sMissionBaseMelees, sizeof(sMissionBaseMelees)); //darkwood, eye
+			bReadMeleeManifest(sMissionBaseMelees, sizeof(sMissionBaseMelees)); //Dark Wood (Extended), Divine Cybermancy
 			
 		if(sMissionBaseMelees[0] == '\0')
 			strcopy(sMissionBaseMelees, sizeof(sMissionBaseMelees), DEFAULT_MELEES);
