@@ -6,12 +6,13 @@
 #include <dhooks>
 /**************************************************************************/
 //颜色
-#define MAX_COLORS 	 6
 #define SERVER_INDEX 0
 #define NO_INDEX 	-1
 #define NO_PLAYER 	-2
 #define BLUE_INDEX 	 2
 #define RED_INDEX 	 3
+#define MAX_COLORS 	 6
+#define MAX_MESSAGE_LENGTH 250
 static const char CTag[][] = { "{default}", "{green}", "{lightgreen}", "{red}", "{blue}", "{olive}" };
 static const char CTagCode[][] = { "\x01", "\x04", "\x03", "\x03", "\x03", "\x05" };
 static const bool CTagReqSayText2[] = { false, false, true, true, true, false };
@@ -35,15 +36,15 @@ stock void CPrintToChat(int client, const char[] sMessage, any ...)
 	if(!IsClientInGame(client))
 		ThrowError("Client %d is not in game", client);
 	
-	static char sBuffer[250];
-	static char sCMessage[250];
+	static char sBuffer[MAX_MESSAGE_LENGTH];
+	static char sCMessage[MAX_MESSAGE_LENGTH];
 	SetGlobalTransTarget(client);
 	Format(sBuffer, sizeof(sBuffer), "\x01%s", sMessage);
 	VFormat(sCMessage, sizeof(sCMessage), sBuffer, 3);
 	
 	int index = CFormat(sCMessage, sizeof(sCMessage));
 	if(index == NO_INDEX)
-		PrintToChat(client, sCMessage);
+		PrintToChat(client, "%s", sCMessage);
 	else
 		CSayText2(client, index, sCMessage);
 }
@@ -58,7 +59,7 @@ stock void CPrintToChat(int client, const char[] sMessage, any ...)
  */
 stock void CPrintToChatAll(const char[] sMessage, any ...)
 {
-	static char sBuffer[250];
+	static char sBuffer[MAX_MESSAGE_LENGTH];
 
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -66,7 +67,7 @@ stock void CPrintToChatAll(const char[] sMessage, any ...)
 		{
 			SetGlobalTransTarget(i);
 			VFormat(sBuffer, sizeof(sBuffer), sMessage, 2);
-			CPrintToChat(i, sBuffer);
+			CPrintToChat(i, "%s", sBuffer);
 		}
 	}
 }
@@ -89,16 +90,16 @@ stock int CFormat(char[] sMessage, int maxlength)
 		if(StrContains(sMessage, CTag[i]) == -1)									//	Si no se encuentra la etiqueta, omitir.
 			continue;
 		else if(!CTagReqSayText2[i])
-			ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i]);				//	Si la etiqueta no necesita Saytext2 simplemente reemplazará.
+			ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i], false);				//	Si la etiqueta no necesita Saytext2 simplemente reemplazará.
 		else																		//	La etiqueta necesita Saytext2.
 		{	
 			if(iRandomPlayer == NO_INDEX)											//	Si no se especificó un cliente aleatorio para la etiqueta, reemplaca la etiqueta y busca un cliente para la etiqueta.
 			{
 				iRandomPlayer = CFindRandomPlayerByTeam(CProfile_TeamIndex[i]);		//	Busca un cliente válido para la etiqueta, equipo de infectados oh supervivientes.
 				if(iRandomPlayer == NO_PLAYER)
-					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[5]);		//	Si no se encuentra un cliente valido, reemplasa la etiqueta con una etiqueta de color verde.
+					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[5], false);		//	Si no se encuentra un cliente valido, reemplasa la etiqueta con una etiqueta de color verde.
 				else 
-					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i]);		// 	Si el cliente fue encontrado simplemente reemplasa.
+					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i], false);		// 	Si el cliente fue encontrado simplemente reemplasa.
 			}
 			else																	//	Si en caso de usar dos colores de equipo infectado y equipo de superviviente juntos se mandará un mensaje de error.
 				ThrowError("Using two team colors in one message is not allowed");	//	Si se ha usadó una combinación de colores no validad se registrara en la carpeta logs.
