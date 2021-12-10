@@ -4,8 +4,11 @@
 #include <sdkhooks>
 #include <sdktools>
 #include <dhooks>
-/**************************************************************************/
-//颜色
+
+/*****************************************************************************************************/
+// ====================================================================================================
+// colors.inc
+// ====================================================================================================
 #define SERVER_INDEX 0
 #define NO_INDEX 	-1
 #define NO_PLAYER 	-2
@@ -85,24 +88,24 @@ stock int CFormat(char[] sMessage, int maxlength)
 {	
 	int iRandomPlayer = NO_INDEX;
 	
-	for(int i; i < MAX_COLORS; i++)													//	Para otras etiquetas de color se requiere un bucle.
+	for(int i; i < MAX_COLORS; i++)														//	Para otras etiquetas de color se requiere un bucle.
 	{
-		if(StrContains(sMessage, CTag[i]) == -1)									//	Si no se encuentra la etiqueta, omitir.
+		if(StrContains(sMessage, CTag[i]) == -1)										//	Si no se encuentra la etiqueta, omitir.
 			continue;
 		else if(!CTagReqSayText2[i])
-			ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i], false);				//	Si la etiqueta no necesita Saytext2 simplemente reemplazará.
-		else																		//	La etiqueta necesita Saytext2.
+			ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i], false);			//	Si la etiqueta no necesita Saytext2 simplemente reemplazará.
+		else																			//	La etiqueta necesita Saytext2.
 		{	
-			if(iRandomPlayer == NO_INDEX)											//	Si no se especificó un cliente aleatorio para la etiqueta, reemplaca la etiqueta y busca un cliente para la etiqueta.
+			if(iRandomPlayer == NO_INDEX)												//	Si no se especificó un cliente aleatorio para la etiqueta, reemplaca la etiqueta y busca un cliente para la etiqueta.
 			{
-				iRandomPlayer = CFindRandomPlayerByTeam(CProfile_TeamIndex[i]);		//	Busca un cliente válido para la etiqueta, equipo de infectados oh supervivientes.
+				iRandomPlayer = CFindRandomPlayerByTeam(CProfile_TeamIndex[i]);			//	Busca un cliente válido para la etiqueta, equipo de infectados oh supervivientes.
 				if(iRandomPlayer == NO_PLAYER)
-					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[5], false);		//	Si no se encuentra un cliente valido, reemplasa la etiqueta con una etiqueta de color verde.
+					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[5], false);	//	Si no se encuentra un cliente valido, reemplasa la etiqueta con una etiqueta de color verde.
 				else 
-					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i], false);		// 	Si el cliente fue encontrado simplemente reemplasa.
+					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i], false);	// 	Si el cliente fue encontrado simplemente reemplasa.
 			}
-			else																	//	Si en caso de usar dos colores de equipo infectado y equipo de superviviente juntos se mandará un mensaje de error.
-				ThrowError("Using two team colors in one message is not allowed");	//	Si se ha usadó una combinación de colores no validad se registrara en la carpeta logs.
+			else																		//	Si en caso de usar dos colores de equipo infectado y equipo de superviviente juntos se mandará un mensaje de error.
+				ThrowError("Using two team colors in one message is not allowed");		//	Si se ha usadó una combinación de colores no validad se registrara en la carpeta logs.
 		}
 	}
 
@@ -141,13 +144,13 @@ stock int CFindRandomPlayerByTeam(int color_team)
  */
 stock void CSayText2(int client, int author, const char[] sMessage)
 {
-	BfWrite bf = view_as<BfWrite>(StartMessageOne("SayText2", client));
+	BfWrite bf = view_as<BfWrite>(StartMessageOne("SayText2", client, USERMSG_RELIABLE|USERMSG_BLOCKHOOKS));
 	bf.WriteByte(author);
 	bf.WriteByte(true);
 	bf.WriteString(sMessage);
 	EndMessage();
 }
-/**************************************************************************/
+/*****************************************************************************************************/
 
 #define DEBUG				1
 
