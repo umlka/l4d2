@@ -5,12 +5,13 @@
 
 /**************************************************************************/
 //颜色
-#define MAX_COLORS 	 6
 #define SERVER_INDEX 0
 #define NO_INDEX 	-1
 #define NO_PLAYER 	-2
 #define BLUE_INDEX 	 2
 #define RED_INDEX 	 3
+#define MAX_COLORS 	 6
+#define MAX_MESSAGE_LENGTH 250
 static const char CTag[][] = { "{default}", "{green}", "{lightgreen}", "{red}", "{blue}", "{olive}" };
 static const char CTagCode[][] = { "\x01", "\x04", "\x03", "\x03", "\x03", "\x05" };
 static const bool CTagReqSayText2[] = { false, false, true, true, true, false };
@@ -20,11 +21,11 @@ static const int CProfile_TeamIndex[] = { NO_INDEX, NO_INDEX, SERVER_INDEX, RED_
  * @note Prints a message to a specific client in the chat area.
  * @note Supports color tags.
  *
- * @param client 		Client index.
- * @param sMessage 		Message (formatting rules).
- * @return 				No return
+ * @param client	Client index.
+ * @param sMessage	Message (formatting rules).
+ * @return			No return
  * 
- * On error/Errors:   If the client is not connected an error will be thrown.
+ * On error/Errors:	If the client is not connected an error will be thrown.
  */
 stock void CPrintToChat(int client, const char[] sMessage, any ...)
 {
@@ -34,15 +35,15 @@ stock void CPrintToChat(int client, const char[] sMessage, any ...)
 	if(!IsClientInGame(client))
 		ThrowError("Client %d is not in game", client);
 	
-	static char sBuffer[250];
-	static char sCMessage[250];
+	static char sBuffer[MAX_MESSAGE_LENGTH];
+	static char sCMessage[MAX_MESSAGE_LENGTH];
 	SetGlobalTransTarget(client);
 	Format(sBuffer, sizeof(sBuffer), "\x01%s", sMessage);
 	VFormat(sCMessage, sizeof(sCMessage), sBuffer, 3);
 	
 	int index = CFormat(sCMessage, sizeof(sCMessage));
 	if(index == NO_INDEX)
-		PrintToChat(client, sCMessage);
+		PrintToChat(client, "%s", sCMessage);
 	else
 		CSayText2(client, index, sCMessage);
 }
@@ -51,13 +52,13 @@ stock void CPrintToChat(int client, const char[] sMessage, any ...)
  * @note Prints a message to all clients in the chat area.
  * @note Supports color tags.
  *
- * @param client		Client index.
- * @param sMessage 		Message (formatting rules)
- * @return 				No return
+ * @param client	Client index.
+ * @param sMessage	Message (formatting rules)
+ * @return			No return
  */
 stock void CPrintToChatAll(const char[] sMessage, any ...)
 {
-	static char sBuffer[250];
+	static char sBuffer[MAX_MESSAGE_LENGTH];
 
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -65,7 +66,7 @@ stock void CPrintToChatAll(const char[] sMessage, any ...)
 		{
 			SetGlobalTransTarget(i);
 			VFormat(sBuffer, sizeof(sBuffer), sMessage, 2);
-			CPrintToChat(i, sBuffer);
+			CPrintToChat(i, "%s", sBuffer);
 		}
 	}
 }
@@ -73,11 +74,11 @@ stock void CPrintToChatAll(const char[] sMessage, any ...)
 /**
  * @note Replaces color tags in a string with color codes
  *
- * @param sMessage    String.
- * @param maxlength   Maximum length of the string buffer.
- * @return			  Client index that can be used for SayText2 author index
+ * @param sMessage	String.
+ * @param maxlength	Maximum length of the string buffer.
+ * @return			Client index that can be used for SayText2 author index
  * 
- * On error/Errors:   If there is more then one team color is used an error will be thrown.
+ * On error/Errors:	If there is more then one team color is used an error will be thrown.
  */
 stock int CFormat(char[] sMessage, int maxlength)
 {	
@@ -85,22 +86,22 @@ stock int CFormat(char[] sMessage, int maxlength)
 	
 	for(int i; i < MAX_COLORS; i++)													//	Para otras etiquetas de color se requiere un bucle.
 	{
-		if(StrContains(sMessage, CTag[i]) == -1) 										//	Si no se encuentra la etiqueta, omitir.
+		if(StrContains(sMessage, CTag[i]) == -1)									//	Si no se encuentra la etiqueta, omitir.
 			continue;
 		else if(!CTagReqSayText2[i])
-			ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i]); 					//	Si la etiqueta no necesita Saytext2 simplemente reemplazará.
-		else																				//	La etiqueta necesita Saytext2.
+			ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i], false);				//	Si la etiqueta no necesita Saytext2 simplemente reemplazará.
+		else																		//	La etiqueta necesita Saytext2.
 		{	
-			if(iRandomPlayer == NO_INDEX)												//	Si no se especificó un cliente aleatorio para la etiqueta, reemplaca la etiqueta y busca un cliente para la etiqueta.
+			if(iRandomPlayer == NO_INDEX)											//	Si no se especificó un cliente aleatorio para la etiqueta, reemplaca la etiqueta y busca un cliente para la etiqueta.
 			{
-				iRandomPlayer = CFindRandomPlayerByTeam(CProfile_TeamIndex[i]); 			//	Busca un cliente válido para la etiqueta, equipo de infectados oh supervivientes.
-				if(iRandomPlayer == NO_PLAYER) 
-					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[5]); 			//	Si no se encuentra un cliente valido, reemplasa la etiqueta con una etiqueta de color verde.
+				iRandomPlayer = CFindRandomPlayerByTeam(CProfile_TeamIndex[i]);		//	Busca un cliente válido para la etiqueta, equipo de infectados oh supervivientes.
+				if(iRandomPlayer == NO_PLAYER)
+					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[5], false);		//	Si no se encuentra un cliente valido, reemplasa la etiqueta con una etiqueta de color verde.
 				else 
-					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i]); 			// 	Si el cliente fue encontrado simplemente reemplasa.
+					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i], false);		// 	Si el cliente fue encontrado simplemente reemplasa.
 			}
-			else 																			//	Si en caso de usar dos colores de equipo infectado y equipo de superviviente juntos se mandará un mensaje de error.
-				ThrowError("Using two team colors in one message is not allowed"); 			//	Si se ha usadó una combinación de colores no validad se registrara en la carpeta logs.
+			else																	//	Si en caso de usar dos colores de equipo infectado y equipo de superviviente juntos se mandará un mensaje de error.
+				ThrowError("Using two team colors in one message is not allowed");	//	Si se ha usadó una combinación de colores no validad se registrara en la carpeta logs.
 		}
 	}
 
@@ -110,8 +111,8 @@ stock int CFormat(char[] sMessage, int maxlength)
 /**
  * @note Founds a random player with specified team
  *
- * @param color_team  Client team.
- * @return			  Client index or NO_PLAYER if no player found
+ * @param color_team	Client team.
+ * @return				Client index or NO_PLAYER if no player found
  */
 stock int CFindRandomPlayerByTeam(int color_team)
 {
@@ -119,7 +120,7 @@ stock int CFindRandomPlayerByTeam(int color_team)
 		return 0;
 	else
 	{
-		for(int i = 1; i <= MaxClients; i ++)
+		for(int i = 1; i <= MaxClients; i++)
 		{
 			if(IsClientInGame(i) && GetClientTeam(i) == color_team)
 				return i;
@@ -132,10 +133,10 @@ stock int CFindRandomPlayerByTeam(int color_team)
 /**
  * @note Sends a SayText2 usermessage to a client
  *
- * @param sMessage 		Client index
- * @param maxlength 	Author index
- * @param sMessage 		Message
- * @return 				No return.
+ * @param sMessage	Client index
+ * @param maxlength	Author index
+ * @param sMessage	Message
+ * @return			No return.
  */
 stock void CSayText2(int client, int author, const char[] sMessage)
 {
