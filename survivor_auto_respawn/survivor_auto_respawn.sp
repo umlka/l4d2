@@ -355,7 +355,7 @@ public Plugin myinfo =
 	name = "Survivor Auto Respawn",
 	author = "sorallll",
 	description = "",
-	version = "1.3.1",
+	version = "1.3.2",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
