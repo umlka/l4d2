@@ -289,7 +289,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.2.7",
+	version = "3.2.8",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
