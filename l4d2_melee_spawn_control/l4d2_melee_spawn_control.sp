@@ -165,7 +165,7 @@ void vGetMapSetMelees(const char[] sMissionFirstMap, const char[] sMissionBaseMe
 	{
 		if(sExtraMelees[0] == '\0')
 		{
-			g_aMapSetMelees.SetString(sMissionFirstMap, "", true);
+			g_aMapSetMelees.SetString(sMissionFirstMap, sMissionBaseMelees, true);
 			return;
 		}
 
