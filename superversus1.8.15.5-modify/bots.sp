@@ -3,7 +3,7 @@
 #include <sourcemod>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.9.2"
+#define PLUGIN_VERSION "1.9.3"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
 #define TEAM_SPECTATOR	1
@@ -15,6 +15,7 @@ StringMap
 
 Handle
 	g_hBotsUpdateTimer,
+	g_hSDKNextBotCreatePlayerBot,
 	g_hSDKRoundRespawn,
 	g_hSDKSetHumanSpectator,
 	g_hSDKTakeOverBot,
@@ -53,6 +54,7 @@ bool
 	g_bAutoJoin,
 	g_bRespawnJoin,
 	g_bGiveWeaponType,
+	g_bHideNameChange,
 	g_bSpecNotify[MAXPLAYERS + 1];
 
 char
@@ -280,7 +282,7 @@ public void OnPluginStart()
 	g_hSurvivorLimit.Flags &= ~FCVAR_NOTIFY; //移除ConVar变动提示
 	g_hSurvivorLimit.SetBounds(ConVarBound_Upper, true, 31.0);
 
-	//https://forums.alliedmods.net/showthread.php?t=120275
+	// https://forums.alliedmods.net/showthread.php?t=120275
 	ConVar hConVar = FindConVar("z_spawn_flow_limit");
 	hConVar.SetBounds(ConVarBound_Lower, true, 999999999.0);
 	hConVar.SetBounds(ConVarBound_Upper, true, 999999999.0);
@@ -317,6 +319,7 @@ public void OnPluginStart()
 	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving);
 
 	AddCommandListener(CommandListener_SpecNext, "spec_next");
+	HookUserMessage(GetUserMessageId("SayText2"), umSayText2, true);
 	
 	g_aSteamIDs = new StringMap();
 }
@@ -515,6 +518,22 @@ Action CommandListener_SpecNext(int client, char[] command, int argc)
 	return Plugin_Continue;
 }
 
+Action umSayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init)
+{
+	if(!g_bHideNameChange)
+		return Plugin_Continue;
+
+	msg.ReadByte();
+	msg.ReadByte();
+
+	char sMessage[128];
+	msg.ReadString(sMessage, sizeof sMessage, true);
+	if(strcmp(sMessage, "#Cstrike_Name_Change") == 0)
+		return Plugin_Handled;
+
+	return Plugin_Continue;
+}
+
 public void OnConfigsExecuted()
 {
 	vGetSlotCvars();
@@ -622,7 +641,7 @@ void vSpawnCheck()
 		vKickUnusedSurvivorBot();
 	
 	for(; iSurvivor < iSurvivorLimit; iSurvivor++)
-		vSpawnFakeSurvivorClient();
+		iCreateSurvivorBot(); //vSpawnFakeSurvivorClient();
 }
 
 void vKickUnusedSurvivorBot()
@@ -634,7 +653,7 @@ void vKickUnusedSurvivorBot()
 		KickClient(iBot, "Kicking Useless Client.");
 	}
 }
-
+/*
 void vSpawnFakeSurvivorClient()
 {
 	int iBot = CreateFakeClient("SurvivorBot");
@@ -657,7 +676,7 @@ void vSpawnFakeSurvivorClient()
 
 	KickClient(iBot, "Kicking Fake Client.");
 }
-
+*/
 public void OnMapEnd()
 {
 	vResetPlugin();
@@ -799,7 +818,11 @@ void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 	for(int i; i < 8; i++)
 	{
 		if(strcmp(g_sPlayerModel[player], g_sSurvivorModels[i]) == 0)
+		{
+			g_bHideNameChange = true;
 			SetClientName(bot, g_sSurvivorNames[i]);
+			g_bHideNameChange = false;
+		}
 	}
 }
 
@@ -1153,7 +1176,7 @@ void vSetGhostStatus(int client, int iGhost)
 }
 
 //给玩家近战
-//https://forums.alliedmods.net/showpost.php?p=2611529&postcount=484
+// https://forums.alliedmods.net/showpost.php?p=2611529&postcount=484
 public void OnMapStart()
 {
 	int i;
@@ -1356,6 +1379,20 @@ void vLoadGameData()
 	if(hGameData == null) 
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
+	StartPrepSDKCall(SDKCall_Static);
+	Address pAddr = hGameData.GetAddress("NextBotCreatePlayerBot<SurvivorBot>");
+	if(pAddr == Address_Null)
+		SetFailState("Failed to find signature: NextBotCreatePlayerBot<SurvivorBot> in CDirector::AddSurvivorBot");
+	if(hGameData.GetOffset("OS") == 1) // 1 - windows, 2 - linux. it's hard to get uniq. sig in windows => will use XRef.
+		pAddr += view_as<Address>(LoadFromAddress(pAddr + view_as<Address>(1), NumberType_Int32) + 5); // sizeof(instruction)
+	if(PrepSDKCall_SetAddress(pAddr) == false)
+		SetFailState("Failed to find signature: NextBotCreatePlayerBot<SurvivorBot>");
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
+	g_hSDKNextBotCreatePlayerBot = EndPrepSDKCall();
+	if(g_hSDKNextBotCreatePlayerBot == null)
+		SetFailState("Failed to create SDKCall: NextBotCreatePlayerBot<SurvivorBot>");
+
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
@@ -1423,6 +1460,22 @@ void vRegisterStatsConditionPatch(GameData hGameData = null)
 		SetFailState("Failed to load 'CTerrorPlayer::RoundRespawn', byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
 }
 
+// https://forums.alliedmods.net/showpost.php?p=2729883&postcount=16
+int iCreateSurvivorBot()
+{
+	int iBot = SDKCall(g_hSDKNextBotCreatePlayerBot, NULL_STRING);
+	if(IsValidEntity(iBot))
+	{
+		ChangeClientTeam(iBot, 2);
+		
+		if(!IsPlayerAlive(iBot))
+			vRoundRespawn(iBot);
+
+		return iBot;
+	}
+	return -1;
+}
+
 void vRoundRespawn(int client)
 {
 	vStatsConditionPatch(true);
@@ -1430,7 +1483,7 @@ void vRoundRespawn(int client)
 	vStatsConditionPatch(false);
 }
 
-//https://forums.alliedmods.net/showthread.php?t=323220
+// https://forums.alliedmods.net/showthread.php?t=323220
 void vStatsConditionPatch(bool bPatch)
 {
 	static bool bPatched;

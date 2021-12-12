@@ -1,6 +1,6 @@
 "Games"
 {
-    "left4dead2"
+	"left4dead2"
     {
 		"Functions"
 		{
@@ -64,6 +64,10 @@
 		
 		"Addresses"
 		{
+			"NextBotCreatePlayerBot<SurvivorBot>"
+			{
+				"signature" "NextBotCreatePlayerBot<SurvivorBot>"
+			}
 			"CTerrorPlayer::RoundRespawn"
 			{
 				"linux"
@@ -79,6 +83,11 @@
 
 		"Offsets"
 		{
+			"OS"
+			{
+				"windows"	"1"
+				"linux"		"2"
+			}
 			/* CTerrorPlayer::SetObserverTarget(CBaseEntity *) */
 			"CTerrorPlayer::SetObserverTarget"
 			{
@@ -99,6 +108,15 @@
 
 		"Signatures"
 		{
+			"NextBotCreatePlayerBot<SurvivorBot>"
+			{	
+				"library"	"server"
+				"linux"		"@_Z22NextBotCreatePlayerBotI11SurvivorBotEPT_PKc"
+				"windows"	"\xE8****\x83\xC4\x08\x85\xC0\x74\x1C\x8B\x10\x8B"
+				/* E8 ? ? ? ? 83 C4 08 85 C0 74 1C 8B 10 8B */
+				/* (addr+5) + *(addr+1) = call function addr -> this  signature into <CDirector::AddSurvivorBot> */
+				/* Sig. should point to "call" opcode E8, not to the func. start */
+			}
 			/* CTerrorPlayer::RoundRespawn(void) */
 			"CTerrorPlayer::RoundRespawn"
 			{
@@ -143,8 +161,8 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN13CTerrorPlayer16GiveDefaultItemsEv"
-				"windows"	"\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x50\xE8\x2A\x2A\x2A\x2A\x83\xC4\x04\x84\xC0\x0F\x84\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A"
-				/* 56 8B F1 E8 ? ? ? ? 50 E8 ? ? ? ? 83 C4 04 84 C0 0F 84 ? ? ? ? A1 ? ? ? ? */
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x50\xE8\x2A\x2A\x2A\x2A\x83\x2A\x2A\x84\x2A\x0F\x84\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x8B\x88"
+				/* ? ? ? ? ? ? ? ? 50 E8 ? ? ? ? 83 ? ? 84 ? 0F 84 ? ? ? ? A1 ? ? ? ? 8B 88 */
 			}
 		}
     }
