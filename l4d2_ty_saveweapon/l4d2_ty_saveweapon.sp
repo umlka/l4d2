@@ -250,7 +250,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 	switch(GetClientTeam(client))
 	{
 		case 2:
-			CreateTimer(0.5, Timer_Restore, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+			CreateTimer(0.2, Timer_Restore, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 
 		case 3:
 			g_iStatusInfo[client][8] = 1;
