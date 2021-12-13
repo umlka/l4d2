@@ -288,7 +288,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 
 Action Timer_Restore(Handle timer, int client)
 {
-	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client) || iHasIdlePlayer(client))
+	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
 		return Plugin_Stop;
 
 	if(g_iStatusInfo[client][7] == 0 && IsFakeClient(client) && GetGameTime() < 10.0)
