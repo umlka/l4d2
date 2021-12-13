@@ -4,7 +4,7 @@
 #include <sdkhooks>
 #include <sdktools>
 
-#define PLUGIN_VERSION	"4.4.2"
+#define PLUGIN_VERSION	"4.4.3"
 #define CVAR_FLAGS		FCVAR_NOTIFY
 
 ConVar
@@ -22,6 +22,7 @@ int
 bool
 	g_bAllow,
 	g_bMapStarted,
+	g_bHideNameChange,
 	g_bValidMapChange;
 
 static const char
@@ -76,6 +77,8 @@ public void OnPluginStart()
 	g_hAllow.AddChangeHook(vAllowConVarChanged);
 
 	//AutoExecConfig(true, "l4d2_ty_saveweapon");
+
+	HookUserMessage(GetUserMessageId("SayText2"), umSayText2, true);
 }
 
 public void OnConfigsExecuted()
@@ -83,7 +86,7 @@ public void OnConfigsExecuted()
 	vIsAllowed();
 }
 
-void vAllowConVarChanged(Handle convar, const char[] oldValue, const char[] newValue)
+void vAllowConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vIsAllowed();
 }
@@ -184,6 +187,22 @@ void vOnGamemode(const char[] output, int caller, int activator, float delay)
 		g_iCurrentMode = 8;
 }
 
+Action umSayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init)
+{
+	if(!g_bHideNameChange)
+		return Plugin_Continue;
+
+	msg.ReadByte();
+	msg.ReadByte();
+
+	char sMessage[128];
+	msg.ReadString(sMessage, sizeof sMessage, true);
+	if(strcmp(sMessage, "#Cstrike_Name_Change") == 0)
+		return Plugin_Handled;
+
+	return Plugin_Continue;
+}
+
 public void OnEntityCreated(int entity, const char[] classname)
 {
 	if(classname[0] != 'm' && classname[0] != 'p' && classname[0] != 'v')
@@ -267,7 +286,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		g_iStatusInfo[client][8] = 1;
 }
 
-Action Timer_Restore(Handle timer, any client)
+Action Timer_Restore(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client) || iHasIdlePlayer(client))
 		return Plugin_Stop;
@@ -382,7 +401,7 @@ void vSurvivorSave(int client)
 		if(strcmp(sWeapon[7], "melee") == 0)
 			GetEntPropString(iSlot, Prop_Data, "m_strMapSetScriptName", sWeapon, sizeof(sWeapon));
 		else if(strcmp(sWeapon[7], "pistol") == 0 && GetEntProp(iSlot, Prop_Send, "m_isDualWielding") > 0)
-			sWeapon = "v_dual_pistol";
+			strcopy(sWeapon, sizeof(sWeapon), "v_dual_pistol");
 
 		strcopy(g_sWeaponInfo[client][1], sizeof(g_sWeaponInfo[][]), sWeapon);
 
@@ -475,7 +494,11 @@ void vSurvivorGive(int client)
 		for(int i; i < 8; i++)
 		{
 			if(strcmp(g_sStatusInfo[client], g_sSurvivorModels[i]) == 0)
+			{
+				g_bHideNameChange = true;
 				SetClientName(client, g_sSurvivorNames[i]);
+				g_bHideNameChange = false;
+			}
 		}
 	}
 
