@@ -100,8 +100,9 @@ void vIsAllowed()
 	{
 		HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 		HookEvent("map_transition", Event_MapTransition, EventHookMode_Pre);	
-		HookEvent("player_spawn", Event_PlayerSpawn);
+		HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 		HookEvent("player_team", Event_PlayerTeam);
+		HookEvent("player_spawn", Event_PlayerSpawn);
 
 		g_bAllow = true;
 	}
@@ -109,8 +110,9 @@ void vIsAllowed()
 	{
 		UnhookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 		UnhookEvent("map_transition", Event_MapTransition, EventHookMode_Pre);	
-		UnhookEvent("player_spawn", Event_PlayerSpawn);
+		UnhookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 		UnhookEvent("player_team", Event_PlayerTeam);
+		UnhookEvent("player_spawn", Event_PlayerSpawn);
 
 		vSurvivorCleanAll();
 		g_bAllow = false;
@@ -260,6 +262,25 @@ void Event_MapTransition(Event event, const char[] name, bool dontBroadcast)
 	g_bValidMapChange = true;
 }
 
+void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(g_iStatusInfo[client][7] == 0 || g_iStatusInfo[client][8] == 1)
+		return;
+
+	g_iStatusInfo[client][8] = 1;
+}
+
+void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(g_iStatusInfo[client][7] == 0 || g_iStatusInfo[client][8] == 1)
+		return;
+
+	if(event.GetInt("team") > 2)
+		g_iStatusInfo[client][8] = 1;
+}
+
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
@@ -274,16 +295,6 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 		case 3:
 			g_iStatusInfo[client][8] = 1;
 	}
-}
-
-void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
-{
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || g_iStatusInfo[client][8] == 1)
-		return;
-
-	if(event.GetInt("team") > 2)
-		g_iStatusInfo[client][8] = 1;
 }
 
 Action Timer_Restore(Handle timer, int client)
@@ -637,39 +648,8 @@ void vSurvivorSaveAll()
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientInGame(i) && GetClientTeam(i) == 2)
-		{
-			if(!IsFakeClient(i))
-				vSurvivorSave(i);
-			else
-			{
-				int iIdlePlayer = iHasIdlePlayer(i);
-				if(iIdlePlayer == 0)
-					vSurvivorSave(i);
-				else
-				{
-					vSurvivorSave(i);
-					vSurvivorCopy(i, iIdlePlayer);
-					vSurvivorClean(i);
-				}
-			}
-		}
+			vSurvivorSave(i);
 	}
-}
-
-int iHasIdlePlayer(int client)
-{
-	char sNetClass[64];
-	if(!GetEntityNetClass(client, sNetClass, sizeof(sNetClass)))
-		return 0;
-
-	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") < 1)
-		return 0;
-
-	client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
-	if(client && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1)
-		return client;
-
-	return 0;
 }
 
 void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
