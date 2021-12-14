@@ -664,10 +664,9 @@ void vSurvivorSaveAll()
 				vSurvivorSave(i);
 			else
 			{
+				vSurvivorSave(i);
 				int iIdlePlayer = iHasIdlePlayer(i);
-				if(!iIdlePlayer)
-					vSurvivorSave(i);
-				else
+				if(iIdlePlayer)
 				{
 					vSurvivorCopy(i, iIdlePlayer);
 					vSurvivorClean(i);
@@ -676,6 +675,7 @@ void vSurvivorSaveAll()
 			}
 		}
 	}
+
 }
 
 int iHasIdlePlayer(int client)
