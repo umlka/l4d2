@@ -313,7 +313,7 @@ Action Timer_Restore(Handle timer, int client)
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
 		return Plugin_Stop;
 
-	if(g_iStatusInfo[client][7] == 0 && IsFakeClient(client) && GetGameTime() < 10.0)
+	if(g_iStatusInfo[client][7] == 0 && IsFakeClient(client) && GetGameTime() < 30.0)
 		vAppropriateUnusedSave(client);
 
 	if(g_iStatusInfo[client][8] == 0)
@@ -671,11 +671,9 @@ void vSurvivorSaveAll()
 					vSurvivorCopy(i, iIdlePlayer);
 					vSurvivorClean(i);
 				}
-
 			}
 		}
 	}
-
 }
 
 int iHasIdlePlayer(int client)
