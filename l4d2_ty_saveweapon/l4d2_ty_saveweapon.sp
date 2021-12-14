@@ -4,7 +4,7 @@
 #include <sdkhooks>
 #include <sdktools>
 
-#define PLUGIN_VERSION	"4.4.3"
+#define PLUGIN_VERSION	"4.4.4"
 #define CVAR_FLAGS		FCVAR_NOTIFY
 
 ConVar
@@ -102,6 +102,7 @@ void vIsAllowed()
 		HookEvent("map_transition", Event_MapTransition, EventHookMode_Pre);	
 		HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 		HookEvent("player_team", Event_PlayerTeam);
+		HookEvent("player_bot_replace", Event_PlayerBotReplace);
 		HookEvent("player_spawn", Event_PlayerSpawn);
 
 		g_bAllow = true;
@@ -112,6 +113,7 @@ void vIsAllowed()
 		UnhookEvent("map_transition", Event_MapTransition, EventHookMode_Pre);	
 		UnhookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 		UnhookEvent("player_team", Event_PlayerTeam);
+		UnhookEvent("player_bot_replace", Event_PlayerBotReplace);
 		UnhookEvent("player_spawn", Event_PlayerSpawn);
 
 		vSurvivorCleanAll();
@@ -279,6 +281,15 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 
 	if(event.GetInt("team") > 2)
 		g_iStatusInfo[client][8] = 1;
+}
+
+void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
+{
+	int player = GetClientOfUserId(event.GetInt("player"));
+	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || GetClientTeam(player) != 2)
+		return;
+
+	g_iStatusInfo[GetClientOfUserId(event.GetInt("bot"))][8] = 1;
 }
 
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
@@ -648,8 +659,39 @@ void vSurvivorSaveAll()
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientInGame(i) && GetClientTeam(i) == 2)
-			vSurvivorSave(i);
+		{
+			if(!IsFakeClient(i))
+				vSurvivorSave(i);
+			else
+			{
+				int iIdlePlayer = iHasIdlePlayer(i);
+				if(!iIdlePlayer)
+					vSurvivorSave(i);
+				else
+				{
+					vSurvivorCopy(i, iIdlePlayer);
+					vSurvivorClean(i);
+				}
+
+			}
+		}
 	}
+}
+
+int iHasIdlePlayer(int client)
+{
+	char sNetClass[64];
+	if(!GetEntityNetClass(client, sNetClass, sizeof(sNetClass)))
+		return 0;
+
+	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") < 1)
+		return 0;
+
+	client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
+	if(client && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1)
+		return client;
+
+	return 0;
 }
 
 void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
