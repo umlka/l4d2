@@ -3,7 +3,7 @@
 #include <sourcemod>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.9.3"
+#define PLUGIN_VERSION "1.9.4"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
 #define TEAM_SPECTATOR	1
@@ -308,7 +308,6 @@ public void OnPluginStart()
 	RegAdminCmd("sm_botset", cmdBotSet, ADMFLAG_RCON, "设置开局Bot的数量");
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("map_transition", Event_RoundEnd, EventHookMode_Pre);
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
@@ -641,7 +640,7 @@ void vSpawnCheck()
 		vKickUnusedSurvivorBot();
 	
 	for(; iSurvivor < iSurvivorLimit; iSurvivor++)
-		iCreateSurvivorBot(); //vSpawnFakeSurvivorClient();
+		vSpawnFakeSurvivorClient();
 }
 
 void vKickUnusedSurvivorBot()
@@ -653,10 +652,10 @@ void vKickUnusedSurvivorBot()
 		KickClient(iBot, "Kicking Useless Client.");
 	}
 }
-/*
+
 void vSpawnFakeSurvivorClient()
 {
-	int iBot = CreateFakeClient("SurvivorBot");
+	/*int iBot = CreateFakeClient("SurvivorBot");
 	if(iBot == 0)
 		return;
 
@@ -674,9 +673,15 @@ void vSpawnFakeSurvivorClient()
 		}
 	}
 
-	KickClient(iBot, "Kicking Fake Client.");
+	KickClient(iBot, "Kicking Fake Client.");*/
+	int iBot = iCreateSurvivorBot();
+	if(iBot != -1)
+	{
+		vSetGodMode(iBot, 1.0);
+		vTeleportToSurvivor(iBot);
+	}
 }
-*/
+
 public void OnMapEnd()
 {
 	vResetPlugin();
@@ -694,8 +699,7 @@ void vResetPlugin()
 
 void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
-	if(strcmp(name, "round_end") == 0)
-		vResetPlugin();
+	vResetPlugin();
 
 	for(int i = 1; i <= MaxClients; i++)
 		vTakeOver(i);
@@ -842,9 +846,6 @@ void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast)
 
 void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadcast)
 {
-	for(int i = 1; i <= MaxClients; i++)
-		vTakeOver(i);
-
 	int entity = FindEntityByClassname(MaxClients + 1, "info_survivor_position");
 	if(entity != INVALID_ENT_REFERENCE)
 	{
