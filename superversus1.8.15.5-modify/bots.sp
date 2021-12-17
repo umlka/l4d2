@@ -3,12 +3,16 @@
 #include <sourcemod>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.9.4"
+#define PLUGIN_VERSION "1.9.5"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
 #define TEAM_SPECTATOR	1
 #define TEAM_SURVIVOR	2
 #define TEAM_INFECTED   3
+
+DynamicHook
+	g_dPlayerSetModel,
+	g_dGiveDefaultItems;
 
 StringMap
 	g_aSteamIDs;
@@ -49,13 +53,15 @@ int
 	g_iBotPlayer[MAXPLAYERS + 1];
 
 bool
+	g_bLateLoad,
 	g_bShouldFixAFK,
 	g_bShouldIgnore,
 	g_bAutoJoin,
 	g_bRespawnJoin,
 	g_bGiveWeaponType,
 	g_bHideNameChange,
-	g_bSpecNotify[MAXPLAYERS + 1];
+	g_bSpecNotify[MAXPLAYERS + 1],
+	g_bTakingOverBot[MAXPLAYERS + 1];
 
 char
 	g_sMeleeClass[16][32],
@@ -257,8 +263,23 @@ public Plugin myinfo =
 	url			= "https://forums.alliedmods.net/showthread.php?p=2405322#post2405322"
 }
 
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	g_bLateLoad = late;
+	return APLRes_Success;
+}
+
 public void OnPluginStart()
 {
+	if(g_bLateLoad)
+	{
+		for(int i = 1; i <= MaxClients; i++)
+		{
+			if(IsClientInGame(i))
+				OnClientPutInServer(i);
+		}
+	}
+
 	vLoadGameData();
 
 	g_hSurvivorLimit = FindConVar("survivor_limit");
@@ -680,6 +701,14 @@ void vSpawnFakeSurvivorClient()
 		vSetGodMode(iBot, 1.0);
 		vTeleportToSurvivor(iBot);
 	}
+}
+
+public void OnClientPutInServer(int client)
+{
+	if(!IsFakeClient(client))
+		g_dPlayerSetModel.HookEntity(Hook_Post, client, mrePlayerSetModelPost);
+
+	g_dGiveDefaultItems.HookEntity(Hook_Post, client, mreGiveDefaultItemsPost);
 }
 
 public void OnMapEnd()
@@ -1519,12 +1548,17 @@ void vSetupDetours(GameData hGameData = null)
 	if(!dDetour.Enable(Hook_Post, mreGoAwayFromKeyboardPost))
 		SetFailState("Failed to detour post: CTerrorPlayer::GoAwayFromKeyboard");
 
-	dDetour = DynamicDetour.FromConf(hGameData, "CBasePlayer::SetModel");
+	/*dDetour = DynamicDetour.FromConf(hGameData, "CBasePlayer::SetModel");
 	if(dDetour == null)
 		SetFailState("Failed to find signature: CBasePlayer::SetModel");
-		
+
 	if(!dDetour.Enable(Hook_Post, mrePlayerSetModelPost))
-		SetFailState("Failed to detour pre: CBasePlayer::SetModel");
+		SetFailState("Failed to detour pre: CBasePlayer::SetModel");*/
+
+	g_dPlayerSetModel = DynamicHook.FromConf(hGameData, "CBasePlayer::SetModel");
+	if(g_dPlayerSetModel == null)
+		SetFailState("Failed to load offset: CBasePlayer::SetModel");
+	g_dPlayerSetModel.AddParam(HookParamType_CharPtr);
 
 	dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::TakeOverBot");
 	if(dDetour == null)
@@ -1536,12 +1570,16 @@ void vSetupDetours(GameData hGameData = null)
 	if(!dDetour.Enable(Hook_Post, mreTakeOverBotPost))
 		SetFailState("Failed to detour post: CTerrorPlayer::TakeOverBot");
 
-	dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GiveDefaultItems");
+	/*dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GiveDefaultItems");
 	if(dDetour == null)
 		SetFailState("Failed to find signature: CTerrorPlayer::GiveDefaultItems");
 		
 	if(!dDetour.Enable(Hook_Post, mreGiveDefaultItemsPost))
-		SetFailState("Failed to detour post: CTerrorPlayer::GiveDefaultItems");
+		SetFailState("Failed to detour post: CTerrorPlayer::GiveDefaultItems");*/
+
+	g_dGiveDefaultItems = DynamicHook.FromConf(hGameData, "CTerrorPlayer::GiveDefaultItems");
+	if(dDetour == null)
+		SetFailState("Failed to find offset: CTerrorPlayer::GiveDefaultItems");
 }
 
 //AFK Fix https://forums.alliedmods.net/showthread.php?p=2714236
@@ -1599,8 +1637,8 @@ MRESReturn mreGoAwayFromKeyboardPost(int pThis, DHookReturn hReturn)
 //Identity Fix https://forums.alliedmods.net/showpost.php?p=2718792&postcount=36
 MRESReturn mrePlayerSetModelPost(int pThis, DHookParam hParams)
 {
-	if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis))
-		return MRES_Ignored;
+	/*if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis))
+		return MRES_Ignored;*/
 
 	if(GetClientTeam(pThis) != TEAM_SURVIVOR)
 	{
@@ -1629,7 +1667,6 @@ void vWriteTakeoverPanel(int client, int bot)
 	EndMessage();
 }
 
-bool g_bTakingOverBot[MAXPLAYERS + 1];
 MRESReturn mreTakeOverBotPre(int pThis, DHookParam hParams)
 {
 	g_bTakingOverBot[pThis] = true;
@@ -1647,7 +1684,7 @@ MRESReturn mreGiveDefaultItemsPost(int pThis)
 	if(!g_bGiveWeaponType || g_bShouldFixAFK || g_bTakingOverBot[pThis])
 		return MRES_Ignored;
 
-	if(!IsClientInGame(pThis) || GetClientTeam(pThis) != TEAM_SURVIVOR || !IsPlayerAlive(pThis))
+	if(/*!IsClientInGame(pThis) || */GetClientTeam(pThis) != TEAM_SURVIVOR || !IsPlayerAlive(pThis))
 		return MRES_Ignored;
 
 	vGiveDefaultItems(pThis);
