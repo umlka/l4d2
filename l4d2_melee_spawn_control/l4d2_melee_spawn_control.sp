@@ -97,7 +97,7 @@ MRESReturn mreMeleeAllowedPost(DHookReturn hReturn, DHookParam hParams)
 {
 	/*char sScriptName[32];
 	hParams.GetString(1, sScriptName, sizeof(sScriptName));
-	if(strcmp(sScriptName, "knife") == 0)
+	if(strcmp(sScriptName, "knife", false) == 0)
 	{
 		hReturn.Value = 1;
 		return MRES_Override;
@@ -146,7 +146,7 @@ MRESReturn mreGetMissionInfoPost(DHookReturn hReturn)
 	if(sMapSetMelees[0] == '\0')
 		return MRES_Ignored;
 
-	if(strcmp(sMapSetMelees, sMapCurrentMelees) == 0)
+	if(strcmp(sMapSetMelees, sMapCurrentMelees, false) == 0)
 		return MRES_Ignored;
 		
 	SDKCall(g_hSDKKeyValuesSetString, pThis, "meleeweapons", sMapSetMelees);
@@ -186,7 +186,7 @@ void vGetMapSetMelees(const char[] sMissionFirstMap, const char[] sMissionBaseMe
 				continue;
 				
 			Format(sBuffer[i], 32, ";%s;", sBuffer[i]);
-			if(StrContains(sBaseMelees, sBuffer[i]) == -1)
+			if(StrContains(sBaseMelees, sBuffer[i], false) == -1)
 				StrCat(sExtraMelees, sizeof(sExtraMelees), sBuffer[i][1]);
 		}
 
