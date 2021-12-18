@@ -1637,8 +1637,8 @@ MRESReturn mreGoAwayFromKeyboardPost(int pThis, DHookReturn hReturn)
 //Identity Fix https://forums.alliedmods.net/showpost.php?p=2718792&postcount=36
 MRESReturn mrePlayerSetModelPost(int pThis, DHookParam hParams)
 {
-	/*if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis))
-		return MRES_Ignored;*/
+	if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis))
+		return MRES_Ignored;
 
 	if(GetClientTeam(pThis) != TEAM_SURVIVOR)
 	{
@@ -1684,7 +1684,7 @@ MRESReturn mreGiveDefaultItemsPost(int pThis)
 	if(!g_bGiveWeaponType || g_bShouldFixAFK || g_bTakingOverBot[pThis])
 		return MRES_Ignored;
 
-	if(/*!IsClientInGame(pThis) || */GetClientTeam(pThis) != TEAM_SURVIVOR || !IsPlayerAlive(pThis))
+	if(!IsClientInGame(pThis) || GetClientTeam(pThis) != TEAM_SURVIVOR || !IsPlayerAlive(pThis))
 		return MRES_Ignored;
 
 	vGiveDefaultItems(pThis);
