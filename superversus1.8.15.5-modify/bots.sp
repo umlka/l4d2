@@ -271,6 +271,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 public void OnPluginStart()
 {
+	vLoadGameData();
+
 	if(g_bLateLoad)
 	{
 		for(int i = 1; i <= MaxClients; i++)
@@ -279,8 +281,6 @@ public void OnPluginStart()
 				OnClientPutInServer(i);
 		}
 	}
-
-	vLoadGameData();
 
 	g_hSurvivorLimit = FindConVar("survivor_limit");
 	g_hBotsSurvivorLimit = CreateConVar("bots_survivor_limit", "4", "开局Bot的数量", CVAR_FLAGS, true, 1.00, true, 31.0);
