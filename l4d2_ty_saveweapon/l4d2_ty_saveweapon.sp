@@ -102,7 +102,6 @@ void vIsAllowed()
 		HookEvent("map_transition", Event_MapTransition, EventHookMode_Pre);	
 		HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 		HookEvent("player_team", Event_PlayerTeam);
-		HookEvent("player_bot_replace", Event_PlayerBotReplace);
 		HookEvent("player_spawn", Event_PlayerSpawn);
 
 		g_bAllow = true;
@@ -113,7 +112,6 @@ void vIsAllowed()
 		UnhookEvent("map_transition", Event_MapTransition, EventHookMode_Pre);	
 		UnhookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 		UnhookEvent("player_team", Event_PlayerTeam);
-		UnhookEvent("player_bot_replace", Event_PlayerBotReplace);
 		UnhookEvent("player_spawn", Event_PlayerSpawn);
 
 		vSurvivorCleanAll();
@@ -283,15 +281,6 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		g_iStatusInfo[client][8] = 1;
 }
 
-void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
-{
-	int player = GetClientOfUserId(event.GetInt("player"));
-	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || GetClientTeam(player) != 2)
-		return;
-
-	g_iStatusInfo[GetClientOfUserId(event.GetInt("bot"))][8] = 1;
-}
-
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
@@ -313,8 +302,16 @@ Action Timer_Restore(Handle timer, int client)
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
 		return Plugin_Stop;
 
-	if(g_iStatusInfo[client][7] == 0 && IsFakeClient(client) && GetGameTime() < 30.0)
-		vAppropriateUnusedSave(client);
+	if(IsFakeClient(client))
+	{
+		if(iHasIdlePlayer(client))
+		{
+			g_iStatusInfo[client][8] = 1;
+			return Plugin_Stop;
+		}
+		else if(g_iStatusInfo[client][7] == 0 && GetGameTime() < 30.0)
+			vAppropriateUnusedSave(client);
+	}
 
 	if(g_iStatusInfo[client][8] == 0)
 	{
