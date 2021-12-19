@@ -156,7 +156,7 @@ public Plugin myinfo =
 	name = 			"SafeArea Teleport",
 	author = 		"sorallll",
 	description = 	"",
-	version = 		"1.1.0",
+	version = 		"1.1.1",
 	url = 			"https://forums.alliedmods.net/showthread.php?p=2766514#post2766514"
 }
 
@@ -660,7 +660,7 @@ void  vOnStartTouch(const char[] output, int caller, int activator, float delay)
 		if(g_bTranslation)
 			vPrintHintToSurvivor("%t", "SurvivorReached", iTemp, g_iMinSurvivorPercent);
 		else
-			vPrintHintToSurvivor("百分之%d存活玩家已到达安全屋 百分之%d之后开始倒计时", iTemp, g_iMinSurvivorPercent);
+			vPrintHintToSurvivor("百分之%d存活玩家已到达终点区域 百分之%d之后开始倒计时", iTemp, g_iMinSurvivorPercent);
 
 		return;
 	}
