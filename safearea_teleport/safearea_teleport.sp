@@ -157,7 +157,7 @@ public Plugin myinfo =
 	author = 		"sorallll",
 	description = 	"",
 	version = 		"1.1.0",
-	url = 			""
+	url = 			"https://forums.alliedmods.net/showthread.php?p=2766514#post2766514"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -207,7 +207,7 @@ public void OnPluginStart()
 
 	vLoadGameData();
 
-	g_hSafeArea = CreateConVar("st_type", "1", "How to deal with players who have not entered the destination safe area (1=teleport, 2=slay, 0=off)", _, true, 0.0, true, 1.0);
+	g_hSafeArea = CreateConVar("st_type", "1", "How to deal with players who have not entered the destination safe area (1=teleport, 2=slay, 0=off)", _, true, 0.0, true, 2.0);
 	g_hSafeAreaTime = CreateConVar("st_time", "30", "How many seconds to count down before processing (0=disable the function)", _, true, 0.0);
 	g_hMinSurvivorPercent = CreateConVar("st_min_percent", "50", "What percentage of the survivors start the countdown when they reach the finish area", _, true, 0.0);
 	
@@ -755,7 +755,7 @@ void vPerform(int iType)
 				else
 					vPrintHintToSurvivor("终点区域无玩家存在, 已改为自动传送");
 
-				vPerform(0);
+				vPerform(1);
 			}
 			else
 			{
