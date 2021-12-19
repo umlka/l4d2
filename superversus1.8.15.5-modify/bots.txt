@@ -27,8 +27,8 @@
 			}
 			"CBasePlayer::SetModel"
 			{
-				"offset"	"CBasePlayer::SetModel"
-				"hooktype"	"entity"
+				"signature"	"CBasePlayer::SetModel"
+				"callconv"	"thiscall"
 				"return"	"void"
 				"this"		"entity"
 				"arguments"
@@ -55,8 +55,8 @@
 			}
 			"CTerrorPlayer::GiveDefaultItems"
 			{
-				"offset"	"CTerrorPlayer::GiveDefaultItems"
-				"hooktype"	"entity"
+				"signature"	"CTerrorPlayer::GiveDefaultItems"
+				"callconv"	"thiscall"
 				"return"	"void"
 				"this"		"entity"
 			}
@@ -104,18 +104,6 @@
 				"linux"		"117" // 0x75
 				"windows"	"117" // 0x75
 			}
-			/* CBasePlayer::SetModel(CBasePlayer *__hidden this, const char *) */
-			"CBasePlayer::SetModel"
-			{
-				"linux"		"28"
-				"windows"	"27"
-			}
-			/* CTerrorPlayer::GiveDefaultItems(CTerrorPlayer *__hidden this) */
-			"CTerrorPlayer::GiveDefaultItems"
-			{
-				"linux"		"514"
-				"windows"	"513"
-			}
 		}
 
 		"Signatures"
@@ -160,6 +148,21 @@
 				"linux"		"@_ZN13CTerrorPlayer18GoAwayFromKeyboardEv"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x57\x8B\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x8B"
 				/* ? ? ? ? ? ? 53 56 57 8B ? 8B ? 8B 90 ? ? ? ? 8B */
+			}
+			/* CBasePlayer::SetModel(CBasePlayer *__hidden this, const char *) */
+			"CBasePlayer::SetModel"
+			{
+				"library"	"server"
+				"linux"		"@_ZN11CBasePlayer8SetModelEPKc"
+				"windows"	"\x55\x8B\x2A\x8B\x2A\x2A\x56\x57\x50\x8B\x2A\xE8\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x2A\x2A\x8B"
+			}
+			/* CTerrorPlayer::GiveDefaultItems(CTerrorPlayer *__hidden this) */
+			"CTerrorPlayer::GiveDefaultItems"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer16GiveDefaultItemsEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x50\xE8\x2A\x2A\x2A\x2A\x83\x2A\x2A\x84\x2A\x0F\x84\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x8B\x88"
+				/* ? ? ? ? ? ? ? ? 50 E8 ? ? ? ? 83 ? ? 84 ? 0F 84 ? ? ? ? A1 ? ? ? ? 8B 88 */
 			}
 		}
     }
