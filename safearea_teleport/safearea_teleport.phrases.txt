@@ -1,0 +1,31 @@
+"Phrases"
+{
+	"IsSacrificeFinale"
+	{
+		"en"			"The map is a sacrifice ending, the current function has been closed"
+		"chi"			"该地图是牺牲结局，已关闭当前功能"
+	}
+	"SurvivorReached"
+	{
+		"#format"		"{1:d},{2:d}"
+		"en"			"{1} percent of the alive survivors have reached the safe house, and the countdown starts after {2}"
+		"chi"			"百分之{1}存活玩家已到达安全屋，百分之{2}之后开始倒计时"
+	}
+	"Countdown_Send"
+	{
+		"#format"		"{1:d}"
+		"en"			"{1} seconds later teleport all players who have not entered the end zone"
+		"chi"			"{1} 秒后传送所有未进入终点区域的玩家"
+	}
+	"Countdown_Slay"
+	{
+		"#format"		"{1:d}"
+		"en"			"{1} seconds later slay all players who have not entered the end zone"
+		"chi"			"{1} 秒后处死所有未进入终点区域的玩家"
+	}
+	"NoPlayerInEndArea"
+	{
+		"en"			"There is no player in the end area, it has been changed to automatic teleport"
+		"chi"			"终点区域无玩家存在, 已改为自动传送"
+	}
+}

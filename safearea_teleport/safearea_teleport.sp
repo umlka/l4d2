@@ -79,14 +79,8 @@ bool
 	g_bLateLoad,
 	g_bFirstRound,
 	g_bIsTriggered,
-	g_bIsSacrificeFinale;
-
-static const char
-	g_sMethod[][] =
-	{
-		"传送",
-		"处死",
-	};
+	g_bIsSacrificeFinale,
+	g_bTranslation;
 
 methodmap CNavArea
 {
@@ -203,18 +197,25 @@ any aNative_ST_GetRandomStartSpot(Handle plugin, int numParams)
 
 public void OnPluginStart()
 {
+	char sPath[PLATFORM_MAX_PATH];
+	BuildPath(Path_SM, sPath, PLATFORM_MAX_PATH, "translations/safearea_teleport.phrases.txt");
+	if(FileExists(sPath))
+	{
+		LoadTranslations("safearea_teleport.phrases");
+		g_bTranslation = true;
+	}
+
 	vLoadGameData();
 
-	g_hSafeArea = CreateConVar("st_type", "0", "如何处理未进入终点安全区域的玩家(0=传送,1=处死)", _, true, 0.0, true, 1.0);
-	g_hSafeAreaTime = CreateConVar("st_time", "30", "开始倒计时多少秒后进行处理(0=关闭该功能)", _, true, 0.0);
-	g_hMinSurvivorPercent = CreateConVar("st_min_percent", "50", "有百分之多少的生还者到达终点区域时开始倒计时", _, true, 0.0);
+	g_hSafeArea = CreateConVar("st_type", "1", "How to deal with players who have not entered the destination safe area (1=teleport, 2=slay, 0=off)", _, true, 0.0, true, 1.0);
+	g_hSafeAreaTime = CreateConVar("st_time", "30", "How many seconds to count down before processing (0=disable the function)", _, true, 0.0);
+	g_hMinSurvivorPercent = CreateConVar("st_min_percent", "50", "What percentage of the survivors start the countdown when they reach the finish area", _, true, 0.0);
 	
 	g_hSafeArea.AddChangeHook(vConVarChanged);
 	g_hSafeAreaTime.AddChangeHook(vConVarChanged);
 	g_hMinSurvivorPercent.AddChangeHook(vConVarChanged);
 
 	AutoExecConfig(true, "safearea_teleport");
-	//想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
@@ -222,9 +223,9 @@ public void OnPluginStart()
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_PostNoCopy);
 	
-	RegAdminCmd("sm_warpstart", cmdWarpStart, ADMFLAG_RCON, "传送所有生还者到起点安全区域");
-	RegAdminCmd("sm_warpend", cmdWarpEnd, ADMFLAG_RCON, "传送所有生还者到终点安全区域");
-	RegAdminCmd("sm_st", cmdSt, ADMFLAG_ROOT, "测试");
+	RegAdminCmd("sm_warpstart", cmdWarpStart, ADMFLAG_RCON, "Send all survivors to the safe area at the starting point");
+	RegAdminCmd("sm_warpend", cmdWarpEnd, ADMFLAG_RCON, "Send all survivors to the destination safe area");
+	RegAdminCmd("sm_st", cmdSt, ADMFLAG_ROOT, "Test");
 	
 	g_aLastDoor = new ArrayList(2);
 	//g_aStartDoor = new ArrayList(2);
@@ -253,7 +254,12 @@ void vOnFinaleStart(const char[] output, int caller, int activator, float delay)
 		if(g_bIsSacrificeFinale)
 		{
 			if(g_bFirstRound)
-				PrintToChatAll("\x01当前救援地图是\x05牺牲结局\x01，已关闭自动\x05%s\x01功能", g_sMethod[g_iSafeArea]);
+			{
+				if(g_bTranslation)
+					PrintToChatAll("\x05%t", "IsSacrificeFinale");
+				else
+					PrintToChatAll("\x05该地图是牺牲结局，已关闭当前功能");
+			}
 
 			int iEntRef;
 			int iLength = g_aRescueVehicle.Length;
@@ -270,14 +276,14 @@ Action cmdWarpStart(int client, int args)
 {
 	if(g_iRoundStart == 0 || g_iPlayerSpawn == 0)
 	{
-		ReplyToCommand(client, "回合尚未开始");
+		ReplyToCommand(client, "Round has not yet started");
 		return Plugin_Handled;
 	}
 
 	int iLength = g_aStartNavArea.Length;
 	if(iLength == 0)
 	{
-		ReplyToCommand(client, "未发现起点Nav区域");
+		ReplyToCommand(client, "No starting point Nav area found");
 		return Plugin_Handled;
 	}
 
@@ -300,23 +306,23 @@ Action cmdWarpEnd(int client, int args)
 {
 	if(g_iRoundStart == 0 || g_iPlayerSpawn == 0)
 	{
-		ReplyToCommand(client, "回合尚未开始");
+		ReplyToCommand(client, "Round has not yet started");
 		return Plugin_Handled;
 	}
 
 	if(g_aEndNavArea.Length == 0)
 	{
-		ReplyToCommand(client, "未发现终点Nav区域");
+		ReplyToCommand(client, "No endpoint Nav area found");
 		return Plugin_Handled;
 	}
 
-	vTeleportOrSuicide(0);
+	vPerform(1);
 	return Plugin_Handled;
 }
 
 Action cmdSt(int client, int args)
 {
-	ReplyToCommand(client, "过图触发器->%d 救援触发器->%d 起始Nav区域数量->%d 终点Nav区域数量->%d", g_iChangelevel ? EntRefToEntIndex(g_iChangelevel) : -1, SDKCall(g_hSDKFindRescueAreaTrigger), g_aStartNavArea.Length, g_aEndNavArea.Length);
+	ReplyToCommand(client, "RescueAreaTrigger->%d ChangeLevel->%d StartNavArea->%d EndNavArea->%d", g_iChangelevel ? EntRefToEntIndex(g_iChangelevel) : -1, SDKCall(g_hSDKFindRescueAreaTrigger), g_aStartNavArea.Length, g_aEndNavArea.Length);
 	return Plugin_Handled;
 }
 
@@ -411,8 +417,7 @@ void vInitPlugin()
 
 	#if BENCHMARK
 	g_profiler.Stop();
-	//PrintToServer("执行耗时: %f", g_profiler.Time);
-	PrintToChatAll("执行耗时: %f", g_profiler.Time);
+	PrintToServer("ProfilerTime: %f", g_profiler.Time);
 	#endif
 }
 
@@ -529,7 +534,12 @@ void vHookEndAreaEntity()
 		if(g_bIsSacrificeFinale)
 		{
 			if(g_bFirstRound)
-				PrintToChatAll("\x01当前救援地图是\x05牺牲结局\x01，已关闭自动\x05%s\x01功能", g_sMethod[g_iSafeArea]);
+			{
+				if(g_bTranslation)
+					PrintToChatAll("\x05%t", "IsSacrificeFinale");
+				else
+					PrintToChatAll("\x05该地图是牺牲结局，已关闭当前功能");
+			}
 		}
 		else
 		{
@@ -647,7 +657,11 @@ void  vOnStartTouch(const char[] output, int caller, int activator, float delay)
 	iTemp = iGetReachedSurvivorPercent();
 	if(iTemp < g_iMinSurvivorPercent)
 	{
-		vPrintHintToSurvivor("百分之%d存活玩家已到达安全屋 百分之%d开始倒计时%s", iTemp, g_iMinSurvivorPercent, g_sMethod[g_iSafeArea]);
+		if(g_bTranslation)
+			vPrintHintToSurvivor("%t", "SurvivorReached", iTemp, g_iMinSurvivorPercent);
+		else
+			vPrintHintToSurvivor("百分之%d存活玩家已到达安全屋 百分之%d之后开始倒计时", iTemp, g_iMinSurvivorPercent);
+
 		return;
 	}
 
@@ -680,12 +694,25 @@ Action Timer_Countdown(Handle timer)
 {
 	if(g_iCountdown > 0)
 	{
-		vPrintHintToSurvivor("%d 秒后%s所有未进入终点区域的玩家", g_iCountdown--, g_sMethod[g_iSafeArea]);
+		if(g_bTranslation)
+		{
+			switch(g_iSafeArea)
+			{
+				case 1:
+					vPrintHintToSurvivor("%t", "Countdown_Send", g_iCountdown--);
+
+				case 2:
+					vPrintHintToSurvivor("%t", "Countdown_Slay", g_iCountdown--);
+			}
+		}
+		else
+			vPrintHintToSurvivor("%d 秒后%s所有未进入终点区域的玩家", g_iCountdown--, g_iSafeArea == 1 ? "传送" : "处死");
+
 		vEmitSoundToSurvivor(SOUND_COUNTDOWN, SOUND_FROM_PLAYER, SNDCHAN_STATIC, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
 	}
 	else if(g_iCountdown <= 0)
 	{
-		vTeleportOrSuicide(g_iSafeArea);
+		vPerform(g_iSafeArea);
 		g_hTimer = null;
 		return Plugin_Stop;
 	}
@@ -707,11 +734,11 @@ void vPrintHintToSurvivor(const char[] sMessage, any ...)
 	}
 }
 
-void vTeleportOrSuicide(int iType)
+void vPerform(int iType)
 {
 	switch(iType)
 	{
-		case 0:
+		case 1:
 		{
 			if(g_iCurrentMap & FINAL_MAP == 0)
 				vCloseAndLockLastSafeDoor();
@@ -719,12 +746,16 @@ void vTeleportOrSuicide(int iType)
 			CreateTimer(0.5, Timer_TeleportToCheckpoint, _, TIMER_FLAG_NO_MAPCHANGE);
 		}
 		
-		case 1:
+		case 2:
 		{
 			if(bNoPlayerInEndArea())
 			{
-				vPrintHintToSurvivor("终点区域无玩家存在, 已改为自动传送");
-				vTeleportOrSuicide(0);
+				if(g_bTranslation)
+					vPrintHintToSurvivor("%t", "NoPlayerInEndArea");
+				else
+					vPrintHintToSurvivor("终点区域无玩家存在, 已改为自动传送");
+
+				vPerform(0);
 			}
 			else
 			{
@@ -1147,7 +1178,6 @@ void vLoadGameData()
 	if(g_hSDKGetNearestNavArea == null)
 		SetFailState("Failed to create SDKCall: CNavMesh::GetNearestNavArea");
 
-
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::OnRevived") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::OnRevived");
@@ -1177,8 +1207,7 @@ void vLateLoadGameData()
 	if(g_iTheCount == 0)
 	{
 		#if DEBUG
-		//PrintToServer("当前Nav区域数量为0， 可能是某些测试地图");
-		PrintToChatAll("当前Nav区域数量为0， 可能是某些测试地图");
+		PrintToServer("The current number of Nav areas is 0, which may be some test maps");
 		#endif
 	}
 
