@@ -158,6 +158,10 @@ Handle
 	g_hSDKGoAwayFromKeyboard,
 	g_hRespawnTimer[MAXPLAYERS + 1];
 
+ArrayList
+	g_aMeleeScripts;
+
+
 Address
 	g_pStatsCondition;
 
@@ -180,13 +184,9 @@ int
 	g_iRespawnLimit,
 	g_iSlotCount[5],
 	g_iSlotWeapons[5][20],
-	g_iMeleeClassCount,
 	g_iDeathModel[MAXPLAYERS + 1],
 	g_iPlayerRespawned[MAXPLAYERS + 1],
 	g_iRespawnCountdown[MAXPLAYERS + 1];
-
-char
-	g_sMeleeClass[16][32];
 
 static const char
 	g_sWeaponName[5][17][] =
@@ -222,7 +222,7 @@ static const char
 			"cricket_bat",				//256 球拍
 			"tonfa",					//512 警棍
 			"katana",					//1024 武士刀
-			"electric_guitar",			//2048 吉他
+			"electric_guitar",			//2048 电吉他
 			"knife",					//4096 小刀
 			"golfclub",					//8192 高尔夫球棍
 			"shovel",					//16384 铁铲
@@ -364,6 +364,8 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	vLoadGameData();
+
+	g_aMeleeScripts = new ArrayList(64);
 
 	g_hRespawnTime = CreateConVar("sar_respawn_time", "15", "玩家自动复活时间(秒)", CVAR_FLAGS, true, 0.0);
 	g_hRespawnLimit = CreateConVar("sar_respawn_limit", "5", "玩家每回合自动复活次数", CVAR_FLAGS, true, 0.0);
@@ -879,35 +881,34 @@ public void OnMapStart()
 			PrecacheGeneric(sBuffer, true);
 	}
 
-	vGetMeleeClasses();
+	vGetMeleeWeaponsStringTable();
 }
 
-void vGetMeleeClasses()
+void vGetMeleeWeaponsStringTable()
 {
-	int iMeleeStringTable = FindStringTable("MeleeWeapons");
-	g_iMeleeClassCount = GetStringTableNumStrings(iMeleeStringTable);
+	g_aMeleeScripts.Clear();
 
-	for(int i; i < g_iMeleeClassCount; i++)
-		ReadStringTable(iMeleeStringTable, i, g_sMeleeClass[i], sizeof(g_sMeleeClass[]));
-}
-
-void vGetScriptName(const char[] sMeleeClass, char[] sScriptName, int maxlength)
-{
-	for(int i; i < g_iMeleeClassCount; i++)
+	int iTable = FindStringTable("meleeweapons");
+	if(iTable != INVALID_STRING_TABLE)
 	{
-		if(StrContains(g_sMeleeClass[i], sMeleeClass, false) == 0)
+		int iNum = GetStringTableNumStrings(iTable);
+		char sMeleeName[64];
+		for(int i; i < iNum; i++)
 		{
-			strcopy(sScriptName, maxlength, g_sMeleeClass[i]);
-			return;
+			ReadStringTable(iTable, i, sMeleeName, sizeof(sMeleeName));
+			g_aMeleeScripts.PushString(sMeleeName);
 		}
 	}
-	strcopy(sScriptName, maxlength, g_sMeleeClass[GetRandomInt(0, g_iMeleeClassCount - 1)]);
 }
 
-void vGiveMelee(int client, const char[] sMeleeClass)
+void vGiveMelee(int client, const char[] sMeleeName)
 {
-	char sScriptName[32];
-	vGetScriptName(sMeleeClass, sScriptName, sizeof(sScriptName));
+	char sScriptName[64];
+	if(g_aMeleeScripts.FindString(sMeleeName) != -1)
+		strcopy(sScriptName, sizeof(sScriptName), sMeleeName);
+	else
+		g_aMeleeScripts.GetString(GetRandomInt(0, g_aMeleeScripts.Length - 1), sScriptName, sizeof(sScriptName));
+	
 	vCheatCommand(client, "give", sScriptName);
 }
 
