@@ -305,11 +305,11 @@ void vGetMeleeWeaponsStringTable()
 	if(iTable != INVALID_STRING_TABLE)
 	{
 		int iNum = GetStringTableNumStrings(iTable);
-		char sName[PLATFORM_MAX_PATH];
+		char sMeleeName[64];
 		for(int i; i < iNum; i++)
 		{
-			ReadStringTable(iTable, i, sName, sizeof(sName));
-			g_aMeleeScripts.PushString(sName);
+			ReadStringTable(iTable, i, sMeleeName, sizeof(sMeleeName));
+			g_aMeleeScripts.PushString(sMeleeName);
 		}
 	}
 }
