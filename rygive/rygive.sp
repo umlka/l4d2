@@ -281,7 +281,7 @@ public void OnMapStart()
 	}
 
 	vGetMaxClipSize();
-	vGetMeleeClasses();
+	vGetMeleeWeaponsStringTable();
 }
 
 void vGetMaxClipSize()
@@ -297,7 +297,7 @@ void vGetMaxClipSize()
 	RemoveEdict(entity);
 }
 
-void vGetMeleeClasses()
+void vGetMeleeWeaponsStringTable()
 {
 	g_aMeleeScripts.Clear();
 
