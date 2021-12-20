@@ -14,11 +14,13 @@
 #define NAME_CreateTank		"NextBotCreatePlayerBot<Tank>"
 
 StringMap
-	g_aSteamIDs;
+	g_aSteamIDs,
+	g_aMeleeTrans;
 
 ArrayList
 	g_aByteSaved,
-	g_aBytePatch;
+	g_aBytePatch,
+	g_aMeleeScripts;
 
 Handle
 	g_hSDK_Call_RoundRespawn,
@@ -40,7 +42,6 @@ Address
 
 int
 	g_iClipSize[2],
-	g_iMeleeClassCount,
 	g_iFunction[MAXPLAYERS + 1],
 	g_iCurrentPage[MAXPLAYERS + 1];
 
@@ -52,7 +53,6 @@ bool
 	g_bWeaponHandling;
 
 char
-	g_sMeleeClass[16][32],
 	g_sItemName[MAXPLAYERS + 1][64];
 
 static const char
@@ -125,23 +125,6 @@ static const char
 		"shovel",			//铁铲
 		"pitchfork",		//草叉
 		"riotshield",		//盾牌
-	},
-	g_sMeleeTrans[][] =
-	{
-		"斧头",
-		"平底锅",
-		"砍刀",
-		"棒球棒",
-		"撬棍",
-		"球拍",
-		"警棍",
-		"武士刀",
-		"吉他",
-		"小刀",
-		"高尔夫球棍",
-		"铁铲",
-		"草叉",
-		"盾牌"
 	};
 
 enum L4D2WeaponType 
@@ -220,6 +203,25 @@ public void OnPluginStart()
 	RegAdminCmd("sm_rygive", cmdRygive, ADMFLAG_ROOT, "rygive");
 
 	g_aSteamIDs = new StringMap();
+	g_aMeleeTrans = new StringMap();
+
+	g_aMeleeScripts = new ArrayList(64);
+
+	g_aMeleeTrans.SetString("fireaxe", "斧头");
+	g_aMeleeTrans.SetString("frying_pan", "平底锅");
+	g_aMeleeTrans.SetString("machete", "砍刀");
+	g_aMeleeTrans.SetString("baseball_bat", "棒球棒");
+	g_aMeleeTrans.SetString("crowbar", "撬棍");
+	g_aMeleeTrans.SetString("cricket_bat", "球拍");
+	g_aMeleeTrans.SetString("tonfa", "警棍");
+	g_aMeleeTrans.SetString("katana", "武士刀");
+	g_aMeleeTrans.SetString("electric_guitar", "电吉他");
+	g_aMeleeTrans.SetString("knife", "小刀");
+	g_aMeleeTrans.SetString("golfclub", "高尔夫球棍");
+	g_aMeleeTrans.SetString("shovel", "铁铲");
+	g_aMeleeTrans.SetString("pitchfork", "草叉");
+	g_aMeleeTrans.SetString("riotshield", "盾牌");
+	g_aMeleeTrans.SetString("riot_shield", "盾牌");
 }
 
 public void OnPluginEnd()
@@ -297,14 +299,22 @@ void vGetMaxClipSize()
 
 void vGetMeleeClasses()
 {
-	int iMeleeStringTable = FindStringTable("MeleeWeapons");
-	g_iMeleeClassCount = GetStringTableNumStrings(iMeleeStringTable);
+	g_aMeleeScripts.Clear();
 
-	for(int i; i < g_iMeleeClassCount; i++)
-		ReadStringTable(iMeleeStringTable, i, g_sMeleeClass[i], sizeof(g_sMeleeClass[]));
+	int iTable = FindStringTable("meleeweapons");
+	if(iTable != INVALID_STRING_TABLE)
+	{
+		int iNum = GetStringTableNumStrings(iTable);
+		char sName[PLATFORM_MAX_PATH];
+		for(int i; i < iNum; i++)
+		{
+			ReadStringTable(iTable, i, sName, sizeof(sName));
+			g_aMeleeScripts.PushString(sName);
+		}
+	}
 }
 
-public void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if((client == 0 || !IsFakeClient(client)) && !bRealPlayerExist(client))
@@ -324,7 +334,7 @@ bool bRealPlayerExist(int iExclude = 0)
 	return false;
 }
 
-public Action cmdRygive(int client, int args)
+Action cmdRygive(int client, int args)
 {
 	if(client && IsClientInGame(client))
 		vRygive(client);
@@ -365,7 +375,7 @@ int iGetClientImmunityLevel(int client)
 	return admin.ImmunityLevel;
 }
 
-public int iRygiveMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iRygiveMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -396,6 +406,8 @@ public int iRygiveMenuHandler(Menu menu, MenuAction action, int client, int para
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vWeapons(int client)
@@ -408,7 +420,7 @@ void vWeapons(int client)
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-public int iWeaponsMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iWeaponsMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -431,6 +443,8 @@ public int iWeaponsMenuHandler(Menu menu, MenuAction action, int client, int par
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vGuns(int client, int index)
@@ -461,7 +475,7 @@ void vGuns(int client, int index)
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
 
-public int iGunsMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iGunsMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -484,35 +498,31 @@ public int iGunsMenuHandler(Menu menu, MenuAction action, int client, int param2
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vMelees(int client, int index)
 {
 	Menu menu = new Menu(iMeleesMenuHandler);
 	menu.SetTitle("近战");
-	for(int i; i < g_iMeleeClassCount; i++)
+
+	char sMelee[64];
+	char sTrans[64];
+	int iLength = g_aMeleeScripts.Length;
+	for(int i; i < iLength; i++)
 	{
-		int iTrans = iGetMeleeTrans(g_sMeleeClass[i]);
-		if(iTrans != -1)
-			menu.AddItem(g_sMeleeClass[i], g_sMeleeTrans[iTrans]);
-		else
-			menu.AddItem(g_sMeleeClass[i], g_sMeleeClass[i]); //三方图自定义近战显示默认脚本名称
+		g_aMeleeScripts.GetString(i, sMelee, sizeof(sMelee));
+		if(!g_aMeleeTrans.GetString(sMelee, sTrans, sizeof(sTrans)))
+			strcopy(sTrans, sizeof(sTrans), sMelee);
+
+		menu.AddItem(sMelee, sTrans);
 	}
 	menu.ExitBackButton = true;
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
 
-int iGetMeleeTrans(const char[] sMeleeName)
-{
-	for(int i; i < sizeof(g_sMeleeName); i++)
-	{
-		if(strcmp(g_sMeleeName[i], sMeleeName) == 0)
-			return i;
-	}
-	return -1;
-}
-
-public int iMeleesMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iMeleesMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -535,6 +545,8 @@ public int iMeleesMenuHandler(Menu menu, MenuAction action, int client, int para
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vItems(int client, int index)
@@ -565,7 +577,7 @@ void vItems(int client, int index)
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
 
-public int iItemsMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iItemsMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -593,6 +605,8 @@ public int iItemsMenuHandler(Menu menu, MenuAction action, int client, int param
 		case MenuAction_End:
 			delete menu;	
 	}
+
+	return 0;
 }
 
 void vInfecteds(int client, int index)
@@ -620,7 +634,7 @@ void vInfecteds(int client, int index)
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
 
-public int iInfectedsMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iInfectedsMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -640,10 +654,10 @@ public int iInfectedsMenuHandler(Menu menu, MenuAction action, int client, int p
 					iCreateInfectedWithParams(client, sItem);
 				else
 				{
-					DataPack datapack = new DataPack();
-					datapack.WriteCell(client);
-					datapack.WriteString(sItem);
-					RequestFrame(OnNextFrame_CreateInfected, datapack);
+					DataPack dPack = new DataPack();
+					dPack.WriteCell(client);
+					dPack.WriteString(sItem);
+					RequestFrame(OnNextFrame_CreateInfected, dPack);
 				}
 			}
 			vInfecteds(client, menu.Selection);
@@ -656,6 +670,8 @@ public int iInfectedsMenuHandler(Menu menu, MenuAction action, int client, int p
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 int iKickDeadInfectedBots(int client)
@@ -676,14 +692,13 @@ int iKickDeadInfectedBots(int client)
 	return iKickedBots;
 }
 
-void OnNextFrame_CreateInfected(any pack)
+void OnNextFrame_CreateInfected(DataPack dPack)
 {
-	DataPack datapack = pack;
-	datapack.Reset();
-	int client = datapack.ReadCell();
+	dPack.Reset();
+	int client = dPack.ReadCell();
 	char sZombie[128];
-	datapack.ReadString(sZombie, sizeof(sZombie));
-	delete datapack;
+	dPack.ReadString(sZombie, sizeof(sZombie));
+	delete dPack;
 
 	iCreateInfectedWithParams(client, sZombie);
 }
@@ -850,7 +865,7 @@ void vMisc(int client, int index)
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
 
-public int iMiscMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iMiscMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -894,6 +909,8 @@ public int iMiscMenuHandler(Menu menu, MenuAction action, int client, int param2
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vIncapSurvivor(int client, int index)
@@ -916,7 +933,7 @@ void vIncapSurvivor(int client, int index)
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
 
-public int iIncapSurvivorMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iIncapSurvivorMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -950,6 +967,8 @@ public int iIncapSurvivorMenuHandler(Menu menu, MenuAction action, int client, i
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 bool bIsIncapacitated(int client) 
@@ -1018,7 +1037,7 @@ void vStripPlayerWeapon(int client, int index)
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
 
-public int iStripPlayerWeaponMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iStripPlayerWeaponMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -1055,6 +1074,8 @@ public int iStripPlayerWeaponMenuHandler(Menu menu, MenuAction action, int clien
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vSlotSlect(int client, int target)
@@ -1083,7 +1104,7 @@ void vSlotSlect(int client, int target)
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-public int iSlotSlectMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iSlotSlectMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -1118,6 +1139,8 @@ public int iSlotSlectMenuHandler(Menu menu, MenuAction action, int client, int p
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vDeletePlayerSlot(int client, int iSlot)
@@ -1156,7 +1179,7 @@ void vRespawnPlayer(int client, int index)
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
 
-public int iRespawnSurvivorMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iRespawnSurvivorMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -1201,6 +1224,8 @@ public int iRespawnSurvivorMenuHandler(Menu menu, MenuAction action, int client,
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void TeleportToSurvivor(int client)
@@ -1215,8 +1240,9 @@ void TeleportToSurvivor(int client)
 		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
 	}
 
-	char sScriptName[32];
-	FormatEx(sScriptName, 32, "give %s", g_sMeleeClass[GetRandomInt(0, g_iMeleeClassCount - 1)]);	
+	char sScriptName[64];
+	g_aMeleeScripts.GetString(GetRandomInt(0, g_aMeleeScripts.Length - 1), sScriptName, sizeof(sScriptName));
+	Format(sScriptName, sizeof(sScriptName), "give %s", sScriptName);
 	vCheatCommand(client, sScriptName);
 	vCheatCommand(client, "give smg");
 }
@@ -1265,7 +1291,7 @@ void vSetFriendlyFire(int client)
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-public int iSetFriendlyFireMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iSetFriendlyFireMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -1305,6 +1331,8 @@ public int iSetFriendlyFireMenuHandler(Menu menu, MenuAction action, int client,
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vTeleportPlayer(int client, int index)
@@ -1328,7 +1356,7 @@ void vTeleportPlayer(int client, int index)
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
 
-public int iTeleportPlayerMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iTeleportPlayerMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -1349,6 +1377,8 @@ public int iTeleportPlayerMenuHandler(Menu menu, MenuAction action, int client, 
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vTeleportTarget(int client, const char[] sTarget)
@@ -1376,7 +1406,7 @@ void vTeleportTarget(int client, const char[] sTarget)
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-public int iTeleportTargetMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iTeleportTargetMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -1464,6 +1494,8 @@ public int iTeleportTargetMenuHandler(Menu menu, MenuAction action, int client, 
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vForceCrouch(int client)
@@ -1782,7 +1814,7 @@ void vTeamSwitch(int client, int index)
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
 
-public int iTeamSwitchMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iTeamSwitchMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -1808,6 +1840,8 @@ public int iTeamSwitchMenuHandler(Menu menu, MenuAction action, int client, int 
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 static const int g_iTargetTeam[4] = {0, 1, 2, 3};
@@ -1838,7 +1872,7 @@ void vSwitchPlayerTeam(int client, int iTarget)
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-public int iSwitchPlayerTeamMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iSwitchPlayerTeamMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -1901,6 +1935,8 @@ public int iSwitchPlayerTeamMenuHandler(Menu menu, MenuAction action, int client
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vChangeTeamToSurvivor(int client, int iTeam)
@@ -2004,7 +2040,7 @@ void vWeaponSpeed(int client, int index)
 	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
 
-public int iWeaponSpeedMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iWeaponSpeedMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -2025,6 +2061,8 @@ public int iWeaponSpeedMenuHandler(Menu menu, MenuAction action, int client, int
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vWeaponSpeedUp(int client, const char[] sSpeedUp)
@@ -2052,7 +2090,7 @@ void vWeaponSpeedUp(int client, const char[] sSpeedUp)
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-public int iWeaponSpeedUpMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iWeaponSpeedUpMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -2097,6 +2135,8 @@ public int iWeaponSpeedUpMenuHandler(Menu menu, MenuAction action, int client, i
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vDebugMode(int client)
@@ -2147,7 +2187,7 @@ void vListAliveSurvivor(int client)
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-public int iListAliveSurvivorMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iListAliveSurvivorMenuHandler(Menu menu, MenuAction action, int client, int param2)
 {
 	switch(action)
 	{
@@ -2178,6 +2218,8 @@ public int iListAliveSurvivorMenuHandler(Menu menu, MenuAction action, int clien
 		case MenuAction_End:
 			delete menu;
 	}
+
+	return 0;
 }
 
 void vPageExitBackSwitch(int client, int iFunction, int index)
