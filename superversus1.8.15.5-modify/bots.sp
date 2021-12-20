@@ -10,9 +10,6 @@
 #define TEAM_SURVIVOR	2
 #define TEAM_INFECTED   3
 
-StringMap
-	g_aSteamIDs;
-
 Handle
 	g_hBotsUpdateTimer,
 	g_hSDKNextBotCreatePlayerBot,
@@ -21,6 +18,12 @@ Handle
 	g_hSDKTakeOverBot,
 	g_hSDKSetObserverTarget,
 	g_hSDKGoAwayFromKeyboard;
+
+StringMap
+	g_aSteamIDs;
+
+ArrayList
+	g_aMeleeScripts;
 
 Address
 	g_pStatsCondition;
@@ -44,7 +47,6 @@ int
 	g_iSpecCmdLimit,
 	g_iSlotCount[5],
 	g_iSlotWeapons[5][20],
-	g_iMeleeClassCount,
 	g_iPlayerBot[MAXPLAYERS + 1],
 	g_iBotPlayer[MAXPLAYERS + 1];
 
@@ -59,7 +61,6 @@ bool
 	g_bTakingOverBot[MAXPLAYERS + 1];
 
 char
-	g_sMeleeClass[16][32],
 	g_sPlayerModel[MAXPLAYERS + 1][128];
 
 static const char
@@ -118,7 +119,7 @@ static const char
 			"cricket_bat",				//256 球拍
 			"tonfa",					//512 警棍
 			"katana",					//1024 武士刀
-			"electric_guitar",			//2048 吉他
+			"electric_guitar",			//2048 电吉他
 			"knife",					//4096 小刀
 			"golfclub",					//8192 高尔夫球棍
 			"shovel",					//16384 铁铲
@@ -262,6 +263,9 @@ public void OnPluginStart()
 {
 	vLoadGameData();
 
+	g_aSteamIDs = new StringMap();
+	g_aMeleeScripts = new ArrayList(64);
+
 	g_hSurvivorLimit = FindConVar("survivor_limit");
 	g_hBotsSurvivorLimit = CreateConVar("bots_survivor_limit", "4", "开局Bot的数量", CVAR_FLAGS, true, 1.00, true, 31.0);
 
@@ -320,8 +324,6 @@ public void OnPluginStart()
 
 	AddCommandListener(CommandListener_SpecNext, "spec_next");
 	HookUserMessage(GetUserMessageId("SayText2"), umSayText2, true);
-	
-	g_aSteamIDs = new StringMap();
 }
 
 public void OnPluginEnd()
@@ -1199,35 +1201,34 @@ public void OnMapStart()
 			PrecacheGeneric(sBuffer, true);
 	}
 
-	vGetMeleeClasses();
+	vGetMeleeWeaponsStringTable();
 }
 
-void vGetMeleeClasses()
+void vGetMeleeWeaponsStringTable()
 {
-	int iMeleeStringTable = FindStringTable("MeleeWeapons");
-	g_iMeleeClassCount = GetStringTableNumStrings(iMeleeStringTable);
+	g_aMeleeScripts.Clear();
 
-	for(int i; i < g_iMeleeClassCount; i++)
-		ReadStringTable(iMeleeStringTable, i, g_sMeleeClass[i], sizeof(g_sMeleeClass[]));
-}
-
-void vGetScriptName(const char[] sMeleeClass, char[] sScriptName, int maxlength)
-{
-	for(int i; i < g_iMeleeClassCount; i++)
+	int iTable = FindStringTable("meleeweapons");
+	if(iTable != INVALID_STRING_TABLE)
 	{
-		if(StrContains(g_sMeleeClass[i], sMeleeClass, false) == 0)
+		int iNum = GetStringTableNumStrings(iTable);
+		char sMeleeName[64];
+		for(int i; i < iNum; i++)
 		{
-			strcopy(sScriptName, maxlength, g_sMeleeClass[i]);
-			return;
+			ReadStringTable(iTable, i, sMeleeName, sizeof(sMeleeName));
+			g_aMeleeScripts.PushString(sMeleeName);
 		}
 	}
-	strcopy(sScriptName, maxlength, g_sMeleeClass[GetRandomInt(0, g_iMeleeClassCount - 1)]);
 }
 
-void vGiveMelee(int client, const char[] sMeleeClass)
+void vGiveMelee(int client, const char[] sMeleeName)
 {
-	char sScriptName[32];
-	vGetScriptName(sMeleeClass, sScriptName, sizeof(sScriptName));
+	char sScriptName[64];
+	if(g_aMeleeScripts.FindString(sMeleeName) != -1)
+		strcopy(sScriptName, sizeof(sScriptName), sMeleeName);
+	else
+		g_aMeleeScripts.GetString(GetRandomInt(0, g_aMeleeScripts.Length - 1), sScriptName, sizeof(sScriptName));
+	
 	vCheatCommand(client, "give", sScriptName);
 }
 
