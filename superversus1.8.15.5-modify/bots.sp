@@ -1385,11 +1385,11 @@ void vLoadGameData()
 	StartPrepSDKCall(SDKCall_Static);
 	Address pAddr = hGameData.GetAddress("NextBotCreatePlayerBot<SurvivorBot>");
 	if(pAddr == Address_Null)
-		SetFailState("Failed to find signature: NextBotCreatePlayerBot<SurvivorBot> in CDirector::AddSurvivorBot");
+		SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot> in CDirector::AddSurvivorBot");
 	if(hGameData.GetOffset("OS") == 1) // 1 - windows, 2 - linux. it's hard to get uniq. sig in windows => will use XRef.
 		pAddr += view_as<Address>(LoadFromAddress(pAddr + view_as<Address>(1), NumberType_Int32) + 5); // sizeof(instruction)
 	if(PrepSDKCall_SetAddress(pAddr) == false)
-		SetFailState("Failed to find signature: NextBotCreatePlayerBot<SurvivorBot>");
+		SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot>");
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
 	g_hSDKNextBotCreatePlayerBot = EndPrepSDKCall();
