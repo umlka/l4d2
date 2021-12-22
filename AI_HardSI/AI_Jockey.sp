@@ -36,7 +36,7 @@ public void OnPluginStart()
 	HookEvent("jockey_ride", Event_JockeyRide, EventHookMode_Pre);
 	
 	g_hJockeyLeapAgain = FindConVar("z_jockey_leap_again_timer");
-	g_hJockeyLeapAgain.SetFloat(0.25);
+	//g_hJockeyLeapAgain.SetFloat(0.25);
 
 	FindConVar("z_jockey_leap_range").SetFloat(1000.0);
 
@@ -57,7 +57,7 @@ public void OnConfigsExecuted()
 	vGetCurrentMode();
 }
 
-public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetCvars();
 }
@@ -69,7 +69,7 @@ void vGetCvars()
 	g_fHopActivationProximity = g_hHopActivationProximity.FloatValue;
 }
 
-public void vGameModeChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vGameModeChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetCurrentMode();
 }
@@ -120,12 +120,12 @@ public void OnGamemode(const char[] output, int caller, int activator, float del
 		g_iCurrentMode = 8;
 }
 
-public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	g_bCanLeap[GetClientOfUserId(event.GetInt("userid"))] = true;
 }
 
-public void Event_PlayerShoved(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerShoved(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(bIsBotJockey(client))
@@ -143,12 +143,12 @@ bool bIsBotJockey(int client)
 	return client && IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 5;
 }
 
-public Action Timer_LeapCooldown(Handle timer, any client)
+Action Timer_LeapCooldown(Handle timer, int client)
 {
 	g_bCanLeap[GetClientOfUserId(client)] = true;
 }
 
-public void Event_JockeyRide(Event event, const char[] name, bool dontBroadcast)
+void Event_JockeyRide(Event event, const char[] name, bool dontBroadcast)
 {	
 	if(g_iCurrentMode != 1 || g_fJockeyStumbleRadius <= 0.0)
 		return;
@@ -199,7 +199,7 @@ bool bIsPinned(int client)
 	return false;
 }
 
-public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
+public Action OnPlayerRunCmd(int client, int &buttons)
 {
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;

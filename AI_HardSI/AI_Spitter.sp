@@ -30,7 +30,7 @@ public void OnConfigsExecuted()
 	vGetCvars();
 }
 
-public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetCvars();
 }

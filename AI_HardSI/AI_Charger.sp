@@ -59,7 +59,7 @@ public void OnConfigsExecuted()
 	vGetCvars();
 }
 
-public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetCvars();
 }
@@ -74,12 +74,12 @@ void vGetCvars()
 	g_iAimOffsetSensitivityCharger = g_hAimOffsetSensitivityCharger.IntValue;
 }
 
-public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	g_bShouldCharge[GetClientOfUserId(event.GetInt("userid"))] = false;
 }
 
-public void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast)
+void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(!IsFakeClient(client))
@@ -91,7 +91,7 @@ public void Event_ChargerChargeStart(Event event, const char[] name, bool dontBr
 	SetEntProp(client, Prop_Send, "m_fFlags", flags);
 }
 
-public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
+public Action OnPlayerRunCmd(int client, int &buttons)
 {
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
@@ -106,7 +106,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	else
 		g_bShouldCharge[client] = true;
 		
-	if(g_bShouldCharge[client] && -1.0 < fSurvivorProximity < 100.0 && bReadyAbility(client) && !bIsChargeSurvivor(client))
+	if(g_bShouldCharge[client] && -1.0 < fSurvivorProximity < 100.0 && bChargerCanCharge(client))
 	{
 		static int iTarget;
 		iTarget = GetClientAimTarget(client, true);
@@ -434,16 +434,17 @@ bool bHitWall(int client, int iTarget)
 	return true;
 }
 
-bool bIsChargeSurvivor(int client)
+bool bChargerCanCharge(int client)
 {
-	return GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0;
-}
+	if(GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0)
+		return false;
 
-bool bReadyAbility(int client)
-{
 	static int iAbility;
 	iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
-	return iAbility != -1 && GetEntPropFloat(iAbility, Prop_Send, "m_timestamp") < GetGameTime();
+	if(iAbility == -1 || IsValidEntity(iAbility) || GetEntProp(iAbility, Prop_Send, "m_isCharging") || GetEntPropFloat(iAbility, Prop_Send, "m_timestamp") >= GetGameTime())
+		return false;
+
+	return true;
 }
 
 void vBlockCharge(int client)

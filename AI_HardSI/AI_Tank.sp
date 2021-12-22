@@ -40,7 +40,7 @@ public void OnConfigsExecuted()
 	vGetCvars();
 }
 
-public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetCvars();
 }
@@ -214,7 +214,7 @@ bool bWontFall(int client, const float vVel[3])
 	return false;
 }
  
-public bool bTraceEntityFilter(int entity, int contentsMask)
+bool bTraceEntityFilter(int entity, int contentsMask)
 {
 	if(entity <= MaxClients)
 		return false;

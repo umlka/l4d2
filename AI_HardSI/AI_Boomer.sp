@@ -53,7 +53,7 @@ public void OnConfigsExecuted()
 	vGetCvars();
 }
 
-public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetCvars();
 }
@@ -64,7 +64,7 @@ void vGetCvars()
 	g_fVomitRange = g_hVomitRange.FloatValue;
 }
 
-public void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
+void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client == 0 || !IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || GetEntProp(client, Prop_Send, "m_zombieClass") != 2)
@@ -76,7 +76,7 @@ public void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
 		vBoomer_OnVomit(client);
 }
 
-public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
+public Action OnPlayerRunCmd(int client, int &buttons)
 {
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 2 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
@@ -321,7 +321,7 @@ float fGetAngleBetweenVectors(const float vVec1[3], const float vVec2[3], const 
 	return fDegree;
 }
 
-public bool bTraceEntityFilter(int entity, int contentsMask)
+bool bTraceEntityFilter(int entity, int contentsMask)
 {
 	if(entity <= MaxClients)
 		return false;
@@ -406,7 +406,7 @@ void vBoomer_OnVomit(int client)
 		vVectors[1] = Sine(DegToRad(vAngles[1])) * Cosine(DegToRad(vAngles[0]));
 		vVectors[2] = Sine(DegToRad(vAngles[0]));
 
-		vLength += fNearestSurvivorDistance(client);
+		//vLength += fNearestSurvivorDistance(client);
 	}
 	
 	NormalizeVector(vVectors, vVectors);

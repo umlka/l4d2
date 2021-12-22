@@ -85,7 +85,7 @@ public void OnConfigsExecuted()
 	vGetCvars();
 }
 
-public void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetCvars();
 }
@@ -102,14 +102,14 @@ void vGetCvars()
 	g_fWallDetectionDistance = g_hWallDetectionDistance.FloatValue;
 }
 
-public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	g_bHasQueuedLunge[client] = false;
 	g_bCanLunge[client] = true;
 }
 
-public void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
+void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
 {
 	char sAbility[16];
 	event.GetString("ability", sAbility, sizeof(sAbility));
@@ -117,7 +117,7 @@ public void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
 		vHunter_OnPounce(GetClientOfUserId(event.GetInt("userid")));
 }
 
-public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
+public Action OnPlayerRunCmd(int client, int &buttons)
 {
 	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 3 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
@@ -175,7 +175,7 @@ float fNearestSurvivorDistance(int client, const float vOrigin[3])
 	return fDists[0];
 }
 
-public Action Timer_LungeInterval(Handle timer, any client)
+Action Timer_LungeInterval(Handle timer, int client)
 {
 	g_bCanLunge[GetClientOfUserId(client)] = true;
 }
@@ -254,7 +254,7 @@ bool bHitWall(int client, float vStart[3])
 	return bDidHit;
 }
 
-public bool bTraceEntityFilter(int entity, int contentsMask)
+bool bTraceEntityFilter(int entity, int contentsMask)
 {
 	if(entity <= MaxClients)
 		return false;
