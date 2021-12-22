@@ -1,0 +1,109 @@
+"Games"
+{
+	"left4dead2"
+	{
+		"Addresses"
+		{
+			"TheCount"
+			{
+				"linux"
+				{
+					"signature"	"nav_update_lighting"
+					"read"		"17"
+				}
+				"windows"
+				{
+					"signature"	"nav_update_lighting"
+					"read"		"70"
+				}
+			}
+			"NextBotCreatePlayerBot<SurvivorBot>"
+			{
+				"signature" "NextBotCreatePlayerBot<SurvivorBot>"
+			}
+		}
+
+		"Offsets"
+		{
+			"OS"
+			{
+				"linux"		"2"
+				"windows"	"1"
+			}
+			/* TerrorNavArea::ScriptGetSpawnAttributes(TerrorNavArea *__hidden this) */
+			"TerrorNavArea::ScriptGetSpawnAttributes"
+			{
+				"linux"		"300"	//mov	 eax, [eax+12Ch]
+				"windows"	"296"	//mov	 eax, [ecx+128h]
+			}
+			/* CPropDoorRotatingCheckpoint::IsCheckpointDoor(CPropDoorRotatingCheckpoint *__hidden this) */
+			"CPropDoorRotatingCheckpoint::IsCheckpointDoor"
+			{
+				"linux"		"286"
+				"windows"	"238"
+			}
+			/* CPropDoorRotatingCheckpoint::IsCheckpointExitDoor(CPropDoorRotatingCheckpoint *__hidden this) */
+			"CPropDoorRotatingCheckpoint::IsCheckpointExitDoor"
+			{
+				"linux"		"287"
+				"windows"	"239"
+			}
+			/**
+			 * CTerrorPlayer::GetFlowDistance(CNavArea const*)
+			 *
+			 * How to find on Windows:
+			 * 1. Find the function's offsets with asherkin's VTable dump.
+			 * 2. Use IDA to get the VTable dump for the "CTerrorPlayer" class on Windows.
+			 * 3. Compare your dump's offsets with asherkin's dump's offsets to find the target function.
+			 * 4. Look for the target function in the Windows binary.
+			 * 5. Look for the 7-byte float (FLD) instruction.
+			 * 6. The offset at the very end of that line of code is the offset for "m_flow".
+			 *
+			 * How to find on Linux:
+			 * 1. Locate the function.
+			 * 2. Look for the 9-byte move (MOVSS) instruction.
+			 * 3. The offset at the very end of that line of code is the offset for "m_flow".
+			 **/
+			"CTerrorPlayer::GetFlowDistance::m_flow"
+			{
+				"linux"		"340"
+				"windows"	"332"
+			}
+		}
+	
+		"Signatures"
+		{
+			/* nav_update_lighting(const CCommand *) */
+			"nav_update_lighting"
+			{
+				"library"	"server"
+				"linux"		"@_ZL19nav_update_lightingRK8CCommand"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x57\x33\x2A\x83\x2A\x2A\x75"
+				/* ? ? ? ? ? ? 57 33 ? 83 ? ? 75 */
+			}
+			"CommandNavSave"
+			{
+				"library"	"server"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x74\x2A\x8B\x0D\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x2A\x2A\xFF\x2A\x8B\x0D\x2A\x2A\x2A\x2A\x84"
+				/* ? ? ? ? ? ? ? 74 ? 8B 0D ? ? ? ? 8B ? 8B ? ? FF ? 8B 0D ? ? ? ? 84 */
+			}
+			"NextBotCreatePlayerBot<SurvivorBot>"
+			{	
+				"library"	"server"
+				"linux"		"@_Z22NextBotCreatePlayerBotI11SurvivorBotEPT_PKc"
+				"windows"	"\xE8****\x83\xC4\x08\x85\xC0\x74\x1C\x8B\x10\x8B"
+				/* E8 ? ? ? ? 83 C4 08 85 C0 74 1C 8B 10 8B */
+				/* (addr+5) + *(addr+1) = call function addr -> this  signature into <CDirector::AddSurvivorBot> */
+				/* Sig. should point to "call" opcode E8, not to the func. start */
+			}
+			/* SurvivorBot::IsReachable(SurvivorBot *__hidden this, CNavArea *, CNavArea *) */
+			"SurvivorBot::IsReachable"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK11SurvivorBot11IsReachableEP8CNavAreaS1_"
+				"windows"	"\x55\x8B\xEC\x83\xEC\x10\x53\x8B\x5D\x0C\x56\x57"
+				/* 55 8B EC 83 EC 10 53 8B 5D 0C 56 57 */
+			}
+		}
+	}
+}
