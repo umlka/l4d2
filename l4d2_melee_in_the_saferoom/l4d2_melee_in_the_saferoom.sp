@@ -281,7 +281,7 @@ void vSpawnMelee(const char[] sClass, const float vPos[3], const float vAng[3])
 	DispatchSpawn(entity);
 	TeleportEntity(entity, vOrigin, vAngles, NULL_VECTOR);
 
-	SetEntityMoveType(entity, MOVETYPE_NONE);
+	//SetEntityMoveType(entity, MOVETYPE_NONE);
 }
 
 void vSpawnCustomList(const float vPos[3], const float vAng[3])
