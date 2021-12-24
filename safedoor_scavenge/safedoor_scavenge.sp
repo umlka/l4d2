@@ -340,19 +340,11 @@ void vFindSafeRoomDoors()
 			vMaxs[1] += 33.0;
 			vMaxs[2] += 33.0;
 
-			entity = CreateEntityByName("func_nav_blocker");
-			DispatchKeyValue(entity, "solid", "2");
-			DispatchKeyValue(entity, "teamToBlock", "2");
-
-			TeleportEntity(entity, vOrigin, NULL_VECTOR, NULL_VECTOR);
-			DispatchSpawn(entity);
-
-			SetEntPropVector(entity, Prop_Send, "m_vecMins", vMins);
-			SetEntPropVector(entity, Prop_Send, "m_vecMaxs", vMaxs);
-
-			AcceptEntityInput(entity, "BlockNav");
-
-			g_iFuncNavBlocker = EntIndexToEntRef(entity);
+			DataPack dPack = new DataPack();
+			dPack.WriteFloatArray(vOrigin, 3);
+			dPack.WriteFloatArray(vMins, 3);
+			dPack.WriteFloatArray(vMaxs, 3);
+			CreateTimer(0.1, tmrBlockNav, dPack, TIMER_FLAG_NO_MAPCHANGE);
 		}
 	}
 }
@@ -410,6 +402,32 @@ void OnNextFrame_CloseDoor(int entity)
 		SetEntPropString(entity, Prop_Data, "m_SoundOpen", "Doors.Checkpoint.FullOpen1");
 	}
 	g_bInTime = false;
+}
+
+Action tmrBlockNav(Handle timer, DataPack dPack)
+{
+	dPack.Reset();
+	float vMins[3], vMaxs[3], vOrigin[3];
+	dPack.ReadFloatArray(vOrigin, 3);
+	dPack.ReadFloatArray(vMins, 3);
+	dPack.ReadFloatArray(vMaxs, 3);
+	delete dPack;
+
+	int entity = CreateEntityByName("func_nav_blocker");
+	DispatchKeyValue(entity, "solid", "2");
+	DispatchKeyValue(entity, "teamToBlock", "2");
+
+	TeleportEntity(entity, vOrigin, NULL_VECTOR, NULL_VECTOR);
+	DispatchSpawn(entity);
+
+	SetEntPropVector(entity, Prop_Send, "m_vecMins", vMins);
+	SetEntPropVector(entity, Prop_Send, "m_vecMaxs", vMaxs);
+
+	AcceptEntityInput(entity, "BlockNav");
+
+	g_iFuncNavBlocker = EntIndexToEntRef(entity);
+
+	return Plugin_Continue;
 }
 
 void vFindTerrorNavAreas()
