@@ -39,6 +39,7 @@ int
 	g_iTargetDoor,
 	g_iGameDisplay,
 	g_iPropUseTarget,
+	g_iFuncNavBlocker,
 	g_iPourGasAmount;
 
 float
@@ -125,7 +126,7 @@ public Plugin myinfo =
 	name = 			"Safe Door Scavenge",
 	author = 		"sorallll",
 	description = 	"",
-	version = 		"1.0.1",
+	version = 		"1.0.2",
 	url = 			""
 }
 
@@ -192,8 +193,6 @@ void vResetPlugin()
 {
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
-	g_iTargetDoor = 0;
-	g_iGameDisplay = 0;
 	g_iPourGasAmount = 0;
 
 	g_bSpawnGascan = false;
@@ -248,6 +247,10 @@ void Event_PlayerUse(Event event, const char[] name, bool dontBroadcast)
 	{
 		g_bBlockOpenDoor = false;
 		vUnhookAllCheckpointDoor();
+
+		if(bIsValidEntRef(g_iFuncNavBlocker))
+			AcceptEntityInput(g_iFuncNavBlocker, "UnblockNav");
+
 		return;
 	}
 
@@ -296,12 +299,18 @@ void vFindSafeRoomDoors()
 	if((entity = FindEntityByClassname(MaxClients + 1, "info_changelevel")) == INVALID_ENT_REFERENCE)
 		entity = FindEntityByClassname(MaxClients + 1, "trigger_changelevel");
 	
-	
 	if(entity != INVALID_ENT_REFERENCE)
 	{
+		int iChangeLevel = entity;
+	
+		int iFlags;
 		entity = MaxClients + 1;
 		while((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE)
 		{
+			iFlags = GetEntProp(entity, Prop_Data, "m_spawnflags");
+			if(iFlags & 8192 == 0 || iFlags & 32768 != 0)
+				continue;
+
 			if(!SDKCall(g_hSDKIsCheckpointDoor, entity))
 				continue;
 			
@@ -314,10 +323,38 @@ void vFindSafeRoomDoors()
 				HookSingleEntityOutput(entity, "OnOpen", vOnOpen);
 			}
 		}
-	}
 
-	if(g_aLastDoor.Length)
-		g_bBlockOpenDoor = true;
+		if(g_aLastDoor.Length)
+		{
+			g_bBlockOpenDoor = true;
+
+			float vMins[3], vMaxs[3], vOrigin[3];
+			GetEntPropVector(iChangeLevel, Prop_Send, "m_vecMins", vMins);
+			GetEntPropVector(iChangeLevel, Prop_Send, "m_vecMaxs", vMaxs);
+			GetEntPropVector(iChangeLevel, Prop_Send, "m_vecOrigin", vOrigin);
+
+			vMins[0] -= 33.0;
+			vMins[1] -= 33.0;
+			vMins[2] -= 33.0;
+			vMaxs[0] += 33.0;
+			vMaxs[1] += 33.0;
+			vMaxs[2] += 33.0;
+
+			entity = CreateEntityByName("func_nav_blocker");
+			DispatchKeyValue(entity, "solid", "2");
+			DispatchKeyValue(entity, "teamToBlock", "2");
+
+			TeleportEntity(entity, vOrigin, NULL_VECTOR, NULL_VECTOR);
+			DispatchSpawn(entity);
+
+			SetEntPropVector(entity, Prop_Send, "m_vecMins", vMins);
+			SetEntPropVector(entity, Prop_Send, "m_vecMaxs", vMaxs);
+
+			AcceptEntityInput(entity, "BlockNav");
+
+			g_iFuncNavBlocker = EntIndexToEntRef(entity);
+		}
+	}
 }
 
 // https://forums.alliedmods.net/showthread.php?t=333086
@@ -328,6 +365,38 @@ void vOnOpen(const char[] output, int caller, int activator, float delay)
 		g_bInTime = true;
 		RequestFrame(OnNextFrame_CloseDoor, EntIndexToEntRef(caller));
 	}
+
+	/*if(g_bSpawnGascan)
+		return;
+
+	int iMaxSpawnArea = g_aSpawnArea.Length;
+	if(!iMaxSpawnArea)
+	{
+		g_bBlockOpenDoor = false;
+		vUnhookAllCheckpointDoor();
+		return;
+	}
+
+	g_iTargetDoor = EntIndexToEntRef(caller);
+
+	SetEntProp(g_iTargetDoor, Prop_Send, "m_glowColorOverride", iGetColorInt(255, 0, 0));
+	AcceptEntityInput(g_iTargetDoor, "StartGlowing");
+
+	g_iNumGascans = g_fCansNeededPerPlayer != 0.0 ? RoundToCeil(float(iCountSurvivorTeam()) * g_fCansNeededPerPlayer) : g_iNumCansNeeded;
+
+	SetRandomSeed(GetTime());
+
+	float vOrigin[3];
+	for(int i; i < g_iNumGascans; i++)
+	{
+		view_as<CNavArea>(g_aSpawnArea.Get(GetRandomInt(0, iMaxSpawnArea - 1))).FindRandomSpot(vOrigin);
+		vSpawnScavengeItem(vOrigin);
+	}
+
+	vCreateGasNozzle(g_iTargetDoor);
+	vSetNeededDisplay(g_iNumGascans);
+
+	g_bSpawnGascan = true;*/
 }
 
 void OnNextFrame_CloseDoor(int entity)
@@ -468,8 +537,13 @@ void vCreateGasNozzle(int iTarget)
 
 	float vOrigin[3];
 	GetEntPropVector(iTarget, Prop_Data, "m_vecAbsOrigin", vOrigin);
+	vOrigin[2] -= 20.0;
 	TeleportEntity(entity, vOrigin, NULL_VECTOR, NULL_VECTOR);
 	DispatchSpawn(entity);
+
+	SetEntPropVector(entity, Prop_Send, "m_vecMins", view_as<float>({ -56.0, -56.0, -72.0 }));
+	SetEntPropVector(entity, Prop_Send, "m_vecMaxs", view_as<float>({ 56.0, 56.0, 72.0 }));
+
 
 	SetVariantString("!activator");
 	AcceptEntityInput(entity, "SetParent", iTarget);
@@ -485,7 +559,8 @@ void vOnUseFinished(const char[] output, int caller, int activator, float delay)
 	{
 		g_bBlockOpenDoor = false;
 
-		SetEntProp(g_iTargetDoor, Prop_Send, "m_glowColorOverride", iGetColorInt(0, 255, 0));
+		if(bIsValidEntRef(g_iTargetDoor))
+			SetEntProp(g_iTargetDoor, Prop_Send, "m_glowColorOverride", iGetColorInt(0, 255, 0));
 
 		int iEntRef;
 		int iLength = g_aLastDoor.Length;
@@ -497,6 +572,9 @@ void vOnUseFinished(const char[] output, int caller, int activator, float delay)
 
 		if(bIsValidEntRef(g_iPropUseTarget))
 			RemoveEntity(g_iPropUseTarget);
+
+		if(bIsValidEntRef(g_iFuncNavBlocker))
+			AcceptEntityInput(g_iFuncNavBlocker, "UnblockNav");
 	}
 }
 
@@ -509,8 +587,6 @@ int iGetColorInt(int red, int green, int blue)
 void vSetNeededDisplay(int iNumCans)
 {
 	int entity = CreateEntityByName("game_scavenge_progress_display");
-	if(entity == -1) 
-		return;
 
 	char sNumCans[8];
 	IntToString(iNumCans, sNumCans, sizeof(sNumCans));
@@ -540,16 +616,13 @@ bool bIsValidEntRef(int entity)
 void vSpawnScavengeItem(const float vOrigin[3])
 {
 	int entity = CreateEntityByName("weapon_scavenge_item_spawn");
-	if(entity == -1)
-		return;
-
 	DispatchKeyValue(entity, "solid", "6");
 	DispatchKeyValue(entity, "glowstate", "3");
 	DispatchKeyValue(entity, "spawnflags", "1");
 	DispatchKeyValue(entity, "disableshadows", "1");
 
 	char sSkin[2];
-	IntToString(GetRandomInt(0, 3), sSkin, sizeof(sSkin));
+	IntToString(GetRandomInt(1, 3), sSkin, sizeof(sSkin));
 	DispatchKeyValue(entity, "weaponskin", sSkin);
 	
 	TeleportEntity(entity, vOrigin, NULL_VECTOR, NULL_VECTOR);
