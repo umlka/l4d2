@@ -3337,7 +3337,7 @@ void vReloadAmmo(int client, int iCost, const char[] sItem)
 		GetEdictClassname(iWeapon, sWeapon, sizeof(sWeapon));
 		if(strcmp(sWeapon, "weapon_rifle_m60") == 0)
 			SetEntProp(iWeapon, Prop_Send, "m_iClip1", g_esGeneral.g_iClipSize[0]);
-		else if(strcmp(sWeapon, "grenade_launcher") == 0)
+		else if(strcmp(sWeapon, "weapon_grenade_launcher") == 0)
 		{
 			SetEntProp(iWeapon, Prop_Send, "m_iClip1", g_esGeneral.g_iClipSize[1]);
 			int iAmmoMax = FindConVar("ammo_grenadelauncher_max").IntValue;
