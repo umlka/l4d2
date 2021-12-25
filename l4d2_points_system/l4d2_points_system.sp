@@ -28,7 +28,7 @@ enum struct esPlayer
 {
 	char g_sBought[64];
 	char g_sCommand[64];
-	char g_sSteamId[32];
+	char g_sSteamID[32];
 	
 	int g_iItemCost;
 	int g_iKillCount;
@@ -1237,8 +1237,8 @@ public void OnClientAuthorized(int client, const char[] auth)
 
 bool bCacheSteamID(int client)
 {
-	if(g_esPlayer[client].g_sSteamId[0] == '\0')
-		return GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].g_sSteamId, sizeof(esPlayer::g_sSteamId));
+	if(g_esPlayer[client].g_sSteamID[0] == '\0')
+		return GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].g_sSteamID, sizeof(esPlayer::g_sSteamID));
 	return true;
 }
 
@@ -1255,7 +1255,7 @@ public void OnClientDisconnect_Post(int client)
 {
 	vResetClientData(client);
 	vSetPlayerStartPoints(client);
-	g_esPlayer[client].g_sSteamId[0] = '\0';
+	g_esPlayer[client].g_sSteamID[0] = '\0';
 }
 
 public void OnClientPostAdminCheck(int client)
@@ -1290,7 +1290,7 @@ void vSQL_Save(int client)
 		return;
 
 	char sQuery[1024];
-	FormatEx(sQuery, sizeof(sQuery), "UPDATE PS_Core SET Points = %d, UnixTime = %d WHERE SteamID = '%s';", g_esPlayer[client].g_iPlayerPoints, GetTime(), g_esPlayer[client].g_sSteamId);
+	FormatEx(sQuery, sizeof(sQuery), "UPDATE PS_Core SET Points = %d, UnixTime = %d WHERE SteamID = '%s';", g_esPlayer[client].g_iPlayerPoints, GetTime(), g_esPlayer[client].g_sSteamID);
 	SQL_FastQuery(g_dbSQL, sQuery);
 }
 
@@ -1303,7 +1303,7 @@ void vSQL_Load(int client)
 		return;
 
 	char sQuery[1024];
-	FormatEx(sQuery, sizeof(sQuery), "SELECT * FROM PS_Core WHERE SteamId = '%s';", g_esPlayer[client].g_sSteamId);
+	FormatEx(sQuery, sizeof(sQuery), "SELECT * FROM PS_Core WHERE SteamId = '%s';", g_esPlayer[client].g_sSteamID);
 	g_dbSQL.Query(vSQL_CallbackLoad, sQuery, GetClientUserId(client));
 }
 
@@ -1324,7 +1324,7 @@ void vSQL_CallbackLoad(Database db, DBResultSet results, const char[] error, any
 	else
 	{
 		char sQuery[1024];
-		FormatEx(sQuery, sizeof(sQuery), "INSERT INTO PS_Core(SteamID, Points, UnixTime) VALUES ('%s', %d, %d);", g_esPlayer[client].g_sSteamId, g_esPlayer[client].g_iPlayerPoints, GetTime());
+		FormatEx(sQuery, sizeof(sQuery), "INSERT INTO PS_Core(SteamID, Points, UnixTime) VALUES ('%s', %d, %d);", g_esPlayer[client].g_sSteamID, g_esPlayer[client].g_iPlayerPoints, GetTime());
 		SQL_FastQuery(g_dbSQL, sQuery);
 	}
 
