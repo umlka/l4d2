@@ -1473,7 +1473,7 @@ Action Timer_Player(Handle timer)
 
 			case 3:
 			{
-				if(!g_bHasAnySurvivorLeftSafeArea || IsFakeClient(i))
+				if(IsFakeClient(i))
 					continue;
 
 				if(fTime - fLastQueryTime[i] >= 1.0)
@@ -1481,6 +1481,9 @@ Action Timer_Player(Handle timer)
 					QueryClientConVar(i, "mp_gamemode", Query_GamemodeCheck, GetClientSerial(i));
 					fLastQueryTime[i] = fTime;
 				}
+
+				if(!g_bHasAnySurvivorLeftSafeArea)
+					continue;
 
 				if(!IsPlayerAlive(i))
 				{
