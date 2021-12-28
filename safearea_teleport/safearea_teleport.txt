@@ -90,17 +90,6 @@
 				"linux"		"340"
 				"windows"	"332"
 			}
-			/**
-			 * CTerrorPlayer::GetLastKnownArea()
-			 *
-			 * How to find:
-			 * 1. Use asherkin's VTable dump.
-			 **/
-			"CTerrorPlayer::GetLastKnownArea"
-			{
-				"linux"		"331"
-				"windows"	"330"
-			}
 		}
 	
 		"Signatures"
@@ -143,30 +132,6 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x83\x2A\x2A\x55\x8B\x2A\x2A\x89\x2A\x2A\x2A\x8B\x2A\x0F\x2A\x2A\x83\x2A\x2A\x56\x8B\x2A\xC7"
 				/* ? ? ? ? ? ? 83 ? ? 83 ? ? 55 8B ? ? 89 ? ? ? 8B ? 0F ? ? 83 ? ? 56 8B ? C7 */
 			}
-			/* CTerrorGameRules::IsMissionFinalMap(void) */
-			"CTerrorGameRules::IsMissionFinalMap"
-			{
-				"library"	"server"
-				"linux"		"@_ZN16CTerrorGameRules17IsMissionFinalMapEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x2A\x2A\x56\xFF\x2A\x8B\x2A\x8B\x2A\x8B\x2A\x2A\x6A\x2A\xFF\x2A\x8B\x2A\x85\x2A\x75\x2A\xB0"
-				/* ? ? ? ? ? ? 8B ? 8B ? ? 56 FF ? 8B ? 8B ? 8B ? ? 6A ? FF ? 8B ? 85 ? 75 ? B0 */
-			}
-			/* KeyValues::GetString(char const*, char const*) */
-			"KeyValues::GetString"
-			{
-				"library"	"server"
-				"linux"		"@_ZN9KeyValues9GetStringEPKcS1_"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x53\x8B\x2A\x2A\x56\x57\x6A\x2A\x53\x8B\x2A\xE8\x2A\x2A\x2A\x2A\x8B\x2A\x85\x2A\x0F\x84\x2A\x2A\x2A\x2A\x0F\x2A\x2A\x2A\x48\x83\x2A\x2A\x0F\x87\x2A\x2A\x2A\x2A\xFF\x24\x2A\x2A\x2A\x2A\x2A\xD9\x2A\x2A\x83\x2A\x2A\xDD\x2A\x2A\x68"
-				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 53 8B ? ? 56 57 6A ? 53 8B ? E8 ? ? ? ? 8B ? 85 ? 0F 84 ? ? ? ? 0F ? ? ? 48 83 ? ? 0F 87 ? ? ? ? FF 24 ? ? ? ? ? D9 ? ? 83 ? ? DD ? ? 68 */
-			}
-			/* CDirector::IsFirstMapInScenario(CDirector *__hidden this) */
-			"CDirector::IsFirstMapInScenario"
-			{
-				"library"	"server"
-				"linux"		"@_ZNK9CDirector20IsFirstMapInScenarioEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x56\x8B\x2A\x85\x2A\x75\x2A\xBE\x2A\x2A\x2A\x2A\x6A"
-				/* ? ? ? ? ? ? ? ? 56 8B ? 85 ? 75 ? BE ? ? ? ? 6A */
-			}
 			/* TerrorNavMesh::GetLastCheckpoint(TerrorNavMesh *__hidden this) */
 			"TerrorNavMesh::GetLastCheckpoint"
 			{
@@ -206,22 +171,6 @@
 				"linux"		"@_ZN12CBaseTrigger10IsTouchingEP11CBaseEntity"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x85\x2A\x74\x2A\x8B\x2A\x8B\x2A\x2A\xFF\x2A\x8B\x2A\x89\x2A\x2A\xEB\x2A\xC7\x45\x2A\x2A\x2A\x2A\x2A\x8D\x2A\x2A\x51\x8D\x8E\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x33"
 				/* ? ? ? ? ? ? 8B ? ? 85 ? 74 ? 8B ? 8B ? ? FF ? 8B ? 89 ? ? EB ? C7 45 ? ? ? ? ? 8D ? ? 51 8D 8E ? ? ? ? E8 ? ? ? ? 33 */
-			}
-			/* TerrorNavArea::FindRandomSpot(TerrorNavArea *__hidden this) */
-			"TerrorNavArea::FindRandomSpot"
-			{
-				"library"	"server"
-				"linux"		"@_ZNK13TerrorNavArea14FindRandomSpotEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x56\x8B\x2A\xF3\x2A\x2A\x2A\x2A\xF3\x2A\x2A\x2A\x2A\x0F"
-				/* ? ? ? ? ? ? ? ? ? ? ? 83 ? ? 56 8B ? F3 ? ? ? ? F3 ? ? ? ? 0F */
-			}
-			/* CNavMesh::GetNearestNavArea(Vector const&, bool, float, bool, bool, bool) */
-			"CNavMesh::GetNearestNavArea<Vector>"
-			{
-				"library"	"server"
-				"linux"		"@_ZNK8CNavMesh17GetNearestNavAreaERK6Vectorbfbbb"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x56\x8B\x2A\x83\x2A\x2A\x2A\x57\x8B"
-				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 56 8B ? 83 ? ? ? 57 8B */
 			}
 			/* CTerrorPlayer::OnRevived(CTerrorPlayer *__hidden this) */
 			"CTerrorPlayer::OnRevived"
