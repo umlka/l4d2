@@ -218,7 +218,7 @@ ConVar
 	g_hSurvuivorAllowChance,
 	g_hSbAllBotGame,
 	g_hAllowAllBotSurvivorTeam,
-	g_hSurvivorMaxIncapacitatedCount,
+	g_hMaxIncapacitatedCount,
 	g_hExchangeTeam,
 	g_hPZSuicideTime,
 	g_hPZRespawnTime,
@@ -257,7 +257,7 @@ int
 	g_iRoundStart,
 	g_iPlayerSpawn,
 	g_iSpawnablePZ,
-	g_iSurvivorMaxIncapacitatedCount,
+	g_iMaxIncapacitatedCount,
 	g_iAllowSurvuivorLimit,
 	g_iMaxTankPlayer,
 	g_iPZRespawnTime,
@@ -298,7 +298,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.2.9",
+	version = "3.3.0",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -370,7 +370,7 @@ public void OnPluginStart()
 	g_hSpawnWeights[SI_CHARGER] = CreateConVar("cz_charger_weight", "50", "charger产生比重", CVAR_FLAGS, true, 0.0);
 	g_hScaleWeights = CreateConVar("cz_scale_weights", "1",	"[ 0 = 关闭 | 1 = 开启 ] 缩放相应特感的产生比重", _, true, 0.0, true, 1.0);
 
-	//AutoExecConfig(true, "controll_zombies");
+	AutoExecConfig(true, "controll_zombies");
 	//想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
 	g_hGameMode = FindConVar("mp_gamemode");
@@ -379,8 +379,8 @@ public void OnPluginStart()
 	g_hSbAllBotGame.AddChangeHook(vOtherConVarChanged);
 	g_hAllowAllBotSurvivorTeam = FindConVar("allow_all_bot_survivor_team");
 	g_hAllowAllBotSurvivorTeam.AddChangeHook(vOtherConVarChanged);
-	g_hSurvivorMaxIncapacitatedCount = FindConVar("survivor_max_incapacitated_count");
-	g_hSurvivorMaxIncapacitatedCount.AddChangeHook(vColorConVarChanged);
+	g_hMaxIncapacitatedCount = FindConVar("survivor_max_incapacitated_count");
+	g_hMaxIncapacitatedCount.AddChangeHook(vColorConVarChanged);
 
 	g_hMaxTankPlayer.AddChangeHook(vOtherConVarChanged);
 	g_hAllowSurvuivorLimit.AddChangeHook(vOtherConVarChanged);
@@ -493,7 +493,7 @@ void vIsAllowed()
 				}
 
 				delete g_hTimer;
-				g_hTimer = CreateTimer(0.1, Timer_Player, _, TIMER_REPEAT);
+				g_hTimer = CreateTimer(0.1, tmrPlayerStatus, _, TIMER_REPEAT);
 			}
 		}
 	}
@@ -577,7 +577,7 @@ void vGetColorCvars()
 {
 	bool bLast = g_bGlowColorEnable;
 	g_bGlowColorEnable = g_hGlowColorEnable.BoolValue;
-	g_iSurvivorMaxIncapacitatedCount = g_hSurvivorMaxIncapacitatedCount.IntValue;
+	g_iMaxIncapacitatedCount = g_hMaxIncapacitatedCount.IntValue;
 
 	int i;
 	for(; i < 4; i++)
@@ -1107,7 +1107,7 @@ void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcas
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client))
-		CreateTimer(0.1, Timer_PlayerLeftStartArea, _, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(0.1, tmrPlayerLeftStartArea, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 bool bIsRoundStarted()
@@ -1115,7 +1115,7 @@ bool bIsRoundStarted()
 	return g_iRoundStart && g_iPlayerSpawn;
 }
 
-Action Timer_PlayerLeftStartArea(Handle timer)
+Action tmrPlayerLeftStartArea(Handle timer)
 {
 	if(!g_bHasAnySurvivorLeftSafeArea && bIsRoundStarted() && bHasAnySurvivorLeftSafeArea())
 	{
@@ -1137,7 +1137,7 @@ Action Timer_PlayerLeftStartArea(Handle timer)
 			}
 
 			delete g_hTimer;
-			g_hTimer = CreateTimer(0.1, Timer_Player, _, TIMER_REPEAT);
+			g_hTimer = CreateTimer(0.1, tmrPlayerStatus, _, TIMER_REPEAT);
 		}
 	}
 
@@ -1245,7 +1245,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 			g_fStartRespawnTime[client] = GetEngineTime();
 		}
 
-		CreateTimer(0.1, Timer_LadderAndGlow, userid, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(0.1, tmrLadderAndGlow, userid, TIMER_FLAG_NO_MAPCHANGE);
 	}
 
 	switch(event.GetInt("oldteam"))
@@ -1265,12 +1265,12 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 			if(team == 2 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 				SetEntProp(client, Prop_Send, "m_isGhost", 0); //SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
 			
-			CreateTimer(0.1, Timer_LadderAndGlow, userid, TIMER_FLAG_NO_MAPCHANGE);
+			CreateTimer(0.1, tmrLadderAndGlow, userid, TIMER_FLAG_NO_MAPCHANGE);
 		}
 	}
 }
 
-Action Timer_LadderAndGlow(Handle timer, int client)
+Action tmrLadderAndGlow(Handle timer, int client)
 {
 	if(!g_bHasPlayerControlledZombies && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client))
 	{
@@ -1283,7 +1283,7 @@ Action Timer_LadderAndGlow(Handle timer, int client)
 					vCreateSurvivorModelGlow(i);
 
 				delete g_hTimer;
-				g_hTimer = CreateTimer(0.1, Timer_Player, _, TIMER_REPEAT);
+				g_hTimer = CreateTimer(0.1, tmrPlayerStatus, _, TIMER_REPEAT);
 			}
 		}
 		else
@@ -1429,7 +1429,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 	}
 }
 
-Action Timer_Player(Handle timer)
+Action tmrPlayerStatus(Handle timer)
 {
 	if(g_bHasPlayerControlledZombies)
 		return Plugin_Continue;
@@ -1602,7 +1602,7 @@ void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast)
 		vCheatCommand(jockey, "dismount", "");
 }
 
-Action Timer_ReturnToSurvivor(Handle timer, int client)
+Action tmrReturnToSurvivor(Handle timer, int client)
 {
 	static int i;
 	static int iTimes[MAXPLAYERS + 1] = {20, ...};
@@ -1717,10 +1717,10 @@ void vSetGodMode(int client, float fDuration)
 	SetEntProp(client, Prop_Data, "m_takedamage", 0);
 	
 	if(fDuration > 0.0)
-		CreateTimer(fDuration, Timer_Mortal, GetClientUserId(client));
+		CreateTimer(fDuration, tmrMortal, GetClientUserId(client));
 }
 
-Action Timer_Mortal(Handle timer, int client)
+Action tmrMortal(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
 		return Plugin_Stop;
@@ -1795,7 +1795,7 @@ int iTakeOverTank(int tank)
 				vSurvivorClean(client);
 				vSurvivorSave(client);
 				ChangeClientTeam(client, 3);
-				CreateTimer(1.0, Timer_ReturnToSurvivor, GetClientUserId(client), TIMER_REPEAT);
+				CreateTimer(1.0, tmrReturnToSurvivor, GetClientUserId(client), TIMER_REPEAT);
 			}
 			
 			case 3:
@@ -1861,35 +1861,40 @@ void vCreateSurvivorModelGlow(int client)
 	if(!g_bGlowColorEnable || bIsRoundStarted() == false || !IsClientInGame(client) || IsClientInKickQueue(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client) || bIsValidEntRef(g_iModelEntRef[client]))
 		return;
 
-	int iEntity = CreateEntityByName("prop_dynamic_ornament");
-	if(iEntity == -1)
+	int entity = CreateEntityByName("prop_dynamic_ornament");
+	if(entity == -1)
 		return;
 
-	g_iModelEntRef[client] = EntIndexToEntRef(iEntity);
+	g_iModelEntRef[client] = EntIndexToEntRef(entity);
 	g_iModelIndex[client] = GetEntProp(client, Prop_Data, "m_nModelIndex");
 
 	static char sModelName[128];
 	GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
-	DispatchKeyValue(iEntity, "model", sModelName);
-	DispatchSpawn(iEntity);
+	DispatchKeyValue(entity, "model", sModelName);
+	DispatchKeyValue(entity, "solid", "0");
+	DispatchKeyValue(entity, "glowstate", "3");
+	DispatchKeyValue(entity, "glowrange", "20000");
+	DispatchKeyValue(entity, "glowrangemin", "1");
+	DispatchKeyValue(entity, "rendermode", "10");
+	DispatchSpawn(entity);
 
-	SetEntProp(iEntity, Prop_Send, "m_nSolidType", 0);
-	SetEntProp(iEntity, Prop_Send, "m_usSolidFlags", 4);
-	SetEntProp(iEntity, Prop_Send, "m_CollisionGroup", 0);
+	// [L4D & L4D2] Hats (https://forums.alliedmods.net/showthread.php?t=153781)
+	AcceptEntityInput(entity, "DisableCollision");
+	SetEntProp(entity, Prop_Send, "m_noGhostCollision", 1, 1);
+	SetEntProp(entity, Prop_Send, "m_CollisionGroup", 0);
+	SetEntPropVector(entity, Prop_Send, "m_vecMins", view_as<float>({0.0, 0.0, 0.0}));
+	SetEntPropVector(entity, Prop_Send, "m_vecMaxs", view_as<float>({0.0, 0.0, 0.0}));
 
-	AcceptEntityInput(iEntity, "DisableCollision");
-	SetEntProp(iEntity, Prop_Data, "m_iEFlags", 0);
-	SetEntProp(iEntity, Prop_Data, "m_fEffects", 0x020); //don't draw entity
-
-	SetEntProp(iEntity, Prop_Send, "m_iGlowType", 3);
-	SetEntProp(iEntity, Prop_Send, "m_nGlowRange", 20000);
-	SetEntProp(iEntity, Prop_Send, "m_nGlowRangeMin", 1);
 	vSetGlowColor(client);
+	AcceptEntityInput(entity, "StartGlowing");
+
+	SetEntProp(entity, Prop_Data, "m_iEFlags", 0);
+	SetEntProp(entity, Prop_Data, "m_fEffects", 0x020); //don't draw entity
 
 	SetVariantString("!activator");
-	AcceptEntityInput(iEntity, "SetAttached", client);
+	AcceptEntityInput(entity, "SetAttached", client);
 
-	SDKHook(iEntity, SDKHook_SetTransmit, Hook_SetTransmit);
+	SDKHook(entity, SDKHook_SetTransmit, Hook_SetTransmit);
 }
 
 Action Hook_SetTransmit(int entity, int client)
@@ -1909,7 +1914,7 @@ static void vSetGlowColor(int client)
 
 static int iGetColorType(int client)
 {
-	if(GetEntProp(client, Prop_Send, "m_currentReviveCount") >= g_iSurvivorMaxIncapacitatedCount)
+	if(GetEntProp(client, Prop_Send, "m_currentReviveCount") >= g_iMaxIncapacitatedCount)
 		return 2;
 	else
 	{
