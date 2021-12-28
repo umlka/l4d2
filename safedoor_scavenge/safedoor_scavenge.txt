@@ -2,6 +2,23 @@
 {
 	"left4dead2"
 	{
+		"Functions"
+		{
+			"CGasCan::GetTargetEntity"
+			{
+				"offset"	"CGasCan::GetTargetEntity"
+				"hooktype"	"entity"
+				"return"	"int"
+				"this"		"entity"
+				"arguments"
+				{
+					"a1"
+					{
+						"type"	"cbaseentity"
+					}
+				}
+			}
+		}
 		"Addresses"
 		{
 			"TheCount"
@@ -68,6 +85,12 @@
 			{
 				"linux"		"340"
 				"windows"	"332"
+			}
+			/* CGasCan::GetTargetEntity(CCarriedProp *, CTerrorPlayer *) */
+			"CGasCan::GetTargetEntity"
+			{
+				"linux"		"448"
+				"windows"	"446"
 			}
 		}
 	
