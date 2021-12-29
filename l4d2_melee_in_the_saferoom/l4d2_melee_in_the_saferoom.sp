@@ -234,10 +234,16 @@ void vStartSpawnMelee()
 
 	if(g_hSpawnType.IntValue == 1)
 	{
-		ArrayList aRandomMelee = g_aMeleeScripts.Clone();
+		static ArrayList aRandomMelee;
 
 		if(bIsGameInFirstHalf())
+		{
+			if(aRandomMelee != null)
+				aRandomMelee.Clear();
+
+			aRandomMelee = g_aMeleeScripts.Clone();
 			aRandomMelee.Sort(Sort_Random, Sort_String);
+		}
 
 		char sScriptName[64];
 		iLimit = g_hRandomAmount.IntValue;
@@ -246,8 +252,6 @@ void vStartSpawnMelee()
 			aRandomMelee.GetString(i < iLength ? i : GetRandomInt(0, iLength - 1), sScriptName, sizeof sScriptName);
 			vSpawnMelee(sScriptName, vOrigin, vAngles);
 		}
-
-		delete aRandomMelee;
 	}
 	else if(g_hSpawnType.IntValue == 2)
 	{
