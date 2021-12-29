@@ -133,7 +133,7 @@ Action cmdMelee(int client, int args)
 		int iLength = g_aMeleeScripts.Length;
 		for(int i; i < iLength; i++)
 		{
-			g_aMeleeScripts.GetString(i, sScriptName, sizeof(sScriptName));
+			g_aMeleeScripts.GetString(i, sScriptName, sizeof sScriptName);
 			ReplyToCommand(client, "%d : %s", i, sScriptName);
 		}
 	}
@@ -146,18 +146,18 @@ public void OnMapStart()
 	int i;
 	int iLen;
 
-	iLen = sizeof(g_sMeleeModels);
+	iLen = sizeof g_sMeleeModels;
 	for(i = 0; i < iLen; i++)
 	{
 		if(!IsModelPrecached(g_sMeleeModels[i]))
 			PrecacheModel(g_sMeleeModels[i], true);
 	}
 
-	iLen = sizeof(g_sMeleeName);
+	iLen = sizeof g_sMeleeName;
 	char sBuffer[64];
 	for(i = 0; i < iLen; i++)
 	{
-		FormatEx(sBuffer, sizeof(sBuffer), "scripts/melee/%s.txt", g_sMeleeName[i]);
+		FormatEx(sBuffer, sizeof sBuffer, "scripts/melee/%s.txt", g_sMeleeName[i]);
 		if(!IsGenericPrecached(sBuffer))
 			PrecacheGeneric(sBuffer, true);
 	}
@@ -176,7 +176,7 @@ void vGetMeleeWeaponsStringTable()
 		char sMeleeName[64];
 		for(int i; i < iNum; i++)
 		{
-			ReadStringTable(iTable, i, sMeleeName, sizeof(sMeleeName));
+			ReadStringTable(iTable, i, sMeleeName, sizeof sMeleeName);
 			g_aMeleeScripts.PushString(sMeleeName);
 		}
 	}
@@ -237,13 +237,13 @@ void vStartSpawnMelee()
 		ArrayList aRandomMelee = g_aMeleeScripts.Clone();
 
 		if(bIsGameInFirstHalf())
-			aRandomMelee.Sort(Sort_Random, Sort_Integer);
+			aRandomMelee.Sort(Sort_Random, Sort_String);
 
 		char sScriptName[64];
 		iLimit = g_hRandomAmount.IntValue;
 		for(int i; i < iLimit; i++)
 		{
-			aRandomMelee.GetString(i < iLength ? i : GetRandomInt(0, iLength - 1), sScriptName, sizeof(sScriptName));
+			aRandomMelee.GetString(i < iLength ? i : GetRandomInt(0, iLength - 1), sScriptName, sizeof sScriptName);
 			vSpawnMelee(sScriptName, vOrigin, vAngles);
 		}
 
@@ -255,7 +255,7 @@ void vStartSpawnMelee()
 		iLimit = g_hMapBaseAmount.IntValue;
 		for(int i; i < iLimit; i++)
 		{
-			g_aMeleeScripts.GetString(i < iLength ? i : i - (RoundToFloor(float(i / iLength)) * iLength), sScriptName, sizeof(sScriptName));
+			g_aMeleeScripts.GetString(i < iLength ? i : i - (RoundToFloor(float(i / iLength)) * iLength), sScriptName, sizeof sScriptName);
 			vSpawnMelee(sScriptName, vOrigin, vAngles);
 		}
 	}
@@ -287,15 +287,15 @@ void vSpawnMelee(const char[] sClass, const float vPos[3], const float vAng[3])
 void vSpawnCustomList(const float vPos[3], const float vAng[3])
 {
 	char sScriptName[64];
-	int iLength = sizeof(g_hMeleeItems);
+	int iLength = sizeof g_hMeleeItems;
 	for(int x; x < iLength; x++)
 	{
 		for(int i; i < g_hMeleeItems[x].IntValue; i++)
 		{
 			if(g_aMeleeScripts.FindString(g_sMeleeName[x]) != -1)
-				strcopy(sScriptName, sizeof(sScriptName), g_sMeleeName[x]);
+				strcopy(sScriptName, sizeof sScriptName, g_sMeleeName[x]);
 			else
-				g_aMeleeScripts.GetString(GetRandomInt(0, g_aMeleeScripts.Length - 1), sScriptName, sizeof(sScriptName));
+				g_aMeleeScripts.GetString(GetRandomInt(0, g_aMeleeScripts.Length - 1), sScriptName, sizeof sScriptName);
 	
 			vSpawnMelee(sScriptName, vPos, vAng);
 		}
