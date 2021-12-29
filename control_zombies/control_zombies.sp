@@ -292,7 +292,7 @@ float
 	g_fStartRespawnTime[MAXPLAYERS + 1],
 	g_fStartSuicideTime[MAXPLAYERS + 1];
 
-//如果签名失效，请到此处更新https://github.com/Psykotikism/L4D1-2_Signatures
+// 如果签名失效，请到此处更新https://github.com/Psykotikism/L4D1-2_Signatures
 public Plugin myinfo = 
 {
 	name = "Control Zombies In Co-op",
@@ -354,7 +354,7 @@ public void OnPluginStart()
 	g_hUserFlagBits = CreateConVar("cz_user_flagbits", ";z;;;z" , "哪些标志能绕过sm_team2,sm_team3,sm_bp,sm_class,鼠标中键重置冷却的使用限制(留空表示所有人都不会被限制)", CVAR_FLAGS);
 	g_hImmunityLevels = CreateConVar("cz_immunity_levels", "99;99;99;99;99" , "要达到什么免疫级别才能绕过sm_team2,sm_team3,sm_bp,sm_class,鼠标中键重置冷的使用限制", CVAR_FLAGS);
 
-	//https://github.com/brxce/hardcoop/blob/master/addons/sourcemod/scripting/modules/SS_SpawnQueue.sp
+	// https://github.com/brxce/hardcoop/blob/master/addons/sourcemod/scripting/modules/SS_SpawnQueue.sp
 	g_hSILimit = CreateConVar("cz_si_limit", "32", "同时存在的最大特感数量", CVAR_FLAGS, true, 0.0, true, 32.0);
 	g_hSpawnLimits[SI_SMOKER] = CreateConVar("cz_smoker_limit",	"5", "同时存在的最大smoker数量", CVAR_FLAGS, true, 0.0, true, 32.0);
 	g_hSpawnLimits[SI_BOOMER] = CreateConVar("cz_boomer_limit",	"5", "同时存在的最大boomer数量", CVAR_FLAGS, true, 0.0, true, 32.0);
@@ -370,8 +370,8 @@ public void OnPluginStart()
 	g_hSpawnWeights[SI_CHARGER] = CreateConVar("cz_charger_weight", "50", "charger产生比重", CVAR_FLAGS, true, 0.0);
 	g_hScaleWeights = CreateConVar("cz_scale_weights", "1",	"[ 0 = 关闭 | 1 = 开启 ] 缩放相应特感的产生比重", _, true, 0.0, true, 1.0);
 
-	AutoExecConfig(true, "controll_zombies");
-	//想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
+	//AutoExecConfig(true, "controll_zombies");
+	// 想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
 	g_hGameMode = FindConVar("mp_gamemode");
 	g_hGameMode.AddChangeHook(vModeConVarChanged);
@@ -414,7 +414,7 @@ public void OnPluginStart()
 
 	vIsAllowed();
 
-	//RegAdminCmd("sm_cz", cmdCz, ADMFLAG_ROOT, "测试");
+	// RegAdminCmd("sm_cz", cmdCz, ADMFLAG_ROOT, "测试");
 	RegConsoleCmd("sm_team2", cmdTeam2, "切换到Team 2.");
 	RegConsoleCmd("sm_team3", cmdTeam3, "切换到Team 3.");
 	RegConsoleCmd("sm_bp", cmdBP, "叛变为坦克.");
@@ -714,8 +714,8 @@ Action cmdTeam2(int client, int args)
 
 	if(bCheckClientAccess(client, 0) == false)
 	{
-		//PrintToChat(client, "无权使用该指令");
-		//return Plugin_Handled;
+		// PrintToChat(client, "无权使用该指令");
+		// return Plugin_Handled;
 		float fCooldown = GetEngineTime() - g_fCmdLastUsedTime[client];
 		if(fCooldown < g_fCmdCooldownTime)
 		{
@@ -749,8 +749,8 @@ Action cmdTeam3(int client, int args)
 
 	if(bCheckClientAccess(client, 1) == false)
 	{
-		//PrintToChat(client, "无权使用该指令");
-		//return Plugin_Handled;
+		// PrintToChat(client, "无权使用该指令");
+		// return Plugin_Handled;
 		float fCooldown = GetEngineTime() - g_fCmdLastUsedTime[client];
 		if(fCooldown < g_fCmdCooldownTime)
 		{
@@ -908,7 +908,7 @@ void vSelectZombieClassMenu(int client)
 			menu.AddItem(sIndex, g_sZombieClass[i]);
 		}
 	}
-	menu.ExitButton = false;
+	menu.ExitButton = true;
 	menu.ExitBackButton = false;
 	menu.Display(client, 30);
 }
@@ -1007,7 +1007,7 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	else
 	{
 		if(iFlags & IN_ZOOM && bCheckClientAccess(client, 4) == true)
-			vResetInfectedAbility(client, 0.1); //管理员鼠标中键重置技能冷却
+			vResetInfectedAbility(client, 0.1); // 管理员鼠标中键重置技能冷却
 	}
 
 	return Plugin_Continue;
@@ -1021,7 +1021,7 @@ void vSelectAscendingZombieClass(int client)
 		vSetZombieClassAndPunish(client, iZombieClass - RoundToFloor(iZombieClass / 6.0) * 6 + 1);
 }
 
-//https://forums.alliedmods.net/showthread.php?p=1542365
+// https://forums.alliedmods.net/showthread.php?p=1542365
 void vResetInfectedAbility(int client, float fTime)
 {
 	int iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
@@ -1098,8 +1098,8 @@ void vResetClientData(int client)
 	g_bUsedClassCmd[client] = false;
 }
 
-//------------------------------------------------------------------------------
-//Event
+// ------------------------------------------------------------------------------
+// Event
 void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
 { 
 	if(g_bHasAnySurvivorLeftSafeArea || !bIsRoundStarted())
@@ -1177,7 +1177,7 @@ void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 	}
 }
 
-//移除一些限制特感的透明墙体，增加活动空间. 并且能够修复C2M5上面坦克卡住的情况
+// 移除一些限制特感的透明墙体，增加活动空间. 并且能够修复C2M5上面坦克卡住的情况
 void vRemoveInfectedClips()
 {
 	int entity = MaxClients + 1;
@@ -1263,7 +1263,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 			g_iLastTeamID[client] = 0;
 
 			if(team == 2 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
-				SetEntProp(client, Prop_Send, "m_isGhost", 0); //SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
+				SetEntProp(client, Prop_Send, "m_isGhost", 0); // SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
 			
 			CreateTimer(0.1, tmrLadderAndGlow, userid, TIMER_FLAG_NO_MAPCHANGE);
 		}
@@ -1276,7 +1276,7 @@ Action tmrLadderAndGlow(Handle timer, int client)
 	{
 		if(GetClientTeam(client) == 3)
 		{
-			//g_hGameMode.ReplicateToClient(client, "versus");
+			// g_hGameMode.ReplicateToClient(client, "versus");
 			if(iGetTeamPlayers(3) == 1)
 			{
 				for(int i = 1; i <= MaxClients; i++)
@@ -1338,7 +1338,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 
 	if(!g_bOnMaterializeFromGhost)
 	{
-		RequestFrame(OnNextFrame_PlayerSpawn, userid); //player_bot_replace在player_spawn之后触发，延迟一帧进行接管判断
+		RequestFrame(OnNextFrame_PlayerSpawn, userid); // player_bot_replace在player_spawn之后触发，延迟一帧进行接管判断
 
 		if(!IsFakeClient(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_isGhost") == 0)
 			vSetInfectedGhost(client, GetEntProp(client, Prop_Send, "m_zombieClass") == 8);
@@ -1370,7 +1370,7 @@ void OnNextFrame_PlayerSpawn(int client)
 				}
 
 				if(iPlayer == 0 && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_Call_IsInStasis, client)))
-					SDKCall(g_hSDK_Call_LeaveStasis, client); //解除战役模式下特感方有玩家存在时坦克卡住的问题
+					SDKCall(g_hSDK_Call_LeaveStasis, client); // 解除战役模式下特感方有玩家存在时坦克卡住的问题
 			}
 		}
 	}
@@ -1478,7 +1478,7 @@ Action tmrPlayerStatus(Handle timer)
 
 				if(fTime - fLastQueryTime[i] >= 1.0)
 				{
-					QueryClientConVar(i, "mp_gamemode", Query_GamemodeCheck, GetClientSerial(i));
+					QueryClientConVar(i, "mp_gamemode", queryMpGamemode, GetClientSerial(i));
 					fLastQueryTime[i] = fTime;
 				}
 
@@ -1493,7 +1493,7 @@ Action tmrPlayerStatus(Handle timer)
 						{
 							if(bAttemptRespawnPZ(i))
 							{
-								//PrintToConsole(i, "重生预设->%d秒 实际耗时->%.5f秒", g_iCurrentPZRespawnTime[i], fInterval);
+								// PrintToConsole(i, "重生预设->%d秒 实际耗时->%.5f秒", g_iCurrentPZRespawnTime[i], fInterval);
 								g_fStartRespawnTime[i] = 0.0;
 							}
 						}
@@ -1515,7 +1515,7 @@ Action tmrPlayerStatus(Handle timer)
 						{
 							ForcePlayerSuicide(i);
 							CPrintToChat(i, "{olive}特感玩家复活处死时间{default}-> {red}%d秒 ", g_iPZSuicideTime);
-							//CPrintToChat(i, "{olive}处死预设{default}-> {red}%d秒 {olive}实际耗时{default}-> {red}%.5f秒", g_iPZSuicideTime, fInterval = fTime - g_fStartSuicideTime[i]);
+							// CPrintToChat(i, "{olive}处死预设{default}-> {red}%d秒 {olive}实际耗时{default}-> {red}%.5f秒", g_iPZSuicideTime, fInterval = fTime - g_fStartSuicideTime[i]);
 							g_fStartSuicideTime[i] = 0.0;
 						}
 					}	
@@ -1532,8 +1532,8 @@ Action tmrPlayerStatus(Handle timer)
 	return Plugin_Continue;
 }
 
-// 与Silvers的[L4D & L4D2] Coop Markers - Flow Distance插件进行兼容(https://forums.alliedmods.net/showthread.php?p=2682584)
-void Query_GamemodeCheck(QueryCookie cookie, int client, ConVarQueryResult result, const char[] cvarName, const char[] cvarValue, any value)
+// 与Silvers的[L4D & L4D2] Coop Markers - Flow Distance插件进行兼容 (https://forums.alliedmods.net/showthread.php?p=2682584)
+void queryMpGamemode(QueryCookie cookie, int client, ConVarQueryResult result, const char[] cvarName, const char[] cvarValue, any value)
 {
     if(result == ConVarQuery_Okay && GetClientFromSerial(value) == client && strcmp(cvarValue, "versus") != 0)
 		g_hGameMode.ReplicateToClient(client, "versus");
@@ -1549,7 +1549,7 @@ void Query_GamemodeCheck(QueryCookie cookie, int client, ConVarQueryResult resul
 // Client entity prop "m_hObserverTarget" - Spectated Client
 bool bRespawnPZ(int client, int iZombieClass)
 {
-	FakeClientCommand(client, "spec_next"); //相比于手动获取玩家位置传送，更省力和节约资源的方法
+	FakeClientCommand(client, "spec_next"); // 相比于手动获取玩家位置传送，更省力和节约资源的方法
 
 	if(GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_lifeState") != 1)
 		SetEntProp(client, Prop_Send, "m_lifeState", 1);
@@ -1585,9 +1585,9 @@ void Event_PlayerBotReplace(Event event, const char[] name, bool dontBroadcast)
 	if(GetClientTeam(bot) == 3 && GetEntProp(bot, Prop_Send, "m_zombieClass") == 8)
 	{
 		if(IsFakeClient(player))
-			g_iTankBot[bot] = 1; //防卡功能中踢出FakeClient后，第二次触发Tank产生并替换原有的Tank(BOT替换BOT)
+			g_iTankBot[bot] = 1; // 防卡功能中踢出FakeClient后，第二次触发Tank产生并替换原有的Tank(BOT替换BOT)
 		else
-			g_iTankBot[bot] = 2; //主动或被动放弃Tank控制权(BOT替换玩家)
+			g_iTankBot[bot] = 2; // 主动或被动放弃Tank控制权(BOT替换玩家)
 	}
 }
 
@@ -1785,7 +1785,7 @@ int iTakeOverTank(int tank)
 		}
 	}
 
-	client = (iPbCount == 0) ? (FloatCompare(GetRandomFloat(0.0, 1.0), g_fSurvuivorAllowChance) == -1 ? (iOtherCount == 0 ? -1 : iOtherClients[GetRandomInt(0, iOtherCount - 1)]) : -1) : iPbClients[GetRandomInt(0, iPbCount - 1)]; //随机抽取一名幸运玩家
+	client = (iPbCount == 0) ? (FloatCompare(GetRandomFloat(0.0, 1.0), g_fSurvuivorAllowChance) == -1 ? (iOtherCount == 0 ? -1 : iOtherClients[GetRandomInt(0, iOtherCount - 1)]) : -1) : iPbClients[GetRandomInt(0, iPbCount - 1)]; // 随机抽取一名幸运玩家
 	if(client != -1 && iGetStandingSurvivors() >= g_iAllowSurvuivorLimit)
 	{
 		switch((g_iLastTeamID[client] = GetClientTeam(client)))
@@ -1889,7 +1889,7 @@ void vCreateSurvivorModelGlow(int client)
 	AcceptEntityInput(entity, "StartGlowing");
 
 	SetEntProp(entity, Prop_Data, "m_iEFlags", 0);
-	SetEntProp(entity, Prop_Data, "m_fEffects", 0x020); //don't draw entity
+	SetEntProp(entity, Prop_Data, "m_fEffects", 0x020); // don't draw entity
 
 	SetVariantString("!activator");
 	AcceptEntityInput(entity, "SetAttached", client);
@@ -1947,8 +1947,8 @@ static bool bIsValidEntRef(int entity)
 	return false;
 }
 
-//------------------------------------------------------------------------------
-//切换回生还者
+// ------------------------------------------------------------------------------
+// 切换回生还者
 void OnNextFrame_ChangeTeamToSurvivor(int client)
 {
 	if(g_bHasPlayerControlledZombies || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
@@ -1963,9 +1963,9 @@ void vChangeTeamToSurvivor(int client)
 	if(iTeam == 2)
 		return;
 
-	//防止因切换而导致正处于Ghost状态的坦克丢失
+	// 防止因切换而导致正处于Ghost状态的坦克丢失
 	if(GetEntProp(client, Prop_Send, "m_isGhost") == 1)
-		SetEntProp(client, Prop_Send, "m_isGhost", 0); //SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
+		SetEntProp(client, Prop_Send, "m_isGhost", 0); // SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
 
 	int iBot = GetClientOfUserId(g_iPlayerBot[client]);
 	if(iBot == 0 || !bIsValidAliveSurvivorBot(iBot))
@@ -1997,7 +1997,7 @@ void vChangeTeamToSurvivor(int client)
 	vSurvivorClean(client);
 }
 
-//https://forums.alliedmods.net/showthread.php?p=2398822#post2398822
+// https://forums.alliedmods.net/showthread.php?p=2398822#post2398822
 void vSurvivorStatus(int client, int iType)
 {
 	static bool bRecorded[MAXPLAYERS + 1];
@@ -2406,7 +2406,7 @@ StringMap aInitWeaponOffsets(StringMap aWeaponOffsets)
 	return aWeaponOffsets;
 }
 
-//https://github.com/brxce/hardcoop/blob/master/addons/sourcemod/scripting/modules/SS_SpawnQueue.sp
+// https://github.com/brxce/hardcoop/blob/master/addons/sourcemod/scripting/modules/SS_SpawnQueue.sp
 int iGetInfecteds()
 {
 	int iCount;
@@ -2504,7 +2504,7 @@ void vSITypeCount()
 	}
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 //SDKCall
 void vLoadGameData()
 {
@@ -2518,7 +2518,7 @@ void vLoadGameData()
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CBaseEntity::IsInStasis") == false) //https://forums.alliedmods.net/showthread.php?t=302140
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CBaseEntity::IsInStasis") == false) // https://forums.alliedmods.net/showthread.php?t=302140
 		SetFailState("Failed to find offset: CBaseEntity::IsInStasis");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
 	g_hSDK_Call_IsInStasis = EndPrepSDKCall();
@@ -2526,7 +2526,7 @@ void vLoadGameData()
 		SetFailState("Failed to create SDKCall: CBaseEntity::IsInStasis");
 	
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "Tank::LeaveStasis") == false) //https://forums.alliedmods.net/showthread.php?t=319342
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "Tank::LeaveStasis") == false) // https://forums.alliedmods.net/showthread.php?t=319342
 		SetFailState("Failed to find signature: Tank::LeaveStasis");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
 	g_hSDK_Call_LeaveStasis = EndPrepSDKCall();
@@ -2707,7 +2707,7 @@ void vRoundRespawn(int client)
 	vStatsConditionPatch(false);
 }
 
-//https://forums.alliedmods.net/showthread.php?t=323220
+// https://forums.alliedmods.net/showthread.php?t=323220
 void vStatsConditionPatch(bool bPatch)
 {
 	static bool bPatched;
@@ -2777,7 +2777,7 @@ void vToggleDetours(bool bEnable)
 MRESReturn mreOnEnterGhostStatePre(int pThis)
 {
 	if(bIsRoundStarted() == false)
-		return MRES_Supercede; //阻止死亡状态下的特感玩家在团灭后下一回合开始前进入Ghost State
+		return MRES_Supercede; // 阻止死亡状态下的特感玩家在团灭后下一回合开始前进入Ghost State
 	
 	return MRES_Ignored;
 }
