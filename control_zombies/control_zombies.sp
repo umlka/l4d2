@@ -15,23 +15,23 @@
 #define BLUE_INDEX 	 2
 #define RED_INDEX 	 3
 #define MAX_COLORS 	 6
-#define MAX_MESSAGE_LENGTH 250
-static const char CTag[][] = { "{default}", "{green}", "{lightgreen}", "{red}", "{blue}", "{olive}" };
-static const char CTagCode[][] = { "\x01", "\x04", "\x03", "\x03", "\x03", "\x05" };
-static const bool CTagReqSayText2[] = { false, false, true, true, true, false };
-static const int CProfile_TeamIndex[] = { NO_INDEX, NO_INDEX, SERVER_INDEX, RED_INDEX, BLUE_INDEX, NO_INDEX };
+#define MAX_MESSAGE_LENGTH 254
+static const char CTag[][] = {"{default}", "{green}", "{lightgreen}", "{red}", "{blue}", "{olive}"};
+static const char CTagCode[][] = {"\x01", "\x04", "\x03", "\x03", "\x03", "\x05"};
+static const bool CTagReqSayText2[] = {false, false, true, true, true, false};
+static const int CProfile_TeamIndex[] = {NO_INDEX, NO_INDEX, SERVER_INDEX, RED_INDEX, BLUE_INDEX, NO_INDEX};
 
 /**
  * @note Prints a message to a specific client in the chat area.
  * @note Supports color tags.
  *
  * @param client	Client index.
- * @param sMessage	Message (formatting rules).
+ * @param szMessage	Message (formatting rules).
  * @return			No return
  * 
  * On error/Errors:	If the client is not connected an error will be thrown.
  */
-stock void CPrintToChat(int client, const char[] sMessage, any ...)
+stock void CPrintToChat(int client, const char[] szMessage, any ...)
 {
 	if(client <= 0 || client > MaxClients)
 		ThrowError("Invalid client index %d", client);
@@ -39,17 +39,18 @@ stock void CPrintToChat(int client, const char[] sMessage, any ...)
 	if(!IsClientInGame(client))
 		ThrowError("Client %d is not in game", client);
 	
-	static char sBuffer[MAX_MESSAGE_LENGTH];
-	static char sCMessage[MAX_MESSAGE_LENGTH];
+	char szBuffer[MAX_MESSAGE_LENGTH];
+	char szCMessage[MAX_MESSAGE_LENGTH];
+
 	SetGlobalTransTarget(client);
-	Format(sBuffer, sizeof(sBuffer), "\x01%s", sMessage);
-	VFormat(sCMessage, sizeof(sCMessage), sBuffer, 3);
+	FormatEx(szBuffer, sizeof szBuffer, "\x01%s", szMessage);
+	VFormat(szCMessage, sizeof szCMessage, szBuffer, 3);
 	
-	int index = CFormat(sCMessage, sizeof(sCMessage));
+	int index = CFormat(szCMessage, sizeof szCMessage);
 	if(index == NO_INDEX)
-		PrintToChat(client, "%s", sCMessage);
+		PrintToChat(client, "%s", szCMessage);
 	else
-		CSayText2(client, index, sCMessage);
+		CSayText2(client, index, szCMessage);
 }
 
 /**
@@ -57,20 +58,20 @@ stock void CPrintToChat(int client, const char[] sMessage, any ...)
  * @note Supports color tags.
  *
  * @param client	Client index.
- * @param sMessage	Message (formatting rules)
+ * @param szMessage	Message (formatting rules)
  * @return			No return
  */
-stock void CPrintToChatAll(const char[] sMessage, any ...)
+stock void CPrintToChatAll(const char[] szMessage, any ...)
 {
-	static char sBuffer[MAX_MESSAGE_LENGTH];
+	char szBuffer[MAX_MESSAGE_LENGTH];
 
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientInGame(i) && !IsFakeClient(i))
 		{
 			SetGlobalTransTarget(i);
-			VFormat(sBuffer, sizeof(sBuffer), sMessage, 2);
-			CPrintToChat(i, "%s", sBuffer);
+			VFormat(szBuffer, sizeof szBuffer, szMessage, 2);
+			CPrintToChat(i, "%s", szBuffer);
 		}
 	}
 }
@@ -78,31 +79,31 @@ stock void CPrintToChatAll(const char[] sMessage, any ...)
 /**
  * @note Replaces color tags in a string with color codes
  *
- * @param sMessage	String.
+ * @param szMessage	String.
  * @param maxlength	Maximum length of the string buffer.
  * @return			Client index that can be used for SayText2 author index
  * 
  * On error/Errors:	If there is more then one team color is used an error will be thrown.
  */
-stock int CFormat(char[] sMessage, int maxlength)
+stock int CFormat(char[] szMessage, int maxlength)
 {	
 	int iRandomPlayer = NO_INDEX;
 	
 	for(int i; i < MAX_COLORS; i++)														//	Para otras etiquetas de color se requiere un bucle.
 	{
-		if(StrContains(sMessage, CTag[i]) == -1)										//	Si no se encuentra la etiqueta, omitir.
+		if(StrContains(szMessage, CTag[i], false) == -1)								//	Si no se encuentra la etiqueta, omitir.
 			continue;
 		else if(!CTagReqSayText2[i])
-			ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i], false);			//	Si la etiqueta no necesita Saytext2 simplemente reemplazará.
+			ReplaceString(szMessage, maxlength, CTag[i], CTagCode[i], false);			//	Si la etiqueta no necesita Saytext2 simplemente reemplazará.
 		else																			//	La etiqueta necesita Saytext2.
 		{	
 			if(iRandomPlayer == NO_INDEX)												//	Si no se especificó un cliente aleatorio para la etiqueta, reemplaca la etiqueta y busca un cliente para la etiqueta.
 			{
 				iRandomPlayer = CFindRandomPlayerByTeam(CProfile_TeamIndex[i]);			//	Busca un cliente válido para la etiqueta, equipo de infectados oh supervivientes.
 				if(iRandomPlayer == NO_PLAYER)
-					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[5], false);	//	Si no se encuentra un cliente valido, reemplasa la etiqueta con una etiqueta de color verde.
+					ReplaceString(szMessage, maxlength, CTag[i], CTagCode[5], false);	//	Si no se encuentra un cliente valido, reemplasa la etiqueta con una etiqueta de color verde.
 				else 
-					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i], false);	// 	Si el cliente fue encontrado simplemente reemplasa.
+					ReplaceString(szMessage, maxlength, CTag[i], CTagCode[i], false);	// 	Si el cliente fue encontrado simplemente reemplasa.
 			}
 			else																		//	Si en caso de usar dos colores de equipo infectado y equipo de superviviente juntos se mandará un mensaje de error.
 				ThrowError("Using two team colors in one message is not allowed");		//	Si se ha usadó una combinación de colores no validad se registrara en la carpeta logs.
@@ -137,17 +138,17 @@ stock int CFindRandomPlayerByTeam(int color_team)
 /**
  * @note Sends a SayText2 usermessage to a client
  *
- * @param sMessage	Client index
+ * @param szMessage	Client index
  * @param maxlength	Author index
- * @param sMessage	Message
+ * @param szMessage	Message
  * @return			No return.
  */
-stock void CSayText2(int client, int author, const char[] sMessage)
+stock void CSayText2(int client, int author, const char[] szMessage)
 {
 	BfWrite bf = view_as<BfWrite>(StartMessageOne("SayText2", client, USERMSG_RELIABLE|USERMSG_BLOCKHOOKS));
 	bf.WriteByte(author);
 	bf.WriteByte(true);
-	bf.WriteString(sMessage);
+	bf.WriteString(szMessage);
 	EndMessage();
 }
 /*****************************************************************************************************/
@@ -370,7 +371,7 @@ public void OnPluginStart()
 	g_hSpawnWeights[SI_CHARGER] = CreateConVar("cz_charger_weight", "50", "charger产生比重", CVAR_FLAGS, true, 0.0);
 	g_hScaleWeights = CreateConVar("cz_scale_weights", "1",	"[ 0 = 关闭 | 1 = 开启 ] 缩放相应特感的产生比重", _, true, 0.0, true, 1.0);
 
-	//AutoExecConfig(true, "controll_zombies");
+	AutoExecConfig(true, "controll_zombies");
 	// 想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
 	g_hGameMode = FindConVar("mp_gamemode");
