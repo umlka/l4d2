@@ -7,14 +7,13 @@
 
 #define SPAWN_DEBUG 0
 
-#define NUM_TYPES_INFECTED	6
-
 #define SI_SMOKER		0
 #define SI_BOOMER		1
 #define SI_HUNTER		2
 #define SI_SPITTER		3
 #define SI_JOCKEY		4
 #define SI_CHARGER		5
+#define NUM_TYPES_INFECTED	6
 #define UNINITIALISED	-1
 
 Handle
@@ -45,9 +44,7 @@ float
 	g_fSpawnTimeMin,
 	g_fSpawnTimeMax,
 	g_fRusherDistance,
-	g_fSpawnTimes[MAXPLAYERS + 1],
-	g_fStartSpawnTime,
-	g_fCurrentSpawnInterval;
+	g_fSpawnTimes[MAXPLAYERS + 1];
 
 static const char
 	g_sZombieClass[NUM_TYPES_INFECTED][] =
@@ -119,7 +116,6 @@ bool
 	g_bScaleWeights,
 	g_bControlZombies,
 	g_bDirectorNoSpecials,
-	g_bOnExecuteSpawnQueue,
 	g_bHasAnySurvivorLeftSafeArea;
 
 native bool CZ_IsSpawnablePZSupported();
@@ -214,17 +210,13 @@ void vResetWeights()
 void vStartCustomSpawnTimer(float fTime)
 {
 	vEndSpawnTimer();
-	g_fStartSpawnTime = GetEngineTime();
-	g_fCurrentSpawnInterval = fTime;
-	g_hSpawnTimer = CreateTimer(0.1, Timer_SpawnInfectedAuto, _, TIMER_REPEAT);
+	g_hSpawnTimer = CreateTimer(fTime, tmrSpawnInfectedAuto);
 }
 
 void vStartSpawnTimer()
 {
 	vEndSpawnTimer();
-	g_fStartSpawnTime = GetEngineTime();
-	g_fCurrentSpawnInterval = 0.0;
-	g_hSpawnTimer = CreateTimer(0.1, Timer_SpawnInfectedAuto, _, TIMER_REPEAT);
+	g_hSpawnTimer = CreateTimer(g_iSpawnTimeMode > 0 ? g_fSpawnTimes[iGetInfecteds()] : GetRandomFloat(g_fSpawnTimeMin, g_fSpawnTimeMax), tmrSpawnInfectedAuto);
 }
 
 void vEndSpawnTimer()
@@ -232,23 +224,12 @@ void vEndSpawnTimer()
 	delete g_hSpawnTimer;
 }
 
-Action Timer_SpawnInfectedAuto(Handle timer)
-{
-	static float fTime;
+public Action tmrSpawnInfectedAuto(Handle timer)
+{ 
+	g_hSpawnTimer = null;
 
-	if(g_fStartSpawnTime)
-	{
-		fTime = GetEngineTime();
-		if(fTime - g_fStartSpawnTime >= g_fCurrentSpawnInterval)
-		{
-			if(!g_bOnExecuteSpawnQueue)
-			{
-				vGenerateAndExecuteSpawnQueue();
-				g_fStartSpawnTime = fTime;
-				g_fCurrentSpawnInterval = g_iSpawnTimeMode > 0 ? g_fSpawnTimes[iGetInfecteds()] : GetRandomFloat(g_fSpawnTimeMin, g_fSpawnTimeMax);
-			}
-		}
-	}
+	vGenerateAndExecuteSpawnQueue();
+	vStartSpawnTimer();
 
 	return Plugin_Continue;
 }
@@ -266,8 +247,6 @@ static int iGetAnyValidClient()
 
 static void vGenerateAndExecuteSpawnQueue()
 {
-	g_bOnExecuteSpawnQueue = true;
-
 	static int iCurrentSI;
 	iCurrentSI = iGetInfecteds();
 	if(iCurrentSI < g_iSILimit)
@@ -303,13 +282,13 @@ static void vGenerateAndExecuteSpawnQueue()
 			client = iGetAnyValidClient();
 			if(client > 0)
 			{
-				static float fFlow;
 				static int iRusher;
-				static bool bForward;
-				static ArrayList aList;
+				static bool bAhead;
+				static float fFlow;
+				static ArrayList aFlow;
 	
-				bForward = false;
-				aList = new ArrayList(2);
+				bAhead = false;
+				aFlow = new ArrayList(2);
 				for(i = 1; i <= MaxClients; i++)
 				{
 					if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
@@ -317,22 +296,22 @@ static void vGenerateAndExecuteSpawnQueue()
 			
 						fFlow = L4D2Direct_GetFlowDistance(i);
 						if(fFlow && fFlow != -9999.0)
-							aList.Set(aList.Push(fFlow), i, 1);
+							aFlow.Set(aFlow.Push(fFlow), i, 1);
 					}
 				}
 
-				aList.Sort(Sort_Descending, Sort_Float);
+				aFlow.Sort(Sort_Descending, Sort_Float);
 		
 				static int iCount;
-				iCount = aList.Length;
-				iRusher = iCount > 0 ? aList.Get(0, 1) : 0;
+				iCount = aFlow.Length;
+				iRusher = iCount > 0 ? aFlow.Get(0, 1) : 0;
 	
 				if(iCount >= 2)
 				{
-					fFlow = aList.Get(0, 0);
+					fFlow = aFlow.Get(0, 0);
 
 					static float fLastFlow;
-					fLastFlow = aList.Get(iCount - 1, 0);
+					fLastFlow = aFlow.Get(iCount - 1, 0);
 
 					if(fFlow - fLastFlow > g_fRusherDistance)
 					{
@@ -340,13 +319,13 @@ static void vGenerateAndExecuteSpawnQueue()
 						PrintToServer("[SS] Rusher->%N", iRusher);
 						#endif
 
-						bForward = true;
+						bAhead = true;
 					}
 				}
 
-				delete aList;
+				delete aFlow;
 
-				g_iPreferredDirection = bForward ? 7 : 0;
+				g_iPreferredDirection = bAhead ? 7 : 0;
 
 				static bool bPZSupported;
 				static bool bResetGhost[MAXPLAYERS + 1];
@@ -412,8 +391,6 @@ static void vGenerateAndExecuteSpawnQueue()
 		}
 		delete aSpawnQueue;
 	}
-
-	g_bOnExecuteSpawnQueue = false;
 }
 
 static void vVerifySIType(int iRusher, ArrayList aSpawnQueue, int iAllowedSI)
@@ -445,8 +422,6 @@ static void vVerifySIType(int iRusher, ArrayList aSpawnQueue, int iAllowedSI)
 		if(iAllowedSI > iQueueLength)
 			iAllowedSI = iQueueLength;
 		
-		//g_hSpawnRange.IntValue = 1500;
-		//g_hDiscardRange.IntValue = 1650;
 		static float fSpawnPos[3];
 		for(i = 0; i < iAllowedSI; i++)
 		{
@@ -468,8 +443,6 @@ static void vVerifySIType(int iRusher, ArrayList aSpawnQueue, int iAllowedSI)
 				#endif
 			}
 		}
-		//g_hSpawnRange.IntValue = 1000;
-		//g_hDiscardRange.IntValue = 1250;
 	}
 }
 
@@ -710,7 +683,7 @@ public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal)
 
 public Action OnPlayerStuck(int client)
 {
-	if(client && IsClientInGame(client) && !IsClientInKickQueue(client) && IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && IsValidStuck(client))
+	if(client && IsClientInGame(client) && !IsClientInKickQueue(client) && IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && bIsValidStuck(client))
 	{
 		#if SPAWN_DEBUG
 		PrintToServer("[SS] %N卡住踢出", client);
@@ -721,7 +694,7 @@ public Action OnPlayerStuck(int client)
 	return Plugin_Continue;
 }
 
-bool IsValidStuck(int client)
+bool bIsValidStuck(int client)
 {
 	bool bIsValid = true;
 	switch(GetEntProp(client, Prop_Send, "m_zombieClass"))
@@ -867,10 +840,10 @@ void vTankCustomConVarChanged(ConVar convar, const char[] oldValue, const char[]
 void vGetTankCustomCvars()
 {
 	char sTemp[64];
-	g_hTankSpawnLimits.GetString(sTemp, sizeof(sTemp));
+	g_hTankSpawnLimits.GetString(sTemp, sizeof sTemp);
 
 	char sValues[NUM_TYPES_INFECTED][8];
-	ExplodeString(sTemp, ";", sValues, sizeof(sValues), sizeof(sValues[]));
+	ExplodeString(sTemp, ";", sValues, sizeof sValues, sizeof sValues[]);
 	
 	int i;
 	int iValue;
@@ -893,8 +866,8 @@ void vGetTankCustomCvars()
 		sValues[i][0] = '\0';
 	}
 	
-	g_hTankSpawnWeights.GetString(sTemp, sizeof(sTemp));
-	ExplodeString(sTemp, ";", sValues, sizeof(sValues), sizeof(sValues[]));
+	g_hTankSpawnWeights.GetString(sTemp, sizeof sTemp);
+	ExplodeString(sTemp, ";", sValues, sizeof sValues, sizeof sValues[]);
 	
 	for(i = 0; i < NUM_TYPES_INFECTED; i++)
 	{
@@ -932,7 +905,7 @@ public void OnClientDisconnect(int client)
 	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) != 3 || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
 		return;
 		
-	CreateTimer(0.1, Timer_TankDisconnectCheck, _, TIMER_FLAG_NO_MAPCHANGE);
+	CreateTimer(0.1, tmrTankDisconnectCheck, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void OnMapEnd()
@@ -942,7 +915,6 @@ public void OnMapEnd()
 
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
-	g_fStartSpawnTime = 0.0;
 	g_bHasAnySurvivorLeftSafeArea = false;
 
 	if(g_iCurrentClass >= 6)
@@ -969,7 +941,7 @@ void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcas
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client))
-		CreateTimer(0.1, Timer_PlayerLeftStartArea, _, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(0.1, tmrPlayerLeftStartArea, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 bool bIsRoundStarted()
@@ -977,7 +949,7 @@ bool bIsRoundStarted()
 	return g_iRoundStart && g_iPlayerSpawn;
 }
 
-Action Timer_PlayerLeftStartArea(Handle timer)
+Action tmrPlayerLeftStartArea(Handle timer)
 {
 	if(!g_bHasAnySurvivorLeftSafeArea && bIsRoundStarted() && bHasAnySurvivorLeftSafeArea())
 	{
@@ -991,7 +963,7 @@ Action Timer_PlayerLeftStartArea(Handle timer)
 		else if(g_iCurrentClass > UNINITIALISED)
 			PrintToChatAll("\x01[\x05%s\x01]\x04模式\x01", g_sZombieClass[g_iCurrentClass]);
 
-		vStartSpawnTimer();
+		vStartCustomSpawnTimer(0.1);
 	}
 
 	return Plugin_Continue;
@@ -1017,11 +989,11 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 	if(event.GetInt("team") == 2 || event.GetInt("oldteam") == 2)
 	{
 		delete g_hUpdateTimer;
-		g_hUpdateTimer = CreateTimer(2.0, Timer_SpecialsUpdate);
+		g_hUpdateTimer = CreateTimer(2.0, tmrSpecialsUpdate);
 	}
 }
 
-Action Timer_SpecialsUpdate(Handle timer)
+Action tmrSpecialsUpdate(Handle timer)
 {
 	g_hUpdateTimer = null;
 
@@ -1070,7 +1042,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) != 3 || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
 		return;
 
-	CreateTimer(0.1, Timer_TankSpawn, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+	CreateTimer(0.1, tmrTankSpawn, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 }
 
 void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
@@ -1089,18 +1061,26 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 		RequestFrame(OnNextFrame_KickBot, userid);
 }
 
-Action Timer_TankSpawn(Handle timer, int client)
+Action tmrTankSpawn(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8 || bFindTank(client))
 		return Plugin_Stop;
 
+	if(!g_iSILimit)
+		return Plugin_Stop;
+
+	int iTotalLimit;
+	int iTotalWeight;
 	for(int i; i < NUM_TYPES_INFECTED; i++)
 	{
 		g_iSpawnLimitsCache[i] = g_iSpawnLimits[i];
+		iTotalLimit += g_iSpawnLimitsCache[i];
 		g_iSpawnWeightsCache[i] = g_iSpawnWeights[i];
+		iTotalWeight += g_iSpawnWeightsCache[i];
 	}
 
-	vTankSpawnDeathActoin(true);
+	if(iTotalLimit && iTotalWeight)
+		vTankSpawnDeathActoin(true);
 
 	return Plugin_Continue;
 }
@@ -1122,7 +1102,7 @@ bool bFindTank(int client)
 	return false;
 }
 
-Action Timer_TankDisconnectCheck(Handle timer)
+Action tmrTankDisconnectCheck(Handle timer)
 {
 	if(bFindTank(-1))
 		return Plugin_Stop;
@@ -1159,7 +1139,7 @@ Action cmdSetLimit(int client, int args)
 	if(args == 1)
 	{
 		char sArg[16];
-		GetCmdArg(1, sArg, sizeof(sArg));	
+		GetCmdArg(1, sArg, sizeof sArg);	
 		if(strcmp(sArg, "reset", false) == 0)
 		{
 			vResetLimits();
@@ -1169,10 +1149,10 @@ Action cmdSetLimit(int client, int args)
 	else if(args == 2)
 	{
 		char sTargetClass[32];
-		GetCmdArg(1, sTargetClass, sizeof(sTargetClass));
+		GetCmdArg(1, sTargetClass, sizeof sTargetClass);
 
 		char sLimitValue[32];	 
-		GetCmdArg(2, sLimitValue, sizeof(sLimitValue));
+		GetCmdArg(2, sLimitValue, sizeof sLimitValue);
 		int iLimitValue = StringToInt(sLimitValue);	
 	
 		if(iLimitValue < 0)
@@ -1224,7 +1204,7 @@ Action cmdSetWeight(int client, int args)
 	if(args == 1)
 	{
 		char sArg[16];
-		GetCmdArg(1, sArg, sizeof(sArg));	
+		GetCmdArg(1, sArg, sizeof sArg);	
 		if(strcmp(sArg, "reset", false) == 0)
 		{
 			vResetWeights();
@@ -1234,10 +1214,10 @@ Action cmdSetWeight(int client, int args)
 	else if(args == 2)
 	{
 		char sTargetClass[32];
-		GetCmdArg(1, sTargetClass, sizeof(sTargetClass));
+		GetCmdArg(1, sTargetClass, sizeof sTargetClass);
 
 		char sWeightPercent[32];	 
-		GetCmdArg(2, sWeightPercent, sizeof(sWeightPercent));
+		GetCmdArg(2, sWeightPercent, sizeof sWeightPercent);
 		int iWeightPercent = StringToInt(sWeightPercent);	  
 		if(iWeightPercent < 0)
 		{
@@ -1283,7 +1263,7 @@ Action cmdSetTimer(int client, int args)
 	{
 		float fTime;
 		char sArg[8];
-		GetCmdArg(1, sArg, sizeof(sArg));
+		GetCmdArg(1, sArg, sizeof sArg);
 
 		fTime = StringToFloat(sArg);
 		if(fTime < 0.0)
@@ -1297,9 +1277,9 @@ Action cmdSetTimer(int client, int args)
 	{
 		float fMin, fMax;
 		char sArg[8];
-		GetCmdArg(1, sArg, sizeof(sArg));
+		GetCmdArg(1, sArg, sizeof sArg);
 		fMin = StringToFloat(sArg);
-		GetCmdArg(2, sArg, sizeof(sArg));
+		GetCmdArg(2, sArg, sizeof sArg);
 		fMax = StringToFloat(sArg);
 		if(fMin > 0.0 && fMax > 1.0 && fMax > fMin)
 		{
@@ -1340,7 +1320,7 @@ Action cmdStartSpawnTimerManually(int client, int args)
 	{
 		float fTime = 1.0;
 		char sArg[8];
-		GetCmdArg(1, sArg, sizeof(sArg));
+		GetCmdArg(1, sArg, sizeof sArg);
 		fTime = StringToFloat(sArg);
 		
 		if(fTime < 0.0)
@@ -1357,7 +1337,7 @@ Action cmdType(int client, int args)
 	if(args == 1)
 	{
 		char sTargetClass[16];
-		GetCmdArg(1, sTargetClass, sizeof(sTargetClass));
+		GetCmdArg(1, sTargetClass, sizeof sTargetClass);
 		if(strcmp(sTargetClass, "off", false) == 0)
 		{
 			g_iCurrentClass = UNINITIALISED;
