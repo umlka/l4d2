@@ -13,23 +13,23 @@
 #define BLUE_INDEX 	 2
 #define RED_INDEX 	 3
 #define MAX_COLORS 	 6
-#define MAX_MESSAGE_LENGTH 250
-static const char CTag[][] = { "{default}", "{green}", "{lightgreen}", "{red}", "{blue}", "{olive}" };
-static const char CTagCode[][] = { "\x01", "\x04", "\x03", "\x03", "\x03", "\x05" };
-static const bool CTagReqSayText2[] = { false, false, true, true, true, false };
-static const int CProfile_TeamIndex[] = { NO_INDEX, NO_INDEX, SERVER_INDEX, RED_INDEX, BLUE_INDEX, NO_INDEX };
+#define MAX_MESSAGE_LENGTH 254
+static const char CTag[][] = {"{default}", "{green}", "{lightgreen}", "{red}", "{blue}", "{olive}"};
+static const char CTagCode[][] = {"\x01", "\x04", "\x03", "\x03", "\x03", "\x05"};
+static const bool CTagReqSayText2[] = {false, false, true, true, true, false};
+static const int CProfile_TeamIndex[] = {NO_INDEX, NO_INDEX, SERVER_INDEX, RED_INDEX, BLUE_INDEX, NO_INDEX};
 
 /**
  * @note Prints a message to a specific client in the chat area.
  * @note Supports color tags.
  *
  * @param client	Client index.
- * @param sMessage	Message (formatting rules).
+ * @param szMessage	Message (formatting rules).
  * @return			No return
  * 
  * On error/Errors:	If the client is not connected an error will be thrown.
  */
-stock void CPrintToChat(int client, const char[] sMessage, any ...)
+stock void CPrintToChat(int client, const char[] szMessage, any ...)
 {
 	if(client <= 0 || client > MaxClients)
 		ThrowError("Invalid client index %d", client);
@@ -37,17 +37,18 @@ stock void CPrintToChat(int client, const char[] sMessage, any ...)
 	if(!IsClientInGame(client))
 		ThrowError("Client %d is not in game", client);
 	
-	static char sBuffer[MAX_MESSAGE_LENGTH];
-	static char sCMessage[MAX_MESSAGE_LENGTH];
+	char szBuffer[MAX_MESSAGE_LENGTH];
+	char szCMessage[MAX_MESSAGE_LENGTH];
+
 	SetGlobalTransTarget(client);
-	Format(sBuffer, sizeof(sBuffer), "\x01%s", sMessage);
-	VFormat(sCMessage, sizeof(sCMessage), sBuffer, 3);
+	FormatEx(szBuffer, sizeof szBuffer, "\x01%s", szMessage);
+	VFormat(szCMessage, sizeof szCMessage, szBuffer, 3);
 	
-	int index = CFormat(sCMessage, sizeof(sCMessage));
+	int index = CFormat(szCMessage, sizeof szCMessage);
 	if(index == NO_INDEX)
-		PrintToChat(client, "%s", sCMessage);
+		PrintToChat(client, "%s", szCMessage);
 	else
-		CSayText2(client, index, sCMessage);
+		CSayText2(client, index, szCMessage);
 }
 
 /**
@@ -55,20 +56,20 @@ stock void CPrintToChat(int client, const char[] sMessage, any ...)
  * @note Supports color tags.
  *
  * @param client	Client index.
- * @param sMessage	Message (formatting rules)
+ * @param szMessage	Message (formatting rules)
  * @return			No return
  */
-stock void CPrintToChatAll(const char[] sMessage, any ...)
+stock void CPrintToChatAll(const char[] szMessage, any ...)
 {
-	static char sBuffer[MAX_MESSAGE_LENGTH];
+	char szBuffer[MAX_MESSAGE_LENGTH];
 
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientInGame(i) && !IsFakeClient(i))
 		{
 			SetGlobalTransTarget(i);
-			VFormat(sBuffer, sizeof(sBuffer), sMessage, 2);
-			CPrintToChat(i, "%s", sBuffer);
+			VFormat(szBuffer, sizeof szBuffer, szMessage, 2);
+			CPrintToChat(i, "%s", szBuffer);
 		}
 	}
 }
@@ -76,31 +77,31 @@ stock void CPrintToChatAll(const char[] sMessage, any ...)
 /**
  * @note Replaces color tags in a string with color codes
  *
- * @param sMessage	String.
+ * @param szMessage	String.
  * @param maxlength	Maximum length of the string buffer.
  * @return			Client index that can be used for SayText2 author index
  * 
  * On error/Errors:	If there is more then one team color is used an error will be thrown.
  */
-stock int CFormat(char[] sMessage, int maxlength)
+stock int CFormat(char[] szMessage, int maxlength)
 {	
 	int iRandomPlayer = NO_INDEX;
 	
 	for(int i; i < MAX_COLORS; i++)														//	Para otras etiquetas de color se requiere un bucle.
 	{
-		if(StrContains(sMessage, CTag[i]) == -1)										//	Si no se encuentra la etiqueta, omitir.
+		if(StrContains(szMessage, CTag[i], false) == -1)								//	Si no se encuentra la etiqueta, omitir.
 			continue;
 		else if(!CTagReqSayText2[i])
-			ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i], false);			//	Si la etiqueta no necesita Saytext2 simplemente reemplazará.
+			ReplaceString(szMessage, maxlength, CTag[i], CTagCode[i], false);			//	Si la etiqueta no necesita Saytext2 simplemente reemplazará.
 		else																			//	La etiqueta necesita Saytext2.
 		{	
 			if(iRandomPlayer == NO_INDEX)												//	Si no se especificó un cliente aleatorio para la etiqueta, reemplaca la etiqueta y busca un cliente para la etiqueta.
 			{
 				iRandomPlayer = CFindRandomPlayerByTeam(CProfile_TeamIndex[i]);			//	Busca un cliente válido para la etiqueta, equipo de infectados oh supervivientes.
 				if(iRandomPlayer == NO_PLAYER)
-					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[5], false);	//	Si no se encuentra un cliente valido, reemplasa la etiqueta con una etiqueta de color verde.
+					ReplaceString(szMessage, maxlength, CTag[i], CTagCode[5], false);	//	Si no se encuentra un cliente valido, reemplasa la etiqueta con una etiqueta de color verde.
 				else 
-					ReplaceString(sMessage, maxlength, CTag[i], CTagCode[i], false);	// 	Si el cliente fue encontrado simplemente reemplasa.
+					ReplaceString(szMessage, maxlength, CTag[i], CTagCode[i], false);	// 	Si el cliente fue encontrado simplemente reemplasa.
 			}
 			else																		//	Si en caso de usar dos colores de equipo infectado y equipo de superviviente juntos se mandará un mensaje de error.
 				ThrowError("Using two team colors in one message is not allowed");		//	Si se ha usadó una combinación de colores no validad se registrara en la carpeta logs.
@@ -135,17 +136,17 @@ stock int CFindRandomPlayerByTeam(int color_team)
 /**
  * @note Sends a SayText2 usermessage to a client
  *
- * @param sMessage	Client index
+ * @param szMessage	Client index
  * @param maxlength	Author index
- * @param sMessage	Message
+ * @param szMessage	Message
  * @return			No return.
  */
-stock void CSayText2(int client, int author, const char[] sMessage)
+stock void CSayText2(int client, int author, const char[] szMessage)
 {
 	BfWrite bf = view_as<BfWrite>(StartMessageOne("SayText2", client, USERMSG_RELIABLE|USERMSG_BLOCKHOOKS));
 	bf.WriteByte(author);
 	bf.WriteByte(true);
-	bf.WriteString(sMessage);
+	bf.WriteString(szMessage);
 	EndMessage();
 }
 /*****************************************************************************************************/
@@ -390,7 +391,7 @@ public void OnPluginStart()
 	for(int i; i < 5; i++)
 		g_hSlotFlags[i].AddChangeHook(vSlotConVarChanged);
 		
-	AutoExecConfig(true, "survivor_auto_respawn");
+	//AutoExecConfig(true, "survivor_auto_respawn");
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
@@ -548,7 +549,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 int iHasIdlePlayer(int client)
 {
 	char sNetClass[64];
-	if(!GetEntityNetClass(client, sNetClass, sizeof(sNetClass)))
+	if(!GetEntityNetClass(client, sNetClass, sizeof sNetClass))
 		return 0;
 
 	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") < 1)
@@ -734,7 +735,7 @@ void vGivePresetPrimary(int client)
 bool bIsWeaponTier1(int iWeapon)
 {
 	static char sWeapon[32];
-	GetEdictClassname(iWeapon, sWeapon, sizeof(sWeapon));
+	GetEdictClassname(iWeapon, sWeapon, sizeof sWeapon);
 	for(int i; i < 5; i++)
 	{
 		if(strcmp(sWeapon[7], g_sWeaponName[0][i]) == 0) 
@@ -866,7 +867,7 @@ public void OnMapStart()
 	int i;
 	int iLen;
 
-	iLen = sizeof(g_sWeaponModels);
+	iLen = sizeof g_sWeaponModels;
 	for(i = 0; i < iLen; i++)
 	{
 		if(!IsModelPrecached(g_sWeaponModels[i]))
@@ -876,7 +877,7 @@ public void OnMapStart()
 	char sBuffer[64];
 	for(i = 3; i < 17; i++)
 	{
-		FormatEx(sBuffer, sizeof(sBuffer), "scripts/melee/%s.txt", g_sWeaponName[1][i]);
+		FormatEx(sBuffer, sizeof sBuffer, "scripts/melee/%s.txt", g_sWeaponName[1][i]);
 		if(!IsGenericPrecached(sBuffer))
 			PrecacheGeneric(sBuffer, true);
 	}
@@ -895,7 +896,7 @@ void vGetMeleeWeaponsStringTable()
 		char sMeleeName[64];
 		for(int i; i < iNum; i++)
 		{
-			ReadStringTable(iTable, i, sMeleeName, sizeof(sMeleeName));
+			ReadStringTable(iTable, i, sMeleeName, sizeof sMeleeName);
 			g_aMeleeScripts.PushString(sMeleeName);
 		}
 	}
@@ -905,9 +906,9 @@ void vGiveMelee(int client, const char[] sMeleeName)
 {
 	char sScriptName[64];
 	if(g_aMeleeScripts.FindString(sMeleeName) != -1)
-		strcopy(sScriptName, sizeof(sScriptName), sMeleeName);
+		strcopy(sScriptName, sizeof sScriptName, sMeleeName);
 	else
-		g_aMeleeScripts.GetString(GetRandomInt(0, g_aMeleeScripts.Length - 1), sScriptName, sizeof(sScriptName));
+		g_aMeleeScripts.GetString(GetRandomInt(0, g_aMeleeScripts.Length - 1), sScriptName, sizeof sScriptName);
 	
 	vCheatCommand(client, "give", sScriptName);
 }
@@ -915,7 +916,7 @@ void vGiveMelee(int client, const char[] sMeleeName)
 void vLoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
+	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
 	if(FileExists(sPath) == false) 
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
