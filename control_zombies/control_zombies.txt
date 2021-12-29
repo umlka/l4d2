@@ -29,8 +29,15 @@
 			{
 				"signature"		"ForEachTerrorPlayer<SpawnablePZScan>"
 				"callconv"		"thiscall"
-				"return"		"void"
+				"return"		"int"
 				"this"			"ignore"
+				"arguments"
+				{
+					"a1"
+					{
+						"type"	"cbaseentity"
+					}
+				}
 			}
 		}
 

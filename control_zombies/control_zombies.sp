@@ -973,18 +973,18 @@ Action CommandListener_CallVote(int client, const char[] command, int argc)
 // Spawn State - These look like flags, but get used like static values quite often.
 // These names were pulled from reversing client.dll--specifically CHudGhostPanel::OnTick()'s uses of the "#L4D_Zombie_UI_*" strings
 //
-// SPAWN_OK			 0
-// SPAWN_DISABLED	   1  "Spawning has been disabled..." (e.g. director_no_specials 1)
+// SPAWN_OK             0
+// SPAWN_DISABLED       1  "Spawning has been disabled..." (e.g. director_no_specials 1)
 // WAIT_FOR_SAFE_AREA   2  "Waiting for the Survivors to leave the safe area..."
-// WAIT_FOR_FINALE	  4  "Waiting for the finale to begin..."
-// WAIT_FOR_TANK		8  "Waiting for Tank battle conclusion..."
-// SURVIVOR_ESCAPED	16  "The Survivors have escaped..."
-// DIRECTOR_TIMEOUT	32  "The Director has called a time-out..." (lol wat)
+// WAIT_FOR_FINALE      4  "Waiting for the finale to begin..."
+// WAIT_FOR_TANK        8  "Waiting for Tank battle conclusion..."
+// SURVIVOR_ESCAPED    16  "The Survivors have escaped..."
+// DIRECTOR_TIMEOUT    32  "The Director has called a time-out..." (lol wat)
 // WAIT_FOR_STAMPEDE   64  "Waiting for the next stampede of Infected..."
-// CAN_BE_SEEN		128  "Can't spawn here" "You can be seen by the Survivors"
-// TOO_CLOSE		  256  "Can't spawn here" "You are too close to the Survivors"
-// RESTRICTED_AREA	512  "Can't spawn here" "This is a restricted area"
-// INSIDE_ENTITY	 1024  "Can't spawn here" "Something is blocking this spot"
+// CAN_BE_SEEN        128  "Can't spawn here" "You can be seen by the Survivors"
+// TOO_CLOSE          256  "Can't spawn here" "You are too close to the Survivors"
+// RESTRICTED_AREA    512  "Can't spawn here" "This is a restricted area"
+// INSIDE_ENTITY     1024  "Can't spawn here" "Something is blocking this spot"
 public Action OnPlayerRunCmd(int client, int &buttons)
 {
 	if(g_bHasPlayerControlledZombies || IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client))
@@ -2751,9 +2751,6 @@ void vToggleDetours(bool bEnable)
 			
 		if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre)))
 			SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
-		
-		if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost)))
-			SetFailState("Failed to detour post: ForEachTerrorPlayer<SpawnablePZScan>");
 	}
 	else if(bEnabled && !bEnable)
 	{
@@ -2770,7 +2767,7 @@ void vToggleDetours(bool bEnable)
 		if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre) || !g_dDetour[2].Disable(Hook_Post, mrePlayerZombieAbortControlPost))
 			SetFailState("Failed to disable detour: CTerrorPlayer::PlayerZombieAbortControl");
 		
-		if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dDetour[3].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
+		if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre))
 			SetFailState("Failed to disable detour: ForEachTerrorPlayer<SpawnablePZScan>");
 	}
 }
@@ -2832,16 +2829,17 @@ MRESReturn mrePlayerZombieAbortControlPost(int pThis)
 	return MRES_Ignored;
 }
 
-MRESReturn mreForEachTerrorPlayerSpawnablePZScanPre()
+MRESReturn mreForEachTerrorPlayerSpawnablePZScanPre(DHookReturn hReturn, DHookParam hParams)
 {
-	vSpawnablePZScanProtect(0);
-	return MRES_Ignored;
-}
+	if(g_iSpawnablePZ)
+	{
+		hParams.Set(1, g_iSpawnablePZ);
+		hReturn.Value = 1;
+		return MRES_ChangedOverride;
+	}
 
-MRESReturn mreForEachTerrorPlayerSpawnablePZScanPost()
-{
-	vSpawnablePZScanProtect(1);
-	return MRES_Ignored;
+	hReturn.Value = 0;
+	return MRES_Supercede;
 }
 
 void OnNextFrame_EnterGhostState(int client)
@@ -2871,49 +2869,5 @@ void vClassSelectionMenu(int client)
 	{
 		vDisplayClassMenu(client);
 		EmitSoundToClient(client, SOUND_CLASSMENU, SOUND_FROM_PLAYER, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
-	}
-}
-
-static void vSpawnablePZScanProtect(int iState)
-{
-	static int i;
-	static bool bResetGhost[MAXPLAYERS + 1];
-	static bool bResetLifeState[MAXPLAYERS + 1];
-
-	switch(iState)
-	{
-		case 0: 
-		{
-			for(i = 1; i <= MaxClients; i++)
-			{
-				if(i == g_iSpawnablePZ || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
-					continue;
-
-				if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
-				{
-					bResetGhost[i] = true;
-					SetEntProp(i, Prop_Send, "m_isGhost", 0);
-				}
-				else if(!IsPlayerAlive(i))
-				{
-					bResetLifeState[i] = true;
-					SetEntProp(i, Prop_Send, "m_lifeState", 0);
-				}
-			}
-		}
-
-		case 1: 
-		{
-			for(i = 1; i <= MaxClients; i++)
-			{
-				if(bResetGhost[i])
-					SetEntProp(i, Prop_Send, "m_isGhost", 1);
-				if(bResetLifeState[i])
-					SetEntProp(i, Prop_Send, "m_lifeState", 1);
-			
-				bResetGhost[i] = false;
-				bResetLifeState[i] = false;
-			}
-		}
 	}
 }
