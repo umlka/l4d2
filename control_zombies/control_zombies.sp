@@ -371,7 +371,7 @@ public void OnPluginStart()
 	g_hSpawnWeights[SI_CHARGER] = CreateConVar("cz_charger_weight", "50", "charger产生比重", CVAR_FLAGS, true, 0.0);
 	g_hScaleWeights = CreateConVar("cz_scale_weights", "1",	"[ 0 = 关闭 | 1 = 开启 ] 缩放相应特感的产生比重", _, true, 0.0, true, 1.0);
 
-	AutoExecConfig(true, "controll_zombies");
+	//AutoExecConfig(true, "controll_zombies");
 	// 想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
 	g_hGameMode = FindConVar("mp_gamemode");
@@ -2751,6 +2751,9 @@ void vToggleDetours(bool bEnable)
 			
 		if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre)))
 			SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
+		
+		if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost)))
+			SetFailState("Failed to detour post: ForEachTerrorPlayer<SpawnablePZScan>");
 	}
 	else if(bEnabled && !bEnable)
 	{
@@ -2767,7 +2770,7 @@ void vToggleDetours(bool bEnable)
 		if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre) || !g_dDetour[2].Disable(Hook_Post, mrePlayerZombieAbortControlPost))
 			SetFailState("Failed to disable detour: CTerrorPlayer::PlayerZombieAbortControl");
 		
-		if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre))
+		if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dDetour[3].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
 			SetFailState("Failed to disable detour: ForEachTerrorPlayer<SpawnablePZScan>");
 	}
 }
@@ -2829,17 +2832,16 @@ MRESReturn mrePlayerZombieAbortControlPost(int pThis)
 	return MRES_Ignored;
 }
 
-MRESReturn mreForEachTerrorPlayerSpawnablePZScanPre(DHookReturn hReturn, DHookParam hParams)
+MRESReturn mreForEachTerrorPlayerSpawnablePZScanPre()
 {
-	if(g_iSpawnablePZ)
-	{
-		hParams.Set(1, g_iSpawnablePZ);
-		hReturn.Value = 1;
-		return MRES_ChangedOverride;
-	}
+	vSpawnablePZScanProtect(0);
+	return MRES_Ignored;
+}
 
-	hReturn.Value = 0;
-	return MRES_Supercede;
+MRESReturn mreForEachTerrorPlayerSpawnablePZScanPost()
+{
+	vSpawnablePZScanProtect(1);
+	return MRES_Ignored;
 }
 
 void OnNextFrame_EnterGhostState(int client)
@@ -2869,5 +2871,49 @@ void vClassSelectionMenu(int client)
 	{
 		vDisplayClassMenu(client);
 		EmitSoundToClient(client, SOUND_CLASSMENU, SOUND_FROM_PLAYER, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
+	}
+}
+
+static void vSpawnablePZScanProtect(int iState)
+{
+	static int i;
+	static bool bResetGhost[MAXPLAYERS + 1];
+	static bool bResetLifeState[MAXPLAYERS + 1];
+
+	switch(iState)
+	{
+		case 0: 
+		{
+			for(i = 1; i <= MaxClients; i++)
+			{
+				if(i == g_iSpawnablePZ || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
+					continue;
+
+				if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
+				{
+					bResetGhost[i] = true;
+					SetEntProp(i, Prop_Send, "m_isGhost", 0);
+				}
+				else if(!IsPlayerAlive(i))
+				{
+					bResetLifeState[i] = true;
+					SetEntProp(i, Prop_Send, "m_lifeState", 0);
+				}
+			}
+		}
+
+		case 1: 
+		{
+			for(i = 1; i <= MaxClients; i++)
+			{
+				if(bResetGhost[i])
+					SetEntProp(i, Prop_Send, "m_isGhost", 1);
+				if(bResetLifeState[i])
+					SetEntProp(i, Prop_Send, "m_lifeState", 1);
+			
+				bResetGhost[i] = false;
+				bResetLifeState[i] = false;
+			}
+		}
 	}
 }
