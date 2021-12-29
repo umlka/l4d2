@@ -77,7 +77,7 @@ public void OnPluginEnd()
 Action cmdMs(int client, int args)
 {
 	char sBuffer[512];
-	bReadMeleeManifest(sBuffer, sizeof(sBuffer));
+	bReadMeleeManifest(sBuffer, sizeof sBuffer);
 	ReplyToCommand(client, "melee_manifest->%s", sBuffer);
 	return Plugin_Handled;
 }
@@ -96,7 +96,7 @@ public void OnMapEnd()
 MRESReturn mreMeleeAllowedPost(DHookReturn hReturn, DHookParam hParams)
 {
 	/*char sScriptName[32];
-	hParams.GetString(1, sScriptName, sizeof(sScriptName));
+	hParams.GetString(1, sScriptName, sizeof sScriptName);
 	if(strcmp(sScriptName, "knife", false) == 0)
 	{
 		hReturn.Value = 1;
@@ -119,29 +119,29 @@ MRESReturn mreGetMissionInfoPost(DHookReturn hReturn)
 		return MRES_Ignored;
 
 	char sMissionFirstMap[64];
-	if(bGetMissionFirstMap(sMissionFirstMap, sizeof(sMissionFirstMap)) == false)
+	if(bGetMissionFirstMap(sMissionFirstMap, sizeof sMissionFirstMap) == false)
 		return MRES_Ignored;
 
 	char sMapCurrentMelees[512];
-	SDKCall(g_hSDKKeyValuesGetString, pThis, sMapCurrentMelees, sizeof(sMapCurrentMelees), "meleeweapons", "N/A");
+	SDKCall(g_hSDKKeyValuesGetString, pThis, sMapCurrentMelees, sizeof sMapCurrentMelees, "meleeweapons", "N/A");
 
 	char sMissionBaseMelees[512];
-	if(g_aMapInitMelees.GetString(sMissionFirstMap, sMissionBaseMelees, sizeof(sMissionBaseMelees)) == false)
+	if(g_aMapInitMelees.GetString(sMissionFirstMap, sMissionBaseMelees, sizeof sMissionBaseMelees) == false)
 	{
 		if(strcmp(sMapCurrentMelees, "N/A") != 0)
-			strcopy(sMissionBaseMelees, sizeof(sMissionBaseMelees), sMapCurrentMelees);
+			strcopy(sMissionBaseMelees, sizeof sMissionBaseMelees, sMapCurrentMelees);
 		else
-			bReadMeleeManifest(sMissionBaseMelees, sizeof(sMissionBaseMelees)); //Dark Wood (Extended), Divine Cybermancy
+			bReadMeleeManifest(sMissionBaseMelees, sizeof sMissionBaseMelees); //Dark Wood (Extended), Divine Cybermancy
 			
 		if(sMissionBaseMelees[0] == '\0')
-			strcopy(sMissionBaseMelees, sizeof(sMissionBaseMelees), DEFAULT_MELEES);
+			strcopy(sMissionBaseMelees, sizeof sMissionBaseMelees, DEFAULT_MELEES);
 
 		g_aMapInitMelees.SetString(sMissionFirstMap, sMissionBaseMelees, false);
 	}
 
 	char sMapSetMelees[512];
-	if(g_aMapSetMelees.GetString(sMissionFirstMap, sMapSetMelees, sizeof(sMapSetMelees)) == false)
-		vGetMapSetMelees(sMissionFirstMap, sMissionBaseMelees, sMapSetMelees, sizeof(sMapSetMelees));
+	if(g_aMapSetMelees.GetString(sMissionFirstMap, sMapSetMelees, sizeof sMapSetMelees) == false)
+		vGetMapSetMelees(sMissionFirstMap, sMissionBaseMelees, sMapSetMelees, sizeof sMapSetMelees);
 
 	if(sMapSetMelees[0] == '\0')
 		return MRES_Ignored;
@@ -156,8 +156,8 @@ MRESReturn mreGetMissionInfoPost(DHookReturn hReturn)
 void vGetMapSetMelees(const char[] sMissionFirstMap, const char[] sMissionBaseMelees, char[] sMapSetMelees, int maxlength)
 {
 	char sBaseMelees[512], sExtraMelees[512];
-	g_hBaseMelees.GetString(sBaseMelees, sizeof(sBaseMelees));
-	g_hExtraMelees.GetString(sExtraMelees, sizeof(sExtraMelees));
+	g_hBaseMelees.GetString(sBaseMelees, sizeof sBaseMelees);
+	g_hExtraMelees.GetString(sExtraMelees, sizeof sExtraMelees);
 	TrimString(sBaseMelees);
 	TrimString(sExtraMelees);
 
@@ -169,13 +169,13 @@ void vGetMapSetMelees(const char[] sMissionFirstMap, const char[] sMissionBaseMe
 			return;
 		}
 
-		strcopy(sBaseMelees, sizeof(sBaseMelees), sMissionBaseMelees);
+		strcopy(sBaseMelees, sizeof sBaseMelees, sMissionBaseMelees);
 	}
 
 	if(sExtraMelees[0] != '\0')
 	{
-		Format(sBaseMelees, sizeof(sBaseMelees), ";%s;", sBaseMelees);
-		int iCount = ReplaceString(sExtraMelees, sizeof(sExtraMelees), ";", ";") + 1;
+		Format(sBaseMelees, sizeof sBaseMelees, ";%s;", sBaseMelees);
+		int iCount = ReplaceString(sExtraMelees, sizeof sExtraMelees, ";", ";") + 1;
 		char[][] sBuffer = new char[iCount][32];
 		ExplodeString(sExtraMelees, ";", sBuffer, iCount, 32);
 		sExtraMelees[0] = '\0';
@@ -187,13 +187,13 @@ void vGetMapSetMelees(const char[] sMissionFirstMap, const char[] sMissionBaseMe
 				
 			Format(sBuffer[i], 32, ";%s;", sBuffer[i]);
 			if(StrContains(sBaseMelees, sBuffer[i], false) == -1)
-				StrCat(sExtraMelees, sizeof(sExtraMelees), sBuffer[i][1]);
+				StrCat(sExtraMelees, sizeof sExtraMelees, sBuffer[i][1]);
 		}
 
 		if(sExtraMelees[0] != '\0')
-			StrCat(sBaseMelees, sizeof(sBaseMelees), sExtraMelees);
+			StrCat(sBaseMelees, sizeof sBaseMelees, sExtraMelees);
 
-		strcopy(sBaseMelees, sizeof(sBaseMelees), sBaseMelees[1]);
+		strcopy(sBaseMelees, sizeof sBaseMelees, sBaseMelees[1]);
 		sBaseMelees[strlen(sBaseMelees) - 1] = '\0';
 	}
 	
@@ -233,13 +233,13 @@ bool bReadMeleeManifest(char[] sManifest, int maxlength)
 
 	while(!hFile.EndOfFile())
 	{
-		if(!hFile.ReadLine(sLine, sizeof(sLine)))
+		if(!hFile.ReadLine(sLine, sizeof sLine))
 			break;
 
 		TrimString(sLine);
 		if(KV_GetValue(sLine, "file", sScriptPath) && FileExists(sScriptPath, true, NULL_STRING))
 		{
-			if(bSplitStringRight(sScriptPath, "scripts/melee/", sScriptPath, sizeof(sScriptPath)) && SplitString(sScriptPath, ".txt", sScriptPath, sizeof(sScriptPath)) != -1)
+			if(bSplitStringRight(sScriptPath, "scripts/melee/", sScriptPath, sizeof sScriptPath) && SplitString(sScriptPath, ".txt", sScriptPath, sizeof sScriptPath) != -1)
 				Format(sManifest, maxlength, "%s;%s", sManifest, sScriptPath);
 		}
 	}
@@ -253,13 +253,13 @@ bool bReadMeleeManifest(char[] sManifest, int maxlength)
 	return true;
 }
 
-//https://forums.alliedmods.net/showthread.php?t=311161
+// [L4D1 & L4D2] Map changer with rating system (https://forums.alliedmods.net/showthread.php?t=311161)
 bool KV_GetValue(char[] str, char[] key, char buffer[PLATFORM_MAX_PATH])
 {
 	buffer[0] = '\0';
 	int posKey, posComment, sizeKey;
 	char substr[64];
-	FormatEx(substr, sizeof(substr), "\"%s\"", key);
+	FormatEx(substr, sizeof substr, "\"%s\"", key);
 	
 	posKey = StrContains(str, substr, false);
 	if( posKey != -1 )
@@ -280,10 +280,10 @@ char[] UnQuote(char[] Str)
 {
 	int pos;
 	static char buf[64];
-	strcopy(buf, sizeof(buf), Str);
+	strcopy(buf, sizeof buf, Str);
 	TrimString(buf);
 	if (buf[0] == '\"') {
-		strcopy(buf, sizeof(buf), buf[1]);
+		strcopy(buf, sizeof buf, buf[1]);
 	}
 	pos = FindCharInString(buf, '\"');
 	if( pos != -1 ) {
@@ -311,7 +311,7 @@ bool bSplitStringRight(const char[] source, const char[] split, char[] part, int
 void vLoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
+	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
 	if(FileExists(sPath) == false)
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
