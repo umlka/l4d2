@@ -857,13 +857,20 @@ Action cmdChangeClass(int client, int args)
 			CPrintToChat(client, "{olive}!class{default}/{olive}sm_class {default}<{red}class{default}>.");
 			CPrintToChat(client, "<{olive}class{default}> [ {red}smoker {default}| {red}boomer {default}| {red}hunter {default}| {red}spitter {default}| {red}jockey {default}| {red}charger {default}]");
 		}
-		else if(++iClass == (iZombieClass = GetEntProp(client, Prop_Send, "m_zombieClass")) || iZombieClass == 8)
-			CPrintToChat(client, "目标特感类型与当前特感类型相同或当前特感类型为 {red}Tank");
+		else if(++iClass == (iZombieClass = GetEntProp(client, Prop_Send, "m_zombieClass")))
+			CPrintToChat(client, "目标特感类型与当前特感类型相同");
+		else if(iZombieClass == 8)
+			CPrintToChat(client, "{red}Tank {default}无法更改特感类型");
 		else
 			vSetZombieClassAndPunish(client, iClass);
 	}
 	else
-		vSelectZombieClassMenu(client);
+	{
+		if(GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
+			vSelectZombieClassMenu(client);
+		else
+			CPrintToChat(client, "{red}Tank {default}无法更改特感类型");
+	}
 	
 	return Plugin_Handled;
 }
@@ -1367,7 +1374,7 @@ void OnNextFrame_PlayerSpawn(int client)
 				if(g_iTankBot[client] != 2 && iGetTankPlayers() < g_iMaxTankPlayer)
 				{
 					if((iPlayer = iTakeOverTank(client)))
-						CPrintToChatAll("{green}★ {red}AI Tank {default}已被 {red}%N {olive}接管", iPlayer);
+						CPrintToChatAll("{green}★ {default}[{olive}AI{default}] {red}%N {default}已被 {red}%N {olive}接管", client, iPlayer);
 				}
 
 				if(iPlayer == 0 && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_Call_IsInStasis, client)))
