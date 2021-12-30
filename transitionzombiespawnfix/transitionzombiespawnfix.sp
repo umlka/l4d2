@@ -6,7 +6,7 @@
 #define GAMEDATA "transitionzombiespawnfix"
 
 DynamicDetour
-	g_dDetour[2];
+	g_dDetour[3];
 
 bool
 	g_bCanZombieSpawnHere;
@@ -16,7 +16,7 @@ public Plugin myinfo =
 	name = "[L4D2]Transition Zombie Spawn Fix",
 	author = "sorallll & Psyk0tik (Crasher_3637)",
 	description = "To Fix z_spawn_old/ZombieManager::GetRandomPZSpawnPosition spawn SI failed during player transition(\"could not find a XX spawn position in 5 tries\")",
-	version = "1.0.1",
+	version = "1.0.2",
 	url = "https://forums.alliedmods.net/showthread.php?t=333351"
 };
 
@@ -44,7 +44,7 @@ public void OnPluginEnd()
 void vLoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
+	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
 	if(FileExists(sPath) == false)
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
@@ -75,6 +75,16 @@ void vSetupDetours(GameData hGameData = null)
 
 	if(!g_dDetour[1].Enable(Hook_Post, mreIsInTransitionPost))
 		SetFailState("Failed to detour post: CDirector::IsInTransition");
+
+	g_dDetour[2] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::OnPreThinkGhostState");
+	if(g_dDetour[2] == null)
+		SetFailState("Failed to load signature: CTerrorPlayer::OnPreThinkGhostState");
+		
+	if(!g_dDetour[2].Enable(Hook_Pre, mreOnPreThinkGhostStatePre))
+		SetFailState("Failed to detour pre: CTerrorPlayer::OnPreThinkGhostState");
+		
+	if(!g_dDetour[2].Enable(Hook_Post, mreOnPreThinkGhostStatePost))
+		SetFailState("Failed to detour post: CTerrorPlayer::OnPreThinkGhostState");
 }
 
 void vDisableDetours()
@@ -84,6 +94,9 @@ void vDisableDetours()
 
 	if(!g_dDetour[1].Disable(Hook_Post, mreIsInTransitionPost))
 		SetFailState("Failed to disable detour: CDirector::IsInTransition");
+
+	if(!g_dDetour[2].Enable(Hook_Pre, mreOnPreThinkGhostStatePre) || !g_dDetour[2].Disable(Hook_Post, mreOnPreThinkGhostStatePost))
+		SetFailState("Failed to disable detour: CTerrorPlayer::OnPreThinkGhostState");
 }
 
 MRESReturn mreCanZombieSpawnHerePre(DHookReturn hReturn, DHookParam hParams)
@@ -98,13 +111,25 @@ MRESReturn mreCanZombieSpawnHerePost(DHookReturn hReturn, DHookParam hParams)
 	return MRES_Ignored;
 }
 
-MRESReturn mreIsInTransitionPost(int pThis, DHookReturn hReturn, DHookParam hParams)
+MRESReturn mreIsInTransitionPost(Address pThis, DHookReturn hReturn)
 {
 	if(g_bCanZombieSpawnHere)
 	{
-		hReturn.Value = 0;
+		hReturn.Value = false;
 		return MRES_Supercede;
 	}
 
+	return MRES_Ignored;
+}
+
+MRESReturn mreOnPreThinkGhostStatePre(int pThis)
+{
+	g_bCanZombieSpawnHere = true;
+	return MRES_Ignored;
+}
+
+MRESReturn mreOnPreThinkGhostStatePost(int pThis)
+{
+	g_bCanZombieSpawnHere = false;
 	return MRES_Ignored;
 }

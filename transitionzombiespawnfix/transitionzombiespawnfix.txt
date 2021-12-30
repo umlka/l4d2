@@ -4,7 +4,6 @@
 	{
 		"Functions"
 		{
-			/* ZombieManager::CanZombieSpawnHere(Vector const&,TerrorNavArea *,ZombieClassType,bool,CBaseCombatCharacter *) */
 			"ZombieManager::CanZombieSpawnHere"
 			{
 				"signature"		"ZombieManager::CanZombieSpawnHere"
@@ -35,13 +34,19 @@
 					}
 				}
 			}
-			/* CDirector::IsInTransition() */
 			"CDirector::IsInTransition"
 			{
 				"signature"		"CDirector::IsInTransition"
 				"callconv"		"thiscall"
 				"return"		"bool"
 				"this"			"address"
+			}
+			"CTerrorPlayer::OnPreThinkGhostState"
+			{
+				"signature"		"CTerrorPlayer::OnPreThinkGhostState"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"entity"
 			}
 		}
 
@@ -55,13 +60,21 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x8B\x2A\x2A\x8B\x0D\x2A\x2A\x2A\x2A\x53\x8B\x2A\x2A\x56\x8B\x2A\x2A\x57"
 				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 8B ? ? 8B 0D ? ? ? ? 53 8B ? ? 56 8B ? ? 57 */
 			}
-			/* CDirector::IsInTransition() */
+			/* CDirector::IsInTransition(CDirector *__hidden this) */
 			"CDirector::IsInTransition"
 			{
 				"library"	"server"
 				"linux"		"@_ZNK9CDirector14IsInTransitionEv"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x75\x2A\x80\xB9\xCC"
 				/* ? ? ? ? ? ? ? 75 ? 80 B9 CC */
+			}
+			/* CTerrorPlayer::OnPreThinkGhostState(CTerrorPlayer *__hidden this) */
+			"CTerrorPlayer::OnPreThinkGhostState"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer20OnPreThinkGhostStateEv"
+				"windows"	"\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x81\xEC\xD8\x00\x00\x00\xA1\x2A\x2A\x2A\x2A\x33\xC5\x89\x45\xFC\x56\x8B\xF1\x8B\x0D\x2A\x2A\x2A\x2A"
+				/* 53 8B DC 83 EC 08 83 E4 F0 83 C4 04 55 8B 6B 04 89 6C 24 04 8B EC 81 EC D8 00 00 00 A1 ? ? ? ? 33 C5 89 45 FC 56 8B F1 8B 0D ? ? ? ? */
 			}
 		}
 	}
