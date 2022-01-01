@@ -502,7 +502,7 @@ void vDisplayBotList(int client)
 		menu.AddItem(sID, sName);
 	}
 	menu.ExitButton = true;
-	menu.ExitBackButton = true;
+	menu.ExitBackButton = false;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
