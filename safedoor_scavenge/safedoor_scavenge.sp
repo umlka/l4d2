@@ -207,7 +207,7 @@ Action cmdSd(int client, int args)
 	{
 		ReplyToCommand(client, "BaseAttributes->%d SpawnAttributes->%d SpawnArea Count->%d", view_as<CNavArea>(area).BaseAttributes, view_as<CNavArea>(area).SpawnAttributes, g_aSpawnArea.Length);
 		ReplyToCommand(client, "DOOR->%d STOP_SCAN->%d TR_PointOutsideWorld->%d SpawnFlags->%d", view_as<CNavArea>(area).SpawnAttributes & 262144, view_as<CNavArea>(area).SpawnAttributes & 4, TR_PointOutsideWorld(vPos), LoadFromAddress(view_as<Address>(area) + view_as<Address>(127), NumberType_Int32));
-		int iBot = iFindSurvivorBot();
+		/*int iBot = iFindSurvivorBot();
 		if(iBot != -1)
 		{
 			float vBot[3];
@@ -216,7 +216,7 @@ Action cmdSd(int client, int args)
 			int iBotArea = L4D_GetNearestNavArea(vBot);
 			if(iBotArea)
 				ReplyToCommand(client, "SurvivorBotIsReachable->%d NavAreaBuildPath->%d", SDKCall(g_hSDKSurvivorBotIsReachable, iBot, iBotArea, area), L4D2_VScriptWrapper_NavAreaBuildPath(vBot, vPos, 100000.0, false, true, 2, false));
-		}
+		}*/
 	}
 
 	/*Event event = CreateEvent("gascan_pour_blocked", true);
@@ -617,7 +617,6 @@ void vFindTerrorNavAreas()
 	CNavArea area;
 
 	int iBaseAttributes;
-	float fFlow;
 	float fDistance;
 	float vCenter[3];
 	for(int i; i < g_iTheCount; i++)
@@ -632,8 +631,7 @@ void vFindTerrorNavAreas()
 		if(iBaseAttributes  & NAV_MESH_PLAYERCLIP || iBaseAttributes  & NAV_MESH_FLOW_BLOCKED || iBaseAttributes  & NAV_MESH_OUTSIDE_WORLD)
 			continue;
 
-		fFlow = area.Flow;
-		if(fFlow == -9999.0 || area.Flow < fLandFlow)
+		if(area.Flow < fLandFlow)
 			continue;
 
 		if(!SDKCall(g_hSDKSurvivorBotIsReachable, iBot, iLandArea, area)) //有往返程之分, 这里只考虑返程. 往程area->iLandArea 返程iDoorArea->area 有些地图从安全门开始的返程不能回去，例如c2m1, c7m1, c13m1等
