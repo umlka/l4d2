@@ -413,9 +413,9 @@ Action cmdBuy(int client, int args)
 
 	char sPlayerInput[64];
 	char sPurchaseCmd[64];
-	GetCmdArg(1, sPlayerInput, sizeof(sPlayerInput));
+	GetCmdArg(1, sPlayerInput, sizeof sPlayerInput);
 
-	if(g_aItemMap.GetString(sPlayerInput, sPurchaseCmd, sizeof(sPurchaseCmd)))
+	if(g_aItemMap.GetString(sPlayerInput, sPurchaseCmd, sizeof sPurchaseCmd))
 	{ // If an entry exists
 		int iRequiredTeam;
 		if(g_aTeamExclusive.GetValue(sPlayerInput, iRequiredTeam))
@@ -426,7 +426,7 @@ Action cmdBuy(int client, int args)
 		if(strcmp(sPlayerInput, "cola", false) == 0)
 		{
 			char sMap[64];
-			GetCurrentMap(sMap, sizeof(sMap));
+			GetCurrentMap(sMap, sizeof sMap);
 			if(strcmp(sMap, "c1m2_streets", false) == 0)
 				PrintToChat(client, "[PS] This item is unavailable during this map");
 		}
@@ -456,7 +456,7 @@ void vReloadAmmo(int client, int iCost, const char[] sItem)
 	if(iWeapon != -1)
 	{
 		char sWeapon[40];
-		GetEdictClassname(iWeapon, sWeapon, sizeof(sWeapon));
+		GetEdictClassname(iWeapon, sWeapon, sizeof sWeapon);
 		if(strcmp(sWeapon, "weapon_rifle_m60") == 0)
 			SetEntProp(iWeapon, Prop_Send, "m_iClip1", 150);
 		else if(strcmp(sWeapon, "weapon_grenade_launcher") == 0)
@@ -523,8 +523,8 @@ void vCheatCommand(int client, const char[] sCommand)
 		return;
 
 	char sCmd[32];
-	if(SplitString(sCommand, " ", sCmd, sizeof(sCmd)) == -1)
-		strcopy(sCmd, sizeof(sCmd), sCommand);
+	if(SplitString(sCommand, " ", sCmd, sizeof sCmd) == -1)
+		strcopy(sCmd, sizeof sCmd, sCommand);
 
 	int bits = GetUserFlagBits(client);
 	SetUserFlagBits(client, ADMFLAG_ROOT);

@@ -147,7 +147,7 @@ any aNative_PS_GetItem(Handle plugin, int numParams)
 
 any aNative_PS_SetItem(Handle plugin, int numParams)
 {
-	GetNativeString(2, g_esPlayer[GetNativeCell(1)].g_sCommand, sizeof(esPlayer::g_sCommand));
+	GetNativeString(2, g_esPlayer[GetNativeCell(1)].g_sCommand, sizeof esPlayer::g_sCommand);
 	return 0;
 }
 
@@ -164,13 +164,13 @@ any aNative_PS_SetCost(Handle plugin, int numParams)
 
 any aNative_PS_GetBought(Handle plugin, int numParams)
 {
-	SetNativeString(2, g_esPlayer[GetNativeCell(1)].g_sBought, sizeof(esPlayer::g_sBought));
+	SetNativeString(2, g_esPlayer[GetNativeCell(1)].g_sBought, sizeof esPlayer::g_sBought);
 	return 0;
 }
 
 any aNative_PS_SetBought(Handle plugin, int numParams)
 {
-	GetNativeString(2, g_esPlayer[GetNativeCell(1)].g_sBought, sizeof(esPlayer::g_sBought));
+	GetNativeString(2, g_esPlayer[GetNativeCell(1)].g_sBought, sizeof esPlayer::g_sBought);
 	return 0;
 }
 
@@ -831,21 +831,21 @@ bool bIsAllowedGameMode()
 	}
 
 	char sGameModes[64], sGameMode[64];
-	g_esGeneral.g_cGameMode.GetString(sGameMode, sizeof(sGameMode));
-	Format(sGameMode, sizeof(sGameMode), ",%s,", sGameMode);
+	g_esGeneral.g_cGameMode.GetString(sGameMode, sizeof sGameMode);
+	Format(sGameMode, sizeof sGameMode, ",%s,", sGameMode);
 
-	g_esGeneral.g_cSettings[cSettingModes].GetString(sGameModes, sizeof(sGameModes));
+	g_esGeneral.g_cSettings[cSettingModes].GetString(sGameModes, sizeof sGameModes);
 	if(sGameModes[0])
 	{
-		Format(sGameModes, sizeof(sGameModes), ",%s,", sGameModes);
+		Format(sGameModes, sizeof sGameModes, ",%s,", sGameModes);
 		if(StrContains(sGameModes, sGameMode, false) == -1)
 			return false;
 	}
 
-	g_esGeneral.g_cSettings[cSettingModesOff].GetString(sGameModes, sizeof(sGameModes));
+	g_esGeneral.g_cSettings[cSettingModesOff].GetString(sGameModes, sizeof sGameModes);
 	if(sGameModes[0])
 	{
-		Format(sGameModes, sizeof(sGameModes), ",%s,", sGameModes);
+		Format(sGameModes, sizeof sGameModes, ",%s,", sGameModes);
 		if(StrContains(sGameModes, sGameMode, false) != -1)
 			return false;
 	}
@@ -868,7 +868,7 @@ void vOnGamemode(const char[] output, int caller, int activator, float delay)
 void vIniSQLite()
 {	
 	char Error[1024];
-	if((g_dbSQL = SQLite_UseDatabase("PointsSystem", Error, sizeof(Error))) == null)
+	if((g_dbSQL = SQLite_UseDatabase("PointsSystem", Error, sizeof Error)) == null)
 		SetFailState("Could not connect to the database \"PointsSystem\" at the following error:\n%s", Error);
 
 	SQL_FastQuery(g_dbSQL, "CREATE TABLE IF NOT EXISTS PS_Core(SteamID NVARCHAR(32) NOT NULL DEFAULT '', Points INT NOT NULL DEFAULT 0, UnixTime INT NOT NULL DEFAULT 0);");
@@ -886,7 +886,7 @@ Action cmdHealPlayer(int client, int args)
 	if(args == 1)
 	{
 		char arg[65];
-		GetCmdArg(1, arg, sizeof(arg));
+		GetCmdArg(1, arg, sizeof arg);
 		char target_name[MAX_TARGET_LENGTH];
 		int target_list[MAXPLAYERS], target_count;
 		bool tn_is_ml;
@@ -897,7 +897,7 @@ Action cmdHealPlayer(int client, int args)
 				MAXPLAYERS,
 				COMMAND_FILTER_ALIVE,
 				target_name,
-				sizeof(target_name),
+				sizeof target_name,
 				tn_is_ml)) <= 0)
 		{
 			ReplyToTargetError(client, target_count);
@@ -940,12 +940,12 @@ Action cmdDelOld(int client, int args)
 		}
 
 		char sDays[8];
-		GetCmdArg(1, sDays, sizeof(sDays));
+		GetCmdArg(1, sDays, sizeof sDays);
 	
 		int iUnixTime = GetTime() - (StringToInt(sDays) * 60 * 60 * 24);
 	
 		char sQuery[1024];
-		FormatEx(sQuery, sizeof(sQuery), "DELETE FROM PS_Core WHERE UnixTime < %d;", iUnixTime);
+		FormatEx(sQuery, sizeof sQuery, "DELETE FROM PS_Core WHERE UnixTime < %d;", iUnixTime);
 		g_dbSQL.Query(vSQL_CallbackDelOld, sQuery, GetClientUserId(client));
 	}
 
@@ -981,8 +981,8 @@ Action cmdSetPoints(int client, int args)
 	if(args == 2)
 	{
 		char arg[MAX_NAME_LENGTH], arg2[32];
-		GetCmdArg(1, arg, sizeof(arg));
-		GetCmdArg(2, arg2, sizeof(arg2));
+		GetCmdArg(1, arg, sizeof arg);
+		GetCmdArg(2, arg2, sizeof arg2);
 		char target_name[MAX_TARGET_LENGTH];
 		int target_list[MAXPLAYERS], target_count;
 		bool tn_is_ml;
@@ -994,7 +994,7 @@ Action cmdSetPoints(int client, int args)
 				MAXPLAYERS,
 				COMMAND_FILTER_NO_BOTS,
 				target_name,
-				sizeof(target_name),
+				sizeof target_name,
 				tn_is_ml)) <= 0)
 		{
 			ReplyToTargetError(client, target_count);
@@ -1021,8 +1021,8 @@ Action cmdGivePoints(int client, int args)
 	if(args == 2)
 	{
 		char arg[MAX_NAME_LENGTH], arg2[32];
-		GetCmdArg(1, arg, sizeof(arg));
-		GetCmdArg(2, arg2, sizeof(arg2));
+		GetCmdArg(1, arg, sizeof arg);
+		GetCmdArg(2, arg2, sizeof arg2);
 		char target_name[MAX_TARGET_LENGTH];
 		int target_list[MAXPLAYERS], target_count;
 		bool tn_is_ml;
@@ -1034,7 +1034,7 @@ Action cmdGivePoints(int client, int args)
 				MAXPLAYERS,
 				COMMAND_FILTER_NO_BOTS,
 				target_name,
-				sizeof(target_name),
+				sizeof target_name,
 				tn_is_ml)) <= 0)
 		{
 			ReplyToTargetError(client, target_count);
@@ -1178,7 +1178,7 @@ public void OnMapStart()
 {
 	g_bMapStarted = true;
 
-	GetCurrentMap(g_esGeneral.g_sCurrentMap, sizeof(esGeneral::g_sCurrentMap));
+	GetCurrentMap(g_esGeneral.g_sCurrentMap, sizeof esGeneral::g_sCurrentMap);
 
 	PrecacheModel("models/v_models/v_m60.mdl");
 	PrecacheModel("models/w_models/weapons/w_m60.mdl");
@@ -1186,18 +1186,18 @@ public void OnMapStart()
 	PrecacheModel("models/infected/witch_bride.mdl");
 
 	int i;
-	int iLength = sizeof(g_sMeleeModels);
-	for(i = 0; i < iLength; i++)
+	int iLength = sizeof g_sMeleeModels;
+	for(; i < iLength; i++)
 	{
 		if(!IsModelPrecached(g_sMeleeModels[i]))
 			PrecacheModel(g_sMeleeModels[i], true);
 	}
 
-	iLength = sizeof(g_sMeleeName);
+	iLength = sizeof g_sMeleeName;
 	char sBuffer[64];
 	for(i = 0; i < iLength; i++)
 	{
-		FormatEx(sBuffer, sizeof(sBuffer), "scripts/melee/%s.txt", g_sMeleeName[i]);
+		FormatEx(sBuffer, sizeof sBuffer, "scripts/melee/%s.txt", g_sMeleeName[i]);
 		if(!IsGenericPrecached(sBuffer))
 			PrecacheGeneric(sBuffer, true);
 	}
@@ -1225,7 +1225,7 @@ void vGetMeleeClasses()
 	g_iMeleeClassCount = GetStringTableNumStrings(iMeleeStringTable);
 
 	for(int i; i < g_iMeleeClassCount; i++)
-		ReadStringTable(iMeleeStringTable, i, g_sMeleeClass[i], sizeof(g_sMeleeClass[]));
+		ReadStringTable(iMeleeStringTable, i, g_sMeleeClass[i], sizeof g_sMeleeClass[]);
 }
 
 //https://forums.alliedmods.net/showthread.php?t=320247
@@ -1238,7 +1238,7 @@ public void OnClientAuthorized(int client, const char[] auth)
 bool bCacheSteamID(int client)
 {
 	if(g_esPlayer[client].g_sSteamID[0] == '\0')
-		return GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].g_sSteamID, sizeof(esPlayer::g_sSteamID));
+		return GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].g_sSteamID, sizeof esPlayer::g_sSteamID);
 	return true;
 }
 
@@ -1280,7 +1280,7 @@ void vResetClientData(int client)
 void vSQL_Save(int client)
 {
 	
-	if(g_esPlayer[client].g_bDataLoaded == false)
+	if(!g_esPlayer[client].g_bDataLoaded)
 		return;
 
 	if(g_dbSQL == null)
@@ -1290,7 +1290,7 @@ void vSQL_Save(int client)
 		return;
 
 	char sQuery[1024];
-	FormatEx(sQuery, sizeof(sQuery), "UPDATE PS_Core SET Points = %d, UnixTime = %d WHERE SteamID = '%s';", g_esPlayer[client].g_iPlayerPoints, GetTime(), g_esPlayer[client].g_sSteamID);
+	FormatEx(sQuery, sizeof sQuery, "UPDATE PS_Core SET Points = %d, UnixTime = %d WHERE SteamID = '%s';", g_esPlayer[client].g_iPlayerPoints, GetTime(), g_esPlayer[client].g_sSteamID);
 	SQL_FastQuery(g_dbSQL, sQuery);
 }
 
@@ -1303,7 +1303,7 @@ void vSQL_Load(int client)
 		return;
 
 	char sQuery[1024];
-	FormatEx(sQuery, sizeof(sQuery), "SELECT * FROM PS_Core WHERE SteamId = '%s';", g_esPlayer[client].g_sSteamID);
+	FormatEx(sQuery, sizeof sQuery, "SELECT * FROM PS_Core WHERE SteamId = '%s';", g_esPlayer[client].g_sSteamID);
 	g_dbSQL.Query(vSQL_CallbackLoad, sQuery, GetClientUserId(client));
 }
 
@@ -1324,7 +1324,7 @@ void vSQL_CallbackLoad(Database db, DBResultSet results, const char[] error, any
 	else
 	{
 		char sQuery[1024];
-		FormatEx(sQuery, sizeof(sQuery), "INSERT INTO PS_Core(SteamID, Points, UnixTime) VALUES ('%s', %d, %d);", g_esPlayer[client].g_sSteamID, g_esPlayer[client].g_iPlayerPoints, GetTime());
+		FormatEx(sQuery, sizeof sQuery, "INSERT INTO PS_Core(SteamID, Points, UnixTime) VALUES ('%s', %d, %d);", g_esPlayer[client].g_sSteamID, g_esPlayer[client].g_iPlayerPoints, GetTime());
 		SQL_FastQuery(g_dbSQL, sQuery);
 	}
 
@@ -1721,27 +1721,27 @@ void vBuildBuyMenu(int client)
 		{
 			char sInfo[32];
 			Menu menu = new Menu(iSurvivorMenuHandler);
-			FormatEx(sInfo, sizeof(sInfo), "%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+			FormatEx(sInfo, sizeof sInfo, "%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
 			menu.SetTitle(sInfo);
 
 			if(g_esGeneral.g_cCategories[cCategoryWeapon].IntValue == 1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Weapons", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Weapons", client);
 				menu.AddItem("w", sInfo);
 			}
 			if(g_esGeneral.g_cCategories[cCategoryUpgrade].IntValue == 1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Upgrades", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Upgrades", client);
 				menu.AddItem("u", sInfo);
 			}
 			if(g_esGeneral.g_cCategories[cCategoryHealth].IntValue == 1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Health", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Health", client);
 				menu.AddItem("h", sInfo);
 			}
 			if(g_esGeneral.g_cCategories[cCategoryTraitor].IntValue == 1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Traitor", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Traitor", client);
 				menu.AddItem("i", sInfo);
 			}
 			if(g_esGeneral.g_cCategories[cCategorySpecial].IntValue == 1)
@@ -1754,71 +1754,71 @@ void vBuildBuyMenu(int client)
 		{
 			char sInfo[32];
 			Menu menu = new Menu(iInfectedMenuHandler);
-			FormatEx(sInfo, sizeof(sInfo), "%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+			FormatEx(sInfo, sizeof sInfo, "%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
 			menu.SetTitle(sInfo);
 			if(g_esGeneral.g_cItemCosts[cCostPZHeal].IntValue > -1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Heal", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Heal", client);
 				menu.AddItem("heal", sInfo);
 			}
 			if(g_esGeneral.g_cItemCosts[cCostSuicide].IntValue > -1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Suicide", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Suicide", client);
 				menu.AddItem("suicide", sInfo);
 			}
 			if(g_esGeneral.g_cItemCosts[cCostSmoker].IntValue > -1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Smoker", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Smoker", client);
 				menu.AddItem("smoker", sInfo);
 			}
 			if(g_esGeneral.g_cItemCosts[cCostBoomer].IntValue > -1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Boomer", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Boomer", client);
 				menu.AddItem("boomer", sInfo);
 			}
 			if(g_esGeneral.g_cItemCosts[cCostHunter].IntValue > -1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Hunter", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Hunter", client);
 				menu.AddItem("hunter", sInfo);
 			}
 			if(g_esGeneral.g_cItemCosts[cCostSpitter].IntValue > -1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Spitter", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Spitter", client);
 				menu.AddItem("spitter", sInfo);
 			}
 			if(g_esGeneral.g_cItemCosts[cCostJockey].IntValue > -1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Jockey", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Jockey", client);
 				menu.AddItem("jockey", sInfo);
 			}
 			if(g_esGeneral.g_cItemCosts[cCostCharger].IntValue > -1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Charger", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Charger", client);
 				menu.AddItem("charger", sInfo);
 			}
 			if(g_esGeneral.g_cItemCosts[cCostTank].IntValue > -1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Tank", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Tank", client);
 				menu.AddItem("tank", sInfo);
 			}
 			if(strcmp(g_esGeneral.g_sCurrentMap, "c6m1_riverbank", false) == 0 && g_esGeneral.g_cItemCosts[cCostWitch].IntValue > -1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Witch Bride", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Witch Bride", client);
 				menu.AddItem("witch_bride", sInfo);
 			}
 			else if(g_esGeneral.g_cItemCosts[cCostWitch].IntValue > -1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Witch", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Witch", client);
 				menu.AddItem("witch", sInfo);
 			}
 			if(g_esGeneral.g_cItemCosts[cCostHorde].IntValue > -1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Horde", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Horde", client);
 				menu.AddItem("horde", sInfo);
 			}
 			if(g_esGeneral.g_cItemCosts[cCostMob].IntValue > -1)
 			{
-				FormatEx(sInfo, sizeof(sInfo), "%T", "Mob", client);
+				FormatEx(sInfo, sizeof sInfo, "%T", "Mob", client);
 				menu.AddItem("mob", sInfo);
 			}
 			menu.Display(client, MENU_TIME_FOREVER);
@@ -1830,41 +1830,41 @@ void vBuildWeaponMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iWeaponMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
 	menu.SetTitle(sInfo);
 	if(g_esGeneral.g_cCategories[cCategoryMelee].IntValue == 1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Melee", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Melee", client);
 		menu.AddItem("a", sInfo);
 	}
 	if(g_esGeneral.g_cCategories[cCategorySniper].IntValue == 1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Sniper Rifles", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Sniper Rifles", client);
 		menu.AddItem("b", sInfo);
 	}
 	if(g_esGeneral.g_cCategories[cCategoryRifle].IntValue == 1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Assault Rifles", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Assault Rifles", client);
 		menu.AddItem("c", sInfo);
 	}
 	if(g_esGeneral.g_cCategories[cCategoryShotgun].IntValue == 1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Shotguns", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Shotguns", client);
 		menu.AddItem("d", sInfo);
 	}
 	if(g_esGeneral.g_cCategories[cCategorySMG].IntValue == 1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Submachine Guns", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Submachine Guns", client);
 		menu.AddItem("e", sInfo);
 	}
 	if(g_esGeneral.g_cCategories[cCategoryThrowable].IntValue == 1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Throwables", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Throwables", client);
 		menu.AddItem("f", sInfo);
 	}
 	if(g_esGeneral.g_cCategories[cCategoryMisc].IntValue == 1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Misc", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Misc", client);
 		menu.AddItem("g", sInfo);
 	}
 	menu.ExitBackButton = true;
@@ -1878,7 +1878,7 @@ int iSurvivorMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'w':
@@ -1896,11 +1896,11 @@ int iSurvivorMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 
 					char sInfo[32];
 					Menu menu1 = new Menu(iTraitorMenuHandler);
-					FormatEx(sInfo, sizeof(sInfo),"%T", "Cost", param1, g_esPlayer[param1].g_iItemCost);
+					FormatEx(sInfo, sizeof sInfo,"%T", "Cost", param1, g_esPlayer[param1].g_iItemCost);
 					menu1.SetTitle(sInfo);
-					FormatEx(sInfo, sizeof(sInfo),"%T", "Yes", param1);
+					FormatEx(sInfo, sizeof sInfo,"%T", "Yes", param1);
 					menu1.AddItem("y", sInfo);
-					FormatEx(sInfo, sizeof(sInfo),"%T", "No", param1);
+					FormatEx(sInfo, sizeof sInfo,"%T", "No", param1);
 					menu1.AddItem("n", sInfo);
 					menu1.ExitButton = true;
 					menu1.ExitBackButton = true;
@@ -1925,7 +1925,7 @@ int iTraitorMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'n':
@@ -1973,7 +1973,7 @@ int iWeaponMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'a':
@@ -2014,7 +2014,7 @@ void vBuildMeleeMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iMeleeMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
 	menu.SetTitle(sInfo);
 	for(int i; i < g_iMeleeClassCount; i++)
 	{
@@ -2025,9 +2025,9 @@ void vBuildMeleeMenu(int client)
 			continue;
 
 		if(iPos != -1)
-			FormatEx(sInfo, sizeof(sInfo), "%T", g_sMeleeClass[i], client);
+			FormatEx(sInfo, sizeof sInfo, "%T", g_sMeleeClass[i], client);
 		else
-			FormatEx(sInfo, sizeof(sInfo), g_sMeleeClass[i]);
+			FormatEx(sInfo, sizeof sInfo, g_sMeleeClass[i]);
 		menu.AddItem(g_sMeleeClass[i], sInfo);
 	}
 	menu.ExitBackButton = true;
@@ -2036,7 +2036,7 @@ void vBuildMeleeMenu(int client)
 
 int iGetMeleePos(const char[] sMelee)
 {
-	for(int i; i < sizeof(g_sMeleeName); i++)
+	for(int i; i < sizeof g_sMeleeName; i++)
 	{
 		if(strcmp(g_sMeleeName[i], sMelee) == 0)
 			return i;
@@ -2048,26 +2048,26 @@ void vBuildSniperMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iSniperMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
 	menu.SetTitle(sInfo);
 	if(g_esGeneral.g_cItemCosts[cCostHunting].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Hunting Rifle", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Hunting Rifle", client);
 		menu.AddItem("hunting_rifle", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostMilitary].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Military Sniper Rifle", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Military Sniper Rifle", client);
 		menu.AddItem("sniper_military", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostAWP].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "AWP Sniper Rifle", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "AWP Sniper Rifle", client);
 		menu.AddItem("sniper_awp", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostScout].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Scout Sniper Rifle", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Scout Sniper Rifle", client);
 		menu.AddItem("sniper_scout", sInfo);
 	}
 	menu.ExitBackButton = true;
@@ -2078,31 +2078,31 @@ void vBuildRifleMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iRifleMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
 	menu.SetTitle(sInfo);
 	if(g_esGeneral.g_cItemCosts[cCostM60].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "M60 Assault Rifle", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "M60 Assault Rifle", client);
 		menu.AddItem("rifle_m60", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostM16].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "M16 Assault Rifle", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "M16 Assault Rifle", client);
 		menu.AddItem("rifle", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostSCAR].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "SCAR-L Assault Rifle", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "SCAR-L Assault Rifle", client);
 		menu.AddItem("rifle_desert", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostAK47].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "AK-47 Assault Rifle", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "AK-47 Assault Rifle", client);
 		menu.AddItem("rifle_ak47", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostSG552].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "SG552 Assault Rifle", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "SG552 Assault Rifle", client);
 		menu.AddItem("rifle_sg552", sInfo);
 	}
 	menu.ExitBackButton = true;
@@ -2113,26 +2113,26 @@ void vBuildShotgunMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iShotgunMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
 	menu.SetTitle(sInfo);
 	if(g_esGeneral.g_cItemCosts[cCostPump].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Pump Shotgun", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Pump Shotgun", client);
 		menu.AddItem("pumpshotgun", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostChrome].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Chrome Shotgun", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Chrome Shotgun", client);
 		menu.AddItem("shotgun_chrome", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostAuto].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Tactical Shotgun", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Tactical Shotgun", client);
 		menu.AddItem("autoshotgun", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostSPAS].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "SPAS Shotgun", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "SPAS Shotgun", client);
 		menu.AddItem("shotgun_spas", sInfo);
 	}
 	menu.ExitBackButton = true;
@@ -2143,21 +2143,21 @@ void vBuildSMGMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iSMGMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
 	menu.SetTitle(sInfo);
 	if(g_esGeneral.g_cItemCosts[cCostUZI].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Uzi", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Uzi", client);
 		menu.AddItem("smg", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostSilenced].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Silenced SMG", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Silenced SMG", client);
 		menu.AddItem("smg_silenced", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostMP5].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "MP5 SMG", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "MP5 SMG", client);
 		menu.AddItem("smg_mp5", sInfo);
 	}
 	menu.ExitBackButton = true;
@@ -2168,31 +2168,31 @@ void vBuildHealthMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iHealthMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
 	menu.SetTitle(sInfo);
 	if(g_esGeneral.g_cItemCosts[cCostHealthKit].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "First Aid Kit", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "First Aid Kit", client);
 		menu.AddItem("first_aid_kit", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostDefib].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Defibrillator", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Defibrillator", client);
 		menu.AddItem("defibrillator", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostPills].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Pills", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Pills", client);
 		menu.AddItem("pain_pills", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostAdren].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Adrenaline", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Adrenaline", client);
 		menu.AddItem("adrenaline", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostHeal].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Full Heal", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Full Heal", client);
 		menu.AddItem("health", sInfo);
 	}
 	menu.ExitBackButton = true;
@@ -2203,21 +2203,21 @@ void vBuildThrowableMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iThrowableMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
 	menu.SetTitle(sInfo);
 	if(g_esGeneral.g_cItemCosts[cCostMolotov].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Molotov", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Molotov", client);
 		menu.AddItem("molotov", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostPipe].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Pipe Bomb", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Pipe Bomb", client);
 		menu.AddItem("pipe_bomb", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostBile].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Bile Bomb", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Bile Bomb", client);
 		menu.AddItem("vomitjar", sInfo);
 	}
 	menu.ExitBackButton = true;
@@ -2228,56 +2228,56 @@ void vBuildMiscMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iMiscMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
 	menu.SetTitle(sInfo);
 	if(g_esGeneral.g_cItemCosts[cCostGrenade].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Grenade Launcher", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Grenade Launcher", client);
 		menu.AddItem("grenade_launcher", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostP220].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "P220 Pistol", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "P220 Pistol", client);
 		menu.AddItem("pistol", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostMagnum].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Magnum Pistol", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Magnum Pistol", client);
 		menu.AddItem("pistol_magnum", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostChainsaw].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Chainsaw", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Chainsaw", client);
 		menu.AddItem("chainsaw", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostGnome].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Gnome", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Gnome", client);
 		menu.AddItem("gnome", sInfo);
 	}
 	if(strcmp(g_esGeneral.g_sCurrentMap, "c1m2_streets", false) != 0 && g_esGeneral.g_cItemCosts[cCostCola].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Cola Bottles", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Cola Bottles", client);
 		menu.AddItem("cola_bottles", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostFireworks].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Fireworks Crate", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Fireworks Crate", client);
 		menu.AddItem("fireworkcrate", sInfo);
 	}
 	if(g_iCurrentMode != 8 && g_esGeneral.g_cItemCosts[cCostGasCan].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Gascan", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Gascan", client);
 		menu.AddItem("gascan", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostOxygen].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Oxygen Tank", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Oxygen Tank", client);
 		menu.AddItem("oxygentank", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostPropane].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Propane Tank", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Propane Tank", client);
 		menu.AddItem("propanetank", sInfo);
 	}
 	menu.ExitBackButton = true;
@@ -2288,36 +2288,36 @@ void vBuildUpgradeMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iUpgradeMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
 	menu.SetTitle(sInfo);
 	if(g_esGeneral.g_cItemCosts[cCostLaserSight].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Laser Sight", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Laser Sight", client);
 		menu.AddItem("laser_sight", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostExplosiveAmmo].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Explosive Ammo", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Explosive Ammo", client);
 		menu.AddItem("explosive_ammo", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostIncendiaryAmmo].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Incendiary Ammo", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Incendiary Ammo", client);
 		menu.AddItem("incendiary_ammo", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostExplosivePack].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Explosive Ammo Pack", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Explosive Ammo Pack", client);
 		menu.AddItem("upgradepack_explosive", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostIncendiaryPack].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Incendiary Ammo Pack", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Incendiary Ammo Pack", client);
 		menu.AddItem("upgradepack_incendiary", sInfo);
 	}
 	if(g_esGeneral.g_cItemCosts[cCostAmmo].IntValue > -1)
 	{
-		FormatEx(sInfo, sizeof(sInfo), "%T", "Ammo", client);
+		FormatEx(sInfo, sizeof sInfo, "%T", "Ammo", client);
 		menu.AddItem("ammo", sInfo);
 	}
 	menu.ExitBackButton = true;
@@ -2331,8 +2331,8 @@ int iMeleeMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof(sItem));
-			FormatEx(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give %s", sItem);
+			menu.GetItem(param2, sItem, sizeof sItem);
+			FormatEx(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give %s", sItem);
 			int sequence = iGetMeleePos(sItem);
 			if(sequence != -1)
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[sequence + 25].IntValue;
@@ -2359,20 +2359,20 @@ int iSMGMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			if(strcmp(sItem, "smg") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give smg");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give smg");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostUZI].IntValue;
 			}
 			else if(strcmp(sItem, "smg_silenced") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give smg_silenced");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give smg_silenced");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSilenced].IntValue;
 			}
 			else if(strcmp(sItem, "smg_mp5") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give smg_mp5");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give smg_mp5");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostMP5].IntValue;
 			}
 			vDisplaySMGConfirmMenu(param1);
@@ -2396,30 +2396,30 @@ int iRifleMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			if(strcmp(sItem, "rifle") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give rifle");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give rifle");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostM16].IntValue;
 			}
 			else if(strcmp(sItem, "rifle_desert") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give rifle_desert");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give rifle_desert");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSCAR].IntValue;
 			}
 			else if(strcmp(sItem, "rifle_ak47") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give rifle_ak47");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give rifle_ak47");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostAK47].IntValue;
 			}
 			else if(strcmp(sItem, "rifle_sg552") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give rifle_sg552");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give rifle_sg552");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSG552].IntValue;
 			}
 			else if(strcmp(sItem, "rifle_m60") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give rifle_m60");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give rifle_m60");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostM60].IntValue;
 			}
 			vDisplayRifleConfirmMenu(param1);
@@ -2443,25 +2443,25 @@ int iSniperMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			if(strcmp(sItem, "hunting_rifle") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give hunting_rifle");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give hunting_rifle");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostHunting].IntValue;
 			}
 			else if(strcmp(sItem, "sniper_scout") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give sniper_scout");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give sniper_scout");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostScout].IntValue;
 			}
 			else if(strcmp(sItem, "sniper_awp") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give sniper_awp");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give sniper_awp");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostAWP].IntValue;
 			}
 			else if(strcmp(sItem, "sniper_military") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give sniper_military");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give sniper_military");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostMilitary].IntValue;
 			}
 			vDisplaySniperConfirmMenu(param1);
@@ -2485,25 +2485,25 @@ int iShotgunMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			if(strcmp(sItem, "pumpshotgun") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give pumpshotgun");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give pumpshotgun");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostPump].IntValue;
 			}
 			else if(strcmp(sItem, "shotgun_chrome") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give shotgun_chrome");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give shotgun_chrome");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostChrome].IntValue;
 			}
 			else if(strcmp(sItem, "autoshotgun") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give autoshotgun");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give autoshotgun");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostAuto].IntValue;
 			}
 			else if(strcmp(sItem, "shotgun_spas") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give shotgun_spas");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give shotgun_spas");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSPAS].IntValue;
 			}
 			vDisplayShotgunConfirmMenu(param1);
@@ -2527,20 +2527,20 @@ int iThrowableMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			if(strcmp(sItem, "molotov") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give molotov");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give molotov");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostMolotov].IntValue;
 			}
 			else if(strcmp(sItem, "pipe_bomb") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give pipe_bomb");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give pipe_bomb");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostPipe].IntValue;
 			}
 			else if(strcmp(sItem, "vomitjar") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give vomitjar");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give vomitjar");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostBile].IntValue;
 			}
 			vDisplayThrowableConfirmMenu(param1);
@@ -2564,55 +2564,55 @@ int iMiscMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			if(strcmp(sItem, "pistol") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give pistol");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give pistol");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostP220].IntValue;
 			}
 			else if(strcmp(sItem, "pistol_magnum") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give pistol_magnum");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give pistol_magnum");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostMagnum].IntValue;
 			}
 			else if(strcmp(sItem, "grenade_launcher") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give grenade_launcher");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give grenade_launcher");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostGrenade].IntValue;
 			}
 			else if(strcmp(sItem, "chainsaw") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give chainsaw");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give chainsaw");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostChainsaw].IntValue;
 			}
 			else if(strcmp(sItem, "gnome") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give gnome");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give gnome");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostGnome].IntValue;
 			}
 			else if(strcmp(sItem, "cola_bottles") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give cola_bottles");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give cola_bottles");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostCola].IntValue;
 			}
 			else if(strcmp(sItem, "gascan") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give gascan");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give gascan");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostGasCan].IntValue;
 			}
 			else if(strcmp(sItem, "propanetank") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give propanetank");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give propanetank");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostPropane].IntValue;
 			}
 			else if(strcmp(sItem, "fireworkcrate") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give fireworkcrate");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give fireworkcrate");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostFireworks].IntValue;
 			}
 			else if(strcmp(sItem, "oxygentank") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give oxygentank");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give oxygentank");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostOxygen].IntValue;
 			}
 			vDisplayMiscConfirmMenu(param1);
@@ -2636,30 +2636,30 @@ int iHealthMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			if(strcmp(sItem, "first_aid_kit") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give first_aid_kit");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give first_aid_kit");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostHealthKit].IntValue;
 			}
 			else if(strcmp(sItem, "defibrillator") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give defibrillator");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give defibrillator");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostDefib].IntValue;
 			}
 			else if(strcmp(sItem, "pain_pills") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give pain_pills");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give pain_pills");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostPills].IntValue;
 			}
 			else if(strcmp(sItem, "adrenaline") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give adrenaline");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give adrenaline");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostAdren].IntValue;
 			}
 			else if(strcmp(sItem, "health") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give health");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give health");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostHeal].IntValue;
 			}
 			vDisplayHealthConfirmMenu(param1);
@@ -2683,35 +2683,35 @@ int iUpgradeMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			if(strcmp(sItem, "upgradepack_explosive") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give upgradepack_explosive");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give upgradepack_explosive");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostExplosivePack].IntValue;
 			}
 			else if(strcmp(sItem, "upgradepack_incendiary") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give upgradepack_incendiary");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give upgradepack_incendiary");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostIncendiaryPack].IntValue;
 			}
 			else if(strcmp(sItem, "explosive_ammo") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "upgrade_add EXPLOSIVE_AMMO");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "upgrade_add EXPLOSIVE_AMMO");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostExplosiveAmmo].IntValue;
 			}
 			else if(strcmp(sItem, "incendiary_ammo") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "upgrade_add INCENDIARY_AMMO");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "upgrade_add INCENDIARY_AMMO");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostIncendiaryAmmo].IntValue;
 			}
 			else if(strcmp(sItem, "laser_sight") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "upgrade_add LASER_SIGHT");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "upgrade_add LASER_SIGHT");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostLaserSight].IntValue;
 			}
 			else if(strcmp(sItem, "ammo") == 0)
 			{
-				strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), "give ammo");
+				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give ammo");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostAmmo].IntValue;
 			}
 			vDisplayUpgradeConfirmMenu(param1);
@@ -2735,10 +2735,10 @@ int iInfectedMenuHandler(Menu menu, MenuAction action, int client, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			if(strcmp(sItem, "heal") == 0)
 			{
-				strcopy(g_esPlayer[client].g_sCommand, sizeof(esPlayer::g_sCommand), "give health");
+				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "give health");
 				if(bIsTank(client))
 					g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostPZHeal].IntValue * g_esGeneral.g_cItemCosts[cCostTankHealMulti].IntValue;
 				else
@@ -2746,62 +2746,62 @@ int iInfectedMenuHandler(Menu menu, MenuAction action, int client, int param2)
 			}
 			else if(strcmp(sItem, "suicide") == 0)
 			{
-				strcopy(g_esPlayer[client].g_sCommand, sizeof(esPlayer::g_sCommand), "suicide");
+				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "suicide");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSuicide].IntValue;
 			}
 			else if(strcmp(sItem, "smoker") == 0)
 			{
-				strcopy(g_esPlayer[client].g_sCommand, sizeof(esPlayer::g_sCommand), "z_spawn_old smoker");
+				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old smoker");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSmoker].IntValue;
 			}
 			else if(strcmp(sItem, "boomer") == 0)
 			{
-				strcopy(g_esPlayer[client].g_sCommand, sizeof(esPlayer::g_sCommand), "z_spawn_old boomer");
+				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old boomer");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostBoomer].IntValue;
 			}
 			else if(strcmp(sItem, "hunter") == 0)
 			{
-				strcopy(g_esPlayer[client].g_sCommand, sizeof(esPlayer::g_sCommand), "z_spawn_old hunter");
+				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old hunter");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostHunter].IntValue;
 			}
 			else if(strcmp(sItem, "spitter") == 0)
 			{
-				strcopy(g_esPlayer[client].g_sCommand, sizeof(esPlayer::g_sCommand), "z_spawn_old spitter");
+				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old spitter");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSpitter].IntValue;
 			}
 			else if(strcmp(sItem, "jockey") == 0)
 			{
-				strcopy(g_esPlayer[client].g_sCommand, sizeof(esPlayer::g_sCommand), "z_spawn_old jockey");
+				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old jockey");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostJockey].IntValue;
 			}
 			else if(strcmp(sItem, "charger") == 0)
 			{
-				strcopy(g_esPlayer[client].g_sCommand, sizeof(esPlayer::g_sCommand), "z_spawn_old charger");
+				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old charger");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostCharger].IntValue;
 			}
 			else if(strcmp(sItem, "witch") == 0)
 			{
-				strcopy(g_esPlayer[client].g_sCommand, sizeof(esPlayer::g_sCommand), "z_spawn_old witch");
+				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old witch");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostWitch].IntValue;
 			}
 			else if(strcmp(sItem, "witch_bride") == 0)
 			{
-				strcopy(g_esPlayer[client].g_sCommand, sizeof(esPlayer::g_sCommand), "z_spawn_old witch_bride");
+				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old witch_bride");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostWitch].IntValue;
 			}
 			else if(strcmp(sItem, "tank") == 0)
 			{
-				strcopy(g_esPlayer[client].g_sCommand, sizeof(esPlayer::g_sCommand), "z_spawn_old tank");
+				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old tank");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostTank].IntValue;
 			}
 			else if(strcmp(sItem, "horde") == 0)
 			{
-				strcopy(g_esPlayer[client].g_sCommand, sizeof(esPlayer::g_sCommand), "director_force_panic_event");
+				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "director_force_panic_event");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostHorde].IntValue;
 			}
 			else if(strcmp(sItem, "mob") == 0)
 			{
-				strcopy(g_esPlayer[client].g_sCommand, sizeof(esPlayer::g_sCommand), "z_spawn_old mob");
+				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old mob");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostMob].IntValue;
 			}
 			vDisplayInfectedConfirmMenu(client);
@@ -2817,11 +2817,11 @@ void vDisplayMeleeConfirmMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iMeleeConfirmMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
 	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Yes", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
 	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "No", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
 	menu.AddItem("n", sInfo);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
@@ -2832,11 +2832,11 @@ void vDisplaySMGConfirmMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iSMGConfirmMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
 	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Yes", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
 	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "No", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
 	menu.AddItem("n", sInfo);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
@@ -2847,11 +2847,11 @@ void vDisplayRifleConfirmMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iRifleConfirmMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
 	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Yes", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
 	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "No", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
 	menu.AddItem("n", sInfo);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
@@ -2862,11 +2862,11 @@ void vDisplaySniperConfirmMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iSniperConfirmMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
 	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Yes", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
 	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "No", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
 	menu.AddItem("n", sInfo);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
@@ -2877,11 +2877,11 @@ void vDisplayShotgunConfirmMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iShotgunConfirmMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
 	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Yes", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
 	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "No", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
 	menu.AddItem("n", sInfo);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
@@ -2892,11 +2892,11 @@ void vDisplayThrowableConfirmMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iThrowableConfirmMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
 	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Yes", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
 	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "No", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
 	menu.AddItem("n", sInfo);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
@@ -2907,11 +2907,11 @@ void vDisplayMiscConfirmMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iMiscConfirmMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
 	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Yes", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
 	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "No", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
 	menu.AddItem("n", sInfo);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
@@ -2922,11 +2922,11 @@ void vDisplayHealthConfirmMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iHealthConfirmMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
 	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Yes", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
 	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "No", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
 	menu.AddItem("n", sInfo);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
@@ -2937,11 +2937,11 @@ void vDisplayUpgradeConfirmMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iUpgradeConfirmMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
 	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Yes", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
 	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "No", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
 	menu.AddItem("n", sInfo);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
@@ -2952,11 +2952,11 @@ void vDisplayInfectedConfirmMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iInfectedConfirmMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
 	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Yes", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
 	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "No", client);
+	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
 	menu.AddItem("n", sInfo);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
@@ -2970,13 +2970,13 @@ int iMeleeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'n':
 				{
 					vBuildMeleeMenu(param1);
-					strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
@@ -2984,7 +2984,7 @@ int iMeleeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param
 				{
 					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
 					{
-						strcopy(g_esPlayer[param1].g_sBought, sizeof(esPlayer::g_sBought), g_esPlayer[param1].g_sCommand);
+						strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
 						vCheatCommand(param1, g_esPlayer[param1].g_sCommand);
@@ -2997,7 +2997,7 @@ int iMeleeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param
 			if(param2 == MenuCancel_ExitBack)
 				vBuildMeleeMenu(param1);
 
-			strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
 		case MenuAction_End:
@@ -3014,13 +3014,13 @@ int iRifleConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'n':
 				{
 					vBuildRifleMenu(param1);
-					strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
@@ -3028,7 +3028,7 @@ int iRifleConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param
 				{
 					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
 					{
-						strcopy(g_esPlayer[param1].g_sBought, sizeof(esPlayer::g_sBought), g_esPlayer[param1].g_sCommand);
+						strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
 						vCheatCommand(param1, g_esPlayer[param1].g_sCommand);
@@ -3041,7 +3041,7 @@ int iRifleConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param
 			if(param2 == MenuCancel_ExitBack)
 				vBuildRifleMenu(param1);
 
-			strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
 		case MenuAction_End:
@@ -3058,13 +3058,13 @@ int iSniperConfirmMenuHandler(Menu menu, MenuAction action, int param1, int para
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'n':
 				{
 					vBuildSniperMenu(param1);
-					strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
@@ -3072,7 +3072,7 @@ int iSniperConfirmMenuHandler(Menu menu, MenuAction action, int param1, int para
 				{
 					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
 					{
-						strcopy(g_esPlayer[param1].g_sBought,sizeof(esPlayer::g_sBought), g_esPlayer[param1].g_sCommand);
+						strcopy(g_esPlayer[param1].g_sBought,sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
 						vCheatCommand(param1, g_esPlayer[param1].g_sCommand);
@@ -3085,7 +3085,7 @@ int iSniperConfirmMenuHandler(Menu menu, MenuAction action, int param1, int para
 			if(param2 == MenuCancel_ExitBack)
 				vBuildSniperMenu(param1);
 
-			strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
 		case MenuAction_End:
@@ -3102,13 +3102,13 @@ int iSMGConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'n':
 				{
 					vBuildSMGMenu(param1);
-					strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
@@ -3116,7 +3116,7 @@ int iSMGConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 				{
 					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
 					{
-						strcopy(g_esPlayer[param1].g_sBought, sizeof(esPlayer::g_sBought), g_esPlayer[param1].g_sCommand);
+						strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
 						vCheatCommand(param1, g_esPlayer[param1].g_sCommand);
@@ -3129,7 +3129,7 @@ int iSMGConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 			if(param2 == MenuCancel_ExitBack)
 				vBuildSMGMenu(param1);
 
-			strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
 		case MenuAction_End:
@@ -3146,13 +3146,13 @@ int iShotgunConfirmMenuHandler(Menu menu, MenuAction action, int param1, int par
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'n':
 				{
 					vBuildShotgunMenu(param1);
-					strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
@@ -3160,7 +3160,7 @@ int iShotgunConfirmMenuHandler(Menu menu, MenuAction action, int param1, int par
 				{
 					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
 					{
-						strcopy(g_esPlayer[param1].g_sBought, sizeof(esPlayer::g_sBought), g_esPlayer[param1].g_sCommand);
+						strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
 						vCheatCommand(param1, g_esPlayer[param1].g_sCommand);
@@ -3173,7 +3173,7 @@ int iShotgunConfirmMenuHandler(Menu menu, MenuAction action, int param1, int par
 			if(param2 == MenuCancel_ExitBack)
 				vBuildShotgunMenu(param1);
 
-			strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
 		case MenuAction_End:
@@ -3190,13 +3190,13 @@ int iThrowableConfirmMenuHandler(Menu menu, MenuAction action, int param1, int p
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'n':
 				{
 					vBuildThrowableMenu(param1);
-					strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
@@ -3204,7 +3204,7 @@ int iThrowableConfirmMenuHandler(Menu menu, MenuAction action, int param1, int p
 				{
 					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
 					{
-						strcopy(g_esPlayer[param1].g_sBought, sizeof(esPlayer::g_sBought), g_esPlayer[param1].g_sCommand);
+						strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
 						vCheatCommand(param1, g_esPlayer[param1].g_sCommand);
@@ -3217,7 +3217,7 @@ int iThrowableConfirmMenuHandler(Menu menu, MenuAction action, int param1, int p
 			if(param2 == MenuCancel_ExitBack)
 				vBuildThrowableMenu(param1);
 
-			strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
 		case MenuAction_End:
@@ -3234,13 +3234,13 @@ int iMiscConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'n':
 				{
 					vBuildMiscMenu(param1);
-					strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
@@ -3248,7 +3248,7 @@ int iMiscConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2
 				{
 					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
 					{
-						strcopy(g_esPlayer[param1].g_sBought, sizeof(esPlayer::g_sBought), g_esPlayer[param1].g_sCommand);
+						strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
 						vCheatCommand(param1, g_esPlayer[param1].g_sCommand);
@@ -3261,7 +3261,7 @@ int iMiscConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2
 			if(param2 == MenuCancel_ExitBack)
 				vBuildMiscMenu(param1);
 
-			strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
 		case MenuAction_End:
@@ -3278,13 +3278,13 @@ int iHealthConfirmMenuHandler(Menu menu, MenuAction action, int param1, int para
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'n':
 				{
 					vBuildHealthMenu(param1);
-					strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
@@ -3296,7 +3296,7 @@ int iHealthConfirmMenuHandler(Menu menu, MenuAction action, int param1, int para
 						{
 							if(IsPlayerAlive(param1))
 							{
-								strcopy(g_esPlayer[param1].g_sBought, sizeof(esPlayer::g_sBought), g_esPlayer[param1].g_sCommand);
+								strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 								g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 								vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
 								vCheatCommand(param1, g_esPlayer[param1].g_sCommand);
@@ -3304,7 +3304,7 @@ int iHealthConfirmMenuHandler(Menu menu, MenuAction action, int param1, int para
 						}
 						else
 						{
-							strcopy(g_esPlayer[param1].g_sBought, sizeof(esPlayer::g_sBought), g_esPlayer[param1].g_sCommand);
+							strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 							g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 							vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
 							vCheatCommand(param1, g_esPlayer[param1].g_sCommand);
@@ -3318,7 +3318,7 @@ int iHealthConfirmMenuHandler(Menu menu, MenuAction action, int param1, int para
 			if(param2 == MenuCancel_ExitBack)
 				vBuildHealthMenu(param1);
 
-			strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
 		case MenuAction_End:
@@ -3334,7 +3334,7 @@ void vReloadAmmo(int client, int iCost, const char[] sItem)
 	if(iWeapon > MaxClients && IsValidEntity(iWeapon))
 	{
 		char sWeapon[32];
-		GetEdictClassname(iWeapon, sWeapon, sizeof(sWeapon));
+		GetEdictClassname(iWeapon, sWeapon, sizeof sWeapon);
 		if(strcmp(sWeapon, "weapon_rifle_m60") == 0)
 			SetEntProp(iWeapon, Prop_Send, "m_iClip1", g_esGeneral.g_iClipSize[0]);
 		else if(strcmp(sWeapon, "weapon_grenade_launcher") == 0)
@@ -3360,13 +3360,13 @@ int iUpgradeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int par
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'n':
 				{
 					vBuildUpgradeMenu(param1);
-					strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
@@ -3378,7 +3378,7 @@ int iUpgradeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int par
 							vReloadAmmo(param1, g_esPlayer[param1].g_iItemCost, g_esPlayer[param1].g_sCommand);
 						else
 						{
-							strcopy(g_esPlayer[param1].g_sBought, sizeof(esPlayer::g_sBought), g_esPlayer[param1].g_sCommand);
+							strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 							g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 							vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
 							vCheatCommand(param1, g_esPlayer[param1].g_sCommand);
@@ -3392,7 +3392,7 @@ int iUpgradeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int par
 			if(param2 == MenuCancel_ExitBack)
 				vBuildUpgradeMenu(param1);
 
-			strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
 		case MenuAction_End:
@@ -3409,13 +3409,13 @@ int iInfectedConfirmMenuHandler(Menu menu, MenuAction action, int param1, int pa
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'n':
 				{
 					vBuildBuyMenu(param1);
-					strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
@@ -3426,11 +3426,11 @@ int iInfectedConfirmMenuHandler(Menu menu, MenuAction action, int param1, int pa
 
 					int iPos;
 					char sCommand[32], sArguments[32];
-					if((iPos = SplitString(g_esPlayer[param1].g_sCommand, " ", sCommand, sizeof(sCommand))) == -1)
-						strcopy(sCommand, sizeof(sCommand), g_esPlayer[param1].g_sCommand);
+					if((iPos = SplitString(g_esPlayer[param1].g_sCommand, " ", sCommand, sizeof sCommand)) == -1)
+						strcopy(sCommand, sizeof sCommand, g_esPlayer[param1].g_sCommand);
 					else
 					{
-						strcopy(sArguments, sizeof(sArguments), g_esPlayer[param1].g_sCommand[iPos]);
+						strcopy(sArguments, sizeof sArguments, g_esPlayer[param1].g_sCommand[iPos]);
 						TrimString(sArguments);
 					}
 
@@ -3469,7 +3469,7 @@ int iInfectedConfirmMenuHandler(Menu menu, MenuAction action, int param1, int pa
 
 									if(IsPlayerAlive(param1))
 									{
-										strcopy(g_esPlayer[param1].g_sBought, sizeof(esPlayer::g_sBought), g_esPlayer[param1].g_sCommand);
+										strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 										g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 										vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
 									}
@@ -3482,7 +3482,7 @@ int iInfectedConfirmMenuHandler(Menu menu, MenuAction action, int param1, int pa
 						}
 						vCheatCommandEx(param1, sCommand, sArguments);
 					}
-					strcopy(g_esPlayer[param1].g_sBought, sizeof(esPlayer::g_sBought), g_esPlayer[param1].g_sCommand);
+					strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 					g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 					vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
 				}
@@ -3490,7 +3490,7 @@ int iInfectedConfirmMenuHandler(Menu menu, MenuAction action, int param1, int pa
 		}
 		case MenuAction_Cancel:
 		{
-			strcopy(g_esPlayer[param1].g_sCommand, sizeof(esPlayer::g_sCommand), g_esPlayer[param1].g_sBought);
+			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
 		case MenuAction_End:
@@ -3591,8 +3591,8 @@ void vCheatCommandEx(int client, const char[] sCommand, const char[] sArguments 
 void vCheatCommand(int client, const char[] sCommand)
 {
 	char sCmd[32];
-	if(SplitString(sCommand, " ", sCmd, sizeof(sCmd)) == -1)
-		strcopy(sCmd, sizeof(sCmd), sCommand);
+	if(SplitString(sCommand, " ", sCmd, sizeof sCmd) == -1)
+		strcopy(sCmd, sizeof sCmd, sCommand);
 
 	static int iFlagBits, iCmdFlags;
 	iFlagBits = GetUserFlagBits(client);
@@ -3614,7 +3614,7 @@ void vBuildSpecialMenu(int client)
 {
 	char sInfo[32];
 	Menu menu = new Menu(iSpecialMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
 	menu.SetTitle(sInfo);
 	menu.AddItem("h", "生命汲取");
 	if(g_bWeaponHandling)
@@ -3630,7 +3630,7 @@ int iSpecialMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			switch(sItem[0])
 			{
 				case 'h':
@@ -3695,7 +3695,7 @@ int iHealthLeechMenuHandler(Menu menu, MenuAction action, int client, int param2
 		case MenuAction_Select:
 		{
 			char sItem[16];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			int iValue = StringToInt(sItem);
 			switch(iValue)
 			{
@@ -3735,7 +3735,7 @@ int iSpeedUpRealodMenuHandler(Menu menu, MenuAction action, int client, int para
 		case MenuAction_Select:
 		{
 			char sItem[16];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			float iValue = StringToFloat(sItem);
 			switch(iValue)
 			{
@@ -3774,17 +3774,17 @@ void vDisplayHealthLeechConfirmMenu(int client, const char[] sValue)
 	char sTrans[32];
 	char sTemp[2][16];
 	Menu menu = new Menu(iHealthLeechConfirmMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
 	menu.SetTitle(sInfo);
-	strcopy(sTemp[1], sizeof(sTemp[]), sValue);
+	strcopy(sTemp[1], sizeof sTemp[], sValue);
 
-	strcopy(sTemp[0], sizeof(sTemp[]), "y");
-	ImplodeStrings(sTemp, 2, "|", sInfo, sizeof(sInfo));
-	FormatEx(sTrans, sizeof(sTrans),"%T", "Yes", client);
+	strcopy(sTemp[0], sizeof sTemp[], "y");
+	ImplodeStrings(sTemp, 2, "|", sInfo, sizeof sInfo);
+	FormatEx(sTrans, sizeof sTrans,"%T", "Yes", client);
 	menu.AddItem(sInfo, sTrans);
-	strcopy(sTemp[0], sizeof(sTemp[]), "n");
-	ImplodeStrings(sTemp, 2, "|", sInfo, sizeof(sInfo));
-	FormatEx(sTrans, sizeof(sTrans),"%T", "No", client);
+	strcopy(sTemp[0], sizeof sTemp[], "n");
+	ImplodeStrings(sTemp, 2, "|", sInfo, sizeof sInfo);
+	FormatEx(sTrans, sizeof sTrans,"%T", "No", client);
 	menu.AddItem(sInfo, sTrans);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
@@ -3797,17 +3797,17 @@ void vDisplaySpeedUpRealodConfirmMenu(int client, const char[] sValue)
 	char sTrans[32];
 	char sTemp[2][16];
 	Menu menu = new Menu(iSpeedUpRealodConfirmMenuHandler);
-	FormatEx(sInfo, sizeof(sInfo),"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
 	menu.SetTitle(sInfo);
-	strcopy(sTemp[1], sizeof(sTemp[]), sValue);
+	strcopy(sTemp[1], sizeof sTemp[], sValue);
 
-	strcopy(sTemp[0], sizeof(sTemp[]), "y");
-	ImplodeStrings(sTemp, 2, "|", sInfo, sizeof(sInfo));
-	FormatEx(sTrans, sizeof(sTrans),"%T", "Yes", client);
+	strcopy(sTemp[0], sizeof sTemp[], "y");
+	ImplodeStrings(sTemp, 2, "|", sInfo, sizeof sInfo);
+	FormatEx(sTrans, sizeof sTrans,"%T", "Yes", client);
 	menu.AddItem(sInfo, sTrans);
-	strcopy(sTemp[0], sizeof(sTemp[]), "n");
-	ImplodeStrings(sTemp, 2, "|", sInfo, sizeof(sInfo));
-	FormatEx(sTrans, sizeof(sTrans),"%T", "No", client);
+	strcopy(sTemp[0], sizeof sTemp[], "n");
+	ImplodeStrings(sTemp, 2, "|", sInfo, sizeof sInfo);
+	FormatEx(sTrans, sizeof sTrans,"%T", "No", client);
 	menu.AddItem(sInfo, sTrans);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
@@ -3822,7 +3822,7 @@ int iHealthLeechConfirmMenuHandler(Menu menu, MenuAction action, int param1, int
 		{
 			char sItem[32];
 			char sInfo[2][16];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			ExplodeString(sItem, "|", sInfo, 2, 16);
 			switch(sInfo[0][0])
 			{
@@ -3859,7 +3859,7 @@ int iSpeedUpRealodConfirmMenuHandler(Menu menu, MenuAction action, int param1, i
 		{
 			char sItem[32];
 			char sInfo[2][16];
-			menu.GetItem(param2, sItem, sizeof(sItem));
+			menu.GetItem(param2, sItem, sizeof sItem);
 			ExplodeString(sItem, "|", sInfo, 2, 16);
 			switch(sInfo[0][0])
 			{
