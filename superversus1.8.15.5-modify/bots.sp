@@ -3,7 +3,7 @@
 #include <sourcemod>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.9.5"
+#define PLUGIN_VERSION "1.9.6"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
 #define TEAM_NOTEAM		0
@@ -465,6 +465,12 @@ Action cmdTakeOverBot(int client, int args)
 		return Plugin_Handled;
 	}
 
+	if(!iFindAvailableSurvivorBot())
+	{
+		ReplyToCommand(client, "\x01没有 \x05空闲的电脑BOT \x01可以接管\x01.");
+		return Plugin_Handled;
+	}
+
 	vDisplayBotList(client);
 	return Plugin_Handled;
 }
@@ -509,8 +515,8 @@ void vDisplayBotList(int client)
 // L4D2_Adrenaline_Recovery (https://github.com/LuxLuma/L4D2_Adrenaline_Recovery)
 char[] sGetModelName(int client)
 {
-	static int iIndex;
-	static char sModel[31];
+	int iIndex;
+	char sModel[31];
 	GetEntPropString(client, Prop_Data, "m_ModelName", sModel, sizeof sModel);
 	switch(sModel[29])
 	{
@@ -600,12 +606,6 @@ Action cmdTeamPanel(int client, int args)
 	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
-	if(!iFindAvailableSurvivorBot())
-	{
-		ReplyToCommand(client, "\x01没有 \x05空闲的电脑BOT \x01可以接管\x01.");
-		return Plugin_Handled;
-	}
-		
 	vDisplayTeamPanel(client);
 	return Plugin_Handled;
 }
@@ -1523,8 +1523,8 @@ void vDisplayTeamPanel(int client)
 	{
 		if(!IsClientInGame(i) || GetClientTeam(i) != TEAM_INFECTED)
 			continue;
-		
-		if(IsFakeClient(i) && (iClass = GetEntProp(i, Prop_Send, "m_zombieClass")) != 8)
+
+		if((iClass = GetEntProp(i, Prop_Send, "m_zombieClass")) != 8 && IsFakeClient(i))
 			continue;
 
 		FormatEx(sBuffer, sizeof sBuffer, "%N", i);
