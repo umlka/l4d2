@@ -249,7 +249,7 @@ public void OnMapStart()
 {
 	int i;
 	int iLength = sizeof g_sMeleeModels;
-	for(i = 0; i < iLength; i++)
+	for(; i < iLength; i++)
 	{
 		if(!IsModelPrecached(g_sMeleeModels[i]))
 			PrecacheModel(g_sMeleeModels[i], true);
