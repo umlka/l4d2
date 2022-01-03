@@ -417,7 +417,7 @@ void vBoomer_OnVomit(int client)
 
 		GetVectorAngles(vVectors, vAngles);
 
-		vLength += GetEntPropFloat(iAimTarget, Prop_Data, "m_flMaxspeed");
+		//vLength += GetEntPropFloat(iAimTarget, Prop_Data, "m_flMaxspeed");
 	}
 	else
 	{
@@ -427,7 +427,7 @@ void vBoomer_OnVomit(int client)
 		vVectors[1] = Sine(DegToRad(vAngles[1])) * Cosine(DegToRad(vAngles[0]));
 		vVectors[2] = Sine(DegToRad(vAngles[0]));
 
-		//vLength += fNearestSurvivorDistance(client);
+		vLength += fNearestSurvivorDistance(client);
 	}
 	
 	NormalizeVector(vVectors, vVectors);
