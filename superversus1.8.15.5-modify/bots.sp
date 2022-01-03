@@ -1062,7 +1062,7 @@ void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadca
 			
 			entity = CreateEntityByName("info_survivor_position");
 			char sOrder[2];
-			IntToString(iSurvivor - RoundToFloor(iSurvivor / 4.0) * 4, sOrder, sizeof sOrder);
+			IntToString(iSurvivor - RoundToFloor(iSurvivor / 4.0) * 4 + 1, sOrder, sizeof sOrder);
 			DispatchKeyValue(entity, "Order", sOrder);
 			TeleportEntity(entity, vOrigin, NULL_VECTOR, NULL_VECTOR);
 			DispatchSpawn(entity);
