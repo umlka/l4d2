@@ -193,24 +193,24 @@ char
 
 Handle
 	g_hTimer,
-	g_hSDK_Call_IsInStasis,
-	g_hSDK_Call_LeaveStasis,
-	g_hSDK_Call_State_Transition,
-	g_hSDK_Call_MaterializeFromGhost,
-	g_hSDK_Call_SetClass,
-	g_hSDK_Call_CreateForPlayer,
-	g_hSDK_Call_CleanupPlayerState,
-	g_hSDK_Call_TakeOverZombieBot,
-	g_hSDK_Call_RoundRespawn,
-	g_hSDK_Call_SetHumanSpectator,
-	g_hSDK_Call_TakeOverBot,
-	g_hSDK_Call_HasPlayerControlledZombies;
+	g_hSDKIsInStasis,
+	g_hSDKLeaveStasis,
+	g_hSDKState_Transition,
+	g_hSDKMaterializeFromGhost,
+	g_hSDKSetClass,
+	g_hSDKCreateForPlayer,
+	g_hSDKCleanupPlayerState,
+	g_hSDKTakeOverZombieBot,
+	g_hSDKRoundRespawn,
+	g_hSDKSetHumanSpectator,
+	g_hSDKTakeOverBot,
+	g_hSDKHasPlayerControlledZombies;
 
 Address
 	g_pStatsCondition;
 
 DynamicDetour
-	g_dDetour[4];
+	g_dDetour[6];
 
 ConVar
 	g_hGameMode,
@@ -218,7 +218,7 @@ ConVar
 	g_hAllowSurvuivorLimit,
 	g_hSurvuivorAllowChance,
 	g_hSbAllBotGame,
-	g_hAllowAllBotSurvivorTeam,
+	g_hSbAllBotTeam,
 	g_hMaxIncapacitatedCount,
 	g_hExchangeTeam,
 	g_hPZSuicideTime,
@@ -240,10 +240,11 @@ ConVar
 	g_hScaleWeights;
 
 bool
+	g_bIsLinuxOS,
 	g_bHasPlayerControlledZombies,
 	g_bHasAnySurvivorLeftSafeArea,
 	g_bSbAllBotGame,
-	g_bAllowAllBotSurvivorTeam,
+	g_bSbAllBotTeam,
 	g_bExchangeTeam,
 	g_bGlowColorEnable,
 	g_bPZPunishHealth,
@@ -299,7 +300,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.3.0",
+	version = "3.3.1",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -371,15 +372,15 @@ public void OnPluginStart()
 	g_hSpawnWeights[SI_CHARGER] = CreateConVar("cz_charger_weight", "50", "charger产生比重", CVAR_FLAGS, true, 0.0);
 	g_hScaleWeights = CreateConVar("cz_scale_weights", "1",	"[ 0 = 关闭 | 1 = 开启 ] 缩放相应特感的产生比重", _, true, 0.0, true, 1.0);
 
-	//AutoExecConfig(true, "controll_zombies");
+	AutoExecConfig(true, "controll_zombies");
 	// 想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
 	g_hGameMode = FindConVar("mp_gamemode");
 	g_hGameMode.AddChangeHook(vModeConVarChanged);
 	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
 	g_hSbAllBotGame.AddChangeHook(vOtherConVarChanged);
-	g_hAllowAllBotSurvivorTeam = FindConVar("allow_all_bot_survivor_team");
-	g_hAllowAllBotSurvivorTeam.AddChangeHook(vOtherConVarChanged);
+	g_hSbAllBotTeam = FindConVar("allow_all_bot_survivor_team");
+	g_hSbAllBotTeam.AddChangeHook(vOtherConVarChanged);
 	g_hMaxIncapacitatedCount = FindConVar("survivor_max_incapacitated_count");
 	g_hMaxIncapacitatedCount.AddChangeHook(vColorConVarChanged);
 
@@ -449,7 +450,7 @@ void vIsAllowed()
 	g_hGameMode.GetString(g_sGameMode, sizeof(g_sGameMode));
 
 	bool bLast = g_bHasPlayerControlledZombies;
-	g_bHasPlayerControlledZombies = SDKCall(g_hSDK_Call_HasPlayerControlledZombies);
+	g_bHasPlayerControlledZombies = SDKCall(g_hSDKHasPlayerControlledZombies);
 	if(g_bHasPlayerControlledZombies == true)
 	{
 		vToggle(false);
@@ -556,7 +557,7 @@ void vGetOtherCvars()
 	g_iAllowSurvuivorLimit = g_hAllowSurvuivorLimit.IntValue;
 	g_fSurvuivorAllowChance = g_hSurvuivorAllowChance.FloatValue;
 	g_bSbAllBotGame = g_hSbAllBotGame.BoolValue;
-	g_bAllowAllBotSurvivorTeam = g_hAllowAllBotSurvivorTeam.BoolValue;
+	g_bSbAllBotTeam = g_hSbAllBotTeam.BoolValue;
 	g_bExchangeTeam = g_hExchangeTeam.BoolValue;
 	g_iPZRespawnTime = g_hPZRespawnTime.IntValue;
 	g_iPZSuicideTime = g_hPZSuicideTime.IntValue;
@@ -886,14 +887,14 @@ void vDisplayClassMenu(int client)
 	menu.Display(client, 15);
 }
 
-int iDisplayClassMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iDisplayClassMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 {
 	switch(action)
 	{
 		case MenuAction_Select:
 		{
-			if(param2 == 0 && GetClientTeam(client) == 3 && !IsFakeClient(client) && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
-				vSelectZombieClassMenu(client);
+			if(param2 == 0 && GetClientTeam(param1) == 3 && !IsFakeClient(param1) && IsPlayerAlive(param1) && GetEntProp(param1, Prop_Send, "m_isGhost") == 1)
+				vSelectZombieClassMenu(param1);
 		}
 		case MenuAction_End:
 			delete menu;
@@ -921,20 +922,20 @@ void vSelectZombieClassMenu(int client)
 	menu.Display(client, 30);
 }
 
-int iSelectZombieClassMenuHandler(Menu menu, MenuAction action, int client, int param2)
+int iSelectZombieClassMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 {
 	switch(action)
 	{
 		case MenuAction_Select:
 		{
 			int iZombieClass;
-			if(GetClientTeam(client) == 3 && !IsFakeClient(client) && IsPlayerAlive(client) && (iZombieClass = GetEntProp(client, Prop_Send, "m_zombieClass")) != 8 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+			if(GetClientTeam(param1) == 3 && !IsFakeClient(param1) && IsPlayerAlive(param1) && (iZombieClass = GetEntProp(param1, Prop_Send, "m_zombieClass")) != 8 && GetEntProp(param1, Prop_Send, "m_isGhost") == 1)
 			{
 				char sItem[2];
 				menu.GetItem(param2, sItem, sizeof(sItem));
 				int iClass = StringToInt(sItem);
 				if(++iClass != iZombieClass)
-					vSetZombieClassAndPunish(client, iClass);
+					vSetZombieClassAndPunish(param1, iClass);
 			}
 		}
 		case MenuAction_End:
@@ -1009,7 +1010,7 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 		else if(iFlags & IN_ATTACK)
 		{
 			if(GetEntProp(client, Prop_Send, "m_ghostSpawnState") == 1)
-				SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
+				SDKCall(g_hSDKMaterializeFromGhost, client);
 		}
 	}
 	else
@@ -1271,7 +1272,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 			g_iLastTeamID[client] = 0;
 
 			if(team == 2 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
-				SetEntProp(client, Prop_Send, "m_isGhost", 0); // SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
+				SetEntProp(client, Prop_Send, "m_isGhost", 0); // SDKCall(g_hSDKMaterializeFromGhost, client);
 			
 			CreateTimer(0.1, tmrLadderAndGlow, userid, TIMER_FLAG_NO_MAPCHANGE);
 		}
@@ -1348,7 +1349,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 	{
 		RequestFrame(OnNextFrame_PlayerSpawn, userid); // player_bot_replace在player_spawn之后触发，延迟一帧进行接管判断
 
-		if(!IsFakeClient(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_isGhost") == 0)
+		if(!IsFakeClient(client))
 			vSetInfectedGhost(client, GetEntProp(client, Prop_Send, "m_zombieClass") == 8);
 	}
 }
@@ -1377,8 +1378,8 @@ void OnNextFrame_PlayerSpawn(int client)
 						CPrintToChatAll("{green}★ {default}[{olive}AI{default}] {red}%N {default}已被 {red}%N {olive}接管", client, iPlayer);
 				}
 
-				if(iPlayer == 0 && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_Call_IsInStasis, client)))
-					SDKCall(g_hSDK_Call_LeaveStasis, client); // 解除战役模式下特感方有玩家存在时坦克卡住的问题
+				if(iPlayer == 0 && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDKIsInStasis, client)))
+					SDKCall(g_hSDKLeaveStasis, client); // 解除战役模式下特感方有玩家存在时坦克卡住的问题
 			}
 		}
 	}
@@ -1810,7 +1811,7 @@ int iTakeOverTank(int tank)
 			{
 				if(IsPlayerAlive(client))
 				{
-					SDKCall(g_hSDK_Call_CleanupPlayerState, client);
+					SDKCall(g_hSDKCleanupPlayerState, client);
 					ForcePlayerSuicide(client);
 				}
 			}
@@ -1835,7 +1836,7 @@ int iGetStandingSurvivors()
 
 bool bAllowSurvivorTakeOver()
 {
-	if(g_bSbAllBotGame || g_bAllowAllBotSurvivorTeam)
+	if(g_bSbAllBotGame || g_bSbAllBotTeam)
 		return true;
 
 	int iAlivesurvivor;
@@ -1973,7 +1974,7 @@ void vChangeTeamToSurvivor(int client)
 
 	// 防止因切换而导致正处于Ghost状态的坦克丢失
 	if(GetEntProp(client, Prop_Send, "m_isGhost") == 1)
-		SetEntProp(client, Prop_Send, "m_isGhost", 0); // SDKCall(g_hSDK_Call_MaterializeFromGhost, client);
+		SetEntProp(client, Prop_Send, "m_isGhost", 0); // SDKCall(g_hSDKMaterializeFromGhost, client);
 
 	int iBot = GetClientOfUserId(g_iPlayerBot[client]);
 	if(iBot == 0 || !bIsValidAliveSurvivorBot(iBot))
@@ -1984,8 +1985,8 @@ void vChangeTeamToSurvivor(int client)
 
 	if(iBot)
 	{
-		SDKCall(g_hSDK_Call_SetHumanSpectator, iBot, client);
-		SDKCall(g_hSDK_Call_TakeOverBot, client, true);
+		SDKCall(g_hSDKSetHumanSpectator, iBot, client);
+		SDKCall(g_hSDKTakeOverBot, client, true);
 	}
 	else
 	{
@@ -2529,40 +2530,40 @@ void vLoadGameData()
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CBaseEntity::IsInStasis") == false) // https://forums.alliedmods.net/showthread.php?t=302140
 		SetFailState("Failed to find offset: CBaseEntity::IsInStasis");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_Call_IsInStasis = EndPrepSDKCall();
-	if(g_hSDK_Call_IsInStasis == null)
+	g_hSDKIsInStasis = EndPrepSDKCall();
+	if(g_hSDKIsInStasis == null)
 		SetFailState("Failed to create SDKCall: CBaseEntity::IsInStasis");
 	
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "Tank::LeaveStasis") == false) // https://forums.alliedmods.net/showthread.php?t=319342
 		SetFailState("Failed to find signature: Tank::LeaveStasis");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	g_hSDK_Call_LeaveStasis = EndPrepSDKCall();
-	if(g_hSDK_Call_LeaveStasis == null)
+	g_hSDKLeaveStasis = EndPrepSDKCall();
+	if(g_hSDKLeaveStasis == null)
 		SetFailState("Failed to create SDKCall: Tank::LeaveStasis");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CCSPlayer::State_Transition") == false)
 		SetFailState("Failed to find signature: CCSPlayer::State_Transition");
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
-	g_hSDK_Call_State_Transition = EndPrepSDKCall();
-	if(g_hSDK_Call_State_Transition == null)
+	g_hSDKState_Transition = EndPrepSDKCall();
+	if(g_hSDKState_Transition == null)
 		SetFailState("Failed to create SDKCall: CCSPlayer::State_Transition");
 		
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::MaterializeFromGhost") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::MaterializeFromGhost");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	g_hSDK_Call_MaterializeFromGhost = EndPrepSDKCall();
-	if(g_hSDK_Call_MaterializeFromGhost == null)
+	g_hSDKMaterializeFromGhost = EndPrepSDKCall();
+	if(g_hSDKMaterializeFromGhost == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::MaterializeFromGhost");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::SetClass") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::SetClass");
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
-	g_hSDK_Call_SetClass = EndPrepSDKCall();
-	if(g_hSDK_Call_SetClass == null)
+	g_hSDKSetClass = EndPrepSDKCall();
+	if(g_hSDKSetClass == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::SetClass");
 	
 	StartPrepSDKCall(SDKCall_Static);
@@ -2570,30 +2571,30 @@ void vLoadGameData()
 		SetFailState("Failed to find signature: CBaseAbility::CreateForPlayer");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
-	g_hSDK_Call_CreateForPlayer = EndPrepSDKCall();
-	if(g_hSDK_Call_CreateForPlayer == null)
+	g_hSDKCreateForPlayer = EndPrepSDKCall();
+	if(g_hSDKCreateForPlayer == null)
 		SetFailState("Failed to create SDKCall: CBaseAbility::CreateForPlayer");
 	
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::CleanupPlayerState") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::CleanupPlayerState");
-	g_hSDK_Call_CleanupPlayerState = EndPrepSDKCall();
-	if(g_hSDK_Call_CleanupPlayerState == null)
+	g_hSDKCleanupPlayerState = EndPrepSDKCall();
+	if(g_hSDKCleanupPlayerState == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::CleanupPlayerState");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TakeOverZombieBot") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverZombieBot");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDK_Call_TakeOverZombieBot = EndPrepSDKCall();
-	if(g_hSDK_Call_TakeOverZombieBot == null)
+	g_hSDKTakeOverZombieBot = EndPrepSDKCall();
+	if(g_hSDKTakeOverZombieBot == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::TakeOverZombieBot");
 	
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
-	g_hSDK_Call_RoundRespawn = EndPrepSDKCall();
-	if(g_hSDK_Call_RoundRespawn == null)
+	g_hSDKRoundRespawn = EndPrepSDKCall();
+	if(g_hSDKRoundRespawn == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
 	
 	vRegisterStatsConditionPatch(hGameData);
@@ -2602,24 +2603,24 @@ void vLoadGameData()
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SurvivorBot::SetHumanSpectator") == false)
 		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDK_Call_SetHumanSpectator = EndPrepSDKCall();
-	if(g_hSDK_Call_SetHumanSpectator == null)
+	g_hSDKSetHumanSpectator = EndPrepSDKCall();
+	if(g_hSDKSetHumanSpectator == null)
 		SetFailState("Failed to create SDKCall: SurvivorBot::SetHumanSpectator");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TakeOverBot") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverBot");
 	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_Call_TakeOverBot = EndPrepSDKCall();
-	if(g_hSDK_Call_TakeOverBot == null)
+	g_hSDKTakeOverBot = EndPrepSDKCall();
+	if(g_hSDKTakeOverBot == null)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::TakeOverBot");
 
 	StartPrepSDKCall(SDKCall_Static);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorGameRules::HasPlayerControlledZombies") == false)
 		SetFailState("Failed to find signature: CTerrorGameRules::HasPlayerControlledZombies");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_Call_HasPlayerControlledZombies = EndPrepSDKCall();
-	if(g_hSDK_Call_HasPlayerControlledZombies == null)
+	g_hSDKHasPlayerControlledZombies = EndPrepSDKCall();
+	if(g_hSDKHasPlayerControlledZombies == null)
 		SetFailState("Failed to create SDKCall: CTerrorGameRules::HasPlayerControlledZombies");
 
 	g_dDetour[0] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::OnEnterGhostState");
@@ -2633,10 +2634,28 @@ void vLoadGameData()
 	g_dDetour[2] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::PlayerZombieAbortControl");
 	if(g_dDetour[2] == null)
 		SetFailState("Failed to load signature: CTerrorPlayer::PlayerZombieAbortControl");
-	
-	g_dDetour[3] = DynamicDetour.FromConf(hGameData, "ForEachTerrorPlayer<SpawnablePZScan>");
-	if(g_dDetour[3] == null)
-		SetFailState("Failed to load signature: ForEachTerrorPlayer<SpawnablePZScan>");
+
+	g_bIsLinuxOS = hGameData.GetOffset("OS") == 2;
+	if(g_bIsLinuxOS)
+	{
+		g_dDetour[3] = DynamicDetour.FromConf(hGameData, "ForEachTerrorPlayer<SpawnablePZScan>");
+		if(g_dDetour[3] == null)
+			SetFailState("Failed to load signature: ForEachTerrorPlayer<SpawnablePZScan>");
+	}
+	else
+	{
+		g_dDetour[3] = DynamicDetour.FromConf(hGameData, "Script_ZSpawn");
+		if(g_dDetour[3] == null)
+			SetFailState("Failed to load signature: Script_ZSpawn");
+
+		g_dDetour[4] = DynamicDetour.FromConf(hGameData, "z_spawn_old");
+		if(g_dDetour[4] == null)
+			SetFailState("Failed to load signature: z_spawn_old");
+
+		g_dDetour[5] = DynamicDetour.FromConf(hGameData, "z_spawn");
+		if(g_dDetour[5] == null)
+			SetFailState("Failed to load signature: z_spawn");
+	}
 
 	delete hGameData;
 }
@@ -2664,21 +2683,24 @@ void vRegisterStatsConditionPatch(GameData hGameData = null)
 
 void vSetInfectedGhost(int client, bool bSavePos = false)
 {
-	static float vOrigin[3];
-	static float vAngles[3];
-	static float vVelocity[3];
-
-	if(bSavePos)
+	if(GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_isGhost") == 0)
 	{
-		GetClientAbsOrigin(client, vOrigin);
-		GetClientEyeAngles(client, vAngles);
-		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
+		static float vPos[3];
+		static float vAng[3];
+		static float vVel[3];
+
+		if(bSavePos)
+		{
+			GetClientAbsOrigin(client, vPos);
+			GetClientEyeAngles(client, vAng);
+			GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
+		}
+
+		SDKCall(g_hSDKState_Transition, client, 8);
+
+		if(bSavePos)
+			TeleportEntity(client, vPos, vAng, vVel);
 	}
-
-	SDKCall(g_hSDK_Call_State_Transition, client, 8);
-
-	if(bSavePos)
-		TeleportEntity(client, vOrigin, vAngles, vVelocity);
 }
 
 void vSetZombieClass(int client, int iZombieClass)
@@ -2694,9 +2716,9 @@ void vSetZombieClass(int client, int iZombieClass)
 	if(iAbility != -1)
 		RemoveEdict(iAbility);
 
-	SDKCall(g_hSDK_Call_SetClass, client, iZombieClass);
+	SDKCall(g_hSDKSetClass, client, iZombieClass);
 
-	iAbility = SDKCall(g_hSDK_Call_CreateForPlayer, client);
+	iAbility = SDKCall(g_hSDKCreateForPlayer, client);
 	if(iAbility != -1)
 		SetEntPropEnt(client, Prop_Send, "m_customAbility", iAbility);
 }
@@ -2704,14 +2726,14 @@ void vSetZombieClass(int client, int iZombieClass)
 int iTakeOverZombieBot(int client, int iZombieBot)
 {
 	AcceptEntityInput(client, "ClearParent");
-	SDKCall(g_hSDK_Call_TakeOverZombieBot, client, iZombieBot);
+	SDKCall(g_hSDKTakeOverZombieBot, client, iZombieBot);
 	return GetEntProp(client, Prop_Send, "m_zombieClass");
 }
 
 void vRoundRespawn(int client)
 {
 	vStatsConditionPatch(true);
-	SDKCall(g_hSDK_Call_RoundRespawn, client);
+	SDKCall(g_hSDKRoundRespawn, client);
 	vStatsConditionPatch(false);
 }
 
@@ -2756,11 +2778,34 @@ void vToggleDetours(bool bEnable)
 		if(!g_dDetour[2].Enable(Hook_Post, mrePlayerZombieAbortControlPost))
 			SetFailState("Failed to detour post: CTerrorPlayer::PlayerZombieAbortControl");
 			
-		if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre)))
-			SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
+		if(g_bIsLinuxOS)
+		{
+			if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre)))
+				SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
 		
-		if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost)))
-			SetFailState("Failed to detour post: ForEachTerrorPlayer<SpawnablePZScan>");
+			if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost)))
+				SetFailState("Failed to detour post: ForEachTerrorPlayer<SpawnablePZScan>");
+		}
+		else
+		{
+			if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Pre, mreScriptZSpawnPre)))
+				SetFailState("Failed to detour pre: Script_ZSpawn");
+		
+			if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Post, mreScriptZSpawnPost)))
+				SetFailState("Failed to detour post: Script_ZSpawn");
+
+			if(!(g_bIsSpawnablePZSupported = g_dDetour[4].Enable(Hook_Pre, mreZSpawnOldPre)))
+				SetFailState("Failed to detour pre: z_spawn_old");
+		
+			if(!(g_bIsSpawnablePZSupported = g_dDetour[4].Enable(Hook_Post, mreZSpawnOldPost)))
+				SetFailState("Failed to detour post: z_spawn_old");
+
+			if(!(g_bIsSpawnablePZSupported = g_dDetour[5].Enable(Hook_Pre, mreZSpawnPre)))
+				SetFailState("Failed to detour pre: z_spawn");
+		
+			if(!(g_bIsSpawnablePZSupported = g_dDetour[5].Enable(Hook_Post, mreZSpawnPost)))
+				SetFailState("Failed to detour post: z_spawn");
+		}
 	}
 	else if(bEnabled && !bEnable)
 	{
@@ -2777,8 +2822,22 @@ void vToggleDetours(bool bEnable)
 		if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre) || !g_dDetour[2].Disable(Hook_Post, mrePlayerZombieAbortControlPost))
 			SetFailState("Failed to disable detour: CTerrorPlayer::PlayerZombieAbortControl");
 		
-		if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dDetour[3].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
-			SetFailState("Failed to disable detour: ForEachTerrorPlayer<SpawnablePZScan>");
+		if(g_bIsLinuxOS)
+		{
+			if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dDetour[3].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
+				SetFailState("Failed to disable detour: ForEachTerrorPlayer<SpawnablePZScan>");
+		}
+		else
+		{
+			if(!g_dDetour[3].Enable(Hook_Pre, mreScriptZSpawnPre) || !g_dDetour[3].Disable(Hook_Post, mreScriptZSpawnPost))
+				SetFailState("Failed to disable detour: Script_ZSpawn");
+
+			if(!g_dDetour[4].Enable(Hook_Pre, mreZSpawnOldPre) || !g_dDetour[4].Disable(Hook_Post, mreZSpawnOldPost))
+				SetFailState("Failed to disable detour: z_spawn_old");
+
+			if(!g_dDetour[5].Enable(Hook_Pre, mreZSpawnPre) || !g_dDetour[5].Disable(Hook_Post, mreZSpawnPost))
+				SetFailState("Failed to disable detour: z_spawn");
+		}
 	}
 }
 
@@ -2846,6 +2905,42 @@ MRESReturn mreForEachTerrorPlayerSpawnablePZScanPre()
 }
 
 MRESReturn mreForEachTerrorPlayerSpawnablePZScanPost()
+{
+	vSpawnablePZScanProtect(1);
+	return MRES_Ignored;
+}
+
+MRESReturn mreScriptZSpawnPre()
+{
+	vSpawnablePZScanProtect(0);
+	return MRES_Ignored;
+}
+
+MRESReturn mreScriptZSpawnPost()
+{
+	vSpawnablePZScanProtect(1);
+	return MRES_Ignored;
+}
+
+MRESReturn mreZSpawnOldPre()
+{
+	vSpawnablePZScanProtect(0);
+	return MRES_Ignored;
+}
+
+MRESReturn mreZSpawnOldPost()
+{
+	vSpawnablePZScanProtect(1);
+	return MRES_Ignored;
+}
+
+MRESReturn mreZSpawnPre()
+{
+	vSpawnablePZScanProtect(0);
+	return MRES_Ignored;
+}
+
+MRESReturn mreZSpawnPost()
 {
 	vSpawnablePZScanProtect(1);
 	return MRES_Ignored;
