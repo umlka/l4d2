@@ -4,7 +4,7 @@
 #include <sdktools>
 
 // witch向门外偏移的距离
-#define WITCH_OFFSET	24.0
+#define WITCH_OFFSET	20.0
 #define GAMEDATA		"end_safedoor_witch"
 
 Handle
@@ -92,7 +92,7 @@ Action tmrSpawnWitch(Handle timer)
 			GetEntPropVector(entity, Prop_Data, "m_angRotationOpenBack", vAng);
 			GetAngleVectors(vAng, vFwd, NULL_VECTOR, NULL_VECTOR);
 			NormalizeVector(vFwd, vFwd);
-			ScaleVector(vFwd, GetRandomFloat(24.0, 32.0));
+			ScaleVector(vFwd, 24.0);
 			AddVectors(vPos, vFwd, vPos);
 
 			GetEntPropVector(entity, Prop_Data, "m_angRotationClosed", vAng);
@@ -118,7 +118,7 @@ Action tmrSpawnWitch(Handle timer)
 	return Plugin_Continue;
 }
 
-float fGetGroundHeight(float vPos[3], int entity)
+float fGetGroundHeight(const float vPos[3], int entity)
 {
 	float vEnd[3];
 	Handle hTrace = TR_TraceRayFilterEx(vPos, view_as<float>({90.0, 0.0, 0.0}), MASK_ALL, RayType_Infinite, bTraceEntityFilter, entity);
@@ -172,7 +172,7 @@ Action tmrSolidCollision(Handle timer, int entity)
 void vLoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
+	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
 	if(FileExists(sPath) == false)
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
