@@ -499,12 +499,7 @@ void vDisplayBotList(int client)
 	Menu menu = new Menu(iDisplayBotListMenuHandler);
 	menu.SetTitle("- 请选择接管目标 - [!tkbot]");
 
-	int iTarget = GetEntPropEnt(client, Prop_Send, "m_hObserverTarget");
-	if(iTarget > 0 && bIsValidSurvivorBot(iTarget, true))
-	{
-		FormatEx(sID, sizeof sID, "%d", GetClientUserId(iTarget));
-		menu.AddItem(sID, "当前旁观目标");
-	}
+	menu.AddItem("o", "当前旁观目标");
 
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -559,25 +554,23 @@ int iDisplayBotListMenuHandler(Menu menu, MenuAction action, int param1, int par
 		case MenuAction_Select:
 		{
 			char sItem[16];
-			if(menu.GetItem(param2, sItem, sizeof sItem))
+			menu.GetItem(param2, sItem, sizeof sItem);
+			int iBot = sItem[0] == 'o' ? GetEntPropEnt(param1, Prop_Send, "m_hObserverTarget") : GetClientOfUserId(StringToInt(sItem));
+			if(iBot < 1 || !bIsValidSurvivorBot(iBot, true))
+				PrintToChat(param1, "目标BOT已失效.");
+			else
 			{
-				int iBot = GetClientOfUserId(StringToInt(sItem));
-				if(iBot == 0 || !bIsValidSurvivorBot(iBot, true))
-					PrintToChat(param1, "目标BOT已失效.");
+				int iTeam = iClientTeamTakeOver(param1);
+				if(!iTeam)
+					PrintToChat(param1, "不符合接管条件.");
 				else
 				{
-					int iTeam = iClientTeamTakeOver(param1);
-					if(!iTeam)
-						PrintToChat(param1, "不符合接管条件.");
-					else
-					{
-						if(iTeam != 1)
-							ChangeClientTeam(param1, TEAM_SPECTATOR);
+					if(iTeam != 1)
+						ChangeClientTeam(param1, TEAM_SPECTATOR);
 
-						SDKCall(g_hSDKSetHumanSpectator, iBot, param1);
-						SDKCall(g_hSDKSetObserverTarget, param1, iBot);
-						SDKCall(g_hSDKTakeOverBot, param1, true);
-					}
+					SDKCall(g_hSDKSetHumanSpectator, iBot, param1);
+					SDKCall(g_hSDKSetObserverTarget, param1, iBot);
+					SDKCall(g_hSDKTakeOverBot, param1, true);
 				}
 			}
 		}
