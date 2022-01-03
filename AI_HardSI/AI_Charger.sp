@@ -513,7 +513,8 @@ void vCharger_OnCharge(int client)
 
 		GetVectorAngles(vVectors, vAngles);
 
-		vLength += GetEntPropFloat(iAimTarget, Prop_Data, "m_flMaxspeed");
+		if(GetEntityFlags(client) & FL_ONGROUND == 0)
+			vLength += GetEntPropFloat(iAimTarget, Prop_Data, "m_flMaxspeed");
 	}
 	else
 	{
@@ -523,7 +524,8 @@ void vCharger_OnCharge(int client)
 		vVectors[1] = Sine(DegToRad(vAngles[1])) * Cosine(DegToRad(vAngles[0]));
 		vVectors[2] = Sine(DegToRad(vAngles[0]));
 
-		vLength += fNearestSurvivorDistance(client);
+		if(GetEntityFlags(client) & FL_ONGROUND == 0)
+			vLength += fNearestSurvivorDistance(client);
 	}
 	
 	NormalizeVector(vVectors, vVectors);
