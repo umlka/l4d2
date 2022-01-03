@@ -407,7 +407,7 @@ Action cmdJoinSurvivor(int client, int args)
 		
 		int iBot = GetClientOfUserId(g_iPlayerBot[client]);
 		if(iBot == 0 || !bIsValidSurvivorBot(iBot, true))
-			iBot = iFindAvailableSurvivorBot();
+			iBot = iFindUselessSurvivorBot();
 
 		if(iBot)
 		{
@@ -433,7 +433,7 @@ Action cmdJoinSurvivor(int client, int args)
 	}
 	else if(!IsPlayerAlive(client))
 	{
-		int iBot = iFindAvailableSurvivorBot();
+		int iBot = iFindUselessSurvivorBot();
 		if(iBot)
 		{
 			ChangeClientTeam(client, TEAM_SPECTATOR);
@@ -465,7 +465,7 @@ Action cmdTakeOverBot(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(!iFindAvailableSurvivorBot())
+	if(!iFindUselessSurvivorBot())
 	{
 		ReplyToCommand(client, "\x01没有 \x05空闲的电脑BOT \x01可以接管\x01.");
 		return Plugin_Handled;
@@ -498,6 +498,14 @@ void vDisplayBotList(int client)
 	char sName[MAX_NAME_LENGTH];
 	Menu menu = new Menu(iDisplayBotListMenuHandler);
 	menu.SetTitle("- 请选择接管目标 - [!tkbot]");
+
+	int iTarget = GetEntPropEnt(client, Prop_Send, "m_hObserverTarget");
+	if(iTarget > 0 && bIsValidSurvivorBot(iTarget, true))
+	{
+		FormatEx(sID, sizeof sID, "%d", GetClientUserId(iTarget));
+		menu.AddItem(sID, "当前旁观目标");
+	}
+
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(!bIsValidSurvivorBot(i, true))
@@ -690,7 +698,7 @@ void vJoinSurvivorMenu(int client)
 	menu.AddItem("y", "是");
 	menu.AddItem("n", "否");
 
-	if(iFindAvailableSurvivorBot())
+	if(iFindUselessSurvivorBot())
 		menu.AddItem("t", "接管指定BOT");
 
 	menu.ExitButton = false;
@@ -710,7 +718,7 @@ int iJoinSurvivorMenuHandler(Menu menu, MenuAction action, int param1, int param
 					cmdJoinSurvivor(param1, 0);
 
 				case 2:
-					if(iFindAvailableSurvivorBot())
+					if(iFindUselessSurvivorBot())
 						vDisplayBotList(param1);
 					else
 						PrintToChat(param1, "\x01没有 \x05空闲的电脑BOT \x01可以接管\x01.");
@@ -932,16 +940,18 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 
 void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
-	vTakeOver(GetClientOfUserId(event.GetInt("userid")));
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(client)
+		vTakeOver(client);
 }
 
-void vTakeOver(int bot)
+void vTakeOver(int client)
 {
 	int iIdlePlayer;
-	if(bot && IsClientInGame(bot) && IsFakeClient(bot) && GetClientTeam(bot) == TEAM_SURVIVOR && (iIdlePlayer = iHasIdlePlayer(bot)))
+	if(IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == TEAM_SURVIVOR && (iIdlePlayer = iHasIdlePlayer(client)))
 	{
-		SDKCall(g_hSDKSetHumanSpectator, bot, iIdlePlayer);
-		SDKCall(g_hSDKSetObserverTarget, iIdlePlayer, bot);
+		SDKCall(g_hSDKSetHumanSpectator, client, iIdlePlayer);
+		SDKCall(g_hSDKSetObserverTarget, iIdlePlayer, client);
 		SDKCall(g_hSDKTakeOverBot, iIdlePlayer, true);
 	}
 }
@@ -1117,7 +1127,7 @@ int iGetBotOfIdle(int client)
 
 static int iHasIdlePlayer(int client)
 {
-	char sNetClass[64];
+	static char sNetClass[64];
 	if(!GetEntityNetClass(client, sNetClass, sizeof sNetClass))
 		return 0;
 
@@ -1163,49 +1173,59 @@ bool bIsValidSurvivorBot(int client, bool bOnlyAlive)
 
 int iFindUnusedSurvivorBot()
 {
-	ArrayList aReservedBots = new ArrayList();
-	ArrayList aUselessBots = new ArrayList();
+	static int i;
+	static int client;
+	static ArrayList aReserveBots;
+	static ArrayList aUselessBots;
 
-	int client;
-	for(int i = MaxClients; i >= 1; i--)
+	client = 0;
+	aReserveBots = new ArrayList();
+	aUselessBots = new ArrayList();
+
+	for(i = MaxClients; i >= 1; i--)
 	{
 		if(!bIsValidSurvivorBot(i, false))
 			continue;
 
 		if((client = GetClientOfUserId(g_iBotPlayer[i])) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) != 2)
-			aReservedBots.Push(i);
+			aReserveBots.Push(i);
 		else
 			aUselessBots.Push(i);
 	}
 
-	client = (aUselessBots.Length == 0) ? (aReservedBots.Length == 0 ? 0 : aReservedBots.Get(0)) : aUselessBots.Get(0);
+	client = (aUselessBots.Length == 0) ? (aReserveBots.Length == 0 ? 0 : aReserveBots.Get(0)) : aUselessBots.Get(0);
 
-	delete aReservedBots;
+	delete aReserveBots;
 	delete aUselessBots;
 
 	return client;
 }
 
-int iFindAvailableSurvivorBot()
+int iFindUselessSurvivorBot()
 {
-	ArrayList aReservedBots = new ArrayList();
-	ArrayList aUselessBots = new ArrayList();
+	static int i;
+	static int client;
+	static ArrayList aReserveBots;
+	static ArrayList aUselessBots;
 
-	int client;
-	for(int i = MaxClients; i >= 1; i--)
+	client = 0;
+	aReserveBots = new ArrayList();
+	aUselessBots = new ArrayList();
+
+	for(i = MaxClients; i >= 1; i--)
 	{
 		if(!bIsValidSurvivorBot(i, true))
 			continue;
 
 		if((client = GetClientOfUserId(g_iBotPlayer[i])) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) != 2)
-			aReservedBots.Push(i);
+			aReserveBots.Push(i);
 		else
 			aUselessBots.Push(i);
 	}
 
-	client = (aUselessBots.Length == 0) ? (aReservedBots.Length == 0 ? 0 : aReservedBots.Get(GetRandomInt(0, aReservedBots.Length - 1))) : aUselessBots.Get(GetRandomInt(0, aUselessBots.Length - 1));
+	client = (aUselessBots.Length == 0) ? (aReserveBots.Length == 0 ? 0 : aReserveBots.Get(GetRandomInt(0, aReserveBots.Length - 1))) : aUselessBots.Get(GetRandomInt(0, aUselessBots.Length - 1));
 
-	delete aReservedBots;
+	delete aReserveBots;
 	delete aUselessBots;
 
 	return client;
@@ -1821,7 +1841,7 @@ MRESReturn mrePlayerSetModelPost(int pThis, DHookParam hParams)
 		return MRES_Ignored;
 	}
 	
-	char sModel[128];
+	static char sModel[128];
 	hParams.GetString(1, sModel, sizeof sModel);
 	if(StrContains(sModel, "survivors", false) >= 0)
 		strcopy(g_sPlayerModel[pThis], sizeof g_sPlayerModel, sModel);
