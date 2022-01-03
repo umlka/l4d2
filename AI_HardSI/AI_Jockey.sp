@@ -12,10 +12,10 @@ ConVar
 float
 	g_fJockeyLeapAgain,
 	g_fJockeyStumbleRadius,
-	g_fHopActivationProximity;
+	g_fHopActivationProximity,
+	g_fLeapAgainTime[MAXPLAYERS + 1];
 	
 bool
-	g_bCanLeap[MAXPLAYERS + 1],
 	g_bDoNormalJump[MAXPLAYERS + 1];
 
 public Plugin myinfo =
@@ -32,7 +32,9 @@ public void OnPluginStart()
 	g_hJockeyStumbleRadius = CreateConVar("ai_jockey_stumble_radius", "50.0", "Stumble radius of a client landing a ride");
 	g_hHopActivationProximity = CreateConVar("ai_hop_activation_proximity", "500.0", "How close a client will approach before it starts hopping");
 
+	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", Event_PlayerSpawn);
+	HookEvent("player_shoved", Event_PlayerShoved);
 	HookEvent("jockey_ride", Event_JockeyRide, EventHookMode_Pre);
 	
 	g_hJockeyLeapAgain = FindConVar("z_jockey_leap_again_timer");
@@ -43,7 +45,6 @@ public void OnPluginStart()
 	g_hJockeyLeapAgain.AddChangeHook(vConVarChanged);
 	g_hJockeyStumbleRadius.AddChangeHook(vConVarChanged);
 	g_hHopActivationProximity.AddChangeHook(vConVarChanged);
-	FindConVar("mp_gamemode").AddChangeHook(vGameModeChanged);
 }
 
 public void OnPluginEnd()
@@ -54,7 +55,6 @@ public void OnPluginEnd()
 public void OnConfigsExecuted()
 {
 	vGetCvars();
-	vGetCurrentMode();
 }
 
 void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -69,73 +69,28 @@ void vGetCvars()
 	g_fHopActivationProximity = g_hHopActivationProximity.FloatValue;
 }
 
-void vGameModeChanged(ConVar convar, const char[] oldValue, const char[] newValue)
-{
-	vGetCurrentMode();
-}
-
-bool g_bMapStarted;
-public void OnMapStart()
-{
-	g_bMapStarted = true;
-}
-
 public void OnMapEnd()
 {
-	g_bMapStarted = false;
+	for(int i = 1; i <= MaxClients; i++)
+		g_fLeapAgainTime[i] = 0.0;
 }
 
-int g_iCurrentMode;
-void vGetCurrentMode()
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
-	if(g_bMapStarted == false)
-		return;
-
-	g_iCurrentMode = 0;
-
-	int entity = CreateEntityByName("info_gamemode");
-	if(IsValidEntity(entity))
-	{
-		DispatchSpawn(entity);
-		HookSingleEntityOutput(entity, "OnCoop", OnGamemode, true);
-		HookSingleEntityOutput(entity, "OnSurvival", OnGamemode, true);
-		HookSingleEntityOutput(entity, "OnVersus", OnGamemode, true);
-		HookSingleEntityOutput(entity, "OnScavenge", OnGamemode, true);
-		ActivateEntity(entity);
-		AcceptEntityInput(entity, "PostSpawnActivate");
-		if(IsValidEntity(entity)) // Because sometimes "PostSpawnActivate" seems to kill the ent.
-			RemoveEdict(entity); // Because multiple plugins creating at once, avoid too many duplicate ents in the same frame
-	}
-}
-
-public void OnGamemode(const char[] output, int caller, int activator, float delay)
-{
-	if(strcmp(output, "OnCoop") == 0)
-		g_iCurrentMode = 1;
-	else if(strcmp(output, "OnSurvival") == 0)
-		g_iCurrentMode = 2;
-	else if(strcmp(output, "OnVersus") == 0)
-		g_iCurrentMode = 4;
-	else if(strcmp(output, "OnScavenge") == 0)
-		g_iCurrentMode = 8;
+	for(int i = 1; i <= MaxClients; i++)
+		g_fLeapAgainTime[i] = 0.0;
 }
 
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
-	g_bCanLeap[GetClientOfUserId(event.GetInt("userid"))] = true;
+	g_fLeapAgainTime[GetClientOfUserId(event.GetInt("userid"))] = 0.0;
 }
 
 void Event_PlayerShoved(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(bIsBotJockey(client))
-		vJockey_OnShoved(client);
-}
-
-void vJockey_OnShoved(int client)
-{
-	g_bCanLeap[client] = false;
-	CreateTimer(g_fJockeyLeapAgain, Timer_LeapCooldown, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+		g_fLeapAgainTime[client] = GetGameTime() + g_fJockeyLeapAgain;
 }
 
 bool bIsBotJockey(int client)
@@ -143,44 +98,42 @@ bool bIsBotJockey(int client)
 	return client && IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 5;
 }
 
-Action Timer_LeapCooldown(Handle timer, int client)
-{
-	g_bCanLeap[GetClientOfUserId(client)] = true;
-}
-
 void Event_JockeyRide(Event event, const char[] name, bool dontBroadcast)
 {	
-	if(g_iCurrentMode != 1 || g_fJockeyStumbleRadius <= 0.0)
+	if(g_fJockeyStumbleRadius <= 0.0 || !L4D_IsCoopMode())
 		return;
 
 	int attacker = GetClientOfUserId(event.GetInt("userid"));
+	if(attacker == 0 || !IsClientInGame(attacker))
+		return;
+
 	int victim = GetClientOfUserId(event.GetInt("victim"));
-	if(attacker > 0 && victim > 0)
-		vStumbleByStanders(victim, attacker);
+	if(victim == 0 || !IsClientInGame(victim))
+		return;
+	
+	vStumbleByStanders(victim, attacker);
 }
 
 void vStumbleByStanders(int iPinnedSurvivor, int iPinner)
 {
-	static float vOrigin[3];
+	static int i;
 	static float vPos[3];
 	static float vDir[3];
-	static int i;
+	static float vOrigin[3];
+
 	GetClientAbsOrigin(iPinnedSurvivor, vOrigin);
 	for(i = 1; i <= MaxClients; i++)
 	{
-		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
+		if(i == iPinnedSurvivor || i == iPinner || !IsClientInGame(i) || GetClientTeam(i) != 2 || !IsPlayerAlive(i) || bIsPinned(i))
+			continue;
+		
+		GetClientAbsOrigin(i, vPos);
+		MakeVectorFromPoints(vOrigin, vPos, vDir);
+		if(GetVectorLength(vDir) <= g_fJockeyStumbleRadius)
 		{
-			if(i != iPinnedSurvivor && i != iPinner && !bIsPinned(i))
-			{
-				GetClientAbsOrigin(i, vPos);
-				SubtractVectors(vPos, vOrigin, vDir);
-				if(GetVectorLength(vDir) <= g_fJockeyStumbleRadius)
-				{
-					NormalizeVector(vDir, vDir);
-					L4D_StaggerPlayer(i, iPinnedSurvivor, vDir);
-				}
-			}
-		} 
+			NormalizeVector(vDir, vDir);
+			L4D_StaggerPlayer(i, iPinnedSurvivor, vDir);
+		}
 	}
 }
 
@@ -215,12 +168,12 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 			}
 			else
 			{
-				if(g_bCanLeap[client])
+				static float fGameTime;
+				if(g_fLeapAgainTime[client] < (fGameTime = GetGameTime()))
 				{
 					buttons |= IN_ATTACK;
-					g_bCanLeap[client] = false;
-					CreateTimer(g_fJockeyLeapAgain, Timer_LeapCooldown, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 					g_bDoNormalJump[client] = true;
+					g_fLeapAgainTime[client] = fGameTime + g_fJockeyLeapAgain;
 				} 			
 			}
 			

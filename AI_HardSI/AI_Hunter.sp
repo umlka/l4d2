@@ -20,13 +20,13 @@ float
 	g_fPounceAngleMean,
 	g_fPounceAngleStd,
 	g_fStraightPounceProximity,
-	g_fWallDetectionDistance;
+	g_fWallDetectionDistance,
+	g_fCanLungeTime[MAXPLAYERS + 1];
 
 int
 	g_iAimOffsetSensitivityHunter;
 
 bool
-	g_bCanLunge[MAXPLAYERS + 1],
 	g_bHasQueuedLunge[MAXPLAYERS + 1];
 
 public Plugin myinfo =
@@ -46,7 +46,7 @@ public void OnPluginStart()
 	g_hPounceAngleStd = CreateConVar("ai_pounce_angle_std", "20.0", "One standard deviation from mean as produced by Gaussian RNG");
 	g_hStraightPounceProximity = CreateConVar("ai_straight_pounce_proximity", "350.0", "Distance to nearest survivor at which hunter will consider pouncing straight");
 	g_hAimOffsetSensitivityHunter = CreateConVar("ai_aim_offset_sensitivity_hunter", "180", "If the hunter has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius");
-	g_hWallDetectionDistance = CreateConVar("ai_wall_detection_distance", "20.0", "How far in front of himself infected bot will check for a wall. Use '-1' to disable feature");
+	g_hWallDetectionDistance = CreateConVar("ai_wall_detection_distance", "-1.0", "How far in front of himself infected bot will check for a wall. Use '-1' to disable feature");
 
 	FindConVar("hunter_pounce_ready_range").SetFloat(2000.0);
 	FindConVar("hunter_pounce_max_loft_angle").SetFloat(0.0);
@@ -54,7 +54,6 @@ public void OnPluginStart()
 	FindConVar("z_pounce_silence_range").SetFloat(999999.0);
 	FindConVar("hunter_committed_attack_range").SetFloat(999999.0);
 	FindConVar("z_pounce_crouch_delay").SetFloat(0.1);
-	//FindConVar("z_pounce_damage_interrupt").SetInt(150);
 	g_hLungeInterval = FindConVar("z_lunge_interval");
 
 	g_hLungeInterval.AddChangeHook(vConVarChanged);
@@ -66,6 +65,7 @@ public void OnPluginStart()
 	g_hAimOffsetSensitivityHunter.AddChangeHook(vConVarChanged);
 	g_hWallDetectionDistance.AddChangeHook(vConVarChanged);
 	
+	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("ability_use", Event_AbilityUse);
 }
@@ -77,7 +77,6 @@ public void OnPluginEnd()
 	FindConVar("hunter_leap_away_give_up_range").RestoreDefault();
 	FindConVar("hunter_pounce_max_loft_angle").RestoreDefault();
 	FindConVar("z_pounce_crouch_delay").RestoreDefault();
-	//FindConVar("z_pounce_damage_interrupt").RestoreDefault();
 }
 
 public void OnConfigsExecuted()
@@ -102,16 +101,28 @@ void vGetCvars()
 	g_fWallDetectionDistance = g_hWallDetectionDistance.FloatValue;
 }
 
+public void OnMapEnd()
+{
+	for(int i = 1; i <= MaxClients; i++)
+		g_fCanLungeTime[i] = 0.0;
+}
+
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
+{
+	for(int i = 1; i <= MaxClients; i++)
+		g_fCanLungeTime[i] = 0.0;
+}
+
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
+	g_fCanLungeTime[client] = 0.0;
 	g_bHasQueuedLunge[client] = false;
-	g_bCanLunge[client] = true;
 }
 
 void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
 {
-	char sAbility[16];
+	static char sAbility[16];
 	event.GetString("ability", sAbility, sizeof(sAbility));
 	if(strcmp(sAbility, "ability_lunge") == 0)
 		vHunter_OnPounce(GetClientOfUserId(event.GetInt("userid")));
@@ -135,11 +146,10 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 			buttons &= ~IN_ATTACK;			
 			if(!g_bHasQueuedLunge[client])
 			{
-				g_bCanLunge[client] = false;
 				g_bHasQueuedLunge[client] = true;
-				CreateTimer(g_fLungeInterval, Timer_LungeInterval, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+				g_fCanLungeTime[client] = GetGameTime() + g_fLungeInterval;
 			}
-			else if(g_bCanLunge[client])
+			else if(g_fCanLungeTime[client] < GetGameTime())
 			{
 				buttons |= IN_ATTACK;
 				g_bHasQueuedLunge[client] = false;
@@ -173,11 +183,6 @@ float fNearestSurvivorDistance(int client, const float vOrigin[3])
 
 	SortFloats(fDists, iNum, Sort_Ascending);
 	return fDists[0];
-}
-
-Action Timer_LungeInterval(Handle timer, int client)
-{
-	g_bCanLunge[GetClientOfUserId(client)] = true;
 }
 
 bool bIsBotHunter(int client)
@@ -217,10 +222,12 @@ void vHunter_OnPounce(int client)
 
 bool bHitWall(int client, float vStart[3])
 {
+	static float vAng[3];
 	static float vEnd[3];
-	GetClientEyeAngles(client, vEnd);
-	GetAngleVectors(vEnd, vEnd, NULL_VECTOR, NULL_VECTOR);
-	NormalizeVector(vEnd, vEnd);
+	GetClientEyeAngles(client, vAng);
+	GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vAng, vAng);
+	vEnd = vAng;
 	ScaleVector(vEnd, g_fWallDetectionDistance);
 	AddVectors(vStart, vEnd, vEnd);
 
@@ -236,32 +243,46 @@ bool bHitWall(int client, float vStart[3])
 	vMins[2] *= 0.5;
 	vMaxs[2] *= 0.5;
 
-	vStart[2] += 5.0;
-	vEnd[2] += 5.0;
+	vStart[2] += 10.0;
+	vEnd[2] += 10.0;
 
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
-
-	static bool bDidHit;
-	bDidHit = false;
-
+	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
 	if(hTrace != null)
 	{
-		bDidHit = TR_DidHit(hTrace);
+		if(TR_DidHit(hTrace))
+		{
+			static float vNormal[3];
+			TR_GetPlaneNormal(hTrace, vNormal);
+			NegateVector(vNormal);
+			NormalizeVector(vNormal, vNormal);
+			if(RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vNormal))) < 30.0)
+			{
+				delete hTrace;
+				return false;
+			}
+		}
 		delete hTrace;
 	}
-	
-	return bDidHit;
+
+	return true;
 }
 
 bool bTraceEntityFilter(int entity, int contentsMask)
 {
 	if(entity <= MaxClients)
 		return false;
-
-	static char sClassName[9];
-	GetEntityClassname(entity, sClassName, sizeof(sClassName));
-	return (sClassName[0] != 'i' || sClassName[0] != 'w' || strcmp(sClassName, "infected") != 0 || strcmp(sClassName, "witch") != 0);
+	else
+	{
+		static char classname[9];
+		GetEntityClassname(entity, classname, sizeof classname);
+		if(classname[0] == 'i' || classname[0] == 'w')
+		{
+			if(strcmp(classname, "infected") == 0 || strcmp(classname, "witch") == 0)
+				return false;
+		}
+	}
+	return true;
 }
 
 bool bIsTargetWatchingAttacker(int iAttacker, int iOffsetThreshold)
@@ -270,16 +291,9 @@ bool bIsTargetWatchingAttacker(int iAttacker, int iOffsetThreshold)
 	static bool bIsWatching;
 
 	bIsWatching = true;
-	iTarget = GetClientAimTarget(iAttacker);
-	if(bIsAliveSurvivor(iTarget))
-	{
-		static int iAimOffset;
-		iAimOffset = RoundToNearest(fGetPlayerAimOffset(iTarget, iAttacker));
-		if(iAimOffset <= iOffsetThreshold)
-			bIsWatching = true;
-		else 
-			bIsWatching = false;
-	}
+	if(bIsAliveSurvivor((iTarget = GetClientAimTarget(iAttacker))) && RoundToNearest(fGetPlayerAimOffset(iTarget, iAttacker)) > iOffsetThreshold)
+		bIsWatching = false;
+
 	return bIsWatching;
 }
 
