@@ -108,12 +108,13 @@
 
 		"Signatures"
 		{
+			/* SurvivorBot * NextBotCreatePlayerBot<SurvivorBot>(char const*) */
 			"NextBotCreatePlayerBot<SurvivorBot>"
 			{	
 				"library"	"server"
 				"linux"		"@_Z22NextBotCreatePlayerBotI11SurvivorBotEPT_PKc"
-				"windows"	"\xE8****\x83\xC4\x08\x85\xC0\x74\x1C\x8B\x10\x8B"
-				/* E8 ? ? ? ? 83 C4 08 85 C0 74 1C 8B 10 8B */
+				"windows"	"\x55\x8B\x2A\x83\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x56\x57\x8B\x2A\x2A\x68\xB0"
+				/* 55 8B ? 83 ? ? A1 ? ? ? ? 33 ? 89 ? ? 56 57 8B ? ? 68 B0 */
 				/* (addr+5) + *(addr+1) = call function addr -> this  signature into <CDirector::AddSurvivorBot> */
 				/* Sig. should point to "call" opcode E8, not to the func. start */
 			}
