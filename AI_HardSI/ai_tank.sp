@@ -3,6 +3,7 @@
 #include <sourcemod>
 #include <sdktools>
 #include <dhooks>
+#include <left4dhooks>
 
 #define SPEEDBOOST	90.0
 #define GAMEDATA	"ai_tank"
