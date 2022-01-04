@@ -38,7 +38,7 @@ public void OnPluginStart()
 	vLoadGameData();
 
 	g_hTankBhop = CreateConVar("ai_tank_bhop", "1", "Flag to enable bhop facsimile on AI tanks");
-	g_hAimOffsetSensitivityTank = CreateConVar("ai_aim_offset_sensitivity_hunter", "45", "If the tank has a target, it will not straight throw if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
+	g_hAimOffsetSensitivityTank = CreateConVar("ai_aim_offset_sensitivity_tank", "30", "If the tank has a target, it will not straight throw if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hTankAttackRange = FindConVar("tank_attack_range");
 	g_hTankThrowForce = FindConVar("z_tank_throw_force");
 
