@@ -285,7 +285,7 @@ public void OnPluginStart()
 	g_hSlotFlags[3] = CreateConVar("bots_give_slot3", "3", "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
 	g_hSlotFlags[4] = CreateConVar("bots_give_slot4", "3", "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
 
-	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品Flags参考源码g_sWeaponName中的武器名处的数字,多个武器里面随机则数字取和)", CVAR_FLAGS | FCVAR_DONTRECORD);
+	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品flags参考源码g_sWeaponName中的武器名处的数字,多个武器里面随机则取数字和)", CVAR_FLAGS | FCVAR_DONTRECORD);
 	
 	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
 	g_hSbAllBotTeam = FindConVar("allow_all_bot_survivor_team");
@@ -410,11 +410,7 @@ Action cmdJoinSurvivor(int client, int args)
 			iBot = iFindUselessSurvivorBot();
 
 		if(iBot)
-		{
-			SDKCall(g_hSDKSetHumanSpectator, iBot, client);
-			SDKCall(g_hSDKSetObserverTarget, client, iBot);
-			SDKCall(g_hSDKTakeOverBot, client, true);
-		}
+			vTakeOverBot(client, iBot);
 		else
 		{
 			bool bCanRespawn = g_bRespawnJoin && bIsFirstTime(client);
@@ -437,9 +433,7 @@ Action cmdJoinSurvivor(int client, int args)
 		if(iBot)
 		{
 			ChangeClientTeam(client, TEAM_SPECTATOR);
-			SDKCall(g_hSDKSetHumanSpectator, iBot, client);
-			SDKCall(g_hSDKSetObserverTarget, client, iBot);
-			SDKCall(g_hSDKTakeOverBot, client, true);
+			vTakeOverBot(client, iBot);
 		}
 		else
 			ReplyToCommand(client, "\x01你已经 \x04死亡\x01. 没有 \x05空闲的电脑BOT \x01可以接管\x01.");
@@ -555,22 +549,33 @@ int iDisplayBotListMenuHandler(Menu menu, MenuAction action, int param1, int par
 		{
 			char sItem[16];
 			menu.GetItem(param2, sItem, sizeof sItem);
-			int iBot = sItem[0] == 'o' ? GetEntPropEnt(param1, Prop_Send, "m_hObserverTarget") : GetClientOfUserId(StringToInt(sItem));
-			if(iBot < 1 || !bIsValidSurvivorBot(iBot, true))
-				PrintToChat(param1, "目标BOT已失效.");
+
+			int iBot;
+			if(sItem[0] == 'o')
+			{
+				iBot = GetEntPropEnt(param1, Prop_Send, "m_hObserverTarget");
+				if(iBot > 0 && bIsValidSurvivorBot(iBot, true))
+					vTakeOverBot(param1, iBot);
+				else
+					PrintToChat(param1, "当前旁观目标非可接管BOT.");
+			}
 			else
 			{
-				int iTeam = iClientTeamTakeOver(param1);
-				if(!iTeam)
-					PrintToChat(param1, "不符合接管条件.");
+				iBot = GetClientOfUserId(StringToInt(sItem));
+				if(iBot < 1 || !bIsValidSurvivorBot(iBot, true))
+					PrintToChat(param1, "选定的目标BOT已失效.");
 				else
 				{
-					if(iTeam != 1)
-						ChangeClientTeam(param1, TEAM_SPECTATOR);
+					int iTeam = iClientTeamTakeOver(param1);
+					if(!iTeam)
+						PrintToChat(param1, "不符合接管条件.");
+					else
+					{
+						if(iTeam != 1)
+							ChangeClientTeam(param1, TEAM_SPECTATOR);
 
-					SDKCall(g_hSDKSetHumanSpectator, iBot, param1);
-					SDKCall(g_hSDKSetObserverTarget, param1, iBot);
-					SDKCall(g_hSDKTakeOverBot, param1, true);
+						vTakeOverBot(param1, iBot);
+					}
 				}
 			}
 		}
@@ -906,7 +911,7 @@ void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 	vResetPlugin();
 
 	for(int i = 1; i <= MaxClients; i++)
-		vTakeOver(i);
+		vAutoTakeOverBot(i);
 }
 
 void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
@@ -935,18 +940,14 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(client)
-		vTakeOver(client);
+		vAutoTakeOverBot(client);
 }
 
-void vTakeOver(int client)
+void vAutoTakeOverBot(int client)
 {
 	int iIdlePlayer;
 	if(IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == TEAM_SURVIVOR && (iIdlePlayer = iHasIdlePlayer(client)))
-	{
-		SDKCall(g_hSDKSetHumanSpectator, client, iIdlePlayer);
-		SDKCall(g_hSDKSetObserverTarget, iIdlePlayer, client);
-		SDKCall(g_hSDKTakeOverBot, iIdlePlayer, true);
-	}
+		vTakeOverBot(iIdlePlayer, client);
 }
 
 void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
@@ -1724,6 +1725,13 @@ void vStatsConditionPatch(bool bPatch)
 		bPatched = false;
 		StoreToAddress(g_pStatsCondition, 0x75, NumberType_Int8);
 	}
+}
+
+void vTakeOverBot(int client, int iBot)
+{
+	SDKCall(g_hSDKSetHumanSpectator, iBot, client);
+	SDKCall(g_hSDKSetObserverTarget, client, iBot);
+	SDKCall(g_hSDKTakeOverBot, client, true);
 }
 
 void vSetupDetours(GameData hGameData = null)
