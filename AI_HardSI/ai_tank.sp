@@ -381,16 +381,23 @@ MRESReturn mreTankRockReleasePre(int pThis, DHookParam hParams)
 
 	static float vPos[3];
 	static float vTarget[3];
+	static float vVectors[3];
 	GetClientEyePosition(iThrower, vPos);
 	GetClientAbsOrigin(iAimTarget, vTarget);
 
 	vTarget[2] += 45.0;
 
-	MakeVectorFromPoints(vPos, vTarget, vTarget);
-	GetVectorAngles(vTarget, vTarget);
-	TeleportEntity(iThrower, NULL_VECTOR, vTarget, NULL_VECTOR);
+	MakeVectorFromPoints(vPos, vTarget, vVectors);
+	GetVectorAngles(vVectors, vTarget);
+	hParams.SetVector(2, vTarget);
 
-	return MRES_Ignored;
+	static float vLength;
+	vLength = GetVectorLength(vVectors);
+	vLength = vLength > g_fTankThrowForce ? vLength : g_fTankThrowForce;
+	NormalizeVector(vVectors, vVectors);
+	ScaleVector(vVectors, vLength + GetEntPropFloat(iAimTarget, Prop_Data, "m_flMaxspeed"));
+	hParams.SetVector(3, vVectors);
+	return MRES_ChangedHandled;
 }
 /*
 MRESReturn mreTankRockReleasePost(int pThis, DHookParam hParams)
