@@ -368,7 +368,7 @@ MRESReturn mreTankRockReleasePre(int pThis, DHookParam hParams)
 	
 	static int iAimTarget;
 	iAimTarget = g_iSpecialTarget[iThrower]/*GetClientAimTarget(iThrower, true)*/;
-	if(!bIsAliveSurvivor(iAimTarget) || bIsIncapacitated(iAimTarget) || bHitWall(pThis, iAimTarget) || bIsTargetWatchingAttacker(iAimTarget, g_iAimOffsetSensitivityTank))
+	if(!bIsAliveSurvivor(iAimTarget) || bIsIncapacitated(iAimTarget) || bIsPinned(iAimTarget) || bHitWall(pThis, iAimTarget) || bIsTargetWatchingAttacker(iAimTarget, g_iAimOffsetSensitivityTank))
 	{
 		static int iNewTarget;
 		iNewTarget = iGetClosestSurvivor(iThrower, iAimTarget, pThis, g_fTankThrowForce);
@@ -418,6 +418,21 @@ bool bIsValidClient(int client)
 bool bIsIncapacitated(int client)
 {
 	return !!GetEntProp(client, Prop_Send, "m_isIncapacitated");
+}
+
+bool bIsPinned(int client)
+{
+	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
+		return true;
+	/*if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
+		return true;
+	if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
+		return true;*/
+	return false;
 }
 
 bool bIsTargetWatchingAttacker(int iAttacker, int iOffsetThreshold)
@@ -496,7 +511,7 @@ int iGetClosestSurvivor(int client, int iAimTarget = -1, int entity, float fDist
 	for(i = 0; i < iCount; i++)
 	{
 		iTarget = iTargets[i];
-		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !bIsIncapacitated(iTarget) && !bHitWall(entity, iTarget))
+		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !bIsIncapacitated(iTarget) && !bIsPinned(iTarget) && !bHitWall(entity, iTarget))
 		{
 			GetClientAbsOrigin(iTarget, vTarget);
 			fDist = GetVectorDistance(vPos, vTarget);
@@ -512,7 +527,7 @@ int iGetClosestSurvivor(int client, int iAimTarget = -1, int entity, float fDist
 		
 		for(i = 1; i <= MaxClients; i++)
 		{
-			if(i != iAimTarget && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsIncapacitated(i) && !bHitWall(client, i))
+			if(i != iAimTarget && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsIncapacitated(i) && !bIsPinned(i) && !bHitWall(client, i))
 			{
 				GetClientAbsOrigin(i, vTarget);
 				fDist = GetVectorDistance(vPos, vTarget);
