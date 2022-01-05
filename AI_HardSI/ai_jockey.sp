@@ -150,48 +150,87 @@ bool bIsPinned(int client)
 	return false;
 }
 
-public Action OnPlayerRunCmd(int client, int &buttons)
+public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
 {
-	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+	
+	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") == 1 || !(GetEntProp(client, Prop_Send, "m_hasVisibleThreats") || bTargetSurvivor(client)) || fNearestSurvivorDistance(client) > g_fHopActivationProximity)
 		return Plugin_Continue;
-
-	if((GetEntProp(client, Prop_Send, "m_hasVisibleThreats") || bTargetSurvivor(client)) && fNearestSurvivorDistance(client) < g_fHopActivationProximity)
+	
+	if(GetEntityFlags(client) & FL_ONGROUND)
 	{
-		if(GetEntityFlags(client) & FL_ONGROUND)
+		if(bIsBeingWatched(client, 20.0))
 		{
-			if(g_bDoNormalJump[client])
+			static float vAng[3];
+			vAng = angles;
+			vAng[0] = GetRandomFloat(-50.0, -10.0);
+			TeleportEntity(client, NULL_VECTOR, vAng, NULL_VECTOR);
+		}
+
+		if(g_bDoNormalJump[client])
+		{
+			buttons |= IN_JUMP;
+			switch(GetRandomInt(0, 2))
 			{
-				buttons |= IN_JUMP;
-				g_bDoNormalJump[client] = false;
+				case 0:
+					buttons |= IN_DUCK;
+	
+				case 1:
+					buttons |= IN_ATTACK2;
 			}
-			else
-			{
-				static float fGameTime;
-				if(g_fLeapAgainTime[client] < (fGameTime = GetGameTime()))
-				{
-					buttons |= IN_ATTACK;
-					g_bDoNormalJump[client] = true;
-					g_fLeapAgainTime[client] = fGameTime + g_fJockeyLeapAgain;
-				} 			
-			}
-			
+			g_bDoNormalJump[client] = false;
 		}
 		else
 		{
-			buttons &= ~IN_JUMP;
-			buttons &= ~IN_ATTACK;
+			static float fGameTime;
+			if(g_fLeapAgainTime[client] < (fGameTime = GetGameTime()))
+			{
+				buttons |= IN_ATTACK;
+				g_bDoNormalJump[client] = true;
+				g_fLeapAgainTime[client] = fGameTime + g_fJockeyLeapAgain;
+			} 			
 		}
-		return Plugin_Changed;
-	} 
+	}
+	else
+	{
+		buttons &= ~IN_JUMP;
+		buttons &= ~IN_ATTACK;
+	}
 
 	return Plugin_Continue;
 }
 
-int bTargetSurvivor(int client)
+bool bTargetSurvivor(int client)
+{
+	return bIsAliveSurvivor(GetClientAimTarget(client, true));
+}
+
+bool bIsBeingWatched(int client, float fOffsetThreshold)
 {
 	static int iTarget;
-	iTarget = GetClientAimTarget(client, true);
-	return bIsAliveSurvivor(iTarget) ? iTarget : 0;
+	if(bIsAliveSurvivor((iTarget = GetClientAimTarget(client))) && fGetPlayerAimOffset(client, iTarget) > fOffsetThreshold)
+		return false;
+
+	return true;
+}
+
+float fGetPlayerAimOffset(int client, int iTarget)
+{
+	static float vAng[3];
+	static float vPos[3];
+	static float vDir[3];
+
+	GetClientEyeAngles(iTarget, vAng);
+	vAng[0] = vAng[2] = 0.0;
+	GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vAng, vAng);
+
+	GetClientAbsOrigin(client, vPos);
+	GetClientAbsOrigin(iTarget, vDir);
+	vPos[2] = vDir[2] = 0.0;
+	MakeVectorFromPoints(vDir, vPos, vDir);
+	NormalizeVector(vDir, vDir);
+
+	return RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vDir)));
 }
 
 bool bIsAliveSurvivor(int client)
