@@ -20,8 +20,8 @@ public Plugin myinfo =
 	name = 			"End Safedoor Witch",
 	author = 		"sorallll",
 	description = 	"",
-	version = 		"1.0.1",
-	url = 			""
+	version = 		"1.0.2",
+	url = 			"https://forums.alliedmods.net/showthread.php?t=335777"
 }
 
 public void OnPluginStart()
@@ -71,6 +71,8 @@ Action tmrSpawnWitch(Handle timer)
 		float vPos[3];
 		float vAng[3];
 		float vFwd[3];
+		float vEnd1[3];
+		float vEnd2[3];
 		float fHeight;
 		char sModel[64];
 
@@ -95,6 +97,17 @@ Action tmrSpawnWitch(Handle timer)
 			ScaleVector(vFwd, 24.0);
 			AddVectors(vPos, vFwd, vPos);
 
+			if(bGetEndPoint(vPos, vAng, 32.0, vEnd1, entity))
+			{
+				vAng[1] += 180.0;
+				if(bGetEndPoint(vPos, vAng, 32.0, vEnd2, entity))
+				{
+					NormalizeVector(vFwd, vFwd);
+					ScaleVector(vFwd, GetVectorDistance(vEnd1, vEnd2) * 0.5);
+					AddVectors(vEnd2, vFwd, vPos);
+				}
+			}
+
 			GetEntPropVector(entity, Prop_Data, "m_angRotationClosed", vAng);
 			GetEntPropString(entity, Prop_Data, "m_ModelName", sModel, sizeof sModel);
 			if(strcmp(sModel, "models/props_doors/checkpoint_door_-02.mdl") != 0)
@@ -108,7 +121,7 @@ Action tmrSpawnWitch(Handle timer)
 			vPos[2] -= 25.0;
 			fHeight = fGetGroundHeight(vPos, entity);
 
-			if(fHeight)
+			if(fHeight && FloatAbs(vPos[2] - fHeight) < 71.0)
 				vPos[2] = fHeight + 5.0;
 
 			vSpawnWitch(vPos, vAng);
@@ -127,6 +140,26 @@ float fGetGroundHeight(const float vPos[3], int entity)
 
 	delete hTrace;
 	return vEnd[2];
+}
+
+bool bGetEndPoint(const float vStart[3], const float vAng[3], float fScale, float vBuffer[3], int entity)
+{
+	float vEnd[3];
+	GetAngleVectors(vAng, vEnd, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vEnd, vEnd);
+	ScaleVector(vEnd, fScale);
+	AddVectors(vStart, vEnd, vEnd);
+
+	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, bTraceEntityFilter, entity);
+	if(TR_DidHit(hTrace))
+	{
+		TR_GetEndPosition(vBuffer, hTrace);
+		delete hTrace;
+		return true;
+	}
+
+	delete hTrace;
+	return false;
 }
 
 bool bTraceEntityFilter(int entity, int contentsMask, any data)
