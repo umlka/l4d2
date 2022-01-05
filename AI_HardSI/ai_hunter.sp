@@ -2,7 +2,6 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
-#include <left4dhooks>
 
 ConVar
 	g_hLungeInterval,
@@ -22,10 +21,8 @@ float
 	g_fPounceAngleStd,
 	g_fStraightPounceProximity,
 	g_fWallDetectionDistance,
+	g_fAimOffsetSensitivityHunter,
 	g_fCanLungeTime[MAXPLAYERS + 1];
-
-int
-	g_iAimOffsetSensitivityHunter;
 
 bool
 	g_bHasQueuedLunge[MAXPLAYERS + 1];
@@ -46,7 +43,7 @@ public void OnPluginStart()
 	g_hPounceAngleMean = CreateConVar("ai_pounce_angle_mean", "10.0", "Mean angle produced by Gaussian RNG");
 	g_hPounceAngleStd = CreateConVar("ai_pounce_angle_std", "20.0", "One standard deviation from mean as produced by Gaussian RNG");
 	g_hStraightPounceProximity = CreateConVar("ai_straight_pounce_proximity", "350.0", "Distance to nearest survivor at which hunter will consider pouncing straight");
-	g_hAimOffsetSensitivityHunter = CreateConVar("ai_aim_offset_sensitivity_hunter", "180", "If the hunter has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
+	g_hAimOffsetSensitivityHunter = CreateConVar("ai_aim_offset_sensitivity_hunter", "180.0", "If the hunter has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hWallDetectionDistance = CreateConVar("ai_wall_detection_distance", "-1.0", "How far in front of himself infected bot will check for a wall. Use '-1' to disable feature");
 	g_hLungeInterval = FindConVar("z_lunge_interval");
 
@@ -98,7 +95,7 @@ void vGetCvars()
 	g_fPounceAngleMean = g_hPounceAngleMean.FloatValue;
 	g_fPounceAngleStd = g_hPounceAngleStd.FloatValue;
 	g_fStraightPounceProximity = g_hStraightPounceProximity.FloatValue;
-	g_iAimOffsetSensitivityHunter = g_hAimOffsetSensitivityHunter.IntValue;
+	g_fAimOffsetSensitivityHunter = g_hAimOffsetSensitivityHunter.FloatValue;
 	g_fWallDetectionDistance = g_hWallDetectionDistance.FloatValue;
 }
 
@@ -127,13 +124,6 @@ void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
 	event.GetString("ability", sAbility, sizeof(sAbility));
 	if(strcmp(sAbility, "ability_lunge") == 0)
 		vHunter_OnPounce(GetClientOfUserId(event.GetInt("userid")));
-}
-
-int g_iSpecialTarget[MAXPLAYERS + 1];
-public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget)
-{
-	g_iSpecialTarget[specialInfected] = curTarget;
-	return Plugin_Continue;
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons)
@@ -216,7 +206,7 @@ void vHunter_OnPounce(int client)
 	}
 	else
 	{	
-		if(bIsTargetWatchingAttacker(client, g_iAimOffsetSensitivityHunter) && fNearestSurvivorDistance(client, vPos) > g_fStraightPounceProximity)
+		if(bIsBeingWatched(client, g_fAimOffsetSensitivityHunter) && fNearestSurvivorDistance(client, vPos) > g_fStraightPounceProximity)
 		{
 			iLunge = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 			vAngleLunge(iLunge, fGaussianRNG(g_fPounceAngleMean, g_fPounceAngleStd));
@@ -279,36 +269,33 @@ bool bTraceEntityFilter(int entity, int contentsMask)
 	return true;
 }
 
-bool bIsTargetWatchingAttacker(int iAttacker, int iOffsetThreshold)
+bool bIsBeingWatched(int client, float fOffsetThreshold)
 {
 	static int iTarget;
-	static bool bIsWatching;
+	if(bIsAliveSurvivor((iTarget = GetClientAimTarget(client))) && fGetPlayerAimOffset(client, iTarget) > fOffsetThreshold)
+		return false;
 
-	bIsWatching = true;
-	if(bIsAliveSurvivor((iTarget = g_iSpecialTarget[iAttacker]/*GetClientAimTarget(iAttacker)*/)) && RoundToNearest(fGetPlayerAimOffset(iTarget, iAttacker)) > iOffsetThreshold)
-		bIsWatching = false;
-
-	return bIsWatching;
+	return true;
 }
 
-float fGetPlayerAimOffset(int iAttacker, int iTarget)
+float fGetPlayerAimOffset(int client, int iTarget)
 {
-	static float vAim[3];
-	static float vTarget[3];
-	static float vAttacker[3];
+	static float vAng[3];
+	static float vPos[3];
+	static float vDir[3];
 
-	GetClientEyeAngles(iAttacker, vAim);
-	vAim[0] = vAim[2] = 0.0;
-	GetAngleVectors(vAim, vAim, NULL_VECTOR, NULL_VECTOR);
-	NormalizeVector(vAim, vAim);
-	
-	GetClientAbsOrigin(iTarget, vTarget);
-	GetClientAbsOrigin(iAttacker, vAttacker);
-	vAttacker[2] = vTarget[2] = 0.0;
-	MakeVectorFromPoints(vAttacker, vTarget, vAttacker);
-	NormalizeVector(vAttacker, vAttacker);
-	
-	return RadToDeg(ArcCosine(GetVectorDotProduct(vAim, vAttacker)));
+	GetClientEyeAngles(iTarget, vAng);
+	vAng[0] = vAng[2] = 0.0;
+	GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vAng, vAng);
+
+	GetClientAbsOrigin(client, vPos);
+	GetClientAbsOrigin(iTarget, vDir);
+	vPos[2] = vDir[2] = 0.0;
+	MakeVectorFromPoints(vDir, vPos, vDir);
+	NormalizeVector(vDir, vDir);
+
+	return RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vDir)));
 }
 
 void vAngleLunge(int iLunge, float fTurnAngle)
