@@ -121,7 +121,7 @@ Action tmrSpawnWitch(Handle timer)
 			vPos[2] -= 25.0;
 			fHeight = fGetGroundHeight(vPos, entity);
 
-			if(fHeight && FloatAbs(vPos[2] - fHeight) < 71.0)
+			if(fHeight && vPos[2] - fHeight < 104.0)
 				vPos[2] = fHeight + 5.0;
 
 			vSpawnWitch(vPos, vAng);
