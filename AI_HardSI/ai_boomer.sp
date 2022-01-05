@@ -2,7 +2,6 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
-#include <left4dhooks>
 
 ConVar
 	g_hBoomerBhop,
@@ -76,13 +75,6 @@ void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
 		vBoomer_OnVomit(client);
 }
 
-int g_iSpecialTarget[MAXPLAYERS + 1];
-public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget)
-{
-	g_iSpecialTarget[specialInfected] = curTarget;
-	return Plugin_Continue;
-}
-
 public Action OnPlayerRunCmd(int client, int &buttons)
 {
 	if(!g_bBoomerBhop)
@@ -110,11 +102,9 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	return Plugin_Continue;
 }
 
-int bTargetSurvivor(int client)
+bool bTargetSurvivor(int client)
 {
-	static int iTarget;
-	iTarget = GetClientAimTarget(client, true);
-	return bIsAliveSurvivor(iTarget) ? iTarget : 0;
+	return bIsAliveSurvivor(GetClientAimTarget(client, true));
 }
 /*
 bool bBhop(int client, int &buttons, float vAng[3])
@@ -251,14 +241,14 @@ bool bClient_Push(int client, int &buttons, float vVec[3], float fForce)
 	return false;
 }
 
-#define JUMP_HEIGHT 18.0
+#define OBSTACLE_HEIGHT 18.0
 bool bWontFall(int client, const float vVel[3])
 {
 	static float vPos[3];
 	static float vEnd[3];
 	GetClientAbsOrigin(client, vPos);
 	AddVectors(vPos, vVel, vEnd);
-	vPos[2] += 20.0;
+	vPos[2] += OBSTACLE_HEIGHT;
 
 	static float vMins[3];
 	static float vMaxs[3];
@@ -270,9 +260,9 @@ bool bWontFall(int client, const float vVel[3])
 	static float vEndPos[3];
 
 	bHit = false;
-	vEnd[2] += JUMP_HEIGHT;
+	vEnd[2] += OBSTACLE_HEIGHT;
 	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
-	//vEnd[2] -= JUMP_HEIGHT;
+	vEnd[2] -= OBSTACLE_HEIGHT;
 
 	if(TR_DidHit(hTrace))
 	{
@@ -380,11 +370,11 @@ float fNearestSurvivorDistance(int client)
 	return fDistance[0];
 }
 
-#define CROUCHING_HEIGHT 56.0
+#define CROUCHING_EYE 44.0
 void vBoomer_OnVomit(int client)
 {
 	static int iAimTarget;
-	iAimTarget = g_iSpecialTarget[client]/*GetClientAimTarget(client, true)*/;
+	iAimTarget = GetClientAimTarget(client, true);
 	if(!bIsAliveSurvivor(iAimTarget))
 	{
 		static int iNewTarget;
@@ -409,7 +399,7 @@ void vBoomer_OnVomit(int client)
 		GetClientAbsOrigin(client, vPos);
 		GetClientAbsOrigin(iAimTarget, vTarget);
 
-		vTarget[2] += CROUCHING_HEIGHT;
+		vTarget[2] += CROUCHING_EYE;
 
 		MakeVectorFromPoints(vPos, vTarget, vVectors);
 		GetVectorAngles(vVectors, vAngles);
