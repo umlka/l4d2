@@ -3,7 +3,6 @@
 #include <sourcemod>
 #include <sdktools>
 #include <dhooks>
-#include <left4dhooks>
 
 #define SPEEDBOOST	90.0
 #define GAMEDATA	"ai_tank"
@@ -19,10 +18,8 @@ bool
 
 float
 	g_fTankAttackRange,
-	g_fTankThrowForce;
-
-int
-	g_iAimOffsetSensitivityTank;
+	g_fTankThrowForce,
+	g_fAimOffsetSensitivityTank;
 
 public Plugin myinfo =
 {
@@ -38,7 +35,7 @@ public void OnPluginStart()
 	vLoadGameData();
 
 	g_hTankBhop = CreateConVar("ai_tank_bhop", "1", "Flag to enable bhop facsimile on AI tanks");
-	g_hAimOffsetSensitivityTank = CreateConVar("ai_aim_offset_sensitivity_tank", "30", "If the tank has a target, it will not straight throw if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
+	g_hAimOffsetSensitivityTank = CreateConVar("ai_aim_offset_sensitivity_tank", "30.0", "If the tank has a target, it will not straight throw if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hTankAttackRange = FindConVar("tank_attack_range");
 	g_hTankThrowForce = FindConVar("z_tank_throw_force");
 
@@ -63,17 +60,10 @@ void vGetCvars()
 	g_bTankBhop = g_hTankBhop.BoolValue;
 	g_fTankAttackRange = g_hTankAttackRange.FloatValue;
 	g_fTankThrowForce = g_hTankThrowForce.FloatValue;
-	g_iAimOffsetSensitivityTank = g_hAimOffsetSensitivityTank.IntValue;
+	g_fAimOffsetSensitivityTank = g_hAimOffsetSensitivityTank.FloatValue;
 }
 
-int g_iSpecialTarget[MAXPLAYERS + 1];
-public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget)
-{
-	g_iSpecialTarget[specialInfected] = curTarget;
-	return Plugin_Continue;
-}
-
-public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
+public Action OnPlayerRunCmd(int client, int &buttons)
 {
 	if(!g_bTankBhop)
 		return Plugin_Continue;
@@ -201,14 +191,14 @@ bool bClient_Push(int client, int &buttons, float vVec[3], float fForce)
 	return false;
 }
 */
-#define JUMP_HEIGHT 18.0
+#define OBSTACLE_HEIGHT 18.0
 bool bWontFall(int client, const float vVel[3])
 {
 	static float vPos[3];
 	static float vEnd[3];
 	GetClientAbsOrigin(client, vPos);
 	AddVectors(vPos, vVel, vEnd);
-	vPos[2] += 20.0;
+	vPos[2] += OBSTACLE_HEIGHT;
 
 	static float vMins[3];
 	static float vMaxs[3];
@@ -220,9 +210,9 @@ bool bWontFall(int client, const float vVel[3])
 	static float vEndPos[3];
 
 	bHit = false;
-	vEnd[2] += JUMP_HEIGHT;
+	vEnd[2] += OBSTACLE_HEIGHT;
 	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
-	//vEnd[2] -= JUMP_HEIGHT;
+	vEnd[2] -= OBSTACLE_HEIGHT;
 
 	if(TR_DidHit(hTrace))
 	{
@@ -358,6 +348,7 @@ void vSetupDetours(GameData hGameData = null)
 		SetFailState("Failed to detour post: CTankRock::OnRelease");*/
 }
 
+#define CROUCHING_EYE 44.0
 MRESReturn mreTankRockReleasePre(int pThis, DHookParam hParams)
 {
 	if(pThis <= MaxClients || !IsValidEntity(pThis))
@@ -366,29 +357,25 @@ MRESReturn mreTankRockReleasePre(int pThis, DHookParam hParams)
 	int iThrower = GetEntPropEnt(pThis, Prop_Data, "m_hThrower");
 	if(iThrower < 1 || iThrower > MaxClients || !IsClientInGame(iThrower) || !IsFakeClient(iThrower) || GetClientTeam(iThrower) != 3 || GetEntProp(iThrower, Prop_Send, "m_zombieClass") != 8)
 		return MRES_Ignored;
-	
+
 	static int iAimTarget;
-	iAimTarget = g_iSpecialTarget[iThrower]/*GetClientAimTarget(iThrower, true)*/;
-	if(!bIsAliveSurvivor(iAimTarget) || bIsIncapacitated(iAimTarget) || bIsPinned(iAimTarget) || bHitWall(pThis, iAimTarget) || bIsTargetWatchingAttacker(iAimTarget, g_iAimOffsetSensitivityTank))
+	iAimTarget = GetClientAimTarget(iThrower, true);
+	if(!bIsAliveSurvivor(iAimTarget) || bIsIncapacitated(iAimTarget) || bIsPinned(iAimTarget) || bHitWall(iThrower, pThis, iAimTarget) || bIsBeingWatched(iThrower, g_fAimOffsetSensitivityTank))
 	{
-		static int iNewTarget;
-		iNewTarget = iGetClosestSurvivor(iThrower, iAimTarget, pThis, g_fTankThrowForce);
-		if(iNewTarget != -1)
-			iAimTarget = iNewTarget;
+		iAimTarget = iGetClosestSurvivor(iThrower, iAimTarget, pThis, g_fTankThrowForce);
+		if(iAimTarget == -1)
+			return MRES_Ignored;
 	}
 
-	if(!bIsAliveSurvivor(iAimTarget))
-		return MRES_Ignored;
-
-	static float vPos[3];
+	static float vRock[3];
 	static float vTarget[3];
 	static float vVectors[3];
-	GetClientEyePosition(iThrower, vPos);
+	GetClientEyePosition(iThrower, vRock);
 	GetClientAbsOrigin(iAimTarget, vTarget);
 
-	vTarget[2] += 45.0;
+	vTarget[2] += CROUCHING_EYE;
 
-	MakeVectorFromPoints(vPos, vTarget, vVectors);
+	MakeVectorFromPoints(vRock, vTarget, vVectors);
 	GetVectorAngles(vVectors, vTarget);
 	hParams.SetVector(2, vTarget);
 
@@ -436,45 +423,42 @@ bool bIsPinned(int client)
 	return false;
 }
 
-bool bIsTargetWatchingAttacker(int iAttacker, int iOffsetThreshold)
+bool bIsBeingWatched(int client, float fOffsetThreshold)
 {
 	static int iTarget;
-	static bool bIsWatching;
+	if(bIsAliveSurvivor((iTarget = GetClientAimTarget(client))) && fGetPlayerAimOffset(client, iTarget) > fOffsetThreshold)
+		return false;
 
-	bIsWatching = true;
-	if(bIsAliveSurvivor((iTarget = g_iSpecialTarget[iAttacker]/*GetClientAimTarget(iAttacker)*/)) && RoundToNearest(fGetPlayerAimOffset(iTarget, iAttacker)) > iOffsetThreshold)
-		bIsWatching = false;
-
-	return bIsWatching;
+	return true;
 }
 
-float fGetPlayerAimOffset(int iAttacker, int iTarget)
+float fGetPlayerAimOffset(int client, int iTarget)
 {
-	static float vAim[3];
-	static float vTarget[3];
-	static float vAttacker[3];
+	static float vAng[3];
+	static float vPos[3];
+	static float vDir[3];
 
-	GetClientEyeAngles(iAttacker, vAim);
-	vAim[0] = vAim[2] = 0.0;
-	GetAngleVectors(vAim, vAim, NULL_VECTOR, NULL_VECTOR);
-	NormalizeVector(vAim, vAim);
-	
-	GetClientAbsOrigin(iTarget, vTarget);
-	GetClientAbsOrigin(iAttacker, vAttacker);
-	vAttacker[2] = vTarget[2] = 0.0;
-	MakeVectorFromPoints(vAttacker, vTarget, vAttacker);
-	NormalizeVector(vAttacker, vAttacker);
-	
-	return RadToDeg(ArcCosine(GetVectorDotProduct(vAim, vAttacker)));
+	GetClientEyeAngles(iTarget, vAng);
+	vAng[0] = vAng[2] = 0.0;
+	GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vAng, vAng);
+
+	GetClientAbsOrigin(client, vPos);
+	GetClientAbsOrigin(iTarget, vDir);
+	vPos[2] = vDir[2] = 0.0;
+	MakeVectorFromPoints(vDir, vPos, vDir);
+	NormalizeVector(vDir, vDir);
+
+	return RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vDir)));
 }
 
-bool bHitWall(int entity, int iTarget)
+bool bHitWall(int iTank, int entity, int iTarget)
 {
 	static float vPos[3];
 	static float vTarget[3];
-	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vPos);
+	GetClientEyePosition(iTank, vPos);
 	GetClientAbsOrigin(iTarget, vTarget);
-	vTarget[2] += 45.0;
+	vTarget[2] += CROUCHING_EYE;
 
 	static float vMins[3];
 	static float vMaxs[3];
@@ -501,7 +485,7 @@ int iGetClosestSurvivor(int client, int iAimTarget = -1, int entity, float fDist
 	iCount = 0;
 	GetClientEyePosition(client, vPos);
 	iCount = GetClientsInRange(vPos, RangeType_Visibility, iTargets, MAXPLAYERS);
-	
+
 	if(iCount == 0)
 		return -1;
 			
@@ -512,7 +496,8 @@ int iGetClosestSurvivor(int client, int iAimTarget = -1, int entity, float fDist
 	for(i = 0; i < iCount; i++)
 	{
 		iTarget = iTargets[i];
-		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !bIsIncapacitated(iTarget) && !bIsPinned(iTarget) && !bHitWall(entity, iTarget))
+
+		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !bIsIncapacitated(iTarget) && !bIsPinned(iTarget) && !bHitWall(client, entity, iTarget))
 		{
 			GetClientAbsOrigin(iTarget, vTarget);
 			fDist = GetVectorDistance(vPos, vTarget);
@@ -528,7 +513,7 @@ int iGetClosestSurvivor(int client, int iAimTarget = -1, int entity, float fDist
 		
 		for(i = 1; i <= MaxClients; i++)
 		{
-			if(i != iAimTarget && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsIncapacitated(i) && !bIsPinned(i) && !bHitWall(client, i))
+			if(i != iAimTarget && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsIncapacitated(i) && !bIsPinned(i) && !bHitWall(client, entity, i))
 			{
 				GetClientAbsOrigin(i, vTarget);
 				fDist = GetVectorDistance(vPos, vTarget);
