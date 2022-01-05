@@ -4,7 +4,7 @@
 #include <sdktools>
 #include <dhooks>
 
-#define SPEEDBOOST	90.0
+#define SPEEDBOOST	80.0
 #define GAMEDATA	"ai_tank"
 
 ConVar
@@ -35,7 +35,7 @@ public void OnPluginStart()
 	vLoadGameData();
 
 	g_hTankBhop = CreateConVar("ai_tank_bhop", "1", "Flag to enable bhop facsimile on AI tanks");
-	g_hAimOffsetSensitivityTank = CreateConVar("ai_aim_offset_sensitivity_tank", "30.0", "If the tank has a target, it will not straight throw if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
+	g_hAimOffsetSensitivityTank = CreateConVar("ai_aim_offset_sensitivity_tank", "20.0", "If the tank has a target, it will not straight throw if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hTankAttackRange = FindConVar("tank_attack_range");
 	g_hTankThrowForce = FindConVar("z_tank_throw_force");
 
@@ -360,12 +360,12 @@ MRESReturn mreTankRockReleasePre(int pThis, DHookParam hParams)
 
 	static int iAimTarget;
 	iAimTarget = GetClientAimTarget(iThrower, true);
-	if(!bIsAliveSurvivor(iAimTarget) || bIsIncapacitated(iAimTarget) || bIsPinned(iAimTarget) || bHitWall(iThrower, pThis, iAimTarget) || bIsBeingWatched(iThrower, g_fAimOffsetSensitivityTank))
-	{
-		iAimTarget = iGetClosestSurvivor(iThrower, iAimTarget, pThis, g_fTankThrowForce);
-		if(iAimTarget == -1)
-			return MRES_Ignored;
-	}
+	if(bIsAliveSurvivor(iAimTarget) && !bIsIncapacitated(iAimTarget) && !bIsPinned(iAimTarget) && !bHitWall(iThrower, pThis, iAimTarget) && !bIsBeingWatched(iThrower, g_fAimOffsetSensitivityTank))
+		return MRES_Ignored;
+	
+	iAimTarget = iGetClosestSurvivor(iThrower, iAimTarget, pThis, g_fTankThrowForce);
+	if(iAimTarget == -1)
+		return MRES_Ignored;
 
 	static float vRock[3];
 	static float vTarget[3];
