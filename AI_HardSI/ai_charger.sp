@@ -2,7 +2,6 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
-#include <left4dhooks>
 
 ConVar
 	g_hChargerBhop,
@@ -13,11 +12,11 @@ ConVar
 
 float
 	g_fChargeProximity,
-	g_fChargeStartSpeed;
+	g_fChargeStartSpeed,
+	g_fAimOffsetSensitivityCharger;
 
 int
-	g_iHealthThresholdCharger,
-	g_iAimOffsetSensitivityCharger;
+	g_iHealthThresholdCharger;
 
 bool
 	g_bChargerBhop,
@@ -37,7 +36,7 @@ public void OnPluginStart()
 	g_hChargerBhop = CreateConVar("ai_charger_bhop", "1", "Flag to enable bhop facsimile on AI chargers");
 	g_hChargeProximity = CreateConVar("ai_charge_proximity", "300.0", "How close a client will approach before charging");
 	g_hHealthThresholdCharger = CreateConVar("ai_health_threshold_charger", "300", "Charger will charge if its health drops to this level");
-	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "30", "If the charger has a target, it will not straight charge if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
+	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "30.0", "If the charger has a target, it will not straight charge if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hChargeStartSpeed = FindConVar("z_charge_start_speed");
 
 	g_hChargerBhop.AddChangeHook(vConVarChanged);
@@ -66,7 +65,7 @@ void vGetCvars()
 	g_fChargeStartSpeed = g_hChargeStartSpeed.FloatValue;
 	g_fChargeProximity = g_hChargeProximity.FloatValue;
 	g_iHealthThresholdCharger = g_hHealthThresholdCharger.IntValue;
-	g_iAimOffsetSensitivityCharger = g_hAimOffsetSensitivityCharger.IntValue;
+	g_fAimOffsetSensitivityCharger = g_hAimOffsetSensitivityCharger.FloatValue;
 }
 
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
@@ -84,13 +83,6 @@ void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast
 	SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_FROZEN);
 	vCharger_OnCharge(client);
 	SetEntProp(client, Prop_Send, "m_fFlags", flags);
-}
-
-int g_iSpecialTarget[MAXPLAYERS + 1];
-public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget)
-{
-	g_iSpecialTarget[specialInfected] = curTarget;
-	return Plugin_Continue;
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons)
@@ -111,7 +103,7 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	if(g_bShouldCharge[client] && -1.0 < fSurvivorProximity < 150.0 && bChargerCanCharge(client))
 	{
 		static int iTarget;
-		iTarget = g_iSpecialTarget[client]/*GetClientAimTarget(client, true)*/;
+		iTarget = GetClientAimTarget(client, true);
 		if(bIsAliveSurvivor(iTarget) && !bIsIncapacitated(iTarget) && (buttons & IN_ATTACK2 || !bHitWall(client, iTarget)))
 		{
 			buttons |= IN_ATTACK;
@@ -270,14 +262,14 @@ bool bClient_Push(int client, int &buttons, float vVec[3], float fForce)
 	return false;
 }
 
-#define JUMP_HEIGHT 18.0
+#define OBSTACLE_HEIGHT 18.0
 bool bWontFall(int client, const float vVel[3])
 {
 	static float vPos[3];
 	static float vEnd[3];
 	GetClientAbsOrigin(client, vPos);
 	AddVectors(vPos, vVel, vEnd);
-	vPos[2] += 20.0;
+	vPos[2] += OBSTACLE_HEIGHT;
 
 	static float vMins[3];
 	static float vMaxs[3];
@@ -289,9 +281,9 @@ bool bWontFall(int client, const float vVel[3])
 	static float vEndPos[3];
 
 	bHit = false;
-	vEnd[2] += JUMP_HEIGHT;
+	vEnd[2] += OBSTACLE_HEIGHT;
 	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
-	//vEnd[2] -= JUMP_HEIGHT;
+	vEnd[2] -= OBSTACLE_HEIGHT;
 
 	if(TR_DidHit(hTrace))
 	{
@@ -451,12 +443,12 @@ void vBlockCharge(int client)
 		SetEntPropFloat(iAbility, Prop_Send, "m_timestamp", GetGameTime() + 0.1);	
 }
 
-#define CROUCHING_HEIGHT 56.0
+#define CROUCHING_EYE 44.0
 void vCharger_OnCharge(int client)
 {
 	static int iAimTarget;
-	iAimTarget = g_iSpecialTarget[client]/*GetClientAimTarget(client, true)*/;
-	if(!bIsAliveSurvivor(iAimTarget) || bIsIncapacitated(iAimTarget) || bIsPinned(iAimTarget) || bIsTargetWatchingAttacker(client, g_iAimOffsetSensitivityCharger))
+	iAimTarget = GetClientAimTarget(client, true);
+	if(!bIsAliveSurvivor(iAimTarget) || bIsIncapacitated(iAimTarget) || bIsPinned(iAimTarget) || bHitWall(client, iAimTarget) || bIsBeingWatched(client, g_fAimOffsetSensitivityCharger))
 	{
 		static int iNewTarget;
 		iNewTarget = iGetClosestSurvivor(client, iAimTarget, g_fChargeProximity);
@@ -470,7 +462,7 @@ void vCharger_OnCharge(int client)
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
 
 	static float vLength;
-	vLength = GetVectorLength(vVelocity) + CROUCHING_HEIGHT;
+	vLength = GetVectorLength(vVelocity) + CROUCHING_EYE;
 	vLength = vLength < g_fChargeStartSpeed ? g_fChargeStartSpeed : vLength;
 
 	if(bIsAliveSurvivor(iAimTarget))
@@ -480,7 +472,7 @@ void vCharger_OnCharge(int client)
 		GetClientAbsOrigin(client, vPos);
 		GetClientAbsOrigin(iAimTarget, vTarget);
 
-		vTarget[2] += CROUCHING_HEIGHT;
+		vTarget[2] += CROUCHING_EYE;
 
 		MakeVectorFromPoints(vPos, vTarget, vVectors);
 		GetVectorAngles(vVectors, vAngles);
@@ -535,36 +527,33 @@ bool bIsPinned(int client)
 	return false;
 }
 
-bool bIsTargetWatchingAttacker(int iAttacker, int iOffsetThreshold)
+bool bIsBeingWatched(int client, float fOffsetThreshold)
 {
 	static int iTarget;
-	static bool bIsWatching;
+	if(bIsAliveSurvivor((iTarget = GetClientAimTarget(client))) && fGetPlayerAimOffset(client, iTarget) > fOffsetThreshold)
+		return false;
 
-	bIsWatching = true;
-	if(bIsAliveSurvivor((iTarget = g_iSpecialTarget[iAttacker]/*GetClientAimTarget(iAttacker)*/)) && RoundToNearest(fGetPlayerAimOffset(iTarget, iAttacker)) > iOffsetThreshold)
-		bIsWatching = false;
-
-	return bIsWatching;
+	return true;
 }
 
-float fGetPlayerAimOffset(int iAttacker, int iTarget)
+float fGetPlayerAimOffset(int client, int iTarget)
 {
-	static float vAim[3];
-	static float vTarget[3];
-	static float vAttacker[3];
+	static float vAng[3];
+	static float vPos[3];
+	static float vDir[3];
 
-	GetClientEyeAngles(iAttacker, vAim);
-	vAim[0] = vAim[2] = 0.0;
-	GetAngleVectors(vAim, vAim, NULL_VECTOR, NULL_VECTOR);
-	NormalizeVector(vAim, vAim);
-	
-	GetClientAbsOrigin(iTarget, vTarget);
-	GetClientAbsOrigin(iAttacker, vAttacker);
-	vAttacker[2] = vTarget[2] = 0.0;
-	MakeVectorFromPoints(vAttacker, vTarget, vAttacker);
-	NormalizeVector(vAttacker, vAttacker);
-	
-	return RadToDeg(ArcCosine(GetVectorDotProduct(vAim, vAttacker)));
+	GetClientEyeAngles(iTarget, vAng);
+	vAng[0] = vAng[2] = 0.0;
+	GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vAng, vAng);
+
+	GetClientAbsOrigin(client, vPos);
+	GetClientAbsOrigin(iTarget, vDir);
+	vPos[2] = vDir[2] = 0.0;
+	MakeVectorFromPoints(vDir, vPos, vDir);
+	NormalizeVector(vDir, vDir);
+
+	return RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vDir)));
 }
 
 int iGetClosestSurvivor(int client, int iAimTarget = -1, float fDistance)
