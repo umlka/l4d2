@@ -5,11 +5,13 @@
 #include <left4dhooks>
 
 ConVar
+	g_hJockeyLeapRange,
 	g_hJockeyLeapAgain,
 	g_hJockeyStumbleRadius,
 	g_hHopActivationProximity;
 
 float
+	g_fJockeyLeapRange,
 	g_fJockeyLeapAgain,
 	g_fJockeyStumbleRadius,
 	g_fHopActivationProximity,
@@ -30,12 +32,11 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	g_hJockeyStumbleRadius = CreateConVar("ai_jockey_stumble_radius", "50.0", "Stumble radius of a client landing a ride");
-	g_hHopActivationProximity = CreateConVar("ai_hop_activation_proximity", "500.0", "How close a client will approach before it starts hopping");
+	g_hHopActivationProximity = CreateConVar("ai_hop_activation_proximity", "800.0", "How close a client will approach before it starts hopping");
+	g_hJockeyLeapRange = FindConVar("z_jockey_leap_range");
 	g_hJockeyLeapAgain = FindConVar("z_jockey_leap_again_timer");
-	//g_hJockeyLeapAgain.SetFloat(0.25);
 
-	FindConVar("z_jockey_leap_range").SetFloat(1000.0);
-
+	g_hJockeyLeapRange.AddChangeHook(vConVarChanged);
 	g_hJockeyLeapAgain.AddChangeHook(vConVarChanged);
 	g_hJockeyStumbleRadius.AddChangeHook(vConVarChanged);
 	g_hHopActivationProximity.AddChangeHook(vConVarChanged);
@@ -44,11 +45,6 @@ public void OnPluginStart()
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_shoved", Event_PlayerShoved);
 	HookEvent("jockey_ride", Event_JockeyRide, EventHookMode_Pre);
-}
-
-public void OnPluginEnd()
-{
-	FindConVar("z_jockey_leap_range").RestoreDefault();
 }
 
 public void OnConfigsExecuted()
@@ -63,6 +59,7 @@ void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 
 void vGetCvars()
 {
+	g_fJockeyLeapRange = g_hJockeyLeapRange.FloatValue;
 	g_fJockeyLeapAgain = g_hJockeyLeapAgain.FloatValue;
 	g_fJockeyStumbleRadius = g_hJockeyStumbleRadius.FloatValue;
 	g_fHopActivationProximity = g_hHopActivationProximity.FloatValue;
@@ -153,21 +150,26 @@ bool bIsPinned(int client)
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
 {
 	
-	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") == 1 || !(GetEntProp(client, Prop_Send, "m_hasVisibleThreats") || bTargetSurvivor(client)) || fNearestSurvivorDistance(client) > g_fHopActivationProximity)
+	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") == 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		return Plugin_Continue;
-	
+
+	static float fSurvivorProximity;
+	fSurvivorProximity = fNearestSurvivorDistance(client);
+	if(fSurvivorProximity > g_fHopActivationProximity)
+		return Plugin_Continue;
+
 	if(GetEntityFlags(client) & FL_ONGROUND)
 	{
-		if(bIsBeingWatched(client, 20.0))
-		{
-			static float vAng[3];
-			vAng = angles;
-			vAng[0] = GetRandomFloat(-50.0, -10.0);
-			TeleportEntity(client, NULL_VECTOR, vAng, NULL_VECTOR);
-		}
+		static float vAng[3];
 
 		if(g_bDoNormalJump[client])
 		{
+			if(fSurvivorProximity < g_fJockeyLeapRange && buttons & IN_FORWARD)
+			{
+				vAng = angles;
+				vAng[0] = GetRandomFloat(-10.0, 0.0);
+				TeleportEntity(client, NULL_VECTOR, vAng, NULL_VECTOR);
+			}
 			buttons |= IN_JUMP;
 			switch(GetRandomInt(0, 2))
 			{
@@ -184,10 +186,16 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			static float fGameTime;
 			if(g_fLeapAgainTime[client] < (fGameTime = GetGameTime()))
 			{
+				if(fSurvivorProximity < g_fJockeyLeapRange && buttons & IN_FORWARD && bIsBeingWatched(client, 30.0))
+				{
+					vAng = angles;
+					vAng[0] = GetRandomFloat(-50.0, -10.0);
+					TeleportEntity(client, NULL_VECTOR, vAng, NULL_VECTOR);
+				}
 				buttons |= IN_ATTACK;
 				g_bDoNormalJump[client] = true;
 				g_fLeapAgainTime[client] = fGameTime + g_fJockeyLeapAgain;
-			} 			
+			}
 		}
 	}
 	else
@@ -197,11 +205,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 
 	return Plugin_Continue;
-}
-
-bool bTargetSurvivor(int client)
-{
-	return bIsAliveSurvivor(GetClientAimTarget(client, true));
 }
 
 bool bIsBeingWatched(int client, float fOffsetThreshold)
