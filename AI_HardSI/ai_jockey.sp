@@ -164,7 +164,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 		if(g_bDoNormalJump[client])
 		{
-			if(fSurvivorProximity < g_fJockeyLeapRange && buttons & IN_FORWARD)
+			if(buttons & IN_FORWARD)
 			{
 				vAng = angles;
 				vAng[0] = GetRandomFloat(-10.0, 0.0);
@@ -186,7 +186,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			static float fGameTime;
 			if(g_fLeapAgainTime[client] < (fGameTime = GetGameTime()))
 			{
-				if(fSurvivorProximity < g_fJockeyLeapRange && buttons & IN_FORWARD && bIsBeingWatched(client, 30.0))
+				if(fSurvivorProximity < g_fJockeyLeapRange && bIsBeingWatched(client, 30.0))
 				{
 					vAng = angles;
 					vAng[0] = GetRandomFloat(-50.0, -10.0);
@@ -238,12 +238,7 @@ float fGetPlayerAimOffset(int client, int iTarget)
 
 bool bIsAliveSurvivor(int client)
 {
-	return bIsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
-}
-
-bool bIsValidClient(int client)
-{
-	return client > 0 && client <= MaxClients && IsClientInGame(client);
+	return client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
 }
 
 float fNearestSurvivorDistance(int client)
@@ -251,8 +246,8 @@ float fNearestSurvivorDistance(int client)
 	static int i;
 	static int iCount;
 	static float vPos[3];
-	static float vTarget[3];
-	static float fDistance[MAXPLAYERS + 1];
+	static float vTarg[3];
+	static float fDists[MAXPLAYERS + 1];
 	
 	iCount = 0;
 	GetClientAbsOrigin(client, vPos);
@@ -261,14 +256,14 @@ float fNearestSurvivorDistance(int client)
 	{
 		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 		{
-			GetClientAbsOrigin(i, vTarget);
-			fDistance[iCount++] = GetVectorDistance(vPos, vTarget);
+			GetClientAbsOrigin(i, vTarg);
+			fDists[iCount++] = GetVectorDistance(vPos, vTarg);
 		}
 	}
 
 	if(iCount == 0)
 		return -1.0;
 
-	SortFloats(fDistance, iCount, Sort_Ascending);
-	return fDistance[0];
+	SortFloats(fDists, iCount, Sort_Ascending);
+	return fDists[0];
 }
