@@ -100,7 +100,7 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	else
 		g_bShouldCharge[client] = true;
 		
-	if(g_bShouldCharge[client] && -1.0 < fSurvivorProximity < 150.0 && bChargerCanCharge(client))
+	if(g_bShouldCharge[client] && -1.0 < fSurvivorProximity < 100.0 && bChargerCanCharge(client))
 	{
 		static int iTarget;
 		iTarget = GetClientAimTarget(client, true);
@@ -114,13 +114,13 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 
 	if(g_bChargerBhop && 200.0 < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
-		static float vVelocity[3];
-		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
+		static float vVel[3];
+		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
+		if(SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) > 150.0)
 		{
-			static float vAngles[3];
-			GetClientEyeAngles(client, vAngles);
-			if(bBhop(client, buttons, vAngles))
+			static float vAng[3];
+			GetClientEyeAngles(client,  vAng);
+			if(bBhop(client, buttons,  vAng))
 				return Plugin_Changed;
 		}
 	}
@@ -138,7 +138,7 @@ bool bBhop(int client, int &buttons, float vAng[3])
 	if(buttons & IN_FORWARD)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if(bClient_Push(client, buttons, vVec, 180.0))
+		if(bClientPush(client, buttons, vVec, 180.0))
 			bJumped = true;
 	}
 		
@@ -146,7 +146,7 @@ bool bBhop(int client, int &buttons, float vAng[3])
 	{
 		vAng[1] += 180.0;
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if(bClient_Push(client, buttons, vVec, 90.0))
+		if(bClientPush(client, buttons, vVec, 90.0))
 			bJumped = true;
 	}
 	
@@ -154,7 +154,7 @@ bool bBhop(int client, int &buttons, float vAng[3])
 	{
 		vAng[1] += 90.0;
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		//if(bClient_Push(client, buttons, vVec, 90.0))
+		//if(bClientPush(client, buttons, vVec, 90.0))
 			//bJumped = true;
 
 		static float vRig[3];
@@ -170,7 +170,7 @@ bool bBhop(int client, int &buttons, float vAng[3])
 			bJumped = false;
 		else
 		{
-			if(bClient_Push(client, buttons, vAng, 90.0))
+			if(bClientPush(client, buttons, vAng, 90.0))
 				bJumped = true;
 		}
 	}
@@ -179,7 +179,7 @@ bool bBhop(int client, int &buttons, float vAng[3])
 	{
 		vAng[1] -= 90.0;
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		//if(bClient_Push(client, buttons, vVec, 90.0))
+		//if(bClientPush(client, buttons, vVec, 90.0))
 			//bJumped = true;
 
 		static float vRig[3];
@@ -195,7 +195,7 @@ bool bBhop(int client, int &buttons, float vAng[3])
 			bJumped = false;
 		else
 		{
-			if(bClient_Push(client, buttons, vVec, 90.0))
+			if(bClientPush(client, buttons, vVec, 90.0))
 				bJumped = true;
 		}
 	}
@@ -213,7 +213,7 @@ bool bBhop(int client, int &buttons, float vAng[3])
 	if(buttons & IN_FORWARD || buttons & IN_BACK)
 	{
 		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if(bClient_Push(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
+		if(bClientPush(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
 			bJumped = true;
 	}
 
@@ -234,7 +234,7 @@ bool bBhop(int client, int &buttons, float vAng[3])
 			bJumped = false;
 		else
 		{
-			if(bClient_Push(client, buttons, vVec, buttons & IN_MOVELEFT ? -90.0 : 90.0))
+			if(bClientPush(client, buttons, vVec, buttons & IN_MOVELEFT ? -90.0 : 90.0))
 				bJumped = true;
 		}
 	}
@@ -242,7 +242,7 @@ bool bBhop(int client, int &buttons, float vAng[3])
 	return bJumped;
 }
 
-bool bClient_Push(int client, int &buttons, float vVec[3], float fForce)
+bool bClientPush(int client, int &buttons, float vVec[3], float fForce)
 {
 	NormalizeVector(vVec, vVec);
 	ScaleVector(vVec, fForce);
@@ -369,8 +369,8 @@ float fNearestSurvivorDistance(int client)
 	static int i;
 	static int iCount;
 	static float vPos[3];
-	static float vTarget[3];
-	static float fDistance[MAXPLAYERS + 1];
+	static float vTarg[3];
+	static float fDists[MAXPLAYERS + 1];
 	
 	iCount = 0;
 	GetClientAbsOrigin(client, vPos);
@@ -379,26 +379,26 @@ float fNearestSurvivorDistance(int client)
 	{
 		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 		{
-			GetClientAbsOrigin(i, vTarget);
-			fDistance[iCount++] = GetVectorDistance(vPos, vTarget);
+			GetClientAbsOrigin(i, vTarg);
+			fDists[iCount++] = GetVectorDistance(vPos, vTarg);
 		}
 	}
 
 	if(iCount == 0)
 		return -1.0;
 
-	SortFloats(fDistance, iCount, Sort_Ascending);
-	return fDistance[0];
+	SortFloats(fDists, iCount, Sort_Ascending);
+	return fDists[0];
 }
 
 bool bHitWall(int client, int iTarget)
 {
 	static float vPos[3];
-	static float vTarget[3];
+	static float vTarg[3];
 	GetClientAbsOrigin(client, vPos);
-	GetClientAbsOrigin(iTarget, vTarget);
+	GetClientAbsOrigin(iTarget, vTarg);
 	vPos[2] += 10.0;
-	vTarget[2] += 10.0;
+	vTarg[2] += 10.0;
 
 	static float vMins[3];
 	static float vMaxs[3];
@@ -407,13 +407,13 @@ bool bHitWall(int client, int iTarget)
 
 	static float vEnd[3];
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vPos, vTarget, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vPos, vTarg, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
 	if(TR_DidHit(hTrace))
 	{
 		TR_GetEndPosition(vEnd, hTrace);
 		delete hTrace;
 
-		if(GetVectorDistance(vEnd, vTarget) < 32.0)
+		if(GetVectorDistance(vEnd, vTarg) < 32.0)
 			return false;
 		return true;
 	}
@@ -446,15 +446,13 @@ void vBlockCharge(int client)
 #define CROUCHING_EYE 44.0
 void vCharger_OnCharge(int client)
 {
-	static int iAimTarget;
-	iAimTarget = GetClientAimTarget(client, true);
-	if(!bIsAliveSurvivor(iAimTarget) || bIsIncapacitated(iAimTarget) || bIsPinned(iAimTarget) || bHitWall(client, iAimTarget) || bIsBeingWatched(client, g_fAimOffsetSensitivityCharger))
-	{
-		static int iNewTarget;
-		iNewTarget = iGetClosestSurvivor(client, iAimTarget, g_fChargeProximity);
-		if(iNewTarget != -1)
-			iAimTarget = iNewTarget;
-	}
+	static int iTarget;
+	iTarget = GetClientAimTarget(client, true);
+	if(!bIsAliveSurvivor(iTarget) || bIsIncapacitated(iTarget) || bIsPinned(iTarget) || bHitWall(client, iTarget) || bIsBeingWatched(client, g_fAimOffsetSensitivityCharger))
+		iTarget = iGetClosestSurvivor(client, iTarget, g_fChargeProximity);
+
+	if(iTarget == -1)
+		return;
 
 	static float vAngles[3];
 	static float vVectors[3];
@@ -465,33 +463,20 @@ void vCharger_OnCharge(int client)
 	vLength = GetVectorLength(vVelocity) + CROUCHING_EYE;
 	vLength = vLength < g_fChargeStartSpeed ? g_fChargeStartSpeed : vLength;
 
-	if(bIsAliveSurvivor(iAimTarget))
-	{
-		static float vPos[3];
-		static float vTarget[3];
-		GetClientAbsOrigin(client, vPos);
-		GetClientAbsOrigin(iAimTarget, vTarget);
+	static float vPos[3];
+	static float vTarg[3];
+	GetClientAbsOrigin(client, vPos);
+	GetClientAbsOrigin(iTarget, vTarg);
 
-		vTarget[2] += CROUCHING_EYE;
+	float fHeight = vTarg[2] - vPos[2];
+	if(fHeight > CROUCHING_EYE)
+		vLength += fHeight;
 
-		MakeVectorFromPoints(vPos, vTarget, vVectors);
-		GetVectorAngles(vVectors, vAngles);
+	vTarg[2] += CROUCHING_EYE;
 
-		if(GetEntityFlags(client) & FL_ONGROUND == 0)
-			vLength += GetEntPropFloat(iAimTarget, Prop_Data, "m_flMaxspeed");
-	}
-	else
-	{
-		GetClientEyeAngles(client, vAngles);
+	MakeVectorFromPoints(vPos, vTarg, vVectors);
+	GetVectorAngles(vVectors, vAngles);
 
-		vVectors[0] = Cosine(DegToRad(vAngles[1])) * Cosine(DegToRad(vAngles[0]));
-		vVectors[1] = Sine(DegToRad(vAngles[1])) * Cosine(DegToRad(vAngles[0]));
-		vVectors[2] = Sine(DegToRad(vAngles[0]));
-
-		if(GetEntityFlags(client) & FL_ONGROUND == 0)
-			vLength += fNearestSurvivorDistance(client);
-	}
-	
 	NormalizeVector(vVectors, vVectors);
 	ScaleVector(vVectors, vLength);
 	TeleportEntity(client, NULL_VECTOR, vAngles, vVectors);
@@ -499,12 +484,7 @@ void vCharger_OnCharge(int client)
 
 bool bIsAliveSurvivor(int client)
 {
-	return bIsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
-}
-
-bool bIsValidClient(int client)
-{
-	return client > 0 && client <= MaxClients && IsClientInGame(client);
+	return client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
 }
 
 bool bIsIncapacitated(int client)
@@ -556,13 +536,13 @@ float fGetPlayerAimOffset(int client, int iTarget)
 	return RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vDir)));
 }
 
-int iGetClosestSurvivor(int client, int iAimTarget = -1, float fDistance)
+int iGetClosestSurvivor(int client, int iExclude = -1, float fDistance)
 {
 	static int i;
 	static int iCount;
 	static float fDist;
 	static float vPos[3];
-	static float vTarget[3];
+	static float vTarg[3];
 	static int iTargets[MAXPLAYERS + 1];
 	
 	iCount = 0;
@@ -579,10 +559,10 @@ int iGetClosestSurvivor(int client, int iAimTarget = -1, float fDistance)
 	for(i = 0; i < iCount; i++)
 	{
 		iTarget = iTargets[i];
-		if(iTarget && iTarget != iAimTarget && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !bIsIncapacitated(iTarget) && !bIsPinned(iTarget) && !bHitWall(client, iTarget))
+		if(iTarget && iTarget != iExclude && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !bIsIncapacitated(iTarget) && !bIsPinned(iTarget) && !bHitWall(client, iTarget))
 		{
-			GetClientAbsOrigin(iTarget, vTarget);
-			fDist = GetVectorDistance(vPos, vTarget);
+			GetClientAbsOrigin(iTarget, vTarg);
+			fDist = GetVectorDistance(vPos, vTarg);
 			if(fDist < fDistance)
 				aTargets.Set(aTargets.Push(fDist), iTarget, 1);
 		}
@@ -590,29 +570,12 @@ int iGetClosestSurvivor(int client, int iAimTarget = -1, float fDistance)
 
 	if(aTargets.Length == 0)
 	{
-		iCount = 0;
-		GetClientAbsOrigin(client, vPos);
-		
-		for(i = 1; i <= MaxClients; i++)
-		{
-			if(i != iAimTarget && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsIncapacitated(i) && !bIsPinned(i) && !bHitWall(client, i))
-			{
-				GetClientAbsOrigin(i, vTarget);
-				fDist = GetVectorDistance(vPos, vTarget);
-				if(fDist < fDistance)
-					aTargets.Set(aTargets.Push(fDist), i, 1);
-			}
-		}
-		
-		if(aTargets.Length == 0)
-		{
-			delete aTargets;
-			return -1;
-		}
+		delete aTargets;
+		return -1;
 	}
 
 	aTargets.Sort(Sort_Ascending, Sort_Float);
-	iAimTarget = aTargets.Get(0, 1);
+	iTarget = aTargets.Get(0, 1);
 	delete aTargets;
-	return iAimTarget;
+	return iTarget;
 }
