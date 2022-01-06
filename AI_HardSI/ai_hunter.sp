@@ -162,7 +162,7 @@ float fNearestSurvivorDistance(int client, const float vOrigin[3])
 {
 	static int i;
 	static int iCount;
-	static float vTarget[3];
+	static float vTarg[3];
 	static float fDistance[MAXPLAYERS + 1];
 
 	iCount = 0;
@@ -171,8 +171,8 @@ float fNearestSurvivorDistance(int client, const float vOrigin[3])
 	{
 		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 		{
-			GetClientAbsOrigin(i, vTarget);
-			fDistance[iCount++] = GetVectorDistance(vOrigin, vTarget);
+			GetClientAbsOrigin(i, vTarg);
+			fDistance[iCount++] = GetVectorDistance(vOrigin, vTarg);
 		}
 	}
 
