@@ -50,18 +50,18 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 	if(GetEntityFlags(client) & FL_ONGROUND && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
-		static float vVelocity[3];
-		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
-		if(SquareRoot(Pow(vVelocity[0], 2.0) + Pow(vVelocity[1], 2.0)) > GetEntPropFloat(client, Prop_Data, "m_flMaxspeed") - 30.0)
+		static float vVel[3];
+		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
+		if(SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) > 150.0)
 		{
 			if(150.0 < fNearestSurvivorDistance(client) < 1000.0)
 			{
 				buttons |= IN_DUCK;
 				buttons |= IN_JUMP;
 				
-				static float vEyeAngles[3];
-				GetClientEyeAngles(client, vEyeAngles);
-				vBhop(client, buttons, vEyeAngles);
+				static float vAng[3];
+				GetClientEyeAngles(client, vAng);
+				vBhop(client, buttons, vAng);
 				return Plugin_Changed;
 			}
 		}
@@ -112,8 +112,8 @@ float fNearestSurvivorDistance(int client)
 	static int i;
 	static int iCount;
 	static float vPos[3];
-	static float vTarget[3];
-	static float fDistance[MAXPLAYERS + 1];
+	static float vTarg[3];
+	static float fDists[MAXPLAYERS + 1];
 	
 	iCount = 0;
 	GetClientAbsOrigin(client, vPos);
@@ -122,14 +122,14 @@ float fNearestSurvivorDistance(int client)
 	{
 		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 		{
-			GetClientAbsOrigin(i, vTarget);
-			fDistance[iCount++] = GetVectorDistance(vPos, vTarget);
+			GetClientAbsOrigin(i, vTarg);
+			fDists[iCount++] = GetVectorDistance(vPos, vTarg);
 		}
 	}
-	
+
 	if(iCount == 0)
 		return -1.0;
 
-	SortFloats(fDistance, iCount, Sort_Ascending);
-	return fDistance[0];
+	SortFloats(fDists, iCount, Sort_Ascending);
+	return fDists[0];
 }
