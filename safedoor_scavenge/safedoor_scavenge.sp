@@ -18,7 +18,7 @@ Handle
 	g_hSDKIsCheckpointDoor,
 	g_hSDKIsCheckpointExitDoor,
 	g_hSDKNextBotCreatePlayerBot,
-	g_hSDKSurvivorBotIsReachable;
+	g_hSDKSurvivorBotIsReachableCNavArea;
 
 DynamicHook
 	g_dDynamicHook;
@@ -55,6 +55,7 @@ int
 	g_iPropUseTarget[MAXPLAYERS + 1];
 
 float
+	g_vUseTargetPos[3],
 	g_fGascanUseRange,
 	g_fMinTravelDistance,
 	g_fMaxTravelDistance,
@@ -155,7 +156,7 @@ public Plugin myinfo =
 	name = 			"Safe Door Scavenge",
 	author = 		"sorallll",
 	description = 	"",
-	version = 		"1.0.5",
+	version = 		"1.0.6",
 	url = 			""
 }
 
@@ -184,7 +185,7 @@ public void OnPluginStart()
 	g_hAllowMultipleFill.AddChangeHook(vConVarChanged);
 	g_hScavengePanicTime.AddChangeHook(vConVarChanged);
 
-	//AutoExecConfig(true, "safedoor_scavenge");
+	AutoExecConfig(true, "safedoor_scavenge");
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
@@ -215,7 +216,7 @@ Action cmdSd(int client, int args)
 
 			int iBotArea = L4D_GetNearestNavArea(vBot);
 			if(iBotArea)
-				ReplyToCommand(client, "SurvivorBotIsReachable->%d NavAreaBuildPath->%d", SDKCall(g_hSDKSurvivorBotIsReachable, iBot, iBotArea, area), L4D2_VScriptWrapper_NavAreaBuildPath(vBot, vPos, 100000.0, false, true, 2, false));
+				ReplyToCommand(client, "SurvivorBotIsReachable->%d NavAreaBuildPath->%d", SDKCall(g_hSDKSurvivorBotIsReachableCNavArea, iBot, iBotArea, area), L4D2_VScriptWrapper_NavAreaBuildPath(vBot, vPos, 100000.0, false, true, 2, false));
 		}*/
 	}
 
@@ -238,7 +239,7 @@ void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 
 void vGetCvars()
 {
-	g_fGascanUseRange = g_hGascanUseRange.FloatValue + 128.0;
+	g_fGascanUseRange = g_hGascanUseRange.FloatValue + 33.0;
 	g_iNumCansNeeded = g_hNumCansNeeded.IntValue;
 	g_fMinTravelDistance = g_hMinTravelDistance.FloatValue;
 	g_fMaxTravelDistance = g_hMaxTravelDistance.FloatValue;
@@ -334,7 +335,7 @@ void Event_WeaponDrop(Event event, const char[] name, bool dontBroadcast)
 		return;
 	
 	char classname[14];
-	GetEntityClassname(propid, classname, sizeof(classname));
+	GetEntityClassname(propid, classname, sizeof classname);
 	if(strcmp(classname[7], "gascan") == 0)
 	{
 		int entity = g_iPropUseTarget[client];
@@ -372,6 +373,7 @@ void Event_EntityVisible(Event event, const char[] name, bool dontBroadcast)
 	g_bScavengeStarted = true;
 
 	g_iTargetDoor = subject;
+	vCalculateUseTargetPos();
 
 	SetEntProp(subject, Prop_Send, "m_glowColorOverride", iGetColorInt(255, 0, 0));
 	AcceptEntityInput(subject, "StartGlowing");
@@ -487,6 +489,7 @@ void vOnOpen(const char[] output, int caller, int activator, float delay)
 		g_bScavengeStarted = true;
 
 		g_iTargetDoor = EntIndexToEntRef(caller);
+		vCalculateUseTargetPos();
 
 		SetEntProp(caller, Prop_Send, "m_glowColorOverride", iGetColorInt(255, 0, 0));
 		AcceptEntityInput(caller, "StartGlowing");
@@ -525,7 +528,6 @@ Action tmrScavengePanic(Handle timer)
 	vExecuteCheatCommand("director_force_panic_event");
 	return Plugin_Continue;
 }
-
 
 void OnNextFrame_CloseDoor(int entity)
 {
@@ -634,7 +636,7 @@ void vFindTerrorNavAreas()
 		if(area.Flow < fLandFlow)
 			continue;
 
-		if(!SDKCall(g_hSDKSurvivorBotIsReachable, iBot, iLandArea, area)) //有往返程之分, 这里只考虑返程. 往程area->iLandArea 返程iDoorArea->area 有些地图从安全门开始的返程不能回去，例如c2m1, c7m1, c13m1等
+		if(!SDKCall(g_hSDKSurvivorBotIsReachableCNavArea, iBot, iLandArea, area)) //有往返程之分, 这里只考虑返程. 往程area->iLandArea 返程iDoorArea->area 有些地图从安全门开始的返程不能回去，例如c2m1, c7m1, c13m1等
 			continue;
 
 		area.Center(vCenter);
@@ -669,9 +671,21 @@ bool bIsPlayerStuck(const float vPos[3])
 	return bHit;
 }
 
-bool bTraceEntityFilter(int entity, int contentsMask)
+bool bTraceEntityFilter(int entity, int contentsMask, any data)
 {
-	return !entity || entity > MaxClients;
+	if(entity == data || entity <= MaxClients)
+		return false;
+	else
+	{
+		static char classname[9];
+		GetEntityClassname(entity, classname, sizeof classname);
+		if(classname[0] == 'i' || classname[0] == 'w')
+		{
+			if(strcmp(classname, "infected") == 0 || strcmp(classname, "witch") == 0)
+				return false;
+		}
+	}
+	return true;
 }
 
 int iFindSurvivorBot()
@@ -734,7 +748,7 @@ void vSpawnScavengeItem(const float vOrigin[3])
 	DispatchKeyValue(entity, "disableshadows", "1");
 
 	char sSkin[2];
-	IntToString(GetRandomInt(1, 3), sSkin, sizeof(sSkin));
+	IntToString(GetRandomInt(1, 3), sSkin, sizeof sSkin);
 	DispatchKeyValue(entity, "weaponskin", sSkin);
 	
 	TeleportEntity(entity, vOrigin, NULL_VECTOR, NULL_VECTOR);
@@ -752,7 +766,7 @@ void vSetNeededDisplay(int iNumCans)
 	int entity = CreateEntityByName("game_scavenge_progress_display");
 
 	char sNumCans[8];
-	IntToString(iNumCans, sNumCans, sizeof(sNumCans));
+	IntToString(iNumCans, sNumCans, sizeof sNumCans);
 	DispatchKeyValue(entity, "Max", sNumCans);
 	DispatchSpawn(entity);
 
@@ -777,7 +791,7 @@ void vExecuteCheatCommand(const char[] sCommand, const char[] sValue = "")
 void vLoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
+	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
 	if(FileExists(sPath) == false)
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
@@ -814,7 +828,7 @@ void vLoadGameData()
 	if(pAddr == Address_Null)
 		SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot> in CDirector::AddSurvivorBot");
 	if(hGameData.GetOffset("OS") == 1) // 1 - windows, 2 - linux. it's hard to get uniq. sig in windows => will use XRef.
-		pAddr += view_as<Address>(LoadFromAddress(pAddr + view_as<Address>(1), NumberType_Int32) + 5); // sizeof(instruction)
+		pAddr += view_as<Address>(LoadFromAddress(pAddr + view_as<Address>(1), NumberType_Int32) + 5); // sizeof instruction
 	if(PrepSDKCall_SetAddress(pAddr) == false)
 		SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot>");
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
@@ -824,14 +838,14 @@ void vLoadGameData()
 		SetFailState("Failed to create SDKCall: NextBotCreatePlayerBot<SurvivorBot>");
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SurvivorBot::IsReachable") == false)
-		SetFailState("Failed to find signature: SurvivorBot::IsReachable");
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SurvivorBot::IsReachable<CNavArea>") == false)
+		SetFailState("Failed to find signature: SurvivorBot::IsReachable<CNavArea>");
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDKSurvivorBotIsReachable = EndPrepSDKCall();
-	if(g_hSDKSurvivorBotIsReachable == null)
-		SetFailState("Failed to create SDKCall: SurvivorBot::IsReachable");
+	g_hSDKSurvivorBotIsReachableCNavArea = EndPrepSDKCall();
+	if(g_hSDKSurvivorBotIsReachableCNavArea == null)
+		SetFailState("Failed to create SDKCall: SurvivorBot::IsReachable<CNavArea>");
 
 	vSetupDynamicHooks(hGameData);
 
@@ -851,31 +865,10 @@ MRESReturn mreGasCanGetTargetEntityPre(int pThis, DHookReturn hReturn, DHookPara
 		return MRES_Ignored;
 
 	int client = hParams.Get(1);
-	if(client < 1 || client > MaxClients || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
+	if(client < 1 || client > MaxClients || !IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client) || GetEntityFlags(client) & FL_ONGROUND == 0)
 		return MRES_Ignored;
 
-	static float vPos[3], vTarget[3];
-	GetClientEyePosition(client, vPos);
-	GetEntPropVector(g_iTargetDoor, Prop_Data, "m_vecAbsOrigin", vTarget);
-	if(FloatAbs(vPos[2] - vTarget[2]) > g_fGascanUseRange)
-		return MRES_Ignored;
-
-	vTarget[2] = vPos[2] = 0.0;
-	if(GetVectorDistance(vPos, vTarget) > g_fGascanUseRange)
-		return MRES_Ignored;
-
-	MakeVectorFromPoints(vPos, vTarget, vPos);
-	NormalizeVector(vPos, vPos);
-
-	static float vAng[3];
-	GetClientEyeAngles(client, vAng);
-	vAng[0] = vAng[2] = 0.0;
-	GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
-	NormalizeVector(vAng, vAng);
-
-	static float fDegree;
-	fDegree = RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPos)));
-	if(fDegree < -120.0 || fDegree > 120.0)
+	if(!bWatchingTargetDoor(client, 90.0))
 		return MRES_Ignored;
 
 	if(!g_bAllowMultipleFill && bOtherPlayerPouringGas(client))
@@ -893,6 +886,92 @@ MRESReturn mreGasCanGetTargetEntityPre(int pThis, DHookReturn hReturn, DHookPara
 	vStartPouring(client);
 
 	return MRES_Ignored;
+}
+
+void vCalculateUseTargetPos()
+{
+	float vAng[3];
+	float vFwd[3];
+	float vEnd1[3];
+	float vEnd2[3];
+	float fHeight;
+
+	GetEntPropVector(g_iTargetDoor, Prop_Data, "m_vecAbsOrigin", g_vUseTargetPos);
+
+	GetEntPropVector(g_iTargetDoor, Prop_Data, "m_angRotationOpenBack", vAng);
+	GetAngleVectors(vAng, vFwd, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vFwd, vFwd);
+	ScaleVector(vFwd, 24.0);
+	AddVectors(g_vUseTargetPos, vFwd, g_vUseTargetPos);
+
+	if(bGetEndPoint(g_vUseTargetPos, vAng, 32.0, vEnd1, g_iTargetDoor))
+	{
+		vAng[1] += 180.0;
+		if(bGetEndPoint(g_vUseTargetPos, vAng, 32.0, vEnd2, g_iTargetDoor))
+		{
+			NormalizeVector(vFwd, vFwd);
+			ScaleVector(vFwd, GetVectorDistance(vEnd1, vEnd2) * 0.5);
+			AddVectors(vEnd2, vFwd, g_vUseTargetPos);
+		}
+	}
+
+	g_vUseTargetPos[2] -= 25.0;
+
+	fHeight = fGetGroundHeight(g_vUseTargetPos, g_iTargetDoor);
+	if(fHeight && FloatAbs(g_vUseTargetPos[2] - fHeight) < 104.0)
+		g_vUseTargetPos[2] = fHeight + 64.0;
+}
+
+float fGetGroundHeight(const float vPos[3], int entity)
+{
+	float vEnd[3];
+	Handle hTrace = TR_TraceRayFilterEx(vPos, view_as<float>({90.0, 0.0, 0.0}), MASK_ALL, RayType_Infinite, bTraceEntityFilter, entity);
+	if(TR_DidHit(hTrace))
+		TR_GetEndPosition(vEnd, hTrace);
+
+	delete hTrace;
+	return vEnd[2];
+}
+
+bool bGetEndPoint(const float vStart[3], const float vAng[3], float fScale, float vBuffer[3], int entity)
+{
+	float vEnd[3];
+	GetAngleVectors(vAng, vEnd, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vEnd, vEnd);
+	ScaleVector(vEnd, fScale);
+	AddVectors(vStart, vEnd, vEnd);
+
+	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, bTraceEntityFilter, entity);
+	if(TR_DidHit(hTrace))
+	{
+		TR_GetEndPosition(vBuffer, hTrace);
+		delete hTrace;
+		return true;
+	}
+
+	delete hTrace;
+	return false;
+}
+
+bool bWatchingTargetDoor(int client, float fOffsetThreshold)
+{
+	static float vPos[3];
+	static float vAng[3];
+
+	GetClientEyePosition(client, vPos);
+	if(GetVectorDistance(vPos, g_vUseTargetPos) > g_fGascanUseRange)
+		return false;
+
+	vPos[2] = g_vUseTargetPos[2];
+	MakeVectorFromPoints(vPos, g_vUseTargetPos, vPos);
+	NormalizeVector(vPos, vPos);
+
+	GetClientEyeAngles(client, vAng);
+	vAng[0] = vAng[2] = 0.0;
+	GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vAng, vAng);
+
+	return RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPos))) < fOffsetThreshold;
 }
 
 // [L4D2] Scavenge Pouring (https://forums.alliedmods.net/showthread.php?t=333064)
@@ -1017,7 +1096,7 @@ void vOnUseFinished(const char[] output, int caller, int activator, float delay)
 void vLateLoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
+	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
 	if(FileExists(sPath) == false)
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
