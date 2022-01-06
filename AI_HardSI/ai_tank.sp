@@ -147,78 +147,15 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 		if(RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPos))) < 90.0)
 			return Plugin_Continue;
 
-		vDir[0][2] += 20.0;
-		vDir[1][2] += 20.0;
 		MakeVectorFromPoints(vDir[0], vDir[1], vDir[0]);
-
-		int flags = GetEntProp(client, Prop_Send, "m_fFlags");
-		SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_FROZEN);
 		TeleportEntity(client, NULL_VECTOR, vVel, vDir[0]);
-		SetEntProp(client, Prop_Send, "m_fFlags", flags);
 
 		g_bModify[client] = true;
 	}
 	
 	return Plugin_Continue;
 }
-/*
-bool bBhop(int client, int &buttons, float vAng[3])
-{
-	static bool bJumped;
-	bJumped = false;
 
-	if(buttons & IN_FORWARD)
-	{
-		if(bClientPush(client, buttons, vAng, 2.0 * SPEEDBOOST))
-			bJumped = true;
-	}
-		
-	if(buttons & IN_BACK)
-	{
-		vAng[1] += 180.0;
-		if(bClientPush(client, buttons, vAng, SPEEDBOOST))
-			bJumped = true;
-	}
-	
-	if(buttons & IN_MOVELEFT)
-	{
-		vAng[1] += 90.0;
-		if(bClientPush(client, buttons, vAng, SPEEDBOOST))
-			bJumped = true;
-	}
-
-	if(buttons & IN_MOVERIGHT)
-	{
-		vAng[1] -= 90.0;
-		if(bClientPush(client, buttons, vAng, SPEEDBOOST))
-			bJumped = true;
-	}
-	
-	return bJumped;
-}
-
-bool bClientPush(int client, int &buttons, const float vAng[3], float fForce)
-{
-	static float vVec[3];
-	GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-	NormalizeVector(vVec, vVec);
-	ScaleVector(vVec, fForce);
-
-	static float vVel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
-	AddVectors(vVel, vVec, vVel);
-
-	if(bWontFall(client, vVel))
-	{
-		buttons |= IN_DUCK;
-		buttons |= IN_JUMP;
-		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
-		return true;
-	}
-
-	return false;
-}
-*/
 bool bBhop(int client, int &buttons, float vAng[3])
 {
 	static bool bJumped;

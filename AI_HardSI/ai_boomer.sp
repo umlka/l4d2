@@ -62,7 +62,7 @@ void vGetCvars()
 void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || GetEntProp(client, Prop_Send, "m_zombieClass") != 2)
+	if(client == 0 || !IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 2 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return;
 
 	static char sAbility[16];
@@ -102,116 +102,47 @@ bool bTargetSurvivor(int client)
 {
 	return bIsAliveSurvivor(GetClientAimTarget(client, true));
 }
-/*
+
 bool bBhop(int client, int &buttons, float vAng[3])
 {
 	static bool bJumped;
-	static float vVec[3];
-
-	bJumped = false;
-
-	if(buttons & IN_FORWARD)
-	{
-		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if(bClientPush(client, buttons, vVec, 180.0))
-			bJumped = true;
-	}
-		
-	if(buttons & IN_BACK)
-	{
-		vAng[1] += 180.0;
-		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if(bClientPush(client, buttons, vVec, 90.0))
-			bJumped = true;
-	}
-	
-	if(buttons & IN_MOVELEFT)
-	{
-		vAng[1] += 90.0;
-		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		//if(bClientPush(client, buttons, vVec, 90.0))
-			//bJumped = true;
-
-		static float vRig[3];
-		static float vVel[3];
-		vAng[0] = vAng[2] = 0.0;
-		GetAngleVectors(vAng, NULL_VECTOR, vRig, NULL_VECTOR);
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
-
-		NormalizeVector(vRig, vRig);
-		NormalizeVector(vVel, vVel);
-		
-		if(155.0 < RadToDeg(ArcCosine(GetVectorDotProduct(vRig, vVel))) <= 180.0)
-			bJumped = false;
-		else
-		{
-			if(bClientPush(client, buttons, vAng, 90.0))
-				bJumped = true;
-		}
-	}
-
-	if(buttons & IN_MOVERIGHT)
-	{
-		vAng[1] -= 90.0;
-		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		//if(bClientPush(client, buttons, vVec, 90.0))
-			//bJumped = true;
-
-		static float vRig[3];
-		static float vVel[3];
-		vAng[0] = vAng[2] = 0.0;
-		GetAngleVectors(vAng, NULL_VECTOR, vRig, NULL_VECTOR);
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
-
-		NormalizeVector(vRig, vRig);
-		NormalizeVector(vVel, vVel);
-		
-		if(155.0 < RadToDeg(ArcCosine(GetVectorDotProduct(vRig, vVel))) <= 180.0)
-			bJumped = false;
-		else
-		{
-			if(bClientPush(client, buttons, vVec, 90.0))
-				bJumped = true;
-		}
-	}
-	
-	return bJumped;
-}
-*/
-bool bBhop(int client, int &buttons, float vAng[3])
-{
-	static bool bJumped;
-	static float vVec[3];
-
 	bJumped = false;
 
 	if(buttons & IN_FORWARD || buttons & IN_BACK)
 	{
-		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if(bClientPush(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
+		GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
+		if(bClientPush(client, buttons, vAng, buttons & IN_FORWARD ? 180.0 : -90.0))
 			bJumped = true;
 	}
 
 	if(buttons & IN_MOVELEFT || buttons & IN_MOVERIGHT)
 	{
-		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
+		static float vPos[3];
+		static float vVec[3];
+		GetAngleVectors(vAng, NULL_VECTOR, vAng, NULL_VECTOR);
 
-		static float vRig[3];
-		static float vVel[3];
-		vAng[0] = vAng[2] = 0.0;
-		GetAngleVectors(vAng, NULL_VECTOR, vRig, NULL_VECTOR);
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
+		vVec = vAng;
+		vVec[0] = vVec[2] = 0.0;
+		GetAngleVectors(vVec, vVec, NULL_VECTOR, NULL_VECTOR);
+		GetClientAbsOrigin(client, vPos);
+		NormalizeVector(vVec, vVec);
+		ScaleVector(vVec, 33.0);
+		AddVectors(vPos, vVec, vVec);
 
-		NormalizeVector(vRig, vRig);
-		NormalizeVector(vVel, vVel);
-		
-		if(155.0 < RadToDeg(ArcCosine(GetVectorDotProduct(vRig, vVel))) <= 180.0)
-			bJumped = false;
-		else
+		static float vMins[3];
+		static float vMaxs[3];
+		GetClientMins(client, vMins);
+		GetClientMaxs(client, vMaxs);
+
+		static Handle hTrace;
+		hTrace = TR_TraceHullFilterEx(vPos, vVec, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
+		if(!TR_DidHit(hTrace))
 		{
-			if(bClientPush(client, buttons, vVec, buttons & IN_MOVELEFT ? -90.0 : 90.0))
+			if(bClientPush(client, buttons, vAng, buttons & IN_MOVELEFT ? -90.0 : 90.0))
 				bJumped = true;
 		}
+
+		delete hTrace;
 	}
 
 	return bJumped;
@@ -265,19 +196,6 @@ bool bWontFall(int client, const float vVel[3])
 		bHit = true;
 		TR_GetEndPosition(vEndPos, hTrace);
 		if(GetVectorDistance(vPos, vEndPos) < 64.0)
-		{
-			delete hTrace;
-			return false;
-		}
-
-		static float vVec[3];
-		NormalizeVector(vVel, vVec);
-	
-		static float vPlane[3];
-		TR_GetPlaneNormal(hTrace, vPlane);
-		NegateVector(vPlane);
-		NormalizeVector(vPlane, vPlane);
-		if(RadToDeg(ArcCosine(GetVectorDotProduct(vVec, vPlane))) < 30.0)
 		{
 			delete hTrace;
 			return false;
@@ -377,8 +295,6 @@ void vBoomer_OnVomit(int client)
 	if(iTarget == -1)
 		return;
 
-	static float vAngles[3];
-	static float vVectors[3];
 	static float vVelocity[3];
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
 
@@ -390,21 +306,18 @@ void vBoomer_OnVomit(int client)
 	static float vTarg[3];
 	GetClientAbsOrigin(client, vPos);
 	GetClientAbsOrigin(iTarget, vTarg);
+	MakeVectorFromPoints(vPos, vTarg, vVelocity);
+
+	static float vAngles[3];
+	GetVectorAngles(vVelocity, vAngles);
 
 	float fHeight = vTarg[2] - vPos[2];
 	if(fHeight > CROUCHING_EYE)
 		vLength += fHeight;
 
-	vTarg[2] += CROUCHING_EYE;
-
-	MakeVectorFromPoints(vPos, vTarg, vVectors);
-	GetVectorAngles(vVectors, vAngles);
-
-	NormalizeVector(vVectors, vVectors);
-	ScaleVector(vVectors, vLength);
-
-	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") & ~FL_ONGROUND);
-	TeleportEntity(client, NULL_VECTOR, vAngles, vVectors);
+	NormalizeVector(vVelocity, vVelocity);
+	ScaleVector(vVelocity, vLength);
+	TeleportEntity(client, NULL_VECTOR, vAngles, vVelocity);
 }
 
 bool bIsAliveSurvivor(int client)
