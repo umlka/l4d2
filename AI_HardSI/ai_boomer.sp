@@ -135,7 +135,7 @@ bool bBhop(int client, int &buttons, float vAng[3])
 		GetClientMaxs(client, vMaxs);
 
 		static Handle hTrace;
-		hTrace = TR_TraceHullFilterEx(vPos, vVec, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
+		hTrace = TR_TraceHullFilterEx(vPos, vVec, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 		if(!TR_DidHit(hTrace))
 		{
 			if(bClientPush(client, buttons, vAng, buttons & IN_MOVELEFT ? -90.0 : 90.0))
@@ -188,7 +188,7 @@ bool bWontFall(int client, const float vVel[3])
 
 	bHit = false;
 	vEnd[2] += OBSTACLE_HEIGHT;
-	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	vEnd[2] -= OBSTACLE_HEIGHT;
 
 	if(TR_DidHit(hTrace))
@@ -211,7 +211,7 @@ bool bWontFall(int client, const float vVel[3])
 	vDown[1] = vEndPos[1];
 	vDown[2] = vEndPos[2] - 100000.0;
 
-	hTrace = TR_TraceHullFilterEx(vEndPos, vDown, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vEndPos, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if(TR_DidHit(hTrace))
 	{
 		TR_GetEndPosition(vEnd, hTrace);
@@ -285,6 +285,7 @@ float fNearestSurvivorDistance(int client)
 }
 
 #define CROUCHING_EYE 44.0
+#define PLAYER_HEIGHT 72.0
 void vBoomer_OnVomit(int client)
 {
 	static int iTarget;
@@ -295,25 +296,26 @@ void vBoomer_OnVomit(int client)
 	if(iTarget == -1)
 		return;
 
-	static float vVelocity[3];
-	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
-
-	static float vLength;
-	vLength = GetVectorLength(vVelocity);
-	vLength = vLength < g_fVomitRange ? g_fVomitRange : vLength;
-
 	static float vPos[3];
 	static float vTarg[3];
+	static float vVelocity[3];
 	GetClientAbsOrigin(client, vPos);
 	GetClientAbsOrigin(iTarget, vTarg);
 	MakeVectorFromPoints(vPos, vTarg, vVelocity);
 
+	static float vLength;
+	vLength = GetVectorLength(vVelocity);
+	if(vLength < g_fVomitRange)
+		vLength = 0.5 * g_fVomitRange;
+	else
+	{
+		float fHeight = vTarg[2] - vPos[2];
+		if(fHeight > PLAYER_HEIGHT)
+			vLength = vLength - 0.5 * g_fVomitRange + fHeight;
+	}
+
 	static float vAngles[3];
 	GetVectorAngles(vVelocity, vAngles);
-
-	float fHeight = vTarg[2] - vPos[2];
-	if(fHeight > CROUCHING_EYE)
-		vLength += fHeight;
 
 	NormalizeVector(vVelocity, vVelocity);
 	ScaleVector(vVelocity, vLength);

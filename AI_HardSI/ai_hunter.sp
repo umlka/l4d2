@@ -221,7 +221,7 @@ void vHunter_OnPounce(int client)
 
 bool bHitWall(int client, float vStart[3])
 {
-	vStart[2] += 10.0;
+	vStart[2] += 20.0;
 
 	static float vAng[3];
 	static float vEnd[3];
@@ -231,15 +231,9 @@ bool bHitWall(int client, float vStart[3])
 	vEnd = vAng;
 	ScaleVector(vEnd, g_fWallDetectionDistance);
 	AddVectors(vStart, vEnd, vEnd);
-	vEnd[2] += 10.0;
-
-	static float vMins[3];
-	static float vMaxs[3];
-	GetClientMins(client, vMins);
-	GetClientMaxs(client, vMaxs);
 
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vStart, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 36.0}), MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if(TR_DidHit(hTrace))
 	{
 		static float vPlane[3];

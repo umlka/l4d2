@@ -2,6 +2,7 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
+#include <dhooks>
 
 ConVar
 	g_hChargerBhop,
@@ -79,10 +80,13 @@ void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast
 	if(client == 0 || !IsClientInGame(client) || !IsFakeClient(client))
 		return;
 
-	int flags = GetEntProp(client, Prop_Send, "m_fFlags");
-	SetEntProp(client, Prop_Send, "m_fFlags", flags & ~FL_FROZEN);
+	int flags = GetEntityFlags(client);
+	SetEntityFlags(client, flags & ~FL_FROZEN);
+	int entity = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+	if(entity != -1)
+		SetEntPropFloat(entity, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 2.5);
 	vCharger_OnCharge(client);
-	SetEntProp(client, Prop_Send, "m_fFlags", flags);
+	SetEntityFlags(client, flags);
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons)
@@ -97,22 +101,31 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 		if(!g_bShouldCharge[client])
 			vBlockCharge(client);
 	}
-	else
+	else if(!bHitWall(client))
 		g_bShouldCharge[client] = true;
 		
-	if(g_bShouldCharge[client] && -1.0 < fSurvivorProximity < 100.0 && bChargerCanCharge(client))
+	if(g_bShouldCharge[client] && -1.0 < fSurvivorProximity < 150.0 && bChargerCanCharge(client))
 	{
 		static int iTarget;
 		iTarget = GetClientAimTarget(client, true);
-		if(bIsAliveSurvivor(iTarget) && !bIsIncapacitated(iTarget) && (buttons & IN_ATTACK2 || !bHitWall(client, iTarget)))
+		if(bIsAliveSurvivor(iTarget) && !bIsIncapacitated(iTarget))
 		{
-			buttons |= IN_ATTACK;
-			buttons |= IN_ATTACK2;
-			return Plugin_Changed;
+			static float vPos[3];
+			static float vTarg[3];
+			GetClientAbsOrigin(client, vPos);
+			GetClientAbsOrigin(iTarget, vTarg);
+			if(GetVectorDistance(vPos, vTarg) < 150.0 && !bHitWall(client, iTarget))
+			{
+				g_bShouldCharge[client] = true;
+
+				buttons |= IN_ATTACK;
+				buttons |= IN_ATTACK2;
+				return Plugin_Changed;
+			}
 		}
 	}
 
-	if(g_bChargerBhop && 100.0 < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if(g_bChargerBhop && 150.0 < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
 		static float vVel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
@@ -160,7 +173,7 @@ bool bBhop(int client, int &buttons, float vAng[3])
 		GetClientMaxs(client, vMaxs);
 
 		static Handle hTrace;
-		hTrace = TR_TraceHullFilterEx(vPos, vVec, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
+		hTrace = TR_TraceHullFilterEx(vPos, vVec, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 		if(!TR_DidHit(hTrace))
 		{
 			if(bClientPush(client, buttons, vAng, buttons & IN_MOVELEFT ? -90.0 : 90.0))
@@ -213,7 +226,7 @@ bool bWontFall(int client, const float vVel[3])
 
 	bHit = false;
 	vEnd[2] += OBSTACLE_HEIGHT;
-	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	vEnd[2] -= OBSTACLE_HEIGHT;
 
 	if(TR_DidHit(hTrace))
@@ -236,7 +249,7 @@ bool bWontFall(int client, const float vVel[3])
 	vDown[1] = vEndPos[1];
 	vDown[2] = vEndPos[2] - 100000.0;
 
-	hTrace = TR_TraceHullFilterEx(vEndPos, vDown, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vEndPos, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if(TR_DidHit(hTrace))
 	{
 		TR_GetEndPosition(vEnd, hTrace);
@@ -309,38 +322,33 @@ float fNearestSurvivorDistance(int client)
 	return fDists[0];
 }
 
-bool bHitWall(int client, int iTarget)
+bool bHitWall(int client, int iTarget = -1)
 {
 	static float vPos[3];
-	static float vTarg[3];
+	static float vAng[3];
 	GetClientAbsOrigin(client, vPos);
-	GetClientAbsOrigin(iTarget, vTarg);
-	vPos[2] += 10.0;
-	vTarg[2] += 10.0;
+	vPos[2] += 20.0;
 
-	static float vMins[3];
-	static float vMaxs[3];
-	GetClientMins(client, vMins);
-	GetClientMaxs(client, vMaxs);
-
-	vMins[2] += 10.0;
-	vMaxs[2] -= 10.0;
-
-	static float vEnd[3];
-	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vPos, vTarg, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
-	if(TR_DidHit(hTrace))
+	if(iTarget != -1)
 	{
-		TR_GetEndPosition(vEnd, hTrace);
-		delete hTrace;
-
-		if(GetVectorDistance(vEnd, vTarg) < 32.0)
-			return false;
-		return true;
+		GetClientAbsOrigin(iTarget, vAng);
+		vAng[2] += 20.0;
+	}
+	else
+	{
+		GetClientEyeAngles(client, vAng);
+		GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
+		NormalizeVector(vAng, vAng);
+		ScaleVector(vAng, g_fChargeProximity); 
+		AddVectors(vPos, vAng, vAng);
 	}
 
+	static bool bHit;
+	static Handle hTrace;
+	hTrace = TR_TraceHullFilterEx(vPos, vAng, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 36.0}), MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
+	bHit = TR_DidHit(hTrace);
 	delete hTrace;
-	return false;
+	return bHit;
 }
 
 bool bChargerCanCharge(int client)
@@ -365,6 +373,7 @@ void vBlockCharge(int client)
 }
 
 #define CROUCHING_EYE 44.0
+#define PLAYER_HEIGHT 72.0
 void vCharger_OnCharge(int client)
 {
 	static int iTarget;
@@ -379,21 +388,28 @@ void vCharger_OnCharge(int client)
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
 
 	static float vLength;
-	vLength = GetVectorLength(vVelocity) + CROUCHING_EYE;
+	vLength = GetVectorLength(vVelocity);
 	vLength = vLength < g_fChargeStartSpeed ? g_fChargeStartSpeed : vLength;
 
 	static float vPos[3];
 	static float vTarg[3];
 	GetClientAbsOrigin(client, vPos);
 	GetClientAbsOrigin(iTarget, vTarg);
+
+	float fHeight = vTarg[2] - vPos[2];
+	if(fHeight > PLAYER_HEIGHT)
+		vLength += fHeight;
+	
+	if(GetEntityFlags(client) & FL_ONGROUND == 0)
+	{
+		vTarg[2] += CROUCHING_EYE;
+		vLength += g_fChargeStartSpeed;
+	}
+
 	MakeVectorFromPoints(vPos, vTarg, vVelocity);
 
 	static float vAngles[3];
 	GetVectorAngles(vVelocity, vAngles);
-
-	float fHeight = vTarg[2] - vPos[2];
-	if(fHeight > CROUCHING_EYE)
-		vLength += fHeight;
 
 	NormalizeVector(vVelocity, vVelocity);
 	ScaleVector(vVelocity, vLength);

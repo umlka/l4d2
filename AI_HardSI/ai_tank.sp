@@ -6,7 +6,7 @@
 #include <left4dhooks>
 
 #define SPEEDBOOST	90.0
-#define GAMEDATA	"ai_tank"
+#define GAMEDATA	"ai_hardsi"
 
 ConVar
 	g_hTankBhop,
@@ -218,7 +218,7 @@ bool bWontFall(int client, const float vVel[3])
 
 	bHit = false;
 	vEnd[2] += OBSTACLE_HEIGHT;
-	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	vEnd[2] -= OBSTACLE_HEIGHT;
 
 	if(TR_DidHit(hTrace))
@@ -241,7 +241,7 @@ bool bWontFall(int client, const float vVel[3])
 	vDown[1] = vEndPos[1];
 	vDown[2] = vEndPos[2] - 100000.0;
 
-	hTrace = TR_TraceHullFilterEx(vEndPos, vDown, vMins, vMaxs, MASK_PLAYERSOLID, bTraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vEndPos, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if(TR_DidHit(hTrace))
 	{
 		TR_GetEndPosition(vEnd, hTrace);
