@@ -110,6 +110,17 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x74\x2A\x8B\x0D\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x2A\x2A\xFF\x2A\x8B\x0D\x2A\x2A\x2A\x2A\x84"
 				/* ? ? ? ? ? ? ? 74 ? 8B 0D ? ? ? ? 8B ? 8B ? ? FF ? 8B 0D ? ? ? ? 84 */
 			}
+			/*  C++ Function:	CBaseEntity* __cdecl NextBotCreatePlayerBotSurvivorBot(const char *src) */
+			/* Search string:	 CreatePlayerBot: Could not Instance() from the bot edict */
+			/* Windows signature:	 (so crazy->to long)55 8B EC 83 EC 28 A1 ?? ?? ?? ?? 33 C5 89 45 FC 56 57 8B 7D 08 68 ?? ?? ?? ?? E8 ?? ?? ?? ?? 8B 0D ?? ?? ?? ?? 8B 01 8B 90 DC 00 00 00 83 C4 04 57 FF D2 6A 00 8B F0 E8 ?? ?? ?? ?? 83 C4 04 85 F6 75 21 57 */
+			/* Windows signature2: 	33 C0 6A 00 68 FC ?? ?? ?? 68 ?? ?? ?? ?? 6A 00 50 E8 ?? ?? ?? ?? 8B F0 83 C4 14 85 F6 75 20 68 ?? ?? ?? ?? FF 15 */
+			/* Windows signature3:  E8 ?? ?? ?? ?? 83 C4 08 85 C0 74 1C 8B 10 8B 92  this  signature into <CDirector::AddSurvivorBot> */
+			/* Finally:	 33 C0 6A 00 68 FC (warning:0xFC may be change when next game version) */
+			/* Version: 	2209 */
+			/* 
+			*	Where call this function: 
+			*	RestoreTransitionedSurvivorBots(void);	CDirector::AddSurvivorBot(SurvivorCharacterType)
+			*/
 			"NextBotCreatePlayerBot<SurvivorBot>"
 			{	
 				"library"	"server"
@@ -120,12 +131,12 @@
 				/* Sig. should point to "call" opcode E8, not to the func. start */
 			}
 			/* SurvivorBot::IsReachable(SurvivorBot *__hidden this, CNavArea *, CNavArea *) */
-			"SurvivorBot::IsReachable"
+			"SurvivorBot::IsReachable<CNavArea>"
 			{
 				"library"	"server"
 				"linux"		"@_ZNK11SurvivorBot11IsReachableEP8CNavAreaS1_"
-				"windows"	"\x55\x8B\xEC\x83\xEC\x10\x53\x8B\x5D\x0C\x56\x57"
-				/* 55 8B EC 83 EC 10 53 8B 5D 0C 56 57 */
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x8B\x2A\x2A\x56\x57\x8B\x2A\x2A\x53\x57\x8B\x2A\xE8\x2A\x2A\x2A\x2A\x83"
+				/* ? ? ? ? ? ? 53 8B ? ? 56 57 8B ? ? 53 57 8B ? E8 ? ? ? ? 83 */
 			}
 		}
 	}
