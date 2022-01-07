@@ -2,7 +2,6 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
-#include <dhooks>
 
 ConVar
 	g_hChargerBhop,
