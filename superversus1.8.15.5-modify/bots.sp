@@ -1056,6 +1056,7 @@ void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadca
 		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vOrigin);
 		
 		int iSurvivor;
+		static const char sOrder[][] = {"1", "2", "3", "4"};
 		for(int i = 1; i <= MaxClients; i++)
 		{
 			if(!IsClientInGame(i) || GetClientTeam(i) != TEAM_SURVIVOR)
@@ -1065,9 +1066,7 @@ void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadca
 				continue;
 			
 			entity = CreateEntityByName("info_survivor_position");
-			char sOrder[2];
-			IntToString(iSurvivor - RoundToFloor(iSurvivor / 4.0) * 4 + 1, sOrder, sizeof sOrder);
-			DispatchKeyValue(entity, "Order", sOrder);
+			DispatchKeyValue(entity, "Order", sOrder[iSurvivor - RoundToFloor(iSurvivor / 4.0) * 4]);
 			TeleportEntity(entity, vOrigin, NULL_VECTOR, NULL_VECTOR);
 			DispatchSpawn(entity);
 		}
