@@ -132,6 +132,14 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x83\x2A\x2A\x55\x8B\x2A\x2A\x89\x2A\x2A\x2A\x8B\x2A\x0F\x2A\x2A\x83\x2A\x2A\x56\x8B\x2A\xC7"
 				/* ? ? ? ? ? ? 83 ? ? 83 ? ? 55 8B ? ? 89 ? ? ? 8B ? 0F ? ? 83 ? ? 56 8B ? C7 */
 			}
+			/* Checkpoint::GetLargestArea(Checkpoint *__hidden this) */
+			"Checkpoint::GetLargestArea"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK10Checkpoint14GetLargestAreaEv"
+				"windows"	"\x55\x8B\xEC\x51\x0F\x57\xC0\x8B\xD1"
+				/* 55 8B EC 51 0F 57 C0 8B D1 */
+			}
 			/* TerrorNavMesh::GetLastCheckpoint(TerrorNavMesh *__hidden this) */
 			"TerrorNavMesh::GetLastCheckpoint"
 			{
@@ -139,14 +147,6 @@
 				"linux"		"@_ZNK13TerrorNavMesh17GetLastCheckpointEv"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x33\x2A\x57\x85\x2A\x7E\x2A\x8B\xB1\x2A\x2A\x2A\x2A\x8B\x2A\x8B"
 				/* ? ? ? ? ? ? 56 33 ? 57 85 ? 7E ? 8B B1 ? ? ? ? 8B ? 8B */
-			}
-			/* TerrorNavMesh::GetInitialCheckpoint(void)const */
-			"TerrorNavMesh::GetInitialCheckpoint"
-			{
-				"library"	"server"
-				"linux"		"@_ZNK13TerrorNavMesh20GetInitialCheckpointEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x89\x2A\x2A\x8B\x0D\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x84\x2A\x75\x2A\x33"
-				/* ? ? ? ? ? ? 89 ? ? 8B 0D ? ? ? ? E8 ? ? ? ? 84 ? 75 ? 33 */
 			}
 			/* Checkpoint::ContainsArea(TerrorNavArea *)const */
 			"Checkpoint::ContainsArea"
