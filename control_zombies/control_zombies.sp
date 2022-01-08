@@ -2446,6 +2446,7 @@ bool bAttemptRespawnPZ(int client)
 	{
 		vSITypeCount();
 
+		SetRandomSeed(GetTime());
 		int	iClass = iGenerateIndex();
 		return bRespawnPZ(client, iClass != -1 ? iClass : GetRandomInt(0, 5));
 	}
