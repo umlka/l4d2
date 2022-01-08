@@ -210,7 +210,10 @@ Address
 	g_pStatsCondition;
 
 DynamicDetour
-	g_dDetour[6];
+	g_dOnEnterGhostState,
+	g_dMaterializeFromGhost,
+	g_dPlayerZombieAbortControl,
+	g_dSpawnablePZScanProtect[3];
 
 ConVar
 	g_hGameMode,
@@ -300,7 +303,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.3.1",
+	version = "3.3.2",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -357,13 +360,13 @@ public void OnPluginStart()
 	g_hImmunityLevels = CreateConVar("cz_immunity_levels", "99;99;99;99;99" , "要达到什么免疫级别才能绕过sm_team2,sm_team3,sm_bp,sm_class,鼠标中键重置冷的使用限制", CVAR_FLAGS);
 
 	// https://github.com/brxce/hardcoop/blob/master/addons/sourcemod/scripting/modules/SS_SpawnQueue.sp
-	g_hSILimit = CreateConVar("cz_si_limit", "32", "同时存在的最大特感数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_SMOKER] = CreateConVar("cz_smoker_limit",	"5", "同时存在的最大smoker数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_BOOMER] = CreateConVar("cz_boomer_limit",	"5", "同时存在的最大boomer数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_HUNTER] = CreateConVar("cz_hunter_limit",	"5", "同时存在的最大hunter数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_SPITTER] = CreateConVar("cz_spitter_limit", "5", "同时存在的最大spitter数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_JOCKEY] = CreateConVar("cz_jockey_limit",	"5", "同时存在的最大jockey数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_CHARGER] = CreateConVar("cz_charger_limit", "5", "同时存在的最大charger数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSILimit = CreateConVar("cz_si_limit", "31", "同时存在的最大特感数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_SMOKER] = CreateConVar("cz_smoker_limit",	"6", "同时存在的最大smoker数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_BOOMER] = CreateConVar("cz_boomer_limit",	"6", "同时存在的最大boomer数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_HUNTER] = CreateConVar("cz_hunter_limit",	"6", "同时存在的最大hunter数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_SPITTER] = CreateConVar("cz_spitter_limit", "6", "同时存在的最大spitter数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_JOCKEY] = CreateConVar("cz_jockey_limit",	"6", "同时存在的最大jockey数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_CHARGER] = CreateConVar("cz_charger_limit", "6", "同时存在的最大charger数量", CVAR_FLAGS, true, 0.0, true, 32.0);
 	g_hSpawnWeights[SI_SMOKER] = CreateConVar("cz_smoker_weight", "100", "smoker产生比重", CVAR_FLAGS, true, 0.0);
 	g_hSpawnWeights[SI_BOOMER] = CreateConVar("cz_boomer_weight", "50", "boomer产生比重", CVAR_FLAGS, true, 0.0);
 	g_hSpawnWeights[SI_HUNTER] = CreateConVar("cz_hunter_weight", "100", "hunter产生比重", CVAR_FLAGS, true, 0.0);
@@ -718,10 +721,10 @@ Action cmdTeam2(int client, int args)
 	{
 		// PrintToChat(client, "无权使用该指令");
 		// return Plugin_Handled;
-		float fCooldown = GetEngineTime() - g_fCmdLastUsedTime[client];
-		if(fCooldown < g_fCmdCooldownTime)
+		float fTime = GetEngineTime();
+		if(g_fCmdLastUsedTime[client] > fTime)
 		{
-			PrintToChat(client, "\x01请等待 \x05%.1f秒 \x01再使用该指令", g_fCmdCooldownTime - fCooldown);
+			PrintToChat(client, "\x01请等待 \x05%.1f秒 \x01再使用该指令", g_fCmdLastUsedTime[client] - fTime);
 			return Plugin_Handled;
 		}
 	}
@@ -733,7 +736,7 @@ Action cmdTeam2(int client, int args)
 	}
 
 	if(g_iCmdEnterCooling & (1 << 0))
-		g_fCmdLastUsedTime[client] = GetEngineTime();
+		g_fCmdLastUsedTime[client] = GetEngineTime() + g_fCmdCooldownTime;
 	vChangeTeamToSurvivor(client);
 	return Plugin_Handled;
 }
@@ -753,10 +756,10 @@ Action cmdTeam3(int client, int args)
 	{
 		// PrintToChat(client, "无权使用该指令");
 		// return Plugin_Handled;
-		float fCooldown = GetEngineTime() - g_fCmdLastUsedTime[client];
-		if(fCooldown < g_fCmdCooldownTime)
+		float fTime = GetEngineTime();
+		if(g_fCmdLastUsedTime[client] > fTime)
 		{
-			PrintToChat(client, "\x01请等待 \x05%.1f秒 \x01再使用该指令", g_fCmdCooldownTime - fCooldown);
+			PrintToChat(client, "\x01请等待 \x05%.1f秒 \x01再使用该指令", g_fCmdLastUsedTime[client] - fTime);
 			return Plugin_Handled;
 		}
 
@@ -770,7 +773,7 @@ Action cmdTeam3(int client, int args)
 	}
 		
 	if(g_iCmdEnterCooling & (1 << 0))
-		g_fCmdLastUsedTime[client] = GetEngineTime();
+		g_fCmdLastUsedTime[client] = GetEngineTime() + g_fCmdCooldownTime;
 
 	vSurvivorClean(client);
 	vSurvivorSave(client);
@@ -1036,7 +1039,7 @@ void vResetInfectedAbility(int client, float fTime)
 	int iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 	if(iAbility != -1)
 	{
-		SetEntPropFloat(iAbility, Prop_Send, "m_duration", fTime);
+		//SetEntPropFloat(iAbility, Prop_Send, "m_duration", fTime);
 		SetEntPropFloat(iAbility, Prop_Send, "m_timestamp", GetGameTime() + fTime);
 	}
 }
@@ -1046,7 +1049,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_CLASSMENU);
 	g_fMapStartTime = GetGameTime();
 	for(int i = 1; i <= MaxClients; i++)
-		g_fBugExploitTime[i][0] = g_fBugExploitTime[i][1] = g_fMapStartTime;
+		g_fBugExploitTime[i][0] = g_fBugExploitTime[i][1] = 0.0;
 }
 
 public void OnMapEnd()
@@ -1409,7 +1412,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 					CPrintToChat(client, "{green}★ {red}生还者玩家 {default}被 {red}特感玩家 {default}杀死后，{olive}二者互换队伍");
 
 					if(g_iCmdEnterCooling & (1 << 4))
-						g_fCmdLastUsedTime[client] = GetEngineTime();
+						g_fCmdLastUsedTime[client] = GetEngineTime() + g_fCmdCooldownTime;
 					RequestFrame(OnNextFrame_ChangeTeamToSurvivor, GetClientUserId(attacker));
 					CPrintToChat(attacker, "{green}★ {red}特感玩家 {default}杀死 {red}生还者玩家 {default}后，{olive}二者互换队伍");
 				}
@@ -1429,7 +1432,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 				if(g_iLastTeamID[client] == 2 && GetEntProp(client, Prop_Send, "m_zombieClass") == 8)
 				{
 					if(g_iCmdEnterCooling & (1 << 2))
-						g_fCmdLastUsedTime[client] = GetEngineTime();
+						g_fCmdLastUsedTime[client] = GetEngineTime() + g_fCmdCooldownTime;
 					RequestFrame(OnNextFrame_ChangeTeamToSurvivor, userid);
 					CPrintToChat(client, "{green}★ {olive}玩家Tank {default}死亡后自动切换回 {blue}生还者队伍");
 				}
@@ -1576,7 +1579,7 @@ void Event_TankFrustrated(Event event, const char[] name, bool dontBroadcast)
 		return;
 
 	if(g_iCmdEnterCooling & (1 << 1))
-		g_fCmdLastUsedTime[client] = GetEngineTime();
+		g_fCmdLastUsedTime[client] = GetEngineTime() + g_fCmdCooldownTime;
 	RequestFrame(OnNextFrame_ChangeTeamToSurvivor, GetClientUserId(client));
 	CPrintToChat(client, "{green}★ {default}丢失 {olive}Tank控制权 {default}后自动切换回 {blue}生还者队伍");
 }
@@ -1624,7 +1627,7 @@ Action tmrReturnToSurvivor(Handle timer, int client)
 		else if(i == 0)
 		{
 			if(g_iCmdEnterCooling & (1 << 3))
-				g_fCmdLastUsedTime[client] = GetEngineTime();
+				g_fCmdLastUsedTime[client] = GetEngineTime() + g_fCmdCooldownTime;
 			vChangeTeamToSurvivor(client);
 			i = iTimes[client] = 20;
 			return Plugin_Stop;
@@ -1740,20 +1743,28 @@ Action tmrMortal(Handle timer, int client)
 
 int iGetAnyValidAliveSurvivorBot()
 {
-	int iPlayer, iHasPlayer, iNotPlayer;
-	int[] iHasPlayerBots = new int[MaxClients];
-	int[] iNotPlayerBots = new int[MaxClients];
-	for(int i = 1; i <= MaxClients; i++)
+	ArrayList aReserveBots;
+	ArrayList aUselessBots;
+	aReserveBots = new ArrayList();
+	aUselessBots = new ArrayList();
+
+	int client;
+	for(int i = MaxClients; i >= 1; i--)
 	{
-		if(bIsValidAliveSurvivorBot(i))
-		{
-			if((iPlayer = GetClientOfUserId(g_iBotPlayer[i])) && IsClientInGame(iPlayer) && !IsFakeClient(iPlayer) && GetClientTeam(iPlayer) != 2)
-				iHasPlayerBots[iHasPlayer++] = i;
-			else
-				iNotPlayerBots[iNotPlayer++] = i;
-		}
+		if(!bIsValidAliveSurvivorBot(i))
+			continue;
+
+		if((client = GetClientOfUserId(g_iBotPlayer[i])) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) != 2)
+			aReserveBots.Push(i);
+		else
+			aUselessBots.Push(i);
 	}
-	return (iNotPlayer == 0) ? (iHasPlayer == 0 ? 0 : iHasPlayerBots[GetRandomInt(0, iHasPlayer - 1)]) : iNotPlayerBots[GetRandomInt(0, iNotPlayer - 1)];
+
+	client = (aUselessBots.Length == 0) ? (aReserveBots.Length == 0 ? 0 : aReserveBots.Get(GetRandomInt(0, aReserveBots.Length - 1))) : aUselessBots.Get(GetRandomInt(0, aUselessBots.Length - 1));
+
+	delete aReserveBots;
+	delete aUselessBots;
+	return client;
 }
 
 bool bIsValidAliveSurvivorBot(int client)
@@ -1794,7 +1805,9 @@ int iTakeOverTank(int tank)
 		}
 	}
 
-	client = (iPbCount == 0) ? (FloatCompare(GetRandomFloat(0.0, 1.0), g_fSurvuivorAllowChance) == -1 ? (iOtherCount == 0 ? -1 : iOtherClients[GetRandomInt(0, iOtherCount - 1)]) : -1) : iPbClients[GetRandomInt(0, iPbCount - 1)]; // 随机抽取一名幸运玩家
+	SetRandomSeed(GetTime());
+
+	client = (iPbCount == 0) ? (GetRandomFloat(0.0, 1.0) < g_fSurvuivorAllowChance ? (iOtherCount == 0 ? -1 : iOtherClients[GetRandomInt(0, iOtherCount - 1)]) : -1) : iPbClients[GetRandomInt(0, iPbCount - 1)]; // 随机抽取一名幸运玩家
 	if(client != -1 && iGetStandingSurvivors() >= g_iAllowSurvuivorLimit)
 	{
 		switch((g_iLastTeamID[client] = GetClientTeam(client)))
@@ -2623,37 +2636,37 @@ void vLoadGameData()
 	if(g_hSDKHasPlayerControlledZombies == null)
 		SetFailState("Failed to create SDKCall: CTerrorGameRules::HasPlayerControlledZombies");
 
-	g_dDetour[0] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::OnEnterGhostState");
-	if(g_dDetour[0] == null)
+	g_dOnEnterGhostState = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::OnEnterGhostState");
+	if(g_dOnEnterGhostState == null)
 		SetFailState("Failed to load signature: CTerrorPlayer::OnEnterGhostState");
 
-	g_dDetour[1] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::MaterializeFromGhost");
-	if(g_dDetour[1] == null)
+	g_dMaterializeFromGhost= DynamicDetour.FromConf(hGameData, "CTerrorPlayer::MaterializeFromGhost");
+	if(g_dMaterializeFromGhost== null)
 		SetFailState("Failed to load signature: CTerrorPlayer::MaterializeFromGhost");
 
-	g_dDetour[2] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::PlayerZombieAbortControl");
-	if(g_dDetour[2] == null)
+	g_dPlayerZombieAbortControl = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::PlayerZombieAbortControl");
+	if(g_dPlayerZombieAbortControl == null)
 		SetFailState("Failed to load signature: CTerrorPlayer::PlayerZombieAbortControl");
 
 	g_bIsLinuxOS = hGameData.GetOffset("OS") == 2;
 	if(g_bIsLinuxOS)
 	{
-		g_dDetour[3] = DynamicDetour.FromConf(hGameData, "ForEachTerrorPlayer<SpawnablePZScan>");
-		if(g_dDetour[3] == null)
+		g_dSpawnablePZScanProtect[0] = DynamicDetour.FromConf(hGameData, "ForEachTerrorPlayer<SpawnablePZScan>");
+		if(g_dSpawnablePZScanProtect[0] == null)
 			SetFailState("Failed to load signature: ForEachTerrorPlayer<SpawnablePZScan>");
 	}
 	else
 	{
-		g_dDetour[3] = DynamicDetour.FromConf(hGameData, "Script_ZSpawn");
-		if(g_dDetour[3] == null)
+		g_dSpawnablePZScanProtect[0] = DynamicDetour.FromConf(hGameData, "Script_ZSpawn");
+		if(g_dSpawnablePZScanProtect[0] == null)
 			SetFailState("Failed to load signature: Script_ZSpawn");
 
-		g_dDetour[4] = DynamicDetour.FromConf(hGameData, "z_spawn_old");
-		if(g_dDetour[4] == null)
+		g_dSpawnablePZScanProtect[1] = DynamicDetour.FromConf(hGameData, "z_spawn_old");
+		if(g_dSpawnablePZScanProtect[1] == null)
 			SetFailState("Failed to load signature: z_spawn_old");
 
-		g_dDetour[5] = DynamicDetour.FromConf(hGameData, "z_spawn");
-		if(g_dDetour[5] == null)
+		g_dSpawnablePZScanProtect[2] = DynamicDetour.FromConf(hGameData, "z_spawn");
+		if(g_dSpawnablePZScanProtect[2] == null)
 			SetFailState("Failed to load signature: z_spawn");
 	}
 
@@ -2760,50 +2773,50 @@ void vToggleDetours(bool bEnable)
 	{
 		bEnabled = true;
 
-		if(!g_dDetour[0].Enable(Hook_Pre, mreOnEnterGhostStatePre))
+		if(!g_dOnEnterGhostState.Enable(Hook_Pre, mreOnEnterGhostStatePre))
 			SetFailState("Failed to detour pre: CTerrorPlayer::OnEnterGhostState");
 		
-		if(!g_dDetour[0].Enable(Hook_Post, mreOnEnterGhostStatePost))
+		if(!g_dOnEnterGhostState.Enable(Hook_Post, mreOnEnterGhostStatePost))
 			SetFailState("Failed to detour post: CTerrorPlayer::OnEnterGhostState");
 			
-		if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre))
+		if(!g_dMaterializeFromGhost.Enable(Hook_Pre, mreMaterializeFromGhostPre))
 			SetFailState("Failed to detour pre: CTerrorPlayer::MaterializeFromGhost");
 		
-		if(!g_dDetour[1].Enable(Hook_Post, mreMaterializeFromGhostPost))
+		if(!g_dMaterializeFromGhost.Enable(Hook_Post, mreMaterializeFromGhostPost))
 			SetFailState("Failed to detour post: CTerrorPlayer::MaterializeFromGhost");
 			
-		if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre))
+		if(!g_dPlayerZombieAbortControl.Enable(Hook_Pre, mrePlayerZombieAbortControlPre))
 			SetFailState("Failed to detour pre: CTerrorPlayer::PlayerZombieAbortControl");
 		
-		if(!g_dDetour[2].Enable(Hook_Post, mrePlayerZombieAbortControlPost))
+		if(!g_dPlayerZombieAbortControl.Enable(Hook_Post, mrePlayerZombieAbortControlPost))
 			SetFailState("Failed to detour post: CTerrorPlayer::PlayerZombieAbortControl");
-			
+
 		if(g_bIsLinuxOS)
 		{
-			if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre)))
+			if(!(g_bIsSpawnablePZSupported = g_dSpawnablePZScanProtect[0].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre)))
 				SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
 		
-			if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost)))
+			if(!(g_bIsSpawnablePZSupported = g_dSpawnablePZScanProtect[0].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost)))
 				SetFailState("Failed to detour post: ForEachTerrorPlayer<SpawnablePZScan>");
 		}
 		else
 		{
-			if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Pre, mreScriptZSpawnPre)))
+			if(!(g_bIsSpawnablePZSupported = g_dSpawnablePZScanProtect[0].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre)))
 				SetFailState("Failed to detour pre: Script_ZSpawn");
 		
-			if(!(g_bIsSpawnablePZSupported = g_dDetour[3].Enable(Hook_Post, mreScriptZSpawnPost)))
+			if(!(g_bIsSpawnablePZSupported = g_dSpawnablePZScanProtect[0].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost)))
 				SetFailState("Failed to detour post: Script_ZSpawn");
 
-			if(!(g_bIsSpawnablePZSupported = g_dDetour[4].Enable(Hook_Pre, mreZSpawnOldPre)))
+			if(!(g_bIsSpawnablePZSupported = g_dSpawnablePZScanProtect[1].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre)))
 				SetFailState("Failed to detour pre: z_spawn_old");
 		
-			if(!(g_bIsSpawnablePZSupported = g_dDetour[4].Enable(Hook_Post, mreZSpawnOldPost)))
+			if(!(g_bIsSpawnablePZSupported = g_dSpawnablePZScanProtect[1].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost)))
 				SetFailState("Failed to detour post: z_spawn_old");
 
-			if(!(g_bIsSpawnablePZSupported = g_dDetour[5].Enable(Hook_Pre, mreZSpawnPre)))
+			if(!(g_bIsSpawnablePZSupported = g_dSpawnablePZScanProtect[2].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre)))
 				SetFailState("Failed to detour pre: z_spawn");
 		
-			if(!(g_bIsSpawnablePZSupported = g_dDetour[5].Enable(Hook_Post, mreZSpawnPost)))
+			if(!(g_bIsSpawnablePZSupported = g_dSpawnablePZScanProtect[2].Enable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost)))
 				SetFailState("Failed to detour post: z_spawn");
 		}
 	}
@@ -2813,29 +2826,29 @@ void vToggleDetours(bool bEnable)
 
 		g_bIsSpawnablePZSupported = false;
 
-		if(!g_dDetour[0].Disable(Hook_Pre, mreOnEnterGhostStatePre) || !g_dDetour[0].Disable(Hook_Post, mreOnEnterGhostStatePost))
+		if(!g_dOnEnterGhostState.Disable(Hook_Pre, mreOnEnterGhostStatePre) || !g_dOnEnterGhostState.Disable(Hook_Post, mreOnEnterGhostStatePost))
 			SetFailState("Failed to disable detour: CTerrorPlayer::OnEnterGhostState");
 		
-		if(!g_dDetour[1].Enable(Hook_Pre, mreMaterializeFromGhostPre) || !g_dDetour[1].Disable(Hook_Post, mreMaterializeFromGhostPost))
+		if(!g_dMaterializeFromGhost.Disable(Hook_Pre, mreMaterializeFromGhostPre) || !g_dMaterializeFromGhost.Disable(Hook_Post, mreMaterializeFromGhostPost))
 			SetFailState("Failed to disable detour: CTerrorPlayer::MaterializeFromGhost");
 		
-		if(!g_dDetour[2].Enable(Hook_Pre, mrePlayerZombieAbortControlPre) || !g_dDetour[2].Disable(Hook_Post, mrePlayerZombieAbortControlPost))
+		if(!g_dPlayerZombieAbortControl.Disable(Hook_Pre, mrePlayerZombieAbortControlPre) || !g_dPlayerZombieAbortControl.Disable(Hook_Post, mrePlayerZombieAbortControlPost))
 			SetFailState("Failed to disable detour: CTerrorPlayer::PlayerZombieAbortControl");
-		
+
 		if(g_bIsLinuxOS)
 		{
-			if(!g_dDetour[3].Enable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dDetour[3].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
+			if(!g_dSpawnablePZScanProtect[0].Disable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dSpawnablePZScanProtect[0].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
 				SetFailState("Failed to disable detour: ForEachTerrorPlayer<SpawnablePZScan>");
 		}
 		else
 		{
-			if(!g_dDetour[3].Enable(Hook_Pre, mreScriptZSpawnPre) || !g_dDetour[3].Disable(Hook_Post, mreScriptZSpawnPost))
+			if(!g_dSpawnablePZScanProtect[0].Disable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dSpawnablePZScanProtect[0].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
 				SetFailState("Failed to disable detour: Script_ZSpawn");
 
-			if(!g_dDetour[4].Enable(Hook_Pre, mreZSpawnOldPre) || !g_dDetour[4].Disable(Hook_Post, mreZSpawnOldPost))
+			if(!g_dSpawnablePZScanProtect[1].Disable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dSpawnablePZScanProtect[1].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
 				SetFailState("Failed to disable detour: z_spawn_old");
 
-			if(!g_dDetour[5].Enable(Hook_Pre, mreZSpawnPre) || !g_dDetour[5].Disable(Hook_Post, mreZSpawnPost))
+			if(!g_dSpawnablePZScanProtect[2].Disable(Hook_Pre, mreForEachTerrorPlayerSpawnablePZScanPre) || !g_dSpawnablePZScanProtect[2].Disable(Hook_Post, mreForEachTerrorPlayerSpawnablePZScanPost))
 				SetFailState("Failed to disable detour: z_spawn");
 		}
 	}
@@ -2861,7 +2874,7 @@ MRESReturn mreMaterializeFromGhostPre(int pThis)
 {
 	g_bOnMaterializeFromGhost = true;
 
-	if(!IsFakeClient(pThis) && GetGameTime() - g_fBugExploitTime[pThis][1] < 1.5)
+	if(!IsFakeClient(pThis) && g_fBugExploitTime[pThis][1] > GetGameTime())
 		return MRES_Supercede;
 
 	return MRES_Ignored;
@@ -2874,7 +2887,7 @@ MRESReturn mreMaterializeFromGhostPost(int pThis)
 
 	if(!IsFakeClient(pThis))
 	{
-		g_fBugExploitTime[pThis][0] = GetGameTime();
+		g_fBugExploitTime[pThis][0] = GetGameTime() + 1.5;
 		if(g_iMaterialized[pThis] == 1 && g_iPZRespawnTime > 0 && g_iPZPunishTime > 0 && g_bUsedClassCmd[pThis] && GetEntProp(pThis, Prop_Send, "m_zombieClass") != 8)
 			CPrintToChat(pThis, "{olive}下次重生时间 {default}-> {red}+%d秒", g_iPZPunishTime);
 	}
@@ -2884,7 +2897,7 @@ MRESReturn mreMaterializeFromGhostPost(int pThis)
 
 MRESReturn mrePlayerZombieAbortControlPre(int pThis)
 {
-	if(!IsFakeClient(pThis) && GetGameTime() - g_fBugExploitTime[pThis][0] < 1.5)
+	if(!IsFakeClient(pThis) && g_fBugExploitTime[pThis][0] > GetGameTime())
 		return MRES_Supercede;
 
 	return MRES_Ignored;
@@ -2893,7 +2906,7 @@ MRESReturn mrePlayerZombieAbortControlPre(int pThis)
 MRESReturn mrePlayerZombieAbortControlPost(int pThis)
 {
 	if(!IsFakeClient(pThis))
-		g_fBugExploitTime[pThis][1] = GetGameTime();
+		g_fBugExploitTime[pThis][1] = GetGameTime() + 1.5;
 
 	return MRES_Ignored;
 }
@@ -2905,42 +2918,6 @@ MRESReturn mreForEachTerrorPlayerSpawnablePZScanPre()
 }
 
 MRESReturn mreForEachTerrorPlayerSpawnablePZScanPost()
-{
-	vSpawnablePZScanProtect(1);
-	return MRES_Ignored;
-}
-
-MRESReturn mreScriptZSpawnPre()
-{
-	vSpawnablePZScanProtect(0);
-	return MRES_Ignored;
-}
-
-MRESReturn mreScriptZSpawnPost()
-{
-	vSpawnablePZScanProtect(1);
-	return MRES_Ignored;
-}
-
-MRESReturn mreZSpawnOldPre()
-{
-	vSpawnablePZScanProtect(0);
-	return MRES_Ignored;
-}
-
-MRESReturn mreZSpawnOldPost()
-{
-	vSpawnablePZScanProtect(1);
-	return MRES_Ignored;
-}
-
-MRESReturn mreZSpawnPre()
-{
-	vSpawnablePZScanProtect(0);
-	return MRES_Ignored;
-}
-
-MRESReturn mreZSpawnPost()
 {
 	vSpawnablePZScanProtect(1);
 	return MRES_Ignored;
