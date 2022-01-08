@@ -83,7 +83,7 @@ methodmap CNavArea
 		return view_as<Address>(this) == Address_Null;
 	}
 
-	public void Mins(float result[3])
+	/*public void Mins(float result[3])
 	{
 		result[0] = view_as<float>(LoadFromAddress(view_as<Address>(this) + view_as<Address>(4), NumberType_Int32));
 		result[1] = view_as<float>(LoadFromAddress(view_as<Address>(this) + view_as<Address>(8), NumberType_Int32));
@@ -97,7 +97,7 @@ methodmap CNavArea
 		result[2] = view_as<float>(LoadFromAddress(view_as<Address>(this) + view_as<Address>(24), NumberType_Int32));
 	}
 
-	/*public void Center(float result[3])
+	public void Center(float result[3])
 	{
 		float vMins[3];
 		float vMaxs[3];
