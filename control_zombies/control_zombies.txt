@@ -197,6 +197,22 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x53\x8B\x2A\x2A\x80\xBB"
 				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 53 8B ? ? 80 BB */
 			}
+			/* CTerrorPlayer::ReplaceWithBot(CTerrorPlayer *__hidden this, bool) */
+			"CTerrorPlayer::ReplaceWithBot"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer14ReplaceWithBotEb"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x56\x8B\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\xFF\x2A\x84\x2A\x74\x2A\x80"
+				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 56 8B ? 8B ? 8B 90 ? ? ? ? FF ? 84 ? 74 ? 80 */
+			}
+			/* CTerrorPlayer::SetPreSpawnClass(ZombieClassType) */
+			"CTerrorPlayer::SetPreSpawnClass"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer16SetPreSpawnClassE15ZombieClassType"
+				"windows"	"\x55\x8B\xEC\x56\x57\x8B\x7D\x08\x8B\xF1\x39\xBE\xB8\x2B\x00\x00"
+				/* 55 8B EC 56 57 8B 7D 08 8B F1 39 BE B8 2B 00 00 */
+			}
 			/* CTerrorPlayer::RoundRespawn(void) */
 			"CTerrorPlayer::RoundRespawn"
 			{
