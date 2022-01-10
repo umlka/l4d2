@@ -6,6 +6,11 @@
 #include <left4dhooks>
 
 #define SPAWN_DEBUG 0
+#define BENCHMARK	0
+#if BENCHMARK
+	#include <profiler>
+	Profiler g_profiler;
+#endif
 
 #define SI_SMOKER		0
 #define SI_BOOMER		1
@@ -15,6 +20,20 @@
 #define SI_CHARGER		5
 #define NUM_TYPES_INFECTED	6
 #define UNINITIALISED	-1
+
+#define SPAWN_NO_PREFERENCE					   -1
+#define SPAWN_ANYWHERE							0
+#define SPAWN_BEHIND_SURVIVORS					1
+#define SPAWN_NEAR_IT_VICTIM					2
+#define SPAWN_SPECIALS_IN_FRONT_OF_SURVIVORS	3
+#define SPAWN_SPECIALS_ANYWHERE					4
+#define SPAWN_FAR_AWAY_FROM_SURVIVORS			5
+#define SPAWN_ABOVE_SURVIVORS					6
+#define SPAWN_IN_FRONT_OF_SURVIVORS				7
+#define SPAWN_VERSUS_FINALE_DISTANCE			8
+#define SPAWN_LARGE_VOLUME						9
+#define SPAWN_NEAR_POSITION						10
+
 
 Handle
 	g_hSpawnTimer;
@@ -37,8 +56,7 @@ ConVar
 	g_hTankSpawnLimits,
 	g_hTankSpawnWeights,
 	g_hSpawnRange,
-	g_hDiscardRange,
-	g_hDirectorNoSpecials;
+	g_hDiscardRange;
 
 float
 	g_fSpawnTimeMin,
@@ -66,7 +84,7 @@ int
 	g_iSpawnWeights[NUM_TYPES_INFECTED],
 	g_iSpawnTimeMode,
 	g_iTankSpawnAction,
-	g_iPreferredDirection = 9,
+	g_iPreferredDirection,
 	g_iSILimitCache = UNINITIALISED,
 	g_iSpawnLimitsCache[NUM_TYPES_INFECTED] =
 	{	
@@ -113,37 +131,16 @@ int
 	g_iCurrentClass = UNINITIALISED;
 
 bool
+	g_bInSpawnTime,
 	g_bScaleWeights,
-	g_bControlZombies,
-	g_bDirectorNoSpecials,
 	g_bHasAnySurvivorLeftSafeArea;
-
-native bool CZ_IsSpawnablePZSupported();
-
-public void OnLibraryAdded(const char[] name)
-{
-	if(strcmp(name, "control_zombies") == 0)
-		g_bControlZombies = true;
-}
-
-public void OnLibraryRemoved(const char[] name)
-{
-	if(strcmp(name, "control_zombies") == 0)
-		g_bControlZombies = false;
-}
-
-public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
-{
-	MarkNativeAsOptional("CZ_IsSpawnablePZSupported");
-	return APLRes_Success;
-}
 
 public Plugin myinfo =
 {
 	name = "Special Spawner",
 	author = "Tordecybombo, breezy",
 	description = "Provides customisable special infected spawing beyond vanilla coop limits",
-	version = "1.3.1",
+	version = "1.3.2",
 	url = ""
 };
 
@@ -228,172 +225,146 @@ public Action tmrSpawnInfectedAuto(Handle timer)
 { 
 	g_hSpawnTimer = null;
 
+	#if BENCHMARK
+	g_profiler = new Profiler();
+	g_profiler.Start();
+	#endif
+	SetRandomSeed(GetTime());
 	vGenerateAndExecuteSpawnQueue();
+	#if BENCHMARK
+	g_profiler.Stop();
+	PrintToServer("ProfilerTime: %f", g_profiler.Time);
+	#endif
 	vStartSpawnTimer();
 
 	return Plugin_Continue;
-}
-
-static int iGetAnyValidClient()
-{
-	static int i;
-	for(i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && !IsClientInKickQueue(i))
-			return i;
-	}
-	return UNINITIALISED;
 }
 
 static void vGenerateAndExecuteSpawnQueue()
 {
 	static int iCurrentSI;
 	iCurrentSI = iGetInfecteds();
-	if(iCurrentSI < g_iSILimit)
+	if(iCurrentSI >= g_iSILimit)
+		return;
+
+	static int iSize;
+	static int iAllowedSI;
+
+	iAllowedSI = g_iSILimit - iCurrentSI;
+	iSize = g_iSpawnSize > iAllowedSI ? iAllowedSI : g_iSpawnSize;
+
+	vSITypeCount();
+
+	static int i;
+	static int iIndex;
+	static ArrayList aSpawnQueue;
+
+	aSpawnQueue = new ArrayList();
+	for(i = 0; i < iSize; i++)
 	{
-		static int iSize;
-		static int iAllowedSI;
+		iIndex = iGenerateIndex();
+		if(iIndex == UNINITIALISED)
+			break;
 
-		iAllowedSI = g_iSILimit - iCurrentSI;
-		iSize = g_iSpawnSize > iAllowedSI ? iAllowedSI : g_iSpawnSize;
-
-		vSITypeCount();
-
-		static int i;
-		static int iIndex;
-		static int iQueueLength;
-		static ArrayList aSpawnQueue;
-
-		aSpawnQueue = new ArrayList();
-		for(i = 0; i < iSize; i++)
-		{
-			iIndex = iGenerateIndex();
-			if(iIndex == UNINITIALISED)
-				break;
-
-			aSpawnQueue.Push(iIndex);
-			g_iSpawnCounts[iIndex] += 1;
-		}	
-
-		iQueueLength = aSpawnQueue.Length;
-		if(iQueueLength > 0)
-		{
-			static int client;
-			client = iGetAnyValidClient();
-			if(client > 0)
-			{
-				static int iRusher;
-				static bool bAhead;
-				static float fFlow;
-				static ArrayList aFlow;
-	
-				bAhead = false;
-				aFlow = new ArrayList(2);
-				for(i = 1; i <= MaxClients; i++)
-				{
-					if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-					{
-			
-						fFlow = L4D2Direct_GetFlowDistance(i);
-						if(fFlow && fFlow != -9999.0)
-							aFlow.Set(aFlow.Push(fFlow), i, 1);
-					}
-				}
-
-				aFlow.Sort(Sort_Descending, Sort_Float);
-		
-				static int iCount;
-				iCount = aFlow.Length;
-				iRusher = iCount > 0 ? aFlow.Get(0, 1) : 0;
-	
-				if(iCount >= 2)
-				{
-					fFlow = aFlow.Get(0, 0);
-
-					static float fLastFlow;
-					fLastFlow = aFlow.Get(iCount - 1, 0);
-
-					if(fFlow - fLastFlow > g_fRusherDistance)
-					{
-						#if SPAWN_DEBUG
-						PrintToServer("[SS] Rusher->%N", iRusher);
-						#endif
-
-						bAhead = true;
-					}
-				}
-
-				delete aFlow;
-
-				g_iPreferredDirection = bAhead ? 7 : 0;
-
-				static bool bPZSupported;
-				static bool bResetGhost[MAXPLAYERS + 1];
-				static bool bResetLifeState[MAXPLAYERS + 1];
-
-				if(!(bPZSupported = g_bControlZombies && CZ_IsSpawnablePZSupported()))
-				{
-					for(i = 1; i <= MaxClients; i++)
-					{
-						if(!IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
-							continue;
-
-						if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
-						{
-							bResetGhost[i] = true;
-							SetEntProp(i, Prop_Send, "m_isGhost", 0);
-						}
-						else if(!IsPlayerAlive(i))
-						{
-							bResetLifeState[i] = true;
-							SetEntProp(i, Prop_Send, "m_lifeState", 0);
-						}
-					}
-				}
-
-				static int iFlagBits, iCmdFlags;
-				iFlagBits = GetUserFlagBits(client);
-				iCmdFlags = GetCommandFlags("z_spawn_old");
-				SetUserFlagBits(client, ADMFLAG_ROOT);
-				SetCommandFlags("z_spawn_old", iCmdFlags & ~FCVAR_CHEAT);
-
-				for(iIndex = 0; iIndex < iQueueLength; iIndex++)
-					FakeClientCommand(client, "z_spawn_old %s auto", g_sZombieClass[aSpawnQueue.Get(iIndex)]);
-
-				SetUserFlagBits(client, iFlagBits);
-				SetCommandFlags("z_spawn_old", iCmdFlags);
-				
-				if(!bPZSupported)
-				{
-					for(i = 1; i <= MaxClients; i++)
-					{
-						if(bResetGhost[i])
-							SetEntProp(i, Prop_Send, "m_isGhost", 1);
-						if(bResetLifeState[i])
-							SetEntProp(i, Prop_Send, "m_lifeState", 1);
-			
-						bResetGhost[i] = false;
-						bResetLifeState[i] = false;
-					}
-				}
-
-				g_iPreferredDirection = 9;
-
-				if(iRusher > 0)
-					vVerifySIType(iRusher, aSpawnQueue, iCurrentSI + iSize);
-				else
-				{
-					#if SPAWN_DEBUG
-					PrintToServer("[SS] 无最高路程玩家");
-					#endif
-				}
-			}
-		}
-		delete aSpawnQueue;
+		aSpawnQueue.Push(iIndex);
+		g_iSpawnCounts[iIndex] += 1;
 	}
+
+	iSize = aSpawnQueue.Length;
+	if(!iSize)
+	{
+		delete aSpawnQueue;
+		return;
+	}
+
+	static float fFlow;
+	static ArrayList aFlow;
+
+	aFlow = new ArrayList(2);
+	for(i = 1; i <= MaxClients; i++)
+	{
+		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
+		{
+			fFlow = L4D2Direct_GetFlowDistance(i);
+			if(fFlow && fFlow != -9999.0)
+				aFlow.Set(aFlow.Push(fFlow), i, 1);
+		}
+	}
+
+	static int iCount;
+	iCount = aFlow.Length;
+	if(!iCount)
+	{
+		delete aFlow;
+		return;
+	}
+
+	aFlow.Sort(Sort_Descending, Sort_Float);
+
+	static int iAhead;
+	static bool bSuccess;
+
+	bSuccess = false;
+	iAhead = aFlow.Get(0, 1);
+
+	if(iCount >= 2)
+	{
+		fFlow = aFlow.Get(0, 0);
+
+		static float fLastFlow;
+		fLastFlow = aFlow.Get(iCount - 1, 0);
+		if(fFlow - fLastFlow > g_fRusherDistance)
+		{
+			#if SPAWN_DEBUG
+			PrintToServer("[SS] Rusher->%N", iAhead);
+			#endif
+
+			bSuccess = true;
+		}
+	}
+
+	delete aFlow;
+
+	g_iPreferredDirection = bSuccess ? SPAWN_IN_FRONT_OF_SURVIVORS : SPAWN_ANYWHERE;
+
+	g_bInSpawnTime = true;
+
+	g_hSpawnRange.IntValue = 1000;
+	g_hDiscardRange.IntValue = 1250;
+
+	bSuccess = false;
+	static float vPos[3];
+	for(i = 0; i < iSize; i++)
+	{
+		iIndex = aSpawnQueue.Get(i);
+		if(L4D_GetRandomPZSpawnPosition(iAhead, iIndex + 1, 5, vPos))
+			bSuccess = true;
+
+		if(!bSuccess)
+			continue;
+
+		L4D2_SpawnSpecial(iIndex + 1, vPos, NULL_VECTOR);
+	}
+
+	g_iPreferredDirection = SPAWN_ANYWHERE;
+
+	if(iAhead > 0)
+	{
+		g_hSpawnRange.IntValue = 1500;
+		g_hDiscardRange.IntValue = 1750;
+		vVerifySIType(iAhead, aSpawnQueue, iCurrentSI + iSize);
+	}
+	#if SPAWN_DEBUG
+	else
+		PrintToServer("[SS] 无最高路程玩家");
+	#endif
+
+	g_bInSpawnTime = false;
+
+	delete aSpawnQueue;
 }
 
-static void vVerifySIType(int iRusher, ArrayList aSpawnQueue, int iAllowedSI)
+static void vVerifySIType(int iAhead, ArrayList aSpawnQueue, int iAllowedSI)
 {
 	static int i;
 	static int iCount;
@@ -414,34 +385,28 @@ static void vVerifySIType(int iRusher, ArrayList aSpawnQueue, int iAllowedSI)
 		}
 	}
 
-	static int iQueueLength;
-	iQueueLength = aSpawnQueue.Length;
-	if(iCount < iAllowedSI && iQueueLength > 0)
+	static int iSize;
+	iSize = aSpawnQueue.Length;
+	if(iCount < iAllowedSI && iSize > 0)
 	{
 		iAllowedSI -= iCount;
-		if(iAllowedSI > iQueueLength)
-			iAllowedSI = iQueueLength;
+		if(iAllowedSI > iSize)
+			iAllowedSI = iSize;
 		
-		static float fSpawnPos[3];
+		static float vPos[3];
+		static bool bSuccess;
+
+		bSuccess = false;
 		for(i = 0; i < iAllowedSI; i++)
 		{
 			iIndex = aSpawnQueue.Get(i);
-			#if SPAWN_DEBUG
-			PrintToServer("[SS] %s产生失败", g_sZombieClass[iIndex]);
-			#endif
-			if(L4D_GetRandomPZSpawnPosition(iRusher, iIndex + 1, 15, fSpawnPos))
-			{
-				L4D2_SpawnSpecial(iIndex + 1, fSpawnPos, NULL_VECTOR);
-				#if SPAWN_DEBUG
-				PrintToServer("[SS] 补充产生%s", g_sZombieClass[iIndex]);
-				#endif
-			}
-			else
-			{
-				#if SPAWN_DEBUG
-				PrintToServer("[SS] %s寻位失败", g_sZombieClass[iIndex]);
-				#endif
-			}
+			if(L4D_GetRandomPZSpawnPosition(iAhead, iIndex + 1, 5, vPos))
+				bSuccess = true;
+
+			if(!bSuccess)
+				continue;
+
+			L4D2_SpawnSpecial(iIndex + 1, vPos, NULL_VECTOR);
 		}
 	}
 }
@@ -583,9 +548,6 @@ public void OnPluginStart()
 	g_hSpawnRange.Flags &= ~FCVAR_NOTIFY;
 	g_hDiscardRange = FindConVar("z_discard_range");
 	g_hDiscardRange.Flags &= ~FCVAR_NOTIFY;
-	
-	g_hDirectorNoSpecials = FindConVar("director_no_specials");
-	g_hDirectorNoSpecials.AddChangeHook(vOthersConVarChanged);
 
 	g_hSpawnSize.AddChangeHook(vLimitsConVarChanged);
 	for(int i; i < NUM_TYPES_INFECTED; i++)
@@ -631,12 +593,10 @@ public void OnPluginEnd()
 {
 	g_hSpawnRange.RestoreDefault();
 	g_hDiscardRange.RestoreDefault();
-	g_hDirectorNoSpecials.RestoreDefault();
 
 	FindConVar("z_spawn_flow_limit").RestoreDefault();
 	FindConVar("z_attack_flow_range").RestoreDefault();
 
-	FindConVar("director_no_bosses").RestoreDefault();
 	FindConVar("director_spectate_specials").RestoreDefault();
 
 	FindConVar("z_safe_spawn_range").RestoreDefault();
@@ -648,33 +608,30 @@ public void OnPluginEnd()
 
 public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal)
 {
-	static int val;
+	static int iValue;
 
-	val = retVal;
-	if(strcmp(key, "MaxSpecials", false) == 0)
-		val = g_bDirectorNoSpecials ? 32 : g_iSILimit;
-	else if(strcmp(key, "DominatorLimit", false) == 0)
-		val = g_bDirectorNoSpecials ? 32 : g_iSILimit;
-	else if(strcmp(key, "SmokerLimit", false) == 0)
-		val = g_bDirectorNoSpecials ? 32 : g_iSpawnLimits[0];
-	else if(strcmp(key, "BoomerLimit", false) == 0)
-		val = g_bDirectorNoSpecials ? 32 : g_iSpawnLimits[1];
-	else if(strcmp(key, "HunterLimit", false) == 0)
-		val = g_bDirectorNoSpecials ? 32 : g_iSpawnLimits[2];
-	else if(strcmp(key, "SpitterLimit", false) == 0)
-		val = g_bDirectorNoSpecials ? 32 : g_iSpawnLimits[3];
-	else if(strcmp(key, "JockeyLimit", false) == 0)
-		val = g_bDirectorNoSpecials ? 32 : g_iSpawnLimits[4];
-	else if(strcmp(key, "ChargerLimit", false) == 0)
-		val = g_bDirectorNoSpecials ? 32 : g_iSpawnLimits[5];
-	else if(strcmp(key, "SpecialInfectedAssault", false) == 0)
-		val = 1;
-	else if(strcmp(key, "PreferredSpecialDirection", false) == 0)
-		val = g_iPreferredDirection;
-
-	if(val != retVal)
+	if(!g_bInSpawnTime)
 	{
-		retVal = val;
+		if(retVal != 0 && strcmp(key, "MaxSpecials", false) == 0)
+		{
+			retVal = 0;
+			return Plugin_Handled;
+		}
+
+		return Plugin_Continue;
+	}
+
+	iValue = retVal;
+	if(strcmp(key, "MaxSpecials", false) == 0)
+		iValue = g_iSILimit;
+	else if(strcmp(key, "SpecialInfectedAssault", false) == 0)
+		iValue = 1;
+	else if(strcmp(key, "PreferredSpecialDirection", false) == 0)
+		iValue = g_iPreferredDirection;
+
+	if(iValue != retVal)
+	{
+		retVal = iValue;
 		return Plugin_Handled;
 	}
 
@@ -685,10 +642,10 @@ public Action OnPlayerStuck(int client)
 {
 	if(client && IsClientInGame(client) && !IsClientInKickQueue(client) && IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && bIsValidStuck(client))
 	{
+		KickClient(client, "感染者卡住踢出");
 		#if SPAWN_DEBUG
 		PrintToServer("[SS] %N卡住踢出", client);
 		#endif
-		KickClient(client, "感染者卡住踢出");
 	}
 
 	return Plugin_Continue;
@@ -737,8 +694,6 @@ public void OnConfigsExecuted()
 	vGetTankSpawnCvars();
 	vGetTankCustomCvars();
 	vSetDirectorConvars();
-
-	g_iPreferredDirection = 9;
 }
 
 void vLimitsConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -814,7 +769,6 @@ void vGetOthersCvars()
 	g_iGroupbase = g_hGroupbase.IntValue;
 	g_iGroupextra = g_hGroupextra.IntValue;
 	g_fRusherDistance = g_hRusherDistance.FloatValue;
-	g_bDirectorNoSpecials = g_hDirectorNoSpecials.BoolValue;
 }
 
 void vTankSpawnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -883,14 +837,12 @@ void vGetTankCustomCvars()
 
 void vSetDirectorConvars()
 {
-	g_hSpawnRange.IntValue = 1000;
-	g_hDiscardRange.IntValue = 1250;
-	g_hDirectorNoSpecials.IntValue = 1;
+	//g_hSpawnRange.IntValue = 1000;
+	//g_hDiscardRange.IntValue = 1250;
 
 	FindConVar("z_spawn_flow_limit").IntValue = 50000;
 	FindConVar("z_attack_flow_range").IntValue = 50000;
 
-	FindConVar("director_no_bosses").IntValue = 1;
 	FindConVar("director_spectate_specials").IntValue = 1;
 
 	FindConVar("z_safe_spawn_range").IntValue = 1;
