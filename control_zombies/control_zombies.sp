@@ -1394,7 +1394,9 @@ void OnNextFrame_PlayerSpawn(int client)
 					if((iPlayer = iTakeOverTank(client)))
 					{
 						vSetInfectedGhost(iPlayer, true);
-						CreateTimer(1.0, tmrReturnToSurvivor, GetClientUserId(iPlayer), TIMER_REPEAT);
+						if(g_iLastTeamID[iPlayer] == 2)
+							CreateTimer(1.0, tmrReturnToSurvivor, GetClientUserId(client), TIMER_REPEAT);
+
 						CPrintToChatAll("{green}★ {default}[{olive}AI{default}] {red}%N {default}已被 {red}%N {olive}接管", client, iPlayer);
 					}
 				}
