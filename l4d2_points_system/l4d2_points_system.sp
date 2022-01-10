@@ -20,6 +20,7 @@ ArrayList
 
 bool
 	g_bLateLoad,
+	g_bRespawnPZ,
 	g_bMapStarted,
 	g_bSettingAllow;
 
@@ -59,6 +60,7 @@ public Plugin myinfo =
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	vCreateNatives();
+	MarkNativeAsOptional("CZ_RespawnPZ");
 	MarkNativeAsOptional("CZ_SetSpawnablePZ");
 	MarkNativeAsOptional("CZ_ResetSpawnablePZ");
 	MarkNativeAsOptional("CZ_IsSpawnablePZSupported");
@@ -90,6 +92,7 @@ void vCreateNatives()
 
 public void OnAllPluginsLoaded()
 {
+	g_bRespawnPZ = GetFeatureStatus(FeatureType_Native, "CZ_RespawnPZ") == FeatureStatus_Available;
 	Call_StartForward(g_hForwardOnPSLoaded);
 	Call_Finish();
 }
@@ -219,6 +222,7 @@ any aNative_PS_UnregisterModule(Handle plugin, int numParams)
 
 bool g_bControlZombies;
 bool g_bWeaponHandling;
+native bool CZ_RespawnPZ(int client, int iZombieClass);
 native void CZ_SetSpawnablePZ(int client);
 native void CZ_ResetSpawnablePZ();
 native bool CZ_IsSpawnablePZSupported();
@@ -3463,9 +3467,23 @@ int iInfectedConfirmMenuHandler(Menu menu, MenuAction action, int param1, int pa
 							{
 								if(!IsPlayerAlive(param1))
 								{
-									vSpawnablePZScanProtect(0, param1);
-									vCheatCommandEx(param1, sCommand, sArguments);
-									vSpawnablePZScanProtect(1, param1);
+									if(g_bRespawnPZ)
+									{
+										static StringMap aZombieClass;
+										if(aZombieClass == null)
+											aZombieClass = aInitZombieClass(aZombieClass);
+
+										int iZombieClass;
+										aZombieClass.GetValue(sArguments, iZombieClass);
+										if(iZombieClass)
+											CZ_RespawnPZ(param1, iZombieClass);
+									}
+									else
+									{
+										vSpawnablePZScanProtect(0, param1);
+										vCheatCommandEx(param1, sCommand, sArguments);
+										vSpawnablePZScanProtect(1, param1);
+									}
 
 									if(IsPlayerAlive(param1))
 									{
@@ -3520,6 +3538,19 @@ bool bReachedWitchLimit(int client)
 	}
 	g_esGeneral.g_iCounter[iWitchSpawned]++;
 	return false;
+}
+
+StringMap aInitZombieClass(StringMap aZombieClass)
+{
+	aZombieClass = new StringMap();
+	aZombieClass.SetValue("smoker", 1);
+	aZombieClass.SetValue("boomer", 2);
+	aZombieClass.SetValue("hunter", 3);
+	aZombieClass.SetValue("spitter", 4);
+	aZombieClass.SetValue("jockey", 5);
+	aZombieClass.SetValue("charger", 6);
+	aZombieClass.SetValue("tank", 8);
+	return aZombieClass;
 }
 
 void vSpawnablePZScanProtect(int iState, int client = -1)
