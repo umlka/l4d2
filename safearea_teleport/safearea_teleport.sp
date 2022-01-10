@@ -30,13 +30,10 @@ Handle
 	g_hSDKFindRescueAreaTrigger,
 	g_hSDKIsTouching,
 	g_hSDKIsCheckpointDoor,
-	g_hSDKIsCheckpointExitDoor,
-	g_hSDKOnRevived;
+	g_hSDKIsCheckpointExitDoor;
 
 Address
-	g_pTheNavAreas,
-	g_pNavMesh,
-	g_pDirector;
+	g_pTheNavAreas;
 
 ArrayList
 	g_aLastDoor,
@@ -389,7 +386,7 @@ void vFindTerrorNavAreas()
 
 	Address pLastCheckpoint;
 	if(!g_bIsFinaleMap)
-		pLastCheckpoint = SDKCall(g_hSDKGetLastCheckpoint, g_pNavMesh);
+		pLastCheckpoint = SDKCall(g_hSDKGetLastCheckpoint, L4D_GetPointer(POINTER_NAVMESH));
 
 	for(int i; i < g_iTheCount; i++)
 	{
@@ -760,7 +757,7 @@ void vTeleportToCheckpoint()
 		ArrayList aVerify = new ArrayList(2);
 
 		if(!g_bIsFinaleMap)
-			CArea = SDKCall(g_hSDKCheckpointGetLargestArea, SDKCall(g_hSDKGetLastCheckpoint, g_pNavMesh));
+			CArea = SDKCall(g_hSDKCheckpointGetLargestArea, SDKCall(g_hSDKGetLastCheckpoint, L4D_GetPointer(POINTER_NAVMESH)));
 		
 		for(i = 1; i <= MaxClients; i++)
 		{
@@ -867,7 +864,7 @@ Action tmrTeleportVerify(Handle timer, DataPack dPack)
 void vTeleportFix(int client)
 {
 	if(GetEntProp(client, Prop_Send, "m_isHangingFromLedge"))
-		SDKCall(g_hSDKOnRevived, client);
+		L4D_ReviveSurvivor(client);
 
 	SetEntityMoveType(client, MOVETYPE_WALK);
 	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") & ~FL_FROZEN);
@@ -972,14 +969,6 @@ void vLoadGameData()
 	if(hGameData == null)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
-	g_pNavMesh = hGameData.GetAddress("TerrorNavMesh");
-	if(g_pNavMesh == Address_Null)
-		SetFailState("Failed to find address: TerrorNavMesh");
-
-	g_pDirector = hGameData.GetAddress("CDirector");
-	if(g_pDirector == Address_Null)
-		SetFailState("Failed to find address: CDirector");
-
 	g_iSpawnAttributesOffset = hGameData.GetOffset("TerrorNavArea::ScriptGetSpawnAttributes");
 	if(g_iSpawnAttributesOffset == -1)
 		SetFailState("Failed to find offset: TerrorNavArea::ScriptGetSpawnAttributes");
@@ -1052,13 +1041,6 @@ void vLoadGameData()
 	g_hSDKIsCheckpointExitDoor = EndPrepSDKCall();
 	if(g_hSDKIsCheckpointExitDoor == null)
 		SetFailState("Failed to create SDKCall: CPropDoorRotatingCheckpoint::IsCheckpointExitDoor");
-
-	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::OnRevived") == false)
-		SetFailState("Failed to find signature: CTerrorPlayer::OnRevived");
-	g_hSDKOnRevived = EndPrepSDKCall();
-	if(g_hSDKOnRevived == null)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::OnRevived");
 
 	delete hGameData;
 }
