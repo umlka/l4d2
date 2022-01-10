@@ -8,8 +8,8 @@
 	"SurvivorReached"
 	{
 		"#format"		"{1:d},{2:d}"
-		"en"			"{1} percent of the alive survivors have reached the end zone, and the countdown starts after {2}"
-		"chi"			"百分之{1}存活玩家已到达终点区域，百分之{2}之后开始倒计时"
+		"en"			"{1}/100 alive survivors have reached, and the countdown starts after {2}/100"
+		"chi"			"{1}/100存活玩家已到达终点区域，{2}/100开始倒计时"
 	}
 	"Countdown_Send"
 	{

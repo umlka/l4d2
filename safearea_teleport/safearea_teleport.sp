@@ -160,7 +160,7 @@ public Plugin myinfo =
 	name = 			"SafeArea Teleport",
 	author = 		"sorallll",
 	description = 	"",
-	version = 		"1.1.4",
+	version = 		"1.1.5",
 	url = 			"https://forums.alliedmods.net/showthread.php?p=2766514#post2766514"
 }
 
@@ -583,7 +583,7 @@ void  vOnStartTouch(const char[] output, int caller, int activator, float delay)
 		if(g_bTranslation)
 			vPrintHintToSurvivor("%t", "SurvivorReached", iTemp, g_iMinSurvivorPercent);
 		else
-			vPrintHintToSurvivor("百分之%d存活玩家已到达终点区域 百分之%d之后开始倒计时", iTemp, g_iMinSurvivorPercent);
+			vPrintHintToSurvivor("%d/100存活玩家已到达终点区域 %d/100开始倒计时", iTemp, g_iMinSurvivorPercent);
 
 		return;
 	}
@@ -606,7 +606,7 @@ int iGetReachedSurvivorPercent()
 		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 		{
 			iAliveSurvivors++;
-			if(bIsPlayerInEndArea(i))
+			if(bIsPlayerInEndArea(i, false))
 				iReached++;
 		}	
 	}
@@ -671,7 +671,12 @@ void vPerform(int iType)
 		
 		case 2:
 		{
-			if(bNoPlayerInEndArea())
+			for(int i = 1; i <= MaxClients; i++)
+			{
+				if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPlayerInEndArea(i, false))
+					ForcePlayerSuicide(i);
+			}
+			/*if(bNoPlayerInEndArea())
 			{
 				if(g_bTranslation)
 					vPrintHintToSurvivor("%t", "NoPlayerInEndArea");
@@ -684,10 +689,10 @@ void vPerform(int iType)
 			{
 				for(int i = 1; i <= MaxClients; i++)
 				{
-					if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPlayerInEndArea(i))
+					if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPlayerInEndArea(i, false))
 						ForcePlayerSuicide(i);
 				}
-			}
+			}*/
 		}
 	}
 }
@@ -843,7 +848,6 @@ Action tmrTeleportVerify(Handle timer, DataPack dPack)
 		iLength = g_aEndNavArea.Length;
 		if(iLength > 0)
 		{
-		
 			for(i = 1; i <= MaxClients; i++)
 			{
 				if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPlayerInEndArea(i))
@@ -908,17 +912,17 @@ void vRemoveInfecteds()
 		RemoveEntity(i);
 	}
 }
-
+/*
 bool bNoPlayerInEndArea()
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && bIsPlayerInEndArea(i))
+		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && bIsPlayerInEndArea(i, false))
 			return false;
 	}
 	return true;
 }
-
+*/
 bool bIsPosInArea(const float vPos[3], const float vMins[3], const float vMaxs[3])
 {
 	return vMins[0] < vPos[0] < vMaxs[0] && vMins[1] < vPos[1] < vMaxs[1] && vMins[2] < vPos[2] < vMaxs[2];
@@ -1075,13 +1079,13 @@ void vLateLoadGameData()
 	delete hGameData;
 }
 
-bool bIsPlayerInEndArea(int client)
+bool bIsPlayerInEndArea(int client, bool bCheckArea = true)
 {
 	int area = L4D_GetLastKnownArea(client);
 	if(!area)
 		return false;
 
-	if(g_aEndNavArea.FindValue(area) == -1)
+	if(bCheckArea && g_aEndNavArea.FindValue(area) == -1)
 		return false;
 
 	if(g_bIsFinaleMap)
