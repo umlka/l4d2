@@ -89,13 +89,13 @@ void vSetupDetours(GameData hGameData = null)
 
 void vDisableDetours()
 {
-	if(!g_dDetour[0].Enable(Hook_Pre, mreCanZombieSpawnHerePre) || !g_dDetour[0].Disable(Hook_Post, mreCanZombieSpawnHerePost))
+	if(!g_dDetour[0].Disable(Hook_Pre, mreCanZombieSpawnHerePre) || !g_dDetour[0].Disable(Hook_Post, mreCanZombieSpawnHerePost))
 		SetFailState("Failed to disable detour: ZombieManager::CanZombieSpawnHere");
 
 	if(!g_dDetour[1].Disable(Hook_Post, mreIsInTransitionPost))
 		SetFailState("Failed to disable detour: CDirector::IsInTransition");
 
-	if(!g_dDetour[2].Enable(Hook_Pre, mreOnPreThinkGhostStatePre) || !g_dDetour[2].Disable(Hook_Post, mreOnPreThinkGhostStatePost))
+	if(!g_dDetour[2].Disable(Hook_Pre, mreOnPreThinkGhostStatePre) || !g_dDetour[2].Disable(Hook_Post, mreOnPreThinkGhostStatePost))
 		SetFailState("Failed to disable detour: CTerrorPlayer::OnPreThinkGhostState");
 }
 
