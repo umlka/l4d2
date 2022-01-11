@@ -394,7 +394,7 @@ public Action TimerCheckFlow(Handle timer)
 
 int SpawnTank(){
 	g_bInSpawnTime = true;
-	g_iPreferredDirection = SPAWN_IN_FRONT_OF_SURVIVORS;
+	g_iPreferredDirection = SPAWN_SPECIALS_IN_FRONT_OF_SURVIVORS;
 	bool canspawn;
 	float spawnpos[3];
 	//int client = L4D_GetHighestFlowSurvivor();
