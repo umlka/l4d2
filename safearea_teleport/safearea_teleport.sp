@@ -11,10 +11,7 @@
 #define RESCUE_VEHICLE				(1 << 1)
 
 // https://developer.valvesoftware.com/wiki/List_of_L4D_Series_Nav_Mesh_Attributes:zh-cn
-#define NAV_MESH_PLAYERCLIP			262144
-#define NAV_MESH_FLOW_BLOCKED		134217728
 #define NAV_MESH_OUTSIDE_WORLD		268435456
-#define TERROR_NAV_MISSION_START	128
 #define TERROR_NAV_CHECKPOINT		2048
 #define TERROR_NAV_RESCUE_VEHICLE	32768
 #define TERROR_NAV_DOOR				262144
@@ -80,7 +77,7 @@ methodmap CNavArea
 		return view_as<Address>(this) == Address_Null;
 	}
 
-	/*public void Mins(float result[3])
+	public void Mins(float result[3])
 	{
 		result[0] = view_as<float>(LoadFromAddress(view_as<Address>(this) + view_as<Address>(4), NumberType_Int32));
 		result[1] = view_as<float>(LoadFromAddress(view_as<Address>(this) + view_as<Address>(8), NumberType_Int32));
@@ -103,7 +100,7 @@ methodmap CNavArea
 
 		AddVectors(vMins, vMaxs, result);
 		ScaleVector(result, 0.5);
-	}*/
+	}
 
 	public void FindRandomSpot(float result[3])
 	{
@@ -160,7 +157,7 @@ public Plugin myinfo =
 	name = 			"SafeArea Teleport",
 	author = 		"sorallll",
 	description = 	"",
-	version = 		"1.1.5",
+	version = 		"1.1.6",
 	url = 			"https://forums.alliedmods.net/showthread.php?p=2766514#post2766514"
 }
 
@@ -381,7 +378,6 @@ void vFindTerrorNavAreas()
 	g_aEndNavArea.Clear();
 
 	CNavArea area;
-	int iBase;
 	int iSpawn;
 
 	Address pLastCheckpoint;
@@ -396,8 +392,7 @@ void vFindTerrorNavAreas()
 		if(area.Flow == -9999.0)
 			continue;
 	
-		iBase = area.BaseAttributes;
-		if(iBase & NAV_MESH_PLAYERCLIP || iBase & NAV_MESH_FLOW_BLOCKED || iBase & NAV_MESH_OUTSIDE_WORLD)
+		if(area.BaseAttributes & NAV_MESH_OUTSIDE_WORLD)
 			continue;
 
 		iSpawn = area.SpawnAttributes;
@@ -560,7 +555,7 @@ void  vOnStartTouch(const char[] output, int caller, int activator, float delay)
 		iLength = g_aEndNavArea.Length;
 		while(iTemp < iLength)
 		{
-			view_as<CNavArea>(g_aEndNavArea.Get(iTemp)).FindRandomSpot(vOrigin);
+			view_as<CNavArea>(g_aEndNavArea.Get(iTemp)).Center(vOrigin);
 			if(!bIsPosInArea(vOrigin, vMins, vMaxs))
 			{
 				g_aEndNavArea.Erase(iTemp);
