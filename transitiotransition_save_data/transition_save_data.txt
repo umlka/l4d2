@@ -1,0 +1,80 @@
+"Games"
+{
+	"left4dead2" 
+	{
+		"Functions"
+		{
+			"Hooks_CTerrorPlayer::OnBeginChangeLevel"
+			{
+				"offset"	"CTerrorPlayer::OnBeginChangeLevel"
+				"hooktype"	"entity"
+				"return"	"void"
+				"this"		"entity"
+				"arguments"
+				{
+					"targetMap"
+					{
+						"type"	"charptr"
+					}
+				}
+			}
+			"Hooks_CTerrorPlayer::OnEndChangeLevel"
+			{
+				"offset"	"CTerrorPlayer::OnEndChangeLevel"
+				"hooktype"	"entity"
+				"return"	"void"
+				"this"		"entity"
+			}
+		}
+
+		"Offsets"
+		{
+			/* CTerrorPlayer::OnBeginChangeLevel(CTerrorPlayer *__hidden this, const char *) */
+			"CTerrorPlayer::OnBeginChangeLevel"
+			{
+				"linux"		"561"
+				"windows"	"560"
+			}
+			/* CTerrorPlayer::OnEndChangeLevel(CTerrorPlayer *__hidden this) */
+			"CTerrorPlayer::OnEndChangeLevel"
+			{
+				"linux"		"562"
+				"windows"	"561"
+			}
+			/**
+			 * CTerrorPlayer::OnIncapacitatedAsSurvivor(CTakeDamageInfo const&)
+			 *
+			 * How to find on Windows:
+			 * 1. Search for the "PlayerIncapacitated" string to locate the "CTerrorPlayer::OnIncapacitatedAsSurvivor" function.
+			 * 2. Look for the "weapon_pistol" string which should be a few lines above the "PainLevel:Critical" string.
+			 * 3. There are two function calls above the line where "weapon_pistol" is referenced.
+			 * 4. The variable that is being assigned a value below those two function calls has an offset.
+			 * 5. The offset will be the offset for the hidden melee weapon.
+			 *
+			 * How to find on Linux:
+			 * 1. Locate the function.
+			 * 2. Look for the "weapon_pistol" string which should be a few lines above the "PainLevel:Critical" string.
+			 * 3. There are two function calls above the line where "weapon_pistol" is referenced.
+			 * 4. The variable that is being assigned a value below those two function calls has an offset.
+			 * 5. Multiply the offset by 4 to get the offset for the hidden melee weapon.
+			 **/
+			"CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenMeleeWeapon"
+			{
+				"linux"		"16288"
+				"windows"	"16308"
+			}
+		}
+
+		"Signatures"
+		{
+			/* CTerrorPlayer::OnRevived(CTerrorPlayer *__hidden this) */
+			"CTerrorPlayer::OnRevived"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer9OnRevivedEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x8B\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x57\xFF\x2A\x84\x2A\x0F\x84\x2A\x2A\x2A\x2A\x8B\x2A\xE8"
+				/* ? ? ? ? ? ? 53 56 8B ? 8B ? 8B 90 ? ? ? ? 57 FF ? 84 ? 0F 84 ? ? ? ? 8B ? E8 */
+			}
+		}
+	}
+}
