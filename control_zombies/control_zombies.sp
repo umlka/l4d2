@@ -1758,6 +1758,7 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 
 		if(!bRandom)
 			iSurvivor = aClients.Get(0, 1);
+		else
 		{
 			iSurvivor = aClients.Get(0, 0);
 			aClients.Sort(Sort_Descending, Sort_Integer);
