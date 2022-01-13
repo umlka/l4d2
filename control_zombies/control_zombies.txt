@@ -135,7 +135,8 @@
 			"CTerrorPlayer::OnRevived::HangingCurrentHealth"
 			{
 				"linux"		"256"	//v50
-				"windows"	
+				"windows"	"236"	//v47
+			}
 		}
 
 		"Signatures" //大部分windows签名来自https://github.com/Psykotikism/L4D1-2_Signatures
