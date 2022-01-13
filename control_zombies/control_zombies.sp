@@ -398,7 +398,7 @@ public void OnPluginStart()
 	g_hSpawnWeights[SI_CHARGER] = CreateConVar("cz_charger_weight", "50", "charger产生比重", CVAR_FLAGS, true, 0.0);
 	g_hScaleWeights = CreateConVar("cz_scale_weights", "1",	"[ 0 = 关闭 | 1 = 开启 ] 缩放相应特感的产生比重", _, true, 0.0, true, 1.0);
 
-	//AutoExecConfig(true, "controll_zombies");
+	AutoExecConfig(true, "controll_zombies");
 	// 想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
 	g_hGameMode = FindConVar("mp_gamemode");
@@ -1863,6 +1863,7 @@ int iTakeOverTank(int tank)
 
 	if(!aClients.Length)
 		client = 0;
+	else
 	{
 		SetRandomSeed(GetTime());
 		if(aClients.FindValue(0) != -1)
@@ -1875,6 +1876,7 @@ int iTakeOverTank(int tank)
 	}
 
 	delete aClients;
+
 	if(client && iGetStandingSurvivors() >= g_iAllowSurvuivorLimit)
 	{
 		switch((g_iLastTeamID[client] = GetClientTeam(client)))
