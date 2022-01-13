@@ -14,17 +14,23 @@ StringMap
 
 ArrayList
 	g_aSavedPlayers;
-/**
+
 Handle
-	g_hSDKOnRevived;*/
+	g_hSDKOnRevived;
 
 int
 	g_iAmmoOffset,
-	g_iMeleeOffset;
+	g_iMeleeOffset,
+	g_iHangingPreTempOffset,
+	g_iHangingPreRealOffset,
+	g_iHangingCurrentOffset;
 
 bool
 	g_bLateLoad,
 	g_bTransitionStart;
+
+char
+	g_sTargetMap[64];
 
 enum struct esData
 {
@@ -111,13 +117,13 @@ enum struct esData
 		{
 			if(!GetEntProp(client, Prop_Send, "m_isHangingFromLedge"))
 			{
-				static ConVar hSurvivorMaxInc;
-				if(hSurvivorMaxInc == null)
-					hSurvivorMaxInc = FindConVar("survivor_max_incapacitated_count");
-
 				static ConVar hSurvivorReviveH;
 				if(hSurvivorReviveH == null)
 					hSurvivorReviveH = FindConVar("survivor_revive_health");
+
+				static ConVar hSurvivorMaxInc;
+				if(hSurvivorMaxInc == null)
+					hSurvivorMaxInc = FindConVar("survivor_max_incapacitated_count");
 
 				this.iHealth = 1;
 				this.iTempHealth = hSurvivorReviveH.IntValue;
@@ -131,10 +137,24 @@ enum struct esData
 				static ConVar hSurvivorIncapH;
 				if(hSurvivorIncapH == null)
 					hSurvivorIncapH = FindConVar("survivor_incap_health");
-				
-				this.iHealth = RoundToCeil(GetEntProp(client, Prop_Data, "m_iHealth") / hSurvivorIncapH.FloatValue * GetEntProp(client, Prop_Data, "m_iMaxHealth"));
-				this.iTempHealth = RoundToNearest(GetEntPropFloat(client, Prop_Send, "m_healthBuffer"));
-				this.iBufferTime = RoundToNearest(GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime"));
+
+				Address pAddr = GetEntityAddress(client);
+				int iPreTemp = LoadFromAddress(pAddr + view_as<Address>(g_iHangingPreTempOffset), NumberType_Int32);	// 玩家挂边前的临时血量
+				int iPreReal = iPreTemp + LoadFromAddress(pAddr + view_as<Address>(g_iHangingPreRealOffset), NumberType_Int32);	// 玩家挂边前的总血量
+				int iCurrent = LoadFromAddress(pAddr + view_as<Address>(g_iHangingCurrentOffset), NumberType_Int32);	// 玩家挂边时的当前血量
+				int iRevivedHealth = RoundToCeil(iCurrent / hSurvivorIncapH.FloatValue * iPreReal);	// 玩家挂边起身后的总血量
+
+				this.iHealth = iRevivedHealth;
+				int v27 = iPreReal - iRevivedHealth;
+				this.iTempHealth = iPreTemp <= v27 ? 0 : iPreTemp - v27;
+
+				if(this.iTempHealth > 0)
+					this.iHealth -= this.iTempHealth;
+
+				if(this.iHealth <= 0)
+					this.iHealth = 1;
+
+				this.iBufferTime = 0;
 				this.iReviveCount = GetEntProp(client, Prop_Send, "m_currentReviveCount");
 				this.iThirdStrike = GetEntProp(client, Prop_Send, "m_bIsOnThirdStrike");
 				this.iGoingToDie = GetEntProp(client, Prop_Send, "m_isGoingToDie");
@@ -167,7 +187,7 @@ enum struct esData
 			bSaved = true;
 		}
 
-		if(GetEntProp(client, Prop_Send, "m_isIncapacitated") && !GetEntProp(client, Prop_Send, "m_isHangingFromLedge"))
+		if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 		{
 			int iMelee = GetEntDataEnt2(client, g_iMeleeOffset);
 			switch(iMelee > MaxClients && IsValidEntity(iMelee))
@@ -257,7 +277,7 @@ enum struct esData
 			return;
 
 		if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
-			SetEntProp(client, Prop_Send, "m_isIncapacitated", 0);
+			SDKCall(g_hSDKOnRevived, client); //SetEntProp(client, Prop_Send, "m_isIncapacitated", 0);
 
 		SetEntProp(client, Prop_Send, "m_iHealth", this.iHealth);
 		SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 1.0 * this.iTempHealth);
@@ -374,7 +394,7 @@ public Plugin myinfo =
 	name = "Player Transition Save Data",
 	author = "sorallll",
 	description = "",
-	version = "1.0.1",
+	version = "1.0.2",
 	url = ""
 };
 
@@ -413,8 +433,6 @@ public void OnPluginStart()
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 
-	/**RegAdminCmd("sm_tsd", cmdTsd, ADMFLAG_ROOT, "Test");*/
-
 	if(g_bLateLoad)
 	{
 		for(int i = 1; i <= MaxClients; i++)
@@ -424,11 +442,20 @@ public void OnPluginStart()
 		}
 	}
 }
-/**
-Action cmdTsd(int client, int args)
+
+public void OnMapStart()
 {
-	return Plugin_Handled;
-}*/
+	char sMap[64];
+	GetCurrentMap(sMap, sizeof sMap);
+	if(strcmp(sMap, g_sTargetMap, false) != 0)
+	{
+		g_aSavedPlayers.Clear();
+		for(int i = 1; i <= MaxClients; i++)
+			g_esData[i].Clean();
+	}
+
+	g_sTargetMap[0] = '\0';
+}
 
 public void OnMapEnd()
 {
@@ -439,7 +466,6 @@ public void OnClientPutInServer(int client)
 {
 	if(!IsFakeClient(client))
 	{
-		//g_dHooksBeginChangeLevel.HookEntity(Hook_Pre, client, mreOnBeginChangeLevelPre);
 		g_dHooksBeginChangeLevel.HookEntity(Hook_Post, client, mreOnBeginChangeLevelPost);
 		g_dHooksEndChangeLevel.HookEntity(Hook_Post, client, mreOnEndChangeLevelPost);
 	}
@@ -495,12 +521,24 @@ void vLoadGameData()
 	if(g_iMeleeOffset == -1)
 		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenMeleeWeapon");
 
-	/**StartPrepSDKCall(SDKCall_Player);
+	g_iHangingPreTempOffset = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingPreTempHealth");
+	if(g_iHangingPreTempOffset == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::HangingPreTempHealth");
+
+	g_iHangingPreRealOffset = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingPreRealHealth");
+	if(g_iHangingPreRealOffset == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::HangingPreRealHealth");
+
+	g_iHangingCurrentOffset = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingCurrentHealth");
+	if(g_iHangingCurrentOffset == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::HangingCurrentHealth");
+
+	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::OnRevived") == false)
 		SetFailState("Failed to find signature: CTerrorPlayer::OnRevived");
 	g_hSDKOnRevived = EndPrepSDKCall();
 	if(g_hSDKOnRevived == null)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::OnRevived");*/
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::OnRevived");
 
 	vSetupDynamicHooks(hGameData);
 
@@ -517,26 +555,7 @@ void vSetupDynamicHooks(GameData hGameData = null)
 	if(g_dHooksEndChangeLevel == null)
 		SetFailState("Failed to load offset: CTerrorPlayer::OnEndChangeLevel");
 }
-/**
-MRESReturn mreOnBeginChangeLevelPre(int pThis, DHookParam hParams)
-{
-	if(!g_bTransitionStart)
-	{
-		g_aSavedPlayers.Clear();
-		g_bTransitionStart = true;
-		for(int i = 1; i <= MaxClients; i++)
-			g_esData[i].Clean();
-	}
 
-	if(GetClientTeam(pThis) != 2)
-		return MRES_Ignored;
-
-	if(GetEntProp(pThis, Prop_Send, "m_isIncapacitated"))
-		SDKCall(g_hSDKOnRevived, pThis);
-
-	return MRES_Ignored;
-}
-*/
 MRESReturn mreOnBeginChangeLevelPost(int pThis, DHookParam hParams)
 {
 	if(!g_bTransitionStart)
@@ -545,6 +564,8 @@ MRESReturn mreOnBeginChangeLevelPost(int pThis, DHookParam hParams)
 		g_bTransitionStart = true;
 		for(int i = 1; i <= MaxClients; i++)
 			g_esData[i].Clean();
+
+		hParams.GetString(1, g_sTargetMap, sizeof g_sTargetMap);
 	}
 
 	if(GetClientTeam(pThis) != 2)
