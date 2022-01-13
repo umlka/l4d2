@@ -413,7 +413,7 @@ public void OnPluginStart()
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 
-	RegAdminCmd("sm_tsd", cmdTsd, ADMFLAG_ROOT, "Test");
+	/**RegAdminCmd("sm_tsd", cmdTsd, ADMFLAG_ROOT, "Test");*/
 
 	if(g_bLateLoad)
 	{
@@ -424,37 +424,11 @@ public void OnPluginStart()
 		}
 	}
 }
-
+/**
 Action cmdTsd(int client, int args)
 {
-	bool bIncap = GetEntProp(client, Prop_Send, "m_isIncapacitated") && !GetEntProp(client, Prop_Send, "m_isHangingFromLedge");
-	int iSlot;
-	if(bIncap)
-	{
-		int iMelee = GetEntDataEnt2(client, g_iMeleeOffset);
-		switch(iMelee > MaxClients && IsValidEntity(iMelee))
-		{
-			case true:
-				iSlot = iMelee;
-
-			case false:
-				iSlot = GetPlayerWeaponSlot(client, 1);
-		}
-	}
-	else
-		iSlot = GetPlayerWeaponSlot(client, 1);
-
-	if(iSlot <= MaxClients)
-		return Plugin_Handled;
-	
-	char sWeapon[32];
-	GetEntityClassname(iSlot, sWeapon, sizeof sWeapon);
-	if(strcmp(sWeapon[7], "melee") == 0)
-		GetEntPropString(iSlot, Prop_Data, "m_strMapSetScriptName", sWeapon, sizeof sWeapon);
-
-	ReplyToCommand(client, "GetPlayerWeaponSlot 1->%s 真正倒地?->%d", sWeapon, bIncap);
 	return Plugin_Handled;
-}
+}*/
 
 public void OnMapEnd()
 {
