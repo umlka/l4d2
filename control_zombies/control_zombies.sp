@@ -457,7 +457,7 @@ public void OnPluginStart()
 		g_bHasAnySurvivorLeftSafeArea = bHasAnySurvivorLeftSafeArea();
 	}
 
-	vvPluginStateChanged();
+	vPluginStateChanged();
 }
 
 public void OnPluginEnd()
@@ -474,15 +474,15 @@ public void OnConfigsExecuted()
 	vGetColorCvars();
 	vGetSpawnCvars();
 	vGetAccessCvars();
-	vvPluginStateChanged();
+	vPluginStateChanged();
 }
 
 void vModeConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	vvPluginStateChanged();
+	vPluginStateChanged();
 }
 
-void vvPluginStateChanged()
+void vPluginStateChanged()
 {
 	g_hGameMode.GetString(g_sGameMode, sizeof g_sGameMode);
 
