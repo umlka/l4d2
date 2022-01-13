@@ -6,6 +6,7 @@
 #define PLUGIN_VERSION "1.9.7"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
+#define MAX_SLOTS		5
 #define TEAM_NOTEAM		0
 #define TEAM_SPECTATOR	1
 #define TEAM_SURVIVOR	2
@@ -38,7 +39,6 @@ ConVar
 	g_hSpecCmdLimit,
 	g_hSpecNextNotify,
 	g_hGiveWeaponType,
-	g_hSlotFlags[5],
 	g_hSbAllBotGame,
 	g_hAllowAllBotSur;
 
@@ -48,11 +48,7 @@ int
 	g_iSurvivorBot,
 	g_iSurvivorLimitSet,
 	g_iSpecCmdLimit,
-	g_iSpecNextNotify,
-	g_iSlotCount[5],
-	g_iSlotWeapons[5][20],
-	g_iPlayerBot[MAXPLAYERS + 1],
-	g_iBotPlayer[MAXPLAYERS + 1];
+	g_iSpecNextNotify;
 
 bool
 	g_bShouldFixAFK,
@@ -60,13 +56,33 @@ bool
 	g_bAutoJoin,
 	g_bRespawnJoin,
 	g_bGiveWeaponType,
-	g_bHideNameChange,
-	g_bSpecNotify[MAXPLAYERS + 1];
+	g_bHideNameChange;
 	/**g_bTakingOverBot[MAXPLAYERS + 1];*/
 
-char
-	g_sSteamID[MAXPLAYERS + 1][32],
-	g_sPlayerModel[MAXPLAYERS + 1][128];
+enum struct esWeapon
+{
+	ConVar cFlags;
+
+	int iCount;
+	int iAllowed[20];
+}
+
+esWeapon
+	g_esWeapon[MAX_SLOTS];
+
+enum struct esData
+{
+	int iPlayerBot;
+	int iBotPlayer;
+
+	bool bSpecNotify;
+
+	char sModel[128];
+	char sSteamID[32];
+}
+
+esData
+	g_esData[MAXPLAYERS + 1];
 
 static const char
 	g_sSurvivorNames[8][] =
@@ -91,7 +107,7 @@ static const char
 		"models/survivors/survivor_biker.mdl",
 		"models/survivors/survivor_manager.mdl"
 	},
-	g_sWeaponName[5][17][] =
+	g_sWeaponName[MAX_SLOTS][17][] =
 	{
 		{//slot 0(主武器)
 			"smg",						//1 UZI微冲
@@ -271,21 +287,19 @@ public void OnPluginStart()
 	g_aSteamIDs = new StringMap();
 	g_aMeleeScripts = new ArrayList(64);
 
-	g_hSurvivorLimit = FindConVar("survivor_limit");
-	g_hSurvivorLimitSet = CreateConVar("bots_survivor_limit", "4", "开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
-
-	g_hAutoJoin = CreateConVar("bots_auto_join_survivor", "1", "玩家连接后,是否自动加入生还者? \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hRespawnJoin = CreateConVar("bots_respawn_on_join", "1", "玩家第一次进服时如果没有存活的Bot可以接管是否复活? \n0=否,1=是", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hSpecCmdLimit = CreateConVar("bots_spec_cmd_limit", "1", "当完全旁观玩家达到多少个时禁止使用sm_spec命令", CVAR_FLAGS, true, 0.0);
-	g_hSpecNextNotify = CreateConVar("bots_spec_next_notify", "3", "完全旁观玩家点击鼠标左键时，提示加入生还者的方式 \n0=不提示,1=聊天栏,2=屏幕中央,3=弹出菜单", CVAR_FLAGS, true, 0.0);
-	g_hGiveWeaponType = CreateConVar("bots_give_type", "2", "根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器)", CVAR_FLAGS, true, 0.0, true, 2.0);
-	g_hSlotFlags[0] = CreateConVar("bots_give_slot0", "131071", "主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[1] = CreateConVar("bots_give_slot1", "5160", "副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[2] = CreateConVar("bots_give_slot2", "0", "投掷物给什么 \n0=不给,7=所有", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[3] = CreateConVar("bots_give_slot3", "3", "槽位3给什么 \n0=不给,15=所有", CVAR_FLAGS, true, 0.0);
-	g_hSlotFlags[4] = CreateConVar("bots_give_slot4", "3", "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
-
-	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品flags参考源码g_sWeaponName中的武器名处的数字,多个武器里面随机则取数字和)", CVAR_FLAGS | FCVAR_DONTRECORD);
+	g_hSurvivorLimit = 		FindConVar("survivor_limit");
+	g_hSurvivorLimitSet = 	CreateConVar("bots_survivor_limit", 		"4", 		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
+	g_hAutoJoin = 			CreateConVar("bots_auto_join_survivor", "1", 		"玩家连接后, 是否自动加入生还者. \n0=否, 1=是.", CVAR_FLAGS);
+	g_hRespawnJoin = 		CreateConVar("bots_respawn_on_join", 	"1", 		"玩家第一次进服时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是.", CVAR_FLAGS);
+	g_hSpecCmdLimit = 		CreateConVar("bots_spec_cmd_limit", 	"1", 		"当完全旁观玩家达到多少个时禁止使用sm_spec命令.", CVAR_FLAGS);
+	g_hSpecNextNotify = 	CreateConVar("bots_spec_next_notify", 	"3", 		"完全旁观玩家点击鼠标左键时, 提示加入生还者的方式 \n0=不提示, 1=聊天栏, 2=屏幕中央, 3=弹出菜单.", CVAR_FLAGS);
+	g_esWeapon[0].cFlags = 	CreateConVar("bots_give_slot0", 		"131071", 	"主武器给什么. \n0=不给, 131071=所有, 7=微冲, 1560=霰弹, 30720=狙击, 31=Tier1, 32736=Tier2, 98304=Tier0.", CVAR_FLAGS);
+	g_esWeapon[1].cFlags = 	CreateConVar("bots_give_slot1", 		"5160", 	"副武器给什么. \n0=不给, 131071=所有.(如果选中了近战且该近战在当前地图上未解锁,则会随机给一把).", CVAR_FLAGS);
+	g_esWeapon[2].cFlags = 	CreateConVar("bots_give_slot2", 		"0", 		"投掷物给什么. \n0=不给, 7=所有.", CVAR_FLAGS);
+	g_esWeapon[3].cFlags =	CreateConVar("bots_give_slot3", 		"1", 		"医疗品给什么. \n0=不给, 15=所有.", CVAR_FLAGS);
+	g_esWeapon[4].cFlags =	CreateConVar("bots_give_slot4", 		"3", 		"药品给什么. \n0=不给, 3=所有.", CVAR_FLAGS);
+	g_hGiveWeaponType = 	CreateConVar("bots_give_type", 			"2", 		"根据什么来给玩家装备. \n0=不给, 1=每个槽位的设置, 2=当前存活生还者的平均装备质量(仅主副武器).", CVAR_FLAGS);
+	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品flags参考源码g_sWeaponName中的武器名处的数字, 多个武器里面随机则取数字和)", CVAR_FLAGS | FCVAR_DONTRECORD);
 	
 	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
 	g_hAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
@@ -294,23 +308,23 @@ public void OnPluginStart()
 	g_hSurvivorLimit.SetBounds(ConVarBound_Upper, true, 31.0);
 
 	// https://forums.alliedmods.net/showthread.php?t=120275
-	ConVar hConVar = FindConVar("z_spawn_flow_limit");
+	/**ConVar hConVar = FindConVar("z_spawn_flow_limit");
 	hConVar.SetBounds(ConVarBound_Lower, true, 999999999.0);
 	hConVar.SetBounds(ConVarBound_Upper, true, 999999999.0);
-	hConVar.FloatValue = 999999999.0;
+	hConVar.FloatValue = 999999999.0;*/
+
+	g_hSurvivorLimitSet.AddChangeHook(vLimitConVarChanged);
 
 	g_hAutoJoin.AddChangeHook(vOtherConVarChanged);
 	g_hRespawnJoin.AddChangeHook(vOtherConVarChanged);
 	g_hSpecCmdLimit.AddChangeHook(vOtherConVarChanged);
 	g_hSpecNextNotify.AddChangeHook(vOtherConVarChanged);
 
-	for(int i; i < 5; i++)
-		g_hSlotFlags[i].AddChangeHook(vSlotConVarChanged);
+	for(int i; i < MAX_SLOTS; i++)
+		g_esWeapon[i].cFlags.AddChangeHook(vSlotConVarChanged);
 	g_hGiveWeaponType.AddChangeHook(vSlotConVarChanged);
-
-	g_hSurvivorLimitSet.AddChangeHook(vLimitConVarChanged);
-
-	AutoExecConfig(true, "bots");
+	
+	//AutoExecConfig(true, "bots");
 
 	RegConsoleCmd("sm_spec", cmdJoinSpectator, "加入旁观者");
 	RegConsoleCmd("sm_join", cmdJoinSurvivor, "加入生还者");
@@ -405,7 +419,7 @@ Action cmdJoinSurvivor(int client, int args)
 			return Plugin_Handled;
 		}
 		
-		int iBot = GetClientOfUserId(g_iPlayerBot[client]);
+		int iBot = GetClientOfUserId(g_esData[client].iPlayerBot);
 		if(iBot == 0 || !bIsValidSurvivorBot(iBot, true))
 			iBot = iFindUselessSurvivorBot();
 
@@ -666,10 +680,10 @@ Action cmdBotSet(int client, int args)
 
 Action CommandListener_SpecNext(int client, char[] command, int argc)
 {
-	if(!g_bSpecNotify[client] || !bIsValidSpectator(client) || iGetBotOfIdlePlayer(client))
+	if(!g_esData[client].bSpecNotify || !bIsValidSpectator(client) || iGetBotOfIdlePlayer(client))
 		return Plugin_Continue;
 
-	g_bSpecNotify[client] = false;
+	g_esData[client].bSpecNotify = false;
 
 	switch(g_iSpecNextNotify)
 	{
@@ -772,27 +786,27 @@ void vSlotConVarChanged(ConVar convar, const char[] oldValue, const char[] newVa
 void vGetSlotCvars()
 {
 	int iNullSlot;
-	for(int i; i < 5; i++)
+	for(int i; i < MAX_SLOTS; i++)
 	{
-		g_iSlotCount[i] = 0;
-		if(!g_hSlotFlags[i].BoolValue || !bGetSlotInfo(i))
+		g_esWeapon[i].iCount = 0;
+		if(!g_esWeapon[i].cFlags.BoolValue || !iGetSlotAllowed(i))
 			iNullSlot++;
 	}
 
-	g_bGiveWeaponType = iNullSlot != 5 ? g_hGiveWeaponType.BoolValue : false;
+	g_bGiveWeaponType = iNullSlot <= MAX_SLOTS ? g_hGiveWeaponType.BoolValue : false;
 }
 
-bool bGetSlotInfo(int iSlot)
+int iGetSlotAllowed(int iSlot)
 {
 	for(int i; i < 17; i++)
 	{
 		if(g_sWeaponName[iSlot][i][0] == '\0')
 			break;
 
-		if((1 << i) & g_hSlotFlags[iSlot].IntValue)
-			g_iSlotWeapons[iSlot][g_iSlotCount[iSlot]++] = i;
+		if((1 << i) & g_esWeapon[iSlot].cFlags.IntValue)
+			g_esWeapon[iSlot].iAllowed[g_esWeapon[iSlot].iCount++] = i;
 	}
-	return g_iSlotCount[iSlot] != 0;
+	return g_esWeapon[iSlot].iCount;
 }
 
 void vLimitConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -813,8 +827,8 @@ public void OnClientAuthorized(int client, const char[] auth)
 
 bool bCacheSteamID(int client)
 {
-	if(g_sSteamID[client][0] == '\0')
-		return GetClientAuthId(client, AuthId_Steam2, g_sSteamID[client], sizeof g_sSteamID[]);
+	if(g_esData[client].sSteamID[0] == '\0')
+		return GetClientAuthId(client, AuthId_Steam2, g_esData[client].sSteamID, sizeof esData::sSteamID);
 	return true;
 }
 
@@ -832,7 +846,7 @@ public void OnClientDisconnect(int client)
 
 public void OnClientDisconnect_Post(int client)
 {
-	g_sSteamID[client][0] = '\0';
+	g_esData[client].sSteamID[0] = '\0';
 }
 
 Action tmrBotsUpdate(Handle timer)
@@ -959,7 +973,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 	{
 		case TEAM_SPECTATOR:
 		{
-			g_bSpecNotify[client] = true;
+			g_esData[client].bSpecNotify = true;
 
 			if(g_bAutoJoin && event.GetInt("oldteam") == TEAM_NOTEAM)
 				CreateTimer(0.1, tmrAutoJoinSurvivorTeam, GetClientUserId(client));
@@ -1004,25 +1018,25 @@ bool bCanIdle(int client)
 
 void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 {
-	int player_userid = event.GetInt("player");
-	int player = GetClientOfUserId(player_userid);
+	int playerID = event.GetInt("player");
+	int player = GetClientOfUserId(playerID);
 	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || GetClientTeam(player) != TEAM_SURVIVOR)
 		return;
 
-	int bot_userid = event.GetInt("bot");
-	int bot = GetClientOfUserId(bot_userid);
+	int botID = event.GetInt("bot");
+	int bot = GetClientOfUserId(botID);
 
-	g_iBotPlayer[bot] = player_userid;
-	g_iPlayerBot[player] = bot_userid;
+	g_esData[bot].iBotPlayer = playerID;
+	g_esData[player].iPlayerBot = botID;
 
-	if(g_sPlayerModel[player][0] == '\0')
+	if(g_esData[player].sModel[0] == '\0')
 		return;
 
 	SetEntProp(bot, Prop_Send, "m_survivorCharacter", GetEntProp(player, Prop_Send, "m_survivorCharacter"));
-	SetEntityModel(bot, g_sPlayerModel[player]);
+	SetEntityModel(bot, g_esData[player].sModel);
 	for(int i; i < 8; i++)
 	{
-		if(strcmp(g_sPlayerModel[player], g_sSurvivorModels[i]) == 0)
+		if(strcmp(g_esData[player].sModel, g_sSurvivorModels[i], false) == 0)
 		{
 			g_bHideNameChange = true;
 			SetClientName(bot, g_sSurvivorNames[i]);
@@ -1039,11 +1053,11 @@ void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast)
 		return;
 
 	int bot = GetClientOfUserId(event.GetInt("bot"));
+	SetEntProp(player, Prop_Send, "m_survivorCharacter", GetEntProp(bot, Prop_Send, "m_survivorCharacter"));
 
 	char sModel[128];
 	GetClientModel(bot, sModel, sizeof sModel);
 	SetEntityModel(player, sModel);
-	SetEntProp(player, Prop_Send, "m_survivorCharacter", GetEntProp(bot, Prop_Send, "m_survivorCharacter"));
 }
 
 void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadcast)
@@ -1093,9 +1107,9 @@ bool bIsFirstTime(int client)
 	static bool bAllowed;
 
 	bAllowed = false;
-	if(!g_aSteamIDs.GetValue(g_sSteamID[client], bAllowed))
+	if(!g_aSteamIDs.GetValue(g_esData[client].sSteamID, bAllowed))
 	{
-		g_aSteamIDs.SetValue(g_sSteamID[client], true, true);
+		g_aSteamIDs.SetValue(g_esData[client].sSteamID, true, true);
 		bAllowed = true;
 	}
 	return bAllowed;
@@ -1104,7 +1118,7 @@ bool bIsFirstTime(int client)
 void vRecordSteamID(int client)
 {
 	if(bCacheSteamID(client))
-		g_aSteamIDs.SetValue(g_sSteamID[client], false, true);
+		g_aSteamIDs.SetValue(g_esData[client].sSteamID, false, true);
 }
 
 int iGetBotOfIdlePlayer(int client)
@@ -1172,7 +1186,7 @@ int iFindUnusedSurvivorBot()
 		if(!bIsValidSurvivorBot(i, false))
 			continue;
 
-		aClients.Set(aClients.Push(!(client = GetClientOfUserId(g_iBotPlayer[i])) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 2 ? 0 : 1), i, 1);
+		aClients.Set(aClients.Push(!(client = GetClientOfUserId(g_esData[i].iBotPlayer)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 2 ? 0 : 1), i, 1);
 	}
 
 	if(!aClients.Length)
@@ -1197,7 +1211,7 @@ int iFindUselessSurvivorBot()
 		if(!bIsValidSurvivorBot(i, true))
 			continue;
 
-		aClients.Set(aClients.Push(!(client = GetClientOfUserId(g_iBotPlayer[i])) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 2 ? 0 : 1), i, 1);
+		aClients.Set(aClients.Push(!(client = GetClientOfUserId(g_esData[i].iBotPlayer)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 2 ? 0 : 1), i, 1);
 	}
 
 	if(!aClients.Length)
@@ -1240,10 +1254,10 @@ void vGiveDefaultItems(int client)
 
 	for(int i = 4; i >= 2; i--)
 	{
-		if(g_iSlotCount[i] == 0)
+		if(!g_esWeapon[i].iCount)
 			continue;
 
-		vCheatCommand(client, "give", g_sWeaponName[i][g_iSlotWeapons[i][GetRandomInt(0, g_iSlotCount[i] - 1)]]);
+		vCheatCommand(client, "give", g_sWeaponName[i][g_esWeapon[i].iAllowed[GetRandomInt(0, g_esWeapon[i].iCount - 1)]]);
 	}
 
 	vGiveSecondary(client);
@@ -1260,9 +1274,9 @@ void vGiveDefaultItems(int client)
 
 void vGiveSecondary(int client)
 {
-	if(g_iSlotCount[1] != 0)
+	if(g_esWeapon[1].iCount)
 	{
-		int iRandom = g_iSlotWeapons[1][GetRandomInt(0, g_iSlotCount[1] - 1)];
+		int iRandom = g_esWeapon[1].iAllowed[GetRandomInt(0, g_esWeapon[1].iCount - 1)];
 		if(iRandom > 2)
 			vGiveMelee(client, g_sWeaponName[1][iRandom]);
 		else
@@ -1272,8 +1286,8 @@ void vGiveSecondary(int client)
 
 void vGivePresetPrimary(int client)
 {
-	if(g_iSlotCount[0] != 0)
-		vCheatCommand(client, "give", g_sWeaponName[0][g_iSlotWeapons[0][GetRandomInt(0, g_iSlotCount[0] - 1)]]);
+	if(g_esWeapon[0].iCount)
+		vCheatCommand(client, "give", g_sWeaponName[0][g_esWeapon[0].iAllowed[GetRandomInt(0, g_esWeapon[0].iCount - 1)]]);
 }
 
 bool bIsWeaponTier1(int iWeapon)
@@ -1290,8 +1304,8 @@ bool bIsWeaponTier1(int iWeapon)
 
 void vGiveAveragePrimary(int client)
 {
-	int i, iWeapon, iTier, iTotal;
-	for(i = 1; i <= MaxClients; i++)
+	int i = 1, iWeapon, iTier, iTotal;
+	for(; i <= MaxClients; i++)
 	{
 		if(i == client || !IsClientInGame(i) || GetClientTeam(i) != TEAM_SURVIVOR || !IsPlayerAlive(i))
 			continue;
@@ -1301,10 +1315,7 @@ void vGiveAveragePrimary(int client)
 		if(iWeapon <= MaxClients || !IsValidEntity(iWeapon))
 			continue;
 
-		if(bIsWeaponTier1(iWeapon))
-			iTier += 1;
-		else 
-			iTier += 2;
+		iTier += bIsWeaponTier1(iWeapon) ? 1 : 2;
 	}
 
 	switch(iTotal > 0 ? RoundToNearest(1.0 * iTier / iTotal) : 0)
@@ -1320,10 +1331,10 @@ void vGiveAveragePrimary(int client)
 void vRemovePlayerWeapons(int client)
 {
 	int iWeapon;
-	for(int i; i < 5; i++)
+	for(int i; i < MAX_SLOTS; i++)
 	{
 		iWeapon = GetPlayerWeaponSlot(client, i);
-		if(iWeapon > MaxClients && IsValidEntity(iWeapon))
+		if(iWeapon > MaxClients)
 		{
 			if(RemovePlayerItem(client, iWeapon))
 				RemoveEdict(iWeapon);
@@ -1364,6 +1375,7 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 
 		if(!bRandom)
 			iSurvivor = aClients.Get(0, 1);
+		else
 		{
 			iSurvivor = aClients.Get(0, 0);
 			aClients.Sort(Sort_Descending, Sort_Integer);
@@ -1386,8 +1398,7 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 
 void vSetGhostStatus(int client, int iGhost)
 {
-	if(GetEntProp(client, Prop_Send, "m_isGhost") != iGhost)
-		SetEntProp(client, Prop_Send, "m_isGhost", iGhost);
+	SetEntProp(client, Prop_Send, "m_isGhost", iGhost);
 }
 
 // 给玩家近战
@@ -1461,7 +1472,7 @@ void vDisplayTeamPanel(int client)
 	Panel hPanel = new Panel();
 	hPanel.SetTitle("---团队信息---");
 
-	char sBuffer[256];
+	char sBuffer[254];
 	FormatEx(sBuffer, sizeof sBuffer, "旁观者 (%d)", iGetTeamPlayers(TEAM_SPECTATOR, false));
 	hPanel.DrawItem(sBuffer);
 
@@ -1496,11 +1507,11 @@ void vDisplayTeamPanel(int client)
 		if(IsPlayerAlive(i))
 		{
 			if(GetEntProp(i, Prop_Send, "m_isIncapacitated"))
-				Format(sBuffer, sizeof sBuffer, "倒地 - %d HP - %s", iGetClientRealHealth(i), sBuffer);
+				Format(sBuffer, sizeof sBuffer, "倒地 - %d HP - %s", GetClientHealth(i) + iGetTempHealth(i), sBuffer);
 			else if(GetEntProp(i, Prop_Send, "m_currentReviveCount") >= FindConVar("survivor_max_incapacitated_count").IntValue)
-				Format(sBuffer, sizeof sBuffer, "黑白 - %d HP - %s", iGetClientRealHealth(i), sBuffer);
+				Format(sBuffer, sizeof sBuffer, "黑白 - %d HP - %s", GetClientHealth(i) + iGetTempHealth(i), sBuffer);
 			else
-				Format(sBuffer, sizeof sBuffer, "%dHP - %s", iGetClientRealHealth(i), sBuffer);
+				Format(sBuffer, sizeof sBuffer, "%dHP - %s", GetClientHealth(i) + iGetTempHealth(i), sBuffer);
 	
 		}
 		else
@@ -1569,11 +1580,14 @@ int iCountAvailableSurvivorBots()
 	return iBot;
 }
 
-int iGetClientRealHealth(int client)
+int iGetTempHealth(int client)
 {
-	float fHealth = GetEntPropFloat(client, Prop_Send, "m_healthBuffer");
-	fHealth -= (GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime")) * FindConVar("pain_pills_decay_rate").FloatValue;
-	return GetClientHealth(client) + RoundToFloor(fHealth < 0.0 ? 0.0 : fHealth);
+	static ConVar hPainPillsDecay;
+	if(hPainPillsDecay == null)
+		hPainPillsDecay = FindConVar("pain_pills_decay_rate");
+
+	int iTempHealth = RoundToCeil(GetEntPropFloat(client, Prop_Send, "m_healthBuffer") - ((GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime")) * hPainPillsDecay.FloatValue)) - 1;
+	return iTempHealth < 0 ? 0 : iTempHealth;
 }
 
 void vLoadGameData()
@@ -1818,14 +1832,14 @@ MRESReturn mrePlayerSetModelPost(int pThis, DHookParam hParams)
 
 	if(GetClientTeam(pThis) != TEAM_SURVIVOR)
 	{
-		g_sPlayerModel[pThis][0] = '\0';
+		g_esData[pThis].sModel[0] = '\0';
 		return MRES_Ignored;
 	}
 	
 	static char sModel[128];
 	hParams.GetString(1, sModel, sizeof sModel);
 	if(StrContains(sModel, "survivors", false) >= 0)
-		strcopy(g_sPlayerModel[pThis], sizeof g_sPlayerModel, sModel);
+		strcopy(g_esData[pThis].sModel, sizeof esData::sModel, sModel);
 
 	return MRES_Ignored;
 }
