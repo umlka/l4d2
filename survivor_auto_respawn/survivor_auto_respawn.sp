@@ -2,6 +2,7 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
+#include <Defib_Fix>
 
 /*****************************************************************************************************/
 // ====================================================================================================
@@ -174,7 +175,7 @@ ConVar
 	g_hGiveWeaponType,
 	g_hSlotFlags[5],
 	g_hSbAllBotGame,
-	g_hAllowAllBotSurvivorTeam;
+	g_hAllowAllBotSur;
 
 bool
 	g_bAllowSurvivorBot,
@@ -381,7 +382,7 @@ public void OnPluginStart()
 	g_hSlotFlags[4] = CreateConVar("sar_respawn_slot4", "3", "槽位4给什么 \n0=不给,3=所有", CVAR_FLAGS, true, 0.0);
 
 	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
-	g_hAllowAllBotSurvivorTeam = FindConVar("allow_all_bot_survivor_team");
+	g_hAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
 
 	g_hRespawnTime.AddChangeHook(vConVarChanged);
 	g_hRespawnLimit.AddChangeHook(vConVarChanged);
@@ -391,7 +392,7 @@ public void OnPluginStart()
 	for(int i; i < 5; i++)
 		g_hSlotFlags[i].AddChangeHook(vSlotConVarChanged);
 		
-	//AutoExecConfig(true, "survivor_auto_respawn");
+	AutoExecConfig(true, "survivor_auto_respawn");
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
@@ -436,7 +437,7 @@ void vGetSlotCvars()
 	for(int i; i < 5; i++)
 	{
 		g_iSlotCount[i] = 0;
-		if(g_hSlotFlags[i].IntValue > 0)
+		if(g_hSlotFlags[i].BoolValue)
 			vGetSlotInfo(i);
 	}
 }
@@ -466,6 +467,7 @@ public void OnClientPutInServer(int client)
 public void OnClientDisconnect(int client)
 {
 	delete g_hRespawnTimer[client];
+	vRemoveSurvivorDeathModel(client);
 }
 
 public void OnMapEnd()
@@ -509,7 +511,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 	if(bCalculateRespawnLimit(client))
 	{
 		delete g_hRespawnTimer[client];
-		g_hRespawnTimer[client] = CreateTimer(1.0, Timer_RespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
+		g_hRespawnTimer[client] = CreateTimer(1.0, tmrRespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
 	}
 }
 
@@ -542,16 +544,14 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 	if(bCalculateRespawnLimit(client))
 	{
 		delete g_hRespawnTimer[client];
-		g_hRespawnTimer[client] = CreateTimer(1.0, Timer_RespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
+		g_hRespawnTimer[client] = CreateTimer(1.0, tmrRespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
 	}
 }
 
 int iHasIdlePlayer(int client)
 {
 	char sNetClass[64];
-	if(!GetEntityNetClass(client, sNetClass, sizeof sNetClass))
-		return 0;
-
+	GetEntityNetClass(client, sNetClass, sizeof sNetClass);
 	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") < 1)
 		return 0;
 
@@ -574,7 +574,7 @@ void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 	if(bCalculateRespawnLimit(bot))
 	{
 		delete g_hRespawnTimer[bot];
-		g_hRespawnTimer[bot] = CreateTimer(1.0, Timer_RespawnSurvivor, GetClientUserId(bot), TIMER_REPEAT);
+		g_hRespawnTimer[bot] = CreateTimer(1.0, tmrRespawnSurvivor, GetClientUserId(bot), TIMER_REPEAT);
 	}
 }
 
@@ -592,7 +592,7 @@ bool bCalculateRespawnLimit(int client)
 	return true;
 }
 
-Action Timer_RespawnSurvivor(Handle timer, int client)
+Action tmrRespawnSurvivor(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) == 0)
 		return Plugin_Stop;
@@ -641,7 +641,7 @@ void vRespawnSurvivor(int client)
 
 bool bCanIdle(int client)
 {
-	if(g_hSbAllBotGame.BoolValue || g_hAllowAllBotSurvivorTeam.BoolValue)
+	if(g_hSbAllBotGame.BoolValue || g_hAllowAllBotSur.BoolValue)
 		return true;
 
 	int iSurvivor;
@@ -749,21 +749,19 @@ void vGiveAveragePrimary(int client)
 	int i, iWeapon, iTier, iTotal;
 	for(i = 1; i <= MaxClients; i++)
 	{
-		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-		{
-			iTotal += 1;	
-			iWeapon = GetPlayerWeaponSlot(i, 0);
-			if(iWeapon <= MaxClients || !IsValidEntity(iWeapon)) 
-				continue;
+		if(i == client || !IsClientInGame(i) || GetClientTeam(i) != 2 || !IsPlayerAlive(i))
+			continue;
 
-			if(bIsWeaponTier1(iWeapon)) 
-				iTier += 1;
-			else 
-				iTier += 2;
-		}
+		iTotal += 1;	
+		iWeapon = GetPlayerWeaponSlot(i, 0);
+		if(iWeapon <= MaxClients || !IsValidEntity(iWeapon))
+			continue;
+
+		if(bIsWeaponTier1(iWeapon))
+			iTier += 1;
+		else 
+			iTier += 2;
 	}
-
-	vRemovePlayerSlot(client, 0);
 
 	switch(iTotal > 0 ? RoundToNearest(1.0 * iTier / iTotal) : 0)
 	{
@@ -777,7 +775,7 @@ void vGiveAveragePrimary(int client)
 
 void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
 {
-	int iFlagBits, iCmdFlags;
+	static int iFlagBits, iCmdFlags;
 	iFlagBits = GetUserFlagBits(client);
 	iCmdFlags = GetCommandFlags(sCommand);
 	SetUserFlagBits(client, ADMFLAG_ROOT);
@@ -787,47 +785,45 @@ void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = 
 	SetCommandFlags(sCommand, iCmdFlags);
 }
 
-void vTeleportToSurvivor(int client)
+void vTeleportToSurvivor(int client, bool bRandom = true)
 {
-	int iTarget = iGetTeleportTarget(client);
-	if(iTarget != -1)
-	{
-		vForceCrouch(client);
+	int iSurvivor = 1;
+	ArrayList aClients = new ArrayList(2);
 
-		float vPos[3];
-		GetClientAbsOrigin(iTarget, vPos);
-		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
+	for(; iSurvivor <= MaxClients; iSurvivor++)
+	{
+		if(iSurvivor == client || !IsClientInGame(iSurvivor) || GetClientTeam(iSurvivor) != 2 || !IsPlayerAlive(iSurvivor))
+			continue;
+	
+		aClients.Set(aClients.Push(!GetEntProp(iSurvivor, Prop_Send, "m_isIncapacitated") ? 0 : !GetEntProp(iSurvivor, Prop_Send, "m_isHangingFromLedge") ? 1 : 2), iSurvivor, 1);
 	}
-}
 
-int iGetTeleportTarget(int client)
-{
-	int iNormal, iIncap, iHanging;
-	int[] iNormalSurvivors = new int[MaxClients];
-	int[] iIncapSurvivors = new int[MaxClients];
-	int[] iHangingSurvivors = new int[MaxClients];
-	for(int i = 1; i <= MaxClients; i++)
+	if(!aClients.Length)
+		iSurvivor = 0;
+	else
 	{
-		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
+		aClients.Sort(Sort_Ascending, Sort_Integer);
+
+		if(!bRandom)
+			iSurvivor = aClients.Get(0, 1);
 		{
-			if(GetEntProp(i, Prop_Send, "m_isIncapacitated"))
-			{
-				if(GetEntProp(i, Prop_Send, "m_isHangingFromLedge"))
-					iHangingSurvivors[iHanging++] = i;
-				else
-					iIncapSurvivors[iIncap++] = i;
-			}
-			else
-				iNormalSurvivors[iNormal++] = i;
+			iSurvivor = aClients.Get(0, 0);
+			aClients.Sort(Sort_Descending, Sort_Integer);
+			iSurvivor = aClients.Get(GetRandomInt(aClients.FindValue(iSurvivor), aClients.Length - 1), 1);
 		}
 	}
-	return (iNormal == 0) ? (iIncap == 0 ? (iHanging == 0 ? -1 : iHangingSurvivors[GetRandomInt(0, iHanging - 1)]) : iIncapSurvivors[GetRandomInt(0, iIncap - 1)]) : iNormalSurvivors[GetRandomInt(0, iNormal - 1)];
-}
 
-void vForceCrouch(int client)
-{
-	SetEntProp(client, Prop_Send, "m_bDucked", 1);
-	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
+	delete aClients;
+
+	if(iSurvivor)
+	{
+		SetEntProp(client, Prop_Send, "m_bDucked", 1);
+		SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
+
+		float vPos[3];
+		GetClientAbsOrigin(iSurvivor, vPos);
+		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
+	}
 }
 
 void vRemovePlayerSlot(int client, int iSlot)
@@ -848,10 +844,10 @@ void vSetGodMode(int client, float fDuration)
 	SetEntProp(client, Prop_Data, "m_takedamage", 0);
 
 	if(fDuration > 0.0) 
-		CreateTimer(fDuration, Timer_Mortal, GetClientUserId(client));
+		CreateTimer(fDuration, tmrMortal, GetClientUserId(client));
 }
 
-Action Timer_Mortal(Handle timer, int client)
+Action tmrMortal(Handle timer, int client)
 {
 	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
 		return Plugin_Stop;
@@ -865,10 +861,8 @@ Action Timer_Mortal(Handle timer, int client)
 public void OnMapStart()
 {
 	int i;
-	int iLen;
-
-	iLen = sizeof g_sWeaponModels;
-	for(i = 0; i < iLen; i++)
+	int iLength = sizeof g_sWeaponModels;
+	for(; i < iLength; i++)
 	{
 		if(!IsModelPrecached(g_sWeaponModels[i]))
 			PrecacheModel(g_sWeaponModels[i], true);
