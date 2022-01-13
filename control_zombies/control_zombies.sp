@@ -176,20 +176,8 @@ stock void CSayText2(int client, int author, const char[] szMessage)
 #define SI_JOCKEY			4
 #define SI_CHARGER			5
 
-static const char
-	g_sZombieClass[6][] =
-	{
-		"smoker",
-		"boomer",
-		"hunter",
-		"spitter",
-		"jockey", 
-		"charger"
-	};
-
-char
-	g_sGameMode[32],
-	g_sSteamID[MAXPLAYERS + 1][32];
+esData
+	g_esData[MAXPLAYERS + 1];
 
 Handle
 	g_hTimer,
@@ -223,8 +211,8 @@ ConVar
 	g_hAllowSurvuivorLimit,
 	g_hSurvuivorAllowChance,
 	g_hSbAllBotGame,
-	g_hSbAllBotTeam,
-	g_hMaxIncapacitatedCount,
+	g_hAllowAllBotSur,
+	g_hSurvivorMaxInc,
 	g_hExchangeTeam,
 	g_hPZSuicideTime,
 	g_hPZRespawnTime,
@@ -249,7 +237,7 @@ bool
 	g_bIsLinuxOS,
 	g_bHasAnySurvivorLeftSafeArea,
 	g_bSbAllBotGame,
-	g_bSbAllBotTeam,
+	g_bAllowAllBotSur,
 	g_bExchangeTeam,
 	g_bGlowColorEnable,
 	g_bPZPunishHealth,
@@ -264,7 +252,8 @@ int
 	g_iRoundStart,
 	g_iPlayerSpawn,
 	g_iSpawnablePZ,
-	g_iMaxIncapacitatedCount,
+	g_iMeleeOffset,
+	g_iSurvivorMaxInc,
 	g_iAllowSurvuivorLimit,
 	g_iMaxTankPlayer,
 	g_iPZRespawnTime,
@@ -300,13 +289,28 @@ float
 	g_fStartRespawnTime[MAXPLAYERS + 1],
 	g_fStartSuicideTime[MAXPLAYERS + 1];
 
+static const char
+	g_sZombieClass[6][] =
+	{
+		"smoker",
+		"boomer",
+		"hunter",
+		"spitter",
+		"jockey", 
+		"charger"
+	};
+
+char
+	g_sGameMode[32],
+	g_sSteamID[MAXPLAYERS + 1][32];
+
 // 如果签名失效，请到此处更新https://github.com/Psykotikism/L4D1-2_Signatures
 public Plugin myinfo = 
 {
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.3.2",
+	version = "3.3.3",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -394,17 +398,17 @@ public void OnPluginStart()
 	g_hSpawnWeights[SI_CHARGER] = CreateConVar("cz_charger_weight", "50", "charger产生比重", CVAR_FLAGS, true, 0.0);
 	g_hScaleWeights = CreateConVar("cz_scale_weights", "1",	"[ 0 = 关闭 | 1 = 开启 ] 缩放相应特感的产生比重", _, true, 0.0, true, 1.0);
 
-	AutoExecConfig(true, "controll_zombies");
+	//AutoExecConfig(true, "controll_zombies");
 	// 想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
 	g_hGameMode = FindConVar("mp_gamemode");
 	g_hGameMode.AddChangeHook(vModeConVarChanged);
 	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
 	g_hSbAllBotGame.AddChangeHook(vOtherConVarChanged);
-	g_hSbAllBotTeam = FindConVar("allow_all_bot_survivor_team");
-	g_hSbAllBotTeam.AddChangeHook(vOtherConVarChanged);
-	g_hMaxIncapacitatedCount = FindConVar("survivor_max_incapacitated_count");
-	g_hMaxIncapacitatedCount.AddChangeHook(vColorConVarChanged);
+	g_hAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
+	g_hAllowAllBotSur.AddChangeHook(vOtherConVarChanged);
+	g_hSurvivorMaxInc = FindConVar("survivor_max_incapacitated_count");
+	g_hSurvivorMaxInc.AddChangeHook(vColorConVarChanged);
 
 	g_hMaxTankPlayer.AddChangeHook(vOtherConVarChanged);
 	g_hAllowSurvuivorLimit.AddChangeHook(vOtherConVarChanged);
@@ -476,7 +480,7 @@ void vModeConVarChanged(ConVar convar, const char[] oldValue, const char[] newVa
 
 void vvPluginStateChanged()
 {
-	g_hGameMode.GetString(g_sGameMode, sizeof(g_sGameMode));
+	g_hGameMode.GetString(g_sGameMode, sizeof g_sGameMode);
 
 	int iLast = g_iControlledZombies;
 	g_iControlledZombies = SDKCall(g_hSDKHasPlayerControlledZombies);
@@ -586,7 +590,7 @@ void vGetOtherCvars()
 	g_iAllowSurvuivorLimit = g_hAllowSurvuivorLimit.IntValue;
 	g_fSurvuivorAllowChance = g_hSurvuivorAllowChance.FloatValue;
 	g_bSbAllBotGame = g_hSbAllBotGame.BoolValue;
-	g_bSbAllBotTeam = g_hSbAllBotTeam.BoolValue;
+	g_bAllowAllBotSur = g_hAllowAllBotSur.BoolValue;
 	g_bExchangeTeam = g_hExchangeTeam.BoolValue;
 	g_iPZRespawnTime = g_hPZRespawnTime.IntValue;
 	g_iPZSuicideTime = g_hPZSuicideTime.IntValue;
@@ -608,7 +612,7 @@ void vGetColorCvars()
 {
 	bool bLast = g_bGlowColorEnable;
 	g_bGlowColorEnable = g_hGlowColorEnable.BoolValue;
-	g_iMaxIncapacitatedCount = g_hMaxIncapacitatedCount.IntValue;
+	g_iSurvivorMaxInc = g_hSurvivorMaxInc.IntValue;
 
 	int i;
 	for(; i < 4; i++)
@@ -635,13 +639,13 @@ void vGetColorCvars()
 int iGetColor(ConVar hConVar)
 {
 	char sTemp[12];
-	hConVar.GetString(sTemp, sizeof(sTemp));
+	hConVar.GetString(sTemp, sizeof sTemp);
 
 	if(sTemp[0] == 0)
 		return 1;
 
 	char sColors[3][4];
-	int iColor = ExplodeString(sTemp, " ", sColors, sizeof(sColors), sizeof(sColors[]));
+	int iColor = ExplodeString(sTemp, " ", sColors, sizeof sColors, sizeof sColors[]);
 
 	if(iColor != 3)
 		return 1;
@@ -667,10 +671,10 @@ void vGetAccessCvars()
 void vGetUserFlagBits()
 {
 	char sTemp[256];
-	g_hUserFlagBits.GetString(sTemp, sizeof(sTemp));
+	g_hUserFlagBits.GetString(sTemp, sizeof sTemp);
 
 	char sUserFlagBits[5][26];
-	ExplodeString(sTemp, ";", sUserFlagBits, sizeof(sUserFlagBits), sizeof(sUserFlagBits[]));
+	ExplodeString(sTemp, ";", sUserFlagBits, sizeof sUserFlagBits, sizeof sUserFlagBits[]);
 
 	for(int i; i < 5; i++)
 		g_iUserFlagBits[i] = ReadFlagString(sUserFlagBits[i]);
@@ -679,10 +683,10 @@ void vGetUserFlagBits()
 void vGetImmunityLevels()
 {
 	char sTemp[128];
-	g_hImmunityLevels.GetString(sTemp, sizeof(sTemp));
+	g_hImmunityLevels.GetString(sTemp, sizeof sTemp);
 
 	char sImmunityLevels[5][8];
-	ExplodeString(sTemp, ";", sImmunityLevels, sizeof(sImmunityLevels), sizeof(sImmunityLevels[]));
+	ExplodeString(sTemp, ";", sImmunityLevels, sizeof sImmunityLevels, sizeof sImmunityLevels[]);
 
 	for(int i; i < 5; i++)
 		g_iImmunityLevels[i] = StringToInt(sImmunityLevels[i]);
@@ -803,8 +807,14 @@ Action cmdTeam3(int client, int args)
 	if(g_iCmdEnterCooling & (1 << 0))
 		g_fCmdLastUsedTime[client] = GetEngineTime() + g_fCmdCooldownTime;
 
-	vSurvivorClean(client);
-	vSurvivorSave(client);
+	g_esData[client].Clean();
+
+	int iBot;
+	if(GetClientTeam(client) != 1 || !(iBot = iGetBotOfIdlePlayer(client)))
+		iBot = client;
+
+	g_esData[client].Save(iBot, false);
+
 	ChangeClientTeam(client, 3);
 	return Plugin_Handled;
 }
@@ -881,7 +891,7 @@ Action cmdChangeClass(int client, int args)
 	if(args == 1)
 	{
 		char sTargetClass[16];
-		GetCmdArg(1, sTargetClass, sizeof(sTargetClass));
+		GetCmdArg(1, sTargetClass, sizeof sTargetClass);
 		int iZombieClass;
 		int iClass = iGetZombieClass(sTargetClass);
 		if(iClass == -1)
@@ -944,7 +954,7 @@ void vSelectZombieClassMenu(int client)
 	{
 		if(i != iZombieClass)
 		{
-			FormatEx(sIndex, sizeof(sIndex), "%d", i);
+			FormatEx(sIndex, sizeof sIndex, "%d", i);
 			menu.AddItem(sIndex, g_sZombieClass[i]);
 		}
 	}
@@ -963,7 +973,7 @@ int iSelectZombieClassMenuHandler(Menu menu, MenuAction action, int param1, int 
 			if(GetClientTeam(param1) == 3 && !IsFakeClient(param1) && IsPlayerAlive(param1) && (iZombieClass = GetEntProp(param1, Prop_Send, "m_zombieClass")) != 8 && GetEntProp(param1, Prop_Send, "m_isGhost") == 1)
 			{
 				char sItem[2];
-				menu.GetItem(param2, sItem, sizeof(sItem));
+				menu.GetItem(param2, sItem, sizeof sItem);
 				int iClass = StringToInt(sItem);
 				if(++iClass != iZombieClass)
 					vSetZombieClassAndPunish(param1, iClass);
@@ -1097,7 +1107,7 @@ public void OnClientAuthorized(int client, const char[] auth)
 bool bCacheSteamID(int client)
 {
 	if(g_sSteamID[client][0] == '\0')
-		return GetClientAuthId(client, AuthId_Steam2, g_sSteamID[client], sizeof(g_sSteamID[]));
+		return GetClientAuthId(client, AuthId_Steam2, g_sSteamID[client], sizeof g_sSteamID[]);
 	return true;
 }
 
@@ -1127,7 +1137,7 @@ public void OnClientPutInServer(int client)
 
 void vResetClientData(int client)
 {
-	vSurvivorClean(client);
+	g_esData[client].Clean();
 
 	g_iMaterialized[client] = 0;
 	g_iEnteredGhostState[client] = 0;
@@ -1497,7 +1507,7 @@ Action tmrPlayerStatus(Handle timer)
 				if(g_iModelIndex[i] != (iModelIndex = GetEntProp(i, Prop_Data, "m_nModelIndex")))
 				{
 					g_iModelIndex[i] = iModelIndex;
-					GetEntPropString(i, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
+					GetEntPropString(i, Prop_Data, "m_ModelName", sModelName, sizeof sModelName);
 					SetEntityModel(g_iModelEntRef[i], sModelName);
 				}
 
@@ -1723,47 +1733,45 @@ int iGetTankPlayers()
 	return iTankPlayers;
 }
 
-void vTeleportToSurvivor(int client)
+void vTeleportToSurvivor(int client, bool bRandom = true)
 {
-	int iTarget = iGetTeleportTarget(client);
-	if(iTarget != -1)
-	{
-		vForceCrouch(client);
+	int iSurvivor = 1;
+	ArrayList aClients = new ArrayList(2);
 
-		float vPos[3];
-		GetClientAbsOrigin(iTarget, vPos);
-		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
+	for(; iSurvivor <= MaxClients; iSurvivor++)
+	{
+		if(iSurvivor == client || !IsClientInGame(iSurvivor) || GetClientTeam(iSurvivor) != 2 || !IsPlayerAlive(iSurvivor))
+			continue;
+	
+		aClients.Set(aClients.Push(!GetEntProp(iSurvivor, Prop_Send, "m_isIncapacitated") ? 0 : !GetEntProp(iSurvivor, Prop_Send, "m_isHangingFromLedge") ? 1 : 2), iSurvivor, 1);
 	}
-}
 
-int iGetTeleportTarget(int client)
-{
-	int iNormal, iIncap, iHanging;
-	int[] iNormalSurvivors = new int[MaxClients];
-	int[] iIncapSurvivors = new int[MaxClients];
-	int[] iHangingSurvivors = new int[MaxClients];
-	for(int i = 1; i <= MaxClients; i++)
+	if(!aClients.Length)
+		iSurvivor = 0;
+	else
 	{
-		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
+		aClients.Sort(Sort_Ascending, Sort_Integer);
+
+		if(!bRandom)
+			iSurvivor = aClients.Get(0, 1);
 		{
-			if(GetEntProp(i, Prop_Send, "m_isIncapacitated"))
-			{
-				if(GetEntProp(i, Prop_Send, "m_isHangingFromLedge"))
-					iHangingSurvivors[iHanging++] = i;
-				else
-					iIncapSurvivors[iIncap++] = i;
-			}
-			else
-				iNormalSurvivors[iNormal++] = i;
+			iSurvivor = aClients.Get(0, 0);
+			aClients.Sort(Sort_Descending, Sort_Integer);
+			iSurvivor = aClients.Get(GetRandomInt(aClients.FindValue(iSurvivor), aClients.Length - 1), 1);
 		}
 	}
-	return (iNormal == 0) ? (iIncap == 0 ? (iHanging == 0 ? -1 : iHangingSurvivors[GetRandomInt(0, iHanging - 1)]) : iIncapSurvivors[GetRandomInt(0, iIncap - 1)]) : iNormalSurvivors[GetRandomInt(0, iNormal - 1)];
-}
 
-void vForceCrouch(int client)
-{
-	SetEntProp(client, Prop_Send, "m_bDucked", 1);
-	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
+	delete aClients;
+
+	if(iSurvivor)
+	{
+		SetEntProp(client, Prop_Send, "m_bDucked", 1);
+		SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
+
+		float vPos[3];
+		GetClientAbsOrigin(iSurvivor, vPos);
+		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
+	}
 }
 
 void vSetGodMode(int client, float fDuration)
@@ -1788,79 +1796,93 @@ Action tmrMortal(Handle timer, int client)
 
 int iGetAnyValidAliveSurvivorBot()
 {
-	ArrayList aReserveBots;
-	ArrayList aUselessBots;
-	aReserveBots = new ArrayList();
-	aUselessBots = new ArrayList();
-
 	int client;
+	ArrayList aClients = new ArrayList(2);
+	
 	for(int i = MaxClients; i >= 1; i--)
 	{
 		if(!bIsValidAliveSurvivorBot(i))
 			continue;
 
-		if((client = GetClientOfUserId(g_iBotPlayer[i])) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) != 2)
-			aReserveBots.Push(i);
-		else
-			aUselessBots.Push(i);
+		aClients.Set(aClients.Push(!(client = GetClientOfUserId(g_iBotPlayer[i])) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 2 ? 0 : 1), i, 1);
 	}
 
-	client = (aUselessBots.Length == 0) ? (aReserveBots.Length == 0 ? 0 : aReserveBots.Get(GetRandomInt(0, aReserveBots.Length - 1))) : aUselessBots.Get(GetRandomInt(0, aUselessBots.Length - 1));
+	if(!aClients.Length)
+		client = 0;
+	else
+	{
+		aClients.Sort(Sort_Ascending, Sort_Integer);
+		client = aClients.Get(0, 1);
+	}
 
-	delete aReserveBots;
-	delete aUselessBots;
+	delete aClients;
 	return client;
 }
 
 bool bIsValidAliveSurvivorBot(int client)
 {
-	return IsClientInGame(client) && !IsClientInKickQueue(client) && IsFakeClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client) && !iHasIdlePlayer(client);
+	return IsClientInGame(client) && !IsClientInKickQueue(client) && IsFakeClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client) && !bIsValidSpectator(iGetIdlePlayerOfBot(client));
 }
 
-int iHasIdlePlayer(int client)
+int iGetBotOfIdlePlayer(int client)
 {
-	char sNetClass[64];
-	if(!GetEntityNetClass(client, sNetClass, sizeof(sNetClass)))
-		return 0;
+	for(int i = 1; i <= MaxClients; i++)
+	{
+		if(IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == 2 && (iGetIdlePlayerOfBot(i) == client))
+			return i;
+	}
+	return 0;
+}
 
+int iGetIdlePlayerOfBot(int client)
+{
+	static char sNetClass[64];
+	GetEntityNetClass(client, sNetClass, sizeof sNetClass);
 	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") < 1)
 		return 0;
 
-	client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
-	if(client > 0 && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1)
-		return client;
+	return GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));
+}
 
-	return 0;
+bool bIsValidSpectator(int client)
+{
+	return client > 0 && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1;
 }
 
 int iTakeOverTank(int tank)
 {
-	int client, iPbCount, iOtherCount;
-	int[] iPbClients = new int[MaxClients];
-	int[] iOtherClients = new int[MaxClients];
+	int client = 1;
+	ArrayList aClients = new ArrayList(2);
 
 	bool bAllowsurvivor = bAllowSurvivorTakeOver();
-	for(int i = 1; i <= MaxClients; i++)
+	for(; client <= MaxClients; client++)
 	{
-		if(IsClientInGame(i) && !IsFakeClient(i) && ((bAllowsurvivor && GetClientTeam(i) == 2) || (GetClientTeam(i) == 3 && (!IsPlayerAlive(i) || GetEntProp(i, Prop_Send, "m_zombieClass") != 8))))
-		{
-			iOtherClients[iOtherCount++] = i;
-			if(g_bIsPlayerBP[i])
-				iPbClients[iPbCount++] = i;
-		}
+		if(IsClientInGame(client) && !IsFakeClient(client) && ((bAllowsurvivor && GetClientTeam(client) == 2) || (GetClientTeam(client) == 3 && (!IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8))))
+			aClients.Set(aClients.Push(g_bIsPlayerBP[client] ? 0 : 1), client, 1);
 	}
 
-	SetRandomSeed(GetTime());
+	if(!aClients.Length)
+		client = 0;
+	{
+		SetRandomSeed(GetTime());
+		if(aClients.FindValue(0) != -1)
+		{
+			aClients.Sort(Sort_Descending, Sort_Integer);
+			client = aClients.Get(GetRandomInt(aClients.FindValue(0), aClients.Length - 1), 1);
+		}
+		else if(GetRandomFloat(0.0, 1.0) < g_fSurvuivorAllowChance)
+			client = aClients.Get(GetRandomInt(0, aClients.Length - 1), 1);
+	}
 
-	client = (iPbCount == 0) ? (GetRandomFloat(0.0, 1.0) < g_fSurvuivorAllowChance ? (iOtherCount == 0 ? -1 : iOtherClients[GetRandomInt(0, iOtherCount - 1)]) : -1) : iPbClients[GetRandomInt(0, iPbCount - 1)]; // 随机抽取一名幸运玩家
-	if(client != -1 && iGetStandingSurvivors() >= g_iAllowSurvuivorLimit)
+	delete aClients;
+	if(client && iGetStandingSurvivors() >= g_iAllowSurvuivorLimit)
 	{
 		switch((g_iLastTeamID[client] = GetClientTeam(client)))
 		{
 			case 2:
 			{
-				vSurvivorClean(client);
-				vSurvivorSave(client);
+				g_esData[client].Clean();
+				g_esData[client].Save(client, false);
 				ChangeClientTeam(client, 3);
 			}
 			
@@ -1893,7 +1915,7 @@ int iGetStandingSurvivors()
 
 bool bAllowSurvivorTakeOver()
 {
-	if(g_bSbAllBotGame || g_bSbAllBotTeam)
+	if(g_bSbAllBotGame || g_bAllowAllBotSur)
 		return true;
 
 	int iAlivesurvivor;
@@ -1935,7 +1957,7 @@ void vCreateSurvivorModelGlow(int client)
 	g_iModelIndex[client] = GetEntProp(client, Prop_Data, "m_nModelIndex");
 
 	static char sModelName[128];
-	GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof(sModelName));
+	GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof sModelName);
 	DispatchKeyValue(entity, "model", sModelName);
 	DispatchKeyValue(entity, "solid", "0");
 	DispatchKeyValue(entity, "glowstate", "3");
@@ -1980,7 +2002,7 @@ static void vSetGlowColor(int client)
 
 static int iGetColorType(int client)
 {
-	if(GetEntProp(client, Prop_Send, "m_currentReviveCount") >= g_iMaxIncapacitatedCount)
+	if(GetEntProp(client, Prop_Send, "m_currentReviveCount") >= g_iSurvivorMaxInc)
 		return 2;
 	else
 	{
@@ -2059,358 +2081,348 @@ void vChangeTeamToSurvivor(int client)
 		}
 	}
 
-	vSurvivorGive(client);
-	vSurvivorClean(client);
+	g_esData[client].Restore(client, false);
+	g_esData[client].Clean();
 }
 
-// https://forums.alliedmods.net/showthread.php?p=2398822#post2398822
-void vSurvivorStatus(int client, int iType)
+enum struct esData
 {
-	static bool bRecorded[MAXPLAYERS + 1];
-	static int iStatusInfo[MAXPLAYERS + 1][6];
+	int iRecorded;
+	int iCharacter;
+	int iHealth;
+	int iTempHealth;
+	int iBufferTime;
+	int iReviveCount;
+	int iThirdStrike;
+	int iGoingToDie;
 	
-	switch(iType)
+	char sModel[128];
+
+	int iClip0;
+	int iAmmo;
+	int iUpgrade;
+	int iUpgradeAmmo;
+	int iWeaponSkin0;
+	int iClip1;
+	int iWeaponSkin1;
+	bool bDualWielding;
+
+	char sSlot0[32];
+	char sSlot1[32];
+	char sSlot2[32];
+	char sSlot3[32];
+	char sSlot4[32];
+	char sActive[32];
+
+	// Save Weapon 4.3 (forked)(https://forums.alliedmods.net/showthread.php?p=2398822#post2398822)
+	// Mutant_Tanks (https://github.com/Psykotikism/Mutant_Tanks)
+	void Clean()
 	{
-		case 0:
-		{
-			bRecorded[client] = false;
-			vCleanStatus(client, iStatusInfo);
-		}
-			
-		case 1:
-		{
-			bRecorded[client] = true;
-			vSaveStatus(client, iStatusInfo);
-		}
-			
-		case 2:
-		{
-			if(bRecorded[client] && IsPlayerAlive(client))
-				vSetStatus(client, iStatusInfo);
-		}
-	}
-}
-
-void vCleanStatus(int client, int[][] iStatusInfo)
-{
-	iStatusInfo[client][0] = 0;
-	iStatusInfo[client][1] = 0;
-	iStatusInfo[client][2] = 0;
-	iStatusInfo[client][3] = 0;
-	iStatusInfo[client][4] = 0;
-	iStatusInfo[client][5] = 0;
-	iStatusInfo[client][6] = -1;
-}
-
-void vSaveStatus(int client, int[][] iStatusInfo)
-{
-	if(!IsPlayerAlive(client))
-	{
-		iStatusInfo[client][3] = 50;
-		return;
-	}
-
-	iStatusInfo[client][0] = GetEntProp(client, Prop_Send, "m_currentReviveCount");
-	iStatusInfo[client][1] = GetEntProp(client, Prop_Send, "m_bIsOnThirdStrike");
-
-	if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
-	{
-		iStatusInfo[client][3] = 1;	
-		iStatusInfo[client][4] = 30;
-		iStatusInfo[client][5] = 0;
-		iStatusInfo[client][2] = 1;
-	}
-	else 
-	{
-		iStatusInfo[client][3] = GetEntProp(client, Prop_Data, "m_iHealth");
-		iStatusInfo[client][4] = RoundToNearest(GetEntPropFloat(client, Prop_Send, "m_healthBuffer"));
-		iStatusInfo[client][5] = RoundToNearest(GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime"));
-		iStatusInfo[client][2] = GetEntProp(client, Prop_Send, "m_isGoingToDie");
-	}
-}
-
-void vSetStatus(int client, int[][] iStatusInfo)
-{
-	if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
-		SetEntProp(client, Prop_Send, "m_isIncapacitated", 0);
-
-	SetEntProp(client, Prop_Send, "m_currentReviveCount", iStatusInfo[client][0]);
-	SetEntProp(client, Prop_Send, "m_bIsOnThirdStrike", iStatusInfo[client][1]);
-	SetEntProp(client, Prop_Send, "m_isGoingToDie", iStatusInfo[client][2]);
-
-	SetEntProp(client, Prop_Send, "m_iHealth", iStatusInfo[client][3]);
-	SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 1.0 * iStatusInfo[client][4]);
-	SetEntPropFloat(client, Prop_Send, "m_healthBufferTime", GetGameTime() - 1.0 * iStatusInfo[client][5]);
-
-	if(iStatusInfo[client][1] != 0)
-		StopSound(client, SNDCHAN_STATIC, "player/heartbeatloop.wav");
-}
-
-int g_iGrenadeThrower[MAXPLAYERS + 1];
-public void OnEntityCreated(int entity, const char[] classname)
-{
-	if(classname[0] != 'm' && classname[0] != 'p' && classname[0] != 'v')
-		return;
-
-	if(strncmp(classname, "molotov_projectile", 19) == 0 || strncmp(classname, "pipe_bomb_projectile", 21) == 0 || strncmp(classname, "vomitjar_projectile", 20) == 0)
-		SDKHook(entity, SDKHook_SpawnPost, Hook_SpawnPost);
-}
-
-void Hook_SpawnPost(int entity)
-{
-	SDKUnhook(entity, SDKHook_SpawnPost, Hook_SpawnPost);
-	if(entity <= MaxClients || !IsValidEntity(entity))
-		return;
-
-	int iOwner = GetEntPropEnt(entity, Prop_Data, "m_hOwnerEntity");
-	if(0 < iOwner <= MaxClients && IsClientInGame(iOwner) && GetClientTeam(iOwner) == 2)
-	{
-		int iSlot = GetPlayerWeaponSlot(iOwner, 2);
-		if(iSlot > MaxClients)
-			g_iGrenadeThrower[iOwner] = EntIndexToEntRef(iSlot);
-	}
-}
-
-void vRemoveWeapons(int client)
-{
-	int iWeapon;
-	for(int iSlot; iSlot < 5; iSlot++)
-	{
-		iWeapon = GetPlayerWeaponSlot(client, iSlot);
-		if(iWeapon > MaxClients && IsValidEntity(iWeapon))
-		{
-			if(RemovePlayerItem(client, iWeapon))
-				RemoveEdict(iWeapon);
-		}
-	}
-}
-
-void vSurvivorWeapons(int client, int iType)
-{
-	static bool bRecorded[MAXPLAYERS + 1];
-	static int iWeaponInfo[MAXPLAYERS + 1][7];
-	static char sWeaponInfo[MAXPLAYERS + 1][6][32];
+		if(!this.iRecorded)
+			return;
 	
-	switch(iType)
+		this.iRecorded = 0;
+		this.iCharacter = -1;
+		this.iReviveCount = 0;
+		this.iThirdStrike = 0;
+		this.iGoingToDie = 0;
+		this.iHealth = 0;
+		this.iTempHealth = 0;
+		this.iBufferTime = 0;
+	
+		this.sModel[0] = '\0';
+
+		this.iClip0 = 0;
+		this.iAmmo = 0;
+		this.iUpgrade = 0;
+		this.iUpgradeAmmo = 0;
+		this.iWeaponSkin0 = 0;
+		this.iClip1 = -1;
+		this.iWeaponSkin1 = 0;
+		this.bDualWielding = false;
+	
+		this.sSlot0[0] = '\0';
+		this.sSlot1[0] = '\0';
+		this.sSlot2[0] = '\0';
+		this.sSlot3[0] = '\0';
+		this.sSlot4[0] = '\0';
+		this.sActive[0] = '\0';
+	}
+
+	void Save(int client, bool bIdentity = true)
 	{
-		case 0:
+		this.Clean();
+		this.iRecorded = 1;
+
+		if(bIdentity)
 		{
-			bRecorded[client] = false;
-			vCleanWeapons(client, iWeaponInfo, sWeaponInfo);
+			this.iCharacter = GetEntProp(client, Prop_Send, "m_survivorCharacter");
+			GetClientModel(client, this.sModel, sizeof esData::sModel);
 		}
-			
-		case 1:
+
+		if(!IsPlayerAlive(client))
 		{
-			if(IsPlayerAlive(client) && bSaveWeapons(client, iWeaponInfo, sWeaponInfo, sizeof(sWeaponInfo[][])))
-				bRecorded[client] = true;
+			this.iHealth = 50;
+			return;
 		}
-			
-		case 2:
+
+		if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 		{
-			if(bRecorded[client] == true && IsPlayerAlive(client))
+			if(!GetEntProp(client, Prop_Send, "m_isHangingFromLedge"))
 			{
-				vRemoveWeapons(client);
-				vGiveWeapons(client, iWeaponInfo, sWeaponInfo);
+				static ConVar hSurvivorMaxInc;
+				if(hSurvivorMaxInc == null)
+					hSurvivorMaxInc = FindConVar("survivor_max_incapacitated_count");
+
+				static ConVar hSurvivorReviveH;
+				if(hSurvivorReviveH == null)
+					hSurvivorReviveH = FindConVar("survivor_revive_health");
+
+				this.iHealth = 1;
+				this.iTempHealth = hSurvivorReviveH.IntValue;
+				this.iBufferTime = 0;
+				this.iReviveCount = GetEntProp(client, Prop_Send, "m_currentReviveCount") + 1;
+				this.iThirdStrike = this.iReviveCount >= hSurvivorMaxInc.IntValue ? 1 : 0;
+				this.iGoingToDie = 1;
+			}
+			else
+			{
+				static ConVar hSurvivorIncapH;
+				if(hSurvivorIncapH == null)
+					hSurvivorIncapH = FindConVar("survivor_incap_health");
+				
+				this.iHealth = RoundToCeil(GetEntProp(client, Prop_Data, "m_iHealth") / hSurvivorIncapH.FloatValue * GetEntProp(client, Prop_Data, "m_iMaxHealth"));
+				this.iTempHealth = RoundToNearest(GetEntPropFloat(client, Prop_Send, "m_healthBuffer"));
+				this.iBufferTime = RoundToNearest(GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime"));
+				this.iReviveCount = GetEntProp(client, Prop_Send, "m_currentReviveCount");
+				this.iThirdStrike = GetEntProp(client, Prop_Send, "m_bIsOnThirdStrike");
+				this.iGoingToDie = GetEntProp(client, Prop_Send, "m_isGoingToDie");
 			}
 		}
-	}
-}
-
-void vCleanWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
-{
-	iWeaponInfo[client][0] = 0;
-	iWeaponInfo[client][1] = 0;
-	iWeaponInfo[client][2] = 0;
-	iWeaponInfo[client][3] = 0;
-	iWeaponInfo[client][4] = 0;
-	iWeaponInfo[client][5] = -1;
-	iWeaponInfo[client][6] = 0;
-	
-	sWeaponInfo[client][0][0] = '\0';
-	sWeaponInfo[client][1][0] = '\0';
-	sWeaponInfo[client][2][0] = '\0';
-	sWeaponInfo[client][3][0] = '\0';
-	sWeaponInfo[client][4][0] = '\0';
-	sWeaponInfo[client][5][0] = '\0';
-}
-
-bool bSaveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo, int maxlength)
-{
-	bool bSaved;
-	char sWeapon[32];
-	int iSlot = GetPlayerWeaponSlot(client, 0);
-
-	if(iSlot > MaxClients)
-	{
-		GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
-		strcopy(sWeaponInfo[client][0], maxlength, sWeapon);
-
-		iWeaponInfo[client][0] = GetEntProp(iSlot, Prop_Send, "m_iClip1");
-		iWeaponInfo[client][1] = iGetOrSetPlayerAmmo(client, sWeapon);
-		iWeaponInfo[client][2] = GetEntProp(iSlot, Prop_Send, "m_upgradeBitVec");
-		iWeaponInfo[client][3] = GetEntProp(iSlot, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded");
-		iWeaponInfo[client][4] = GetEntProp(iSlot, Prop_Send, "m_nSkin");
-
-		bSaved = true;
-	}
-
-	iSlot = GetPlayerWeaponSlot(client, 1);
-	if(iSlot > MaxClients)
-	{
-		GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
-		if(strcmp(sWeapon[7], "melee") == 0)
-			GetEntPropString(iSlot, Prop_Data, "m_strMapSetScriptName", sWeapon, sizeof(sWeapon));
-		else if(strcmp(sWeapon[7], "pistol") == 0 && GetEntProp(iSlot, Prop_Send, "m_isDualWielding") > 0)
-			sWeapon = "v_dual_pistol";
-
-		strcopy(sWeaponInfo[client][1], maxlength, sWeapon);
-
-		if(strncmp(sWeapon[7], "pistol", 6) == 0 || strcmp(sWeapon[7], "chainsaw") == 0)
-			iWeaponInfo[client][5] = GetEntProp(iSlot, Prop_Send, "m_iClip1");
-
-		iWeaponInfo[client][6] = GetEntProp(iSlot, Prop_Send, "m_nSkin");
-		
-		bSaved = true;
-	}
-
-	iSlot = GetPlayerWeaponSlot(client, 2);
-	if(iSlot > MaxClients)
-	{
-		if(EntIndexToEntRef(iSlot) != g_iGrenadeThrower[client])
+		else
 		{
-			GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
-			strcopy(sWeaponInfo[client][2], maxlength, sWeapon);
+			this.iHealth = GetEntProp(client, Prop_Data, "m_iHealth");
+			this.iTempHealth = RoundToNearest(GetEntPropFloat(client, Prop_Send, "m_healthBuffer"));
+			this.iBufferTime = RoundToNearest(GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime"));
+			this.iReviveCount = GetEntProp(client, Prop_Send, "m_currentReviveCount");
+			this.iThirdStrike = GetEntProp(client, Prop_Send, "m_bIsOnThirdStrike");
+			this.iGoingToDie = GetEntProp(client, Prop_Send, "m_isGoingToDie");
+		}
+
+		bool bSaved;
+		char sWeapon[32];
+		int iSlot = GetPlayerWeaponSlot(client, 0);
+		if(iSlot > MaxClients)
+		{
+			GetEntityClassname(iSlot, sWeapon, sizeof sWeapon);
+			strcopy(this.sSlot0, sizeof esData::sSlot0, sWeapon);
+
+			this.iClip0 = GetEntProp(iSlot, Prop_Send, "m_iClip1");
+			this.iAmmo = aGetOrSetPlayerAmmo(client, sWeapon);
+			this.iUpgrade = GetEntProp(iSlot, Prop_Send, "m_upgradeBitVec");
+			this.iUpgradeAmmo = GetEntProp(iSlot, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded");
+			this.iWeaponSkin0 = GetEntProp(iSlot, Prop_Send, "m_nSkin");
+
+			bSaved = true;
+		}
+
+		if(GetEntProp(client, Prop_Send, "m_isIncapacitated") && !GetEntProp(client, Prop_Send, "m_isHangingFromLedge"))
+		{
+			int iMelee = GetEntDataEnt2(client, g_iMeleeOffset);
+			switch(iMelee > MaxClients && IsValidEntity(iMelee))
+			{
+				case true:
+					iSlot = iMelee;
+
+				case false:
+					iSlot = GetPlayerWeaponSlot(client, 1);
+			}
+		}
+		else
+			iSlot = GetPlayerWeaponSlot(client, 1);
+
+		if(iSlot > MaxClients)
+		{
+			GetEntityClassname(iSlot, sWeapon, sizeof sWeapon);
+			if(strcmp(sWeapon[7], "melee") == 0)
+				GetEntPropString(iSlot, Prop_Data, "m_strMapSetScriptName", sWeapon, sizeof sWeapon);
+			else
+			{
+				if(strncmp(sWeapon[7], "pistol", 6) == 0 || strcmp(sWeapon[7], "chainsaw") == 0)
+					this.iClip1 = GetEntProp(iSlot, Prop_Send, "m_iClip1");
+
+				this.bDualWielding = strcmp(sWeapon[7], "pistol") == 0 && GetEntProp(iSlot, Prop_Send, "m_isDualWielding");
+			}
+
+			strcopy(this.sSlot1, sizeof esData::sSlot1, sWeapon);
+			this.iWeaponSkin1 = GetEntProp(iSlot, Prop_Send, "m_nSkin");
+		
+			bSaved = true;
+		}
+
+		iSlot = GetPlayerWeaponSlot(client, 2);
+		if(iSlot > MaxClients)
+		{
+			GetEntityClassname(iSlot, sWeapon, sizeof sWeapon);
+			strcopy(this.sSlot2, sizeof esData::sSlot2, sWeapon);
 			
 			bSaved = true;
 		}
-	}
 
-	iSlot = GetPlayerWeaponSlot(client, 3);
-	if(iSlot > MaxClients)
-	{
-		GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
-		strcopy(sWeaponInfo[client][3], maxlength, sWeapon);
-		
-		bSaved = true;
-	}
-
-	iSlot = GetPlayerWeaponSlot(client, 4);
-	if(iSlot > MaxClients)
-	{
-		GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
-		strcopy(sWeaponInfo[client][4], maxlength, sWeapon);
-		
-		bSaved = true;
-	}
-	
-	if(bSaved == true)
-	{
-		iSlot = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+		iSlot = GetPlayerWeaponSlot(client, 3);
 		if(iSlot > MaxClients)
 		{
-			GetEntityClassname(iSlot, sWeapon, sizeof(sWeapon));
-			strcopy(sWeaponInfo[client][5], maxlength, sWeapon);
+			GetEntityClassname(iSlot, sWeapon, sizeof sWeapon);
+			strcopy(this.sSlot3, sizeof esData::sSlot3, sWeapon);
+		
+			bSaved = true;
 		}
-	}
-	
-	return bSaved;
-}
 
-void vGiveWeapons(int client, int[][] iWeaponInfo, char[][][] sWeaponInfo)
-{
-	int iSlot;
-	bool bGiven;
-
-	if(sWeaponInfo[client][0][0] != '\0')
-	{
-		vCheatCommand(client, "give", sWeaponInfo[client][0]);
-
-		iSlot = GetPlayerWeaponSlot(client, 0);
+		iSlot = GetPlayerWeaponSlot(client, 4);
 		if(iSlot > MaxClients)
 		{
-			SetEntProp(iSlot, Prop_Send, "m_iClip1", iWeaponInfo[client][0]);
-			iGetOrSetPlayerAmmo(client, sWeaponInfo[client][0], iWeaponInfo[client][1]);
-
-			if(iWeaponInfo[client][2] > 0)
-				SetEntProp(iSlot, Prop_Send, "m_upgradeBitVec", iWeaponInfo[client][2]);
-
-			if(iWeaponInfo[client][3] > 0)
-				SetEntProp(iSlot, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded", iWeaponInfo[client][3]);
-				
-			if(iWeaponInfo[client][4] > 0)
-				SetEntProp(iSlot, Prop_Send, "m_nSkin", iWeaponInfo[client][4]);
-				
-			bGiven = true;
+			GetEntityClassname(iSlot, sWeapon, sizeof sWeapon);
+			strcopy(this.sSlot4, sizeof esData::sSlot4, sWeapon);
+		
+			bSaved = true;
+		}
+	
+		if(bSaved == true)
+		{
+			iSlot = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+			if(iSlot > MaxClients)
+			{
+				GetEntityClassname(iSlot, sWeapon, sizeof sWeapon);
+				strcopy(this.sActive, sizeof esData::sActive, sWeapon);
+			}
 		}
 	}
 
-	if(sWeaponInfo[client][1][0] != '\0')
+	void Restore(int client, bool bIdentity = true)
 	{
-		if(strcmp(sWeaponInfo[client][1], "v_dual_pistol") == 0)
+		if(this.iRecorded == 0)
+			return;
+
+		if(bIdentity)
 		{
-			vCheatCommand(client, "give", "weapon_pistol");
-			vCheatCommand(client, "give", "weapon_pistol");
+			if(this.iCharacter != -1)
+				SetEntProp(client, Prop_Send, "m_survivorCharacter", this.iCharacter);
+
+			if(this.sModel[0] != '\0')
+				SetEntityModel(client, this.sModel);
+		}
+		
+		if(!IsPlayerAlive(client)) 
+			return;
+
+		if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
+			SetEntProp(client, Prop_Send, "m_isIncapacitated", 0);
+
+		SetEntProp(client, Prop_Send, "m_iHealth", this.iHealth);
+		SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 1.0 * this.iTempHealth);
+		SetEntPropFloat(client, Prop_Send, "m_healthBufferTime", GetGameTime() - 1.0 * this.iBufferTime);
+		SetEntProp(client, Prop_Send, "m_currentReviveCount", this.iReviveCount);
+		SetEntProp(client, Prop_Send, "m_bIsOnThirdStrike", this.iThirdStrike);
+		SetEntProp(client, Prop_Send, "m_isGoingToDie", this.iGoingToDie);
+
+		if(!GetEntProp(client, Prop_Send, "m_bIsOnThirdStrike"))
+			StopSound(client, SNDCHAN_STATIC, "player/heartbeatloop.wav");
+
+		int iSlot;
+		int iWeapon;
+		for(; iSlot < 5; iSlot++)
+		{
+			iWeapon = GetPlayerWeaponSlot(client, iSlot);
+			if(iWeapon > MaxClients)
+			{
+				if(RemovePlayerItem(client, iWeapon))
+					RemoveEdict(iWeapon);
+			}
+		}
+
+		bool bGiven;
+		if(this.sSlot0[0] != '\0')
+		{
+			vCheatCommand(client, "give", this.sSlot0);
+
+			iSlot = GetPlayerWeaponSlot(client, 0);
+			if(iSlot > MaxClients)
+			{
+				SetEntProp(iSlot, Prop_Send, "m_iClip1", this.iClip0);
+				aGetOrSetPlayerAmmo(client, this.sSlot0, this.iAmmo);
+
+				if(this.iUpgrade > 0)
+					SetEntProp(iSlot, Prop_Send, "m_upgradeBitVec", this.iUpgrade);
+
+				if(this.iUpgradeAmmo > 0)
+					SetEntProp(iSlot, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded", this.iUpgradeAmmo);
+				
+				if(this.iWeaponSkin0 > 0)
+					SetEntProp(iSlot, Prop_Send, "m_nSkin", this.iWeaponSkin0);
+				
+				bGiven = true;
+			}
+		}
+
+		if(this.sSlot1[0] != '\0')
+		{
+			switch(this.bDualWielding)
+			{
+				case true:
+				{
+					vCheatCommand(client, "give", "weapon_pistol");
+					vCheatCommand(client, "give", "weapon_pistol");
+				}
+
+				case false:
+					vCheatCommand(client, "give", this.sSlot1);
+			}
+
+			iSlot = GetPlayerWeaponSlot(client, 1);
+			if(iSlot > MaxClients)
+			{
+				if(this.iClip1 != -1)
+					SetEntProp(iSlot, Prop_Send, "m_iClip1", this.iClip1);
+				
+				if(this.iWeaponSkin1 > 0)
+					SetEntProp(iSlot, Prop_Send, "m_nSkin", this.iWeaponSkin1);
+				
+				bGiven = true;
+			}
+		}
+
+		if(this.sSlot2[0] != '\0')
+		{
+			vCheatCommand(client, "give", this.sSlot2);
+
+			if(GetPlayerWeaponSlot(client, 2) > MaxClients)
+				bGiven = true;
+		}
+
+		if(this.sSlot3[0] != '\0')
+		{
+			vCheatCommand(client, "give", this.sSlot3);
+	
+			if(GetPlayerWeaponSlot(client, 3) > MaxClients)
+				bGiven = true;
+		}
+
+		if(this.sSlot4[0] != '\0')
+		{
+			vCheatCommand(client, "give", this.sSlot4);
+	
+			if(GetPlayerWeaponSlot(client, 4) > MaxClients)
+				bGiven = true;
+		}
+		
+		if(bGiven == true)
+		{
+			if(this.sActive[0] != '\0')
+				FakeClientCommand(client, "use %s", this.sActive);
 		}
 		else
-			vCheatCommand(client, "give", sWeaponInfo[client][1]);
-
-		iSlot = GetPlayerWeaponSlot(client, 1);
-		if(iSlot > MaxClients)
-		{
-			if(iWeaponInfo[client][5] != -1)
-				SetEntProp(iSlot, Prop_Send, "m_iClip1", iWeaponInfo[client][5]);
-				
-			if(iWeaponInfo[client][6] > 0)
-				SetEntProp(iSlot, Prop_Send, "m_nSkin", iWeaponInfo[client][6]);
-				
-			bGiven = true;
-		}
+			vCheatCommand(client, "give", "smg");
 	}
-
-	if(sWeaponInfo[client][2][0] != '\0')
-	{
-		vCheatCommand(client, "give", sWeaponInfo[client][2]);
-
-		if(GetPlayerWeaponSlot(client, 2) > MaxClients)
-			bGiven = true;
-	}
-
-	if(sWeaponInfo[client][3][0] != '\0')
-	{
-		vCheatCommand(client, "give", sWeaponInfo[client][3]);
-
-		if(GetPlayerWeaponSlot(client, 3) > MaxClients)
-			bGiven = true;
-	}
-
-	if(sWeaponInfo[client][4][0] != '\0')
-	{
-		vCheatCommand(client, "give", sWeaponInfo[client][4]);
-
-		if(GetPlayerWeaponSlot(client, 4) > MaxClients)
-			bGiven = true;
-	}
-		
-	if(bGiven == true && sWeaponInfo[client][5][0] != '\0')
-		FakeClientCommand(client, "use %s", sWeaponInfo[client][5]);
-}
-
-void vSurvivorClean(int client)
-{
-	vSurvivorStatus(client, 0);
-	vSurvivorWeapons(client, 0);
-}
-
-void vSurvivorSave(int client)
-{
-	vSurvivorStatus(client, 1);
-	vSurvivorWeapons(client, 1);
-}
-
-void vSurvivorGive(int client)
-{
-	vSurvivorStatus(client, 2);
-	vSurvivorWeapons(client, 2);
 }
 
 void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
@@ -2425,51 +2437,51 @@ void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = 
 	SetCommandFlags(sCommand, iCmdFlags);
 }
 
-int iGetOrSetPlayerAmmo(int client, const char[] sWeapon, int iAmmo = -1)
+any aGetOrSetPlayerAmmo(int client, const char[] sWeapon, int iAmmo = -1)
 {
-	static StringMap aWeaponOffsets;
-	if(aWeaponOffsets == null)
-		aWeaponOffsets = aInitWeaponOffsets(aWeaponOffsets);
+	static StringMap aAmmoOffsets;
+	if(aAmmoOffsets == null)
+		aAmmoOffsets = aInitAmmoOffsets(aAmmoOffsets);
 		
-	static int iOffsetAmmo;
-	if(iOffsetAmmo < 1)
-		iOffsetAmmo = FindSendPropInfo("CTerrorPlayer", "m_iAmmo");
+	static int iAmmoOffset;
+	if(iAmmoOffset < 1)
+		iAmmoOffset = FindSendPropInfo("CTerrorPlayer", "m_iAmmo");
 
-	int offset;
-	aWeaponOffsets.GetValue(sWeapon, offset);
+	int iOffset;
+	aAmmoOffsets.GetValue(sWeapon, iOffset);
 
-	if(offset)
+	if(iOffset)
 	{
 		if(iAmmo != -1)
-			SetEntData(client, iOffsetAmmo + offset, iAmmo);
+			SetEntData(client, iAmmoOffset + iOffset, iAmmo);
 		else
-			return GetEntData(client, iOffsetAmmo + offset);
+			return GetEntData(client, iAmmoOffset + iOffset);
 	}
 
 	return 0;
 }
 
-StringMap aInitWeaponOffsets(StringMap aWeaponOffsets)
+StringMap aInitAmmoOffsets(StringMap aAmmoOffsets)
 {
-	aWeaponOffsets = new StringMap();
-	aWeaponOffsets.SetValue("weapon_rifle", 12);
-	aWeaponOffsets.SetValue("weapon_smg", 20);
-	aWeaponOffsets.SetValue("weapon_pumpshotgun", 28);
-	aWeaponOffsets.SetValue("weapon_shotgun_chrome", 28);
-	aWeaponOffsets.SetValue("weapon_autoshotgun", 32);
-	aWeaponOffsets.SetValue("weapon_hunting_rifle", 36);
-	aWeaponOffsets.SetValue("weapon_rifle_sg552", 12);
-	aWeaponOffsets.SetValue("weapon_rifle_desert", 12);
-	aWeaponOffsets.SetValue("weapon_rifle_ak47", 12);
-	aWeaponOffsets.SetValue("weapon_smg_silenced", 20);
-	aWeaponOffsets.SetValue("weapon_smg_mp5", 20);
-	aWeaponOffsets.SetValue("weapon_shotgun_spas", 32);
-	aWeaponOffsets.SetValue("weapon_sniper_scout", 40);
-	aWeaponOffsets.SetValue("weapon_sniper_military", 40);
-	aWeaponOffsets.SetValue("weapon_sniper_awp", 40);
-	aWeaponOffsets.SetValue("weapon_rifle_m60", 24);
-	aWeaponOffsets.SetValue("weapon_grenade_launcher", 68);
-	return aWeaponOffsets;
+	aAmmoOffsets = new StringMap();
+	aAmmoOffsets.SetValue("weapon_rifle", 12);
+	aAmmoOffsets.SetValue("weapon_smg", 20);
+	aAmmoOffsets.SetValue("weapon_pumpshotgun", 28);
+	aAmmoOffsets.SetValue("weapon_shotgun_chrome", 28);
+	aAmmoOffsets.SetValue("weapon_autoshotgun", 32);
+	aAmmoOffsets.SetValue("weapon_hunting_rifle", 36);
+	aAmmoOffsets.SetValue("weapon_rifle_sg552", 12);
+	aAmmoOffsets.SetValue("weapon_rifle_desert", 12);
+	aAmmoOffsets.SetValue("weapon_rifle_ak47", 12);
+	aAmmoOffsets.SetValue("weapon_smg_silenced", 20);
+	aAmmoOffsets.SetValue("weapon_smg_mp5", 20);
+	aAmmoOffsets.SetValue("weapon_shotgun_spas", 32);
+	aAmmoOffsets.SetValue("weapon_sniper_scout", 40);
+	aAmmoOffsets.SetValue("weapon_sniper_military", 40);
+	aAmmoOffsets.SetValue("weapon_sniper_awp", 40);
+	aAmmoOffsets.SetValue("weapon_rifle_m60", 24);
+	aAmmoOffsets.SetValue("weapon_grenade_launcher", 68);
+	return aAmmoOffsets;
 }
 
 // https://github.com/brxce/hardcoop/blob/master/addons/sourcemod/scripting/modules/SS_SpawnQueue.sp
@@ -2576,13 +2588,17 @@ void vSITypeCount()
 void vLoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
+	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
 	if(FileExists(sPath) == false)
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
 	if(hGameData == null)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
+
+	g_iMeleeOffset = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenMeleeWeapon");
+	if(g_iMeleeOffset == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenMeleeWeapon");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CBaseEntity::IsInStasis") == false) // https://forums.alliedmods.net/showthread.php?t=302140
