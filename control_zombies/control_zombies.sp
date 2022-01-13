@@ -1873,6 +1873,8 @@ int iTakeOverTank(int tank)
 		}
 		else if(GetRandomFloat(0.0, 1.0) < g_fSurvuivorAllowChance)
 			client = aClients.Get(GetRandomInt(0, aClients.Length - 1), 1);
+		else
+			client = 0;
 	}
 
 	delete aClients;
