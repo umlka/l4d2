@@ -115,6 +115,27 @@
 				"linux"		"16288"
 				"windows"	"16308"
 			}
+			/**
+			* CTerrorPlayer::OnRevived(CTerrorPlayer *__hidden this)
+			*
+			* 如何寻找:
+			* 1. 搜索 "RevivedByFrien" 定位到 "CTerrorPlayer::OnRevived" 函数内部
+			* 2. 下面有个函数设置的最后一个参数是0.0, 往下数2行就到v24或v31, Linux和Windows都是一样的位置
+			**/
+			"CTerrorPlayer::OnRevived::HangingPreTempHealth"
+			{
+				"linux"		"14828"	//v24
+				"windows"	"14848"	//v31
+			}
+			"CTerrorPlayer::OnRevived::HangingPreRealHealth"
+			{
+				"linux"		"14824"	//v25
+				"windows"	"14844"	//v32
+			}
+			"CTerrorPlayer::OnRevived::HangingCurrentHealth"
+			{
+				"linux"		"256"	//v50
+				"windows"	
 		}
 
 		"Signatures" //大部分windows签名来自https://github.com/Psykotikism/L4D1-2_Signatures

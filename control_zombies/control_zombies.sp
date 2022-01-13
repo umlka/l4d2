@@ -181,6 +181,7 @@ esData
 
 Handle
 	g_hTimer,
+	g_hSDKOnRevived,
 	g_hSDKIsInStasis,
 	g_hSDKLeaveStasis,
 	g_hSDKState_Transition,
@@ -253,6 +254,9 @@ int
 	g_iPlayerSpawn,
 	g_iSpawnablePZ,
 	g_iMeleeOffset,
+	g_iHangingPreTempOffset,
+	g_iHangingPreRealOffset,
+	g_iHangingCurrentOffset,
 	g_iSurvivorMaxInc,
 	g_iAllowSurvuivorLimit,
 	g_iMaxTankPlayer,
@@ -2174,13 +2178,13 @@ enum struct esData
 		{
 			if(!GetEntProp(client, Prop_Send, "m_isHangingFromLedge"))
 			{
-				static ConVar hSurvivorMaxInc;
-				if(hSurvivorMaxInc == null)
-					hSurvivorMaxInc = FindConVar("survivor_max_incapacitated_count");
-
 				static ConVar hSurvivorReviveH;
 				if(hSurvivorReviveH == null)
 					hSurvivorReviveH = FindConVar("survivor_revive_health");
+
+				static ConVar hSurvivorMaxInc;
+				if(hSurvivorMaxInc == null)
+					hSurvivorMaxInc = FindConVar("survivor_max_incapacitated_count");
 
 				this.iHealth = 1;
 				this.iTempHealth = hSurvivorReviveH.IntValue;
@@ -2194,10 +2198,24 @@ enum struct esData
 				static ConVar hSurvivorIncapH;
 				if(hSurvivorIncapH == null)
 					hSurvivorIncapH = FindConVar("survivor_incap_health");
-				
-				this.iHealth = RoundToCeil(GetEntProp(client, Prop_Data, "m_iHealth") / hSurvivorIncapH.FloatValue * GetEntProp(client, Prop_Data, "m_iMaxHealth"));
-				this.iTempHealth = RoundToNearest(GetEntPropFloat(client, Prop_Send, "m_healthBuffer"));
-				this.iBufferTime = RoundToNearest(GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime"));
+
+				Address pAddr = GetEntityAddress(client);
+				int iPreTemp = LoadFromAddress(pAddr + view_as<Address>(g_iHangingPreTempOffset), NumberType_Int32);	// 玩家挂边前的临时血量
+				int iPreReal = iPreTemp + LoadFromAddress(pAddr + view_as<Address>(g_iHangingPreRealOffset), NumberType_Int32);	// 玩家挂边前的总血量
+				int iCurrent = LoadFromAddress(pAddr + view_as<Address>(g_iHangingCurrentOffset), NumberType_Int32);	// 玩家挂边时的当前血量
+				int iRevivedHealth = RoundToCeil(iCurrent / hSurvivorIncapH.FloatValue * iPreReal);	// 玩家挂边起身后的总血量
+
+				this.iHealth = iRevivedHealth;
+				int v27 = iPreReal - iRevivedHealth;
+				this.iTempHealth = iPreTemp <= v27 ? 0 : iPreTemp - v27;
+
+				if(this.iTempHealth > 0)
+					this.iHealth -= this.iTempHealth;
+
+				if(this.iHealth <= 0)
+					this.iHealth = 1;
+
+				this.iBufferTime = 0;
 				this.iReviveCount = GetEntProp(client, Prop_Send, "m_currentReviveCount");
 				this.iThirdStrike = GetEntProp(client, Prop_Send, "m_bIsOnThirdStrike");
 				this.iGoingToDie = GetEntProp(client, Prop_Send, "m_isGoingToDie");
@@ -2230,7 +2248,7 @@ enum struct esData
 			bSaved = true;
 		}
 
-		if(GetEntProp(client, Prop_Send, "m_isIncapacitated") && !GetEntProp(client, Prop_Send, "m_isHangingFromLedge"))
+		if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 		{
 			int iMelee = GetEntDataEnt2(client, g_iMeleeOffset);
 			switch(iMelee > MaxClients && IsValidEntity(iMelee))
@@ -2320,7 +2338,7 @@ enum struct esData
 			return;
 
 		if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
-			SetEntProp(client, Prop_Send, "m_isIncapacitated", 0);
+			SDKCall(g_hSDKOnRevived, client); //SetEntProp(client, Prop_Send, "m_isIncapacitated", 0);
 
 		SetEntProp(client, Prop_Send, "m_iHealth", this.iHealth);
 		SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 1.0 * this.iTempHealth);
@@ -2603,6 +2621,25 @@ void vLoadGameData()
 	g_iMeleeOffset = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenMeleeWeapon");
 	if(g_iMeleeOffset == -1)
 		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenMeleeWeapon");
+
+	g_iHangingPreTempOffset = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingPreTempHealth");
+	if(g_iHangingPreTempOffset == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::HangingPreTempHealth");
+
+	g_iHangingPreRealOffset = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingPreRealHealth");
+	if(g_iHangingPreRealOffset == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::HangingPreRealHealth");
+
+	g_iHangingCurrentOffset = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingCurrentHealth");
+	if(g_iHangingCurrentOffset == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::HangingCurrentHealth");
+
+	StartPrepSDKCall(SDKCall_Player);
+	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::OnRevived") == false)
+		SetFailState("Failed to find signature: CTerrorPlayer::OnRevived");
+	g_hSDKOnRevived = EndPrepSDKCall();
+	if(g_hSDKOnRevived == null)
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::OnRevived");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CBaseEntity::IsInStasis") == false) // https://forums.alliedmods.net/showthread.php?t=302140
