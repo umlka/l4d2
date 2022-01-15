@@ -23,6 +23,17 @@
 					"signature"	"CTerrorPlayer::RoundRespawn"			
 				}
 			}
+			"IsFallenSurvivorAllowed"
+			{
+				"linux"
+				{
+					"signature"	"Infected::Spawn"
+				}
+				"windows"
+				{
+					"signature"	"Infected::Spawn"			
+				}
+			}
 		}
 
 		"Offsets"
@@ -36,6 +47,21 @@
 			{
 				"linux"		"117" // 0x75
 				"windows"	"117" // 0x75
+			}
+			"IsFallenSurvivorAllowed_Offset"
+			{
+				"linux"		"2012" // 0x7DC
+				"windows"	"268" // 0x10C
+			}
+			"IsFallenSurvivorAllowed_Byte"
+			{
+				"linux"		"15" // 0x0F
+				"windows"	"116" // 0x74
+			}
+			"IsFallenSurvivorAllowed_Count"
+			{
+				"linux"		"2"
+				"windows"	"2"
 			}
 		}
 
@@ -127,6 +153,14 @@
 			{
 				"library"	"server"
 				"linux"		"@_Z22NextBotCreatePlayerBotI4TankEPT_PKc"
+			}
+			/* Infected::Spawn(Infected *__hidden this) */
+			"Infected::Spawn"
+			{
+				"library"	"server"
+				"linux"		"@_ZN8Infected5SpawnEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x8B\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x57\xFF\x2A\xF7"
+				/* ? ? ? ? ? ? 56 8B ? 8B ? 8B 90 ? ? ? ? 57 FF ? F7 */
 			}
 		}
 	}

@@ -18,6 +18,8 @@ StringMap
 	g_aMeleeTrans;
 
 ArrayList
+	g_aByteSaved,
+	g_aBytePatch,
 	g_aMeleeScripts;
 
 Handle
@@ -35,7 +37,8 @@ Handle
 	g_hSDKCreateTank;
 
 Address
-	g_pStatsCondition;
+	g_pStatsCondition,
+	g_pIsFallenSurvivorAllowed;
 
 int
 	g_iClipSize[2],
@@ -264,6 +267,7 @@ public void OnPluginStart()
 public void OnPluginEnd()
 {
 	vStatsConditionPatch(false);
+	vIsFallenSurvivorAllowedPatch(false);
 }
 
 public void OnClientDisconnect(int client)
@@ -839,17 +843,9 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 				DispatchSpawn(iZombie);
 			else
 			{
-				ConVar hFallenMax = FindConVar("z_fallen_max_count");
-				ConVar hFallenCooldown = FindConVar("z_fallen_kill_suppress_time");
-				
-				int iFallenMax = hFallenMax.IntValue;
-				int iFallenCooldown = hFallenCooldown.IntValue;
-
-				hFallenMax.SetInt(999999, false, false);
-				hFallenCooldown.SetInt(0, false, false);
+				vIsFallenSurvivorAllowedPatch(true);
 				DispatchSpawn(iZombie);
-				hFallenMax.SetInt(iFallenMax, false, false);
-				hFallenCooldown.SetInt(iFallenCooldown, false, false);
+				vIsFallenSurvivorAllowedPatch(false);
 			}
 
 			
@@ -2439,6 +2435,8 @@ void vLoadGameData()
 	else
 		vPrepLinuxCreateBotCalls(hGameData);
 
+	vRegisterIsFallenSurvivorAllowedPatch(hGameData);
+
 	delete hGameData;
 }
 
@@ -2476,6 +2474,70 @@ void vStatsConditionPatch(bool bPatch)
 	{
 		bPatched = false;
 		StoreToAddress(g_pStatsCondition, 0x75, NumberType_Int8);
+	}
+}
+
+void vRegisterIsFallenSurvivorAllowedPatch(GameData hGameData = null)
+{
+	int iOffset = hGameData.GetOffset("IsFallenSurvivorAllowed_Offset");
+	if(iOffset == -1)
+		SetFailState("Failed to load offset: IsFallenSurvivorAllowed_Offset");
+
+	int iByteMatch = hGameData.GetOffset("IsFallenSurvivorAllowed_Byte");
+	if(iByteMatch == -1)
+		SetFailState("Failed to load byte: IsFallenSurvivorAllowed_Byte");
+
+	int iByteCount = hGameData.GetOffset("IsFallenSurvivorAllowed_Count");
+	if(iByteCount == -1)
+		SetFailState("Failed to load count: IsFallenSurvivorAllowed_Count");
+
+	g_pIsFallenSurvivorAllowed = hGameData.GetAddress("IsFallenSurvivorAllowed");
+	if(!g_pIsFallenSurvivorAllowed)
+		SetFailState("Failed to load address: IsFallenSurvivorAllowed");
+	
+	g_pIsFallenSurvivorAllowed += view_as<Address>(iOffset);
+
+	g_aByteSaved = new ArrayList();
+	g_aBytePatch = new ArrayList();
+
+	for(int i; i < iByteCount; i++)
+		g_aByteSaved.Push(LoadFromAddress(g_pIsFallenSurvivorAllowed + view_as<Address>(i), NumberType_Int8));
+	
+	if(g_aByteSaved.Get(0) != iByteMatch)
+		LogError("Failed to load 'IsFallenSurvivorAllowed', byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, g_aByteSaved.Get(0), iByteMatch);
+
+	switch(iByteMatch)
+	{
+		case 0x0F:
+		{
+			g_aBytePatch.Push(0x90);
+			g_aBytePatch.Push(0xE9);
+		}
+
+		case 0x74:
+		{
+			g_aBytePatch.Push(0x90);
+			g_aBytePatch.Push(0x90);
+		}
+	}
+}
+
+void vIsFallenSurvivorAllowedPatch(bool bPatch)
+{
+	static bool bPatched;
+	if(!bPatched && bPatch)
+	{
+		bPatched = true;
+		int iLength = g_aBytePatch.Length;
+		for(int i; i < iLength; i++)
+			StoreToAddress(g_pIsFallenSurvivorAllowed + view_as<Address>(i), g_aBytePatch.Get(i), NumberType_Int8);
+	}
+	else if(bPatched && !bPatch)
+	{
+		bPatched = false;
+		int iLength = g_aByteSaved.Length;
+		for(int i; i < iLength; i++)
+			StoreToAddress(g_pIsFallenSurvivorAllowed + view_as<Address>(i), g_aByteSaved.Get(i), NumberType_Int8);
 	}
 }
 
