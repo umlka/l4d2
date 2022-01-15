@@ -99,6 +99,10 @@ enum struct esData
 	void Save(int client, bool bIdentity = true)
 	{
 		this.Clean();
+
+		if(GetClientTeam(client) != 2)
+			return;
+	
 		this.iRecorded = 1;
 
 		if(bIdentity)
@@ -138,21 +142,23 @@ enum struct esData
 				if(hSurvivorIncapH == null)
 					hSurvivorIncapH = FindConVar("survivor_incap_health");
 
-				Address pAddr = GetEntityAddress(client);
-				int iPreTemp = LoadFromAddress(pAddr + view_as<Address>(g_iHangingPreTempOffset), NumberType_Int32);	// 玩家挂边前的临时血量
-				int iPreReal = iPreTemp + LoadFromAddress(pAddr + view_as<Address>(g_iHangingPreRealOffset), NumberType_Int32);	// 玩家挂边前的总血量
-				int iCurrent = LoadFromAddress(pAddr + view_as<Address>(g_iHangingCurrentOffset), NumberType_Int32);	// 玩家挂边时的当前血量
-				int iRevivedHealth = RoundToCeil(iCurrent / hSurvivorIncapH.FloatValue * iPreReal);	// 玩家挂边起身后的总血量
+				int iPreTemp = GetEntData(client, g_iHangingPreTempOffset);									// 玩家挂边前的虚血
+				int iPreReal = GetEntData(client, g_iHangingPreRealOffset);									// 玩家挂边前的实血
+				int iPreTotal = iPreTemp + iPreReal;														// 玩家挂边前的总血量
+				int iHangingCurrent = GetEntData(client, g_iHangingCurrentOffset);							// 玩家挂边时的总血量
+				int iRevivedTotal = RoundToFloor(iHangingCurrent / hSurvivorIncapH.FloatValue * iPreTotal);	// 玩家挂边起身后的总血量
 
-				this.iHealth = iRevivedHealth;
-				int v27 = iPreReal - iRevivedHealth;
-				this.iTempHealth = iPreTemp <= v27 ? 0 : iPreTemp - v27;
-
-				if(this.iTempHealth > 0)
-					this.iHealth -= this.iTempHealth;
-
-				if(this.iHealth <= 0)
-					this.iHealth = 1;
+				int iDelta = iPreTotal - iRevivedTotal;
+				if(iPreTemp > iDelta)
+				{
+					this.iHealth = iPreReal;
+					this.iTempHealth = iPreTemp - iDelta;
+				}
+				else
+				{
+					this.iHealth = iPreReal - (iDelta - iPreTemp);
+					this.iTempHealth = 0;
+				}
 
 				this.iBufferTime = 0;
 				this.iReviveCount = GetEntProp(client, Prop_Send, "m_currentReviveCount");
@@ -170,7 +176,6 @@ enum struct esData
 			this.iGoingToDie = GetEntProp(client, Prop_Send, "m_isGoingToDie");
 		}
 
-		bool bSaved;
 		char sWeapon[32];
 		int iSlot = GetPlayerWeaponSlot(client, 0);
 		if(iSlot > MaxClients)
@@ -183,8 +188,6 @@ enum struct esData
 			this.iUpgrade = GetEntProp(iSlot, Prop_Send, "m_upgradeBitVec");
 			this.iUpgradeAmmo = GetEntProp(iSlot, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded");
 			this.iWeaponSkin0 = GetEntProp(iSlot, Prop_Send, "m_nSkin");
-
-			bSaved = true;
 		}
 
 		if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
@@ -217,17 +220,13 @@ enum struct esData
 
 			strcopy(this.sSlot1, sizeof esData::sSlot1, sWeapon);
 			this.iWeaponSkin1 = GetEntProp(iSlot, Prop_Send, "m_nSkin");
-		
-			bSaved = true;
 		}
 
 		iSlot = GetPlayerWeaponSlot(client, 2);
-		if(iSlot > MaxClients)
-		{
+		if(iSlot > MaxClients && (iSlot != GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") || GetEntPropFloat(iSlot, Prop_Data, "m_flNextPrimaryAttack") < GetGameTime()))
+		{	//Method from HarryPotter (https://forums.alliedmods.net/showpost.php?p=2768411&postcount=5)
 			GetEntityClassname(iSlot, sWeapon, sizeof sWeapon);
 			strcopy(this.sSlot2, sizeof esData::sSlot2, sWeapon);
-			
-			bSaved = true;
 		}
 
 		iSlot = GetPlayerWeaponSlot(client, 3);
@@ -235,8 +234,6 @@ enum struct esData
 		{
 			GetEntityClassname(iSlot, sWeapon, sizeof sWeapon);
 			strcopy(this.sSlot3, sizeof esData::sSlot3, sWeapon);
-		
-			bSaved = true;
 		}
 
 		iSlot = GetPlayerWeaponSlot(client, 4);
@@ -244,24 +241,22 @@ enum struct esData
 		{
 			GetEntityClassname(iSlot, sWeapon, sizeof sWeapon);
 			strcopy(this.sSlot4, sizeof esData::sSlot4, sWeapon);
-		
-			bSaved = true;
 		}
 	
-		if(bSaved == true)
+		iSlot = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+		if(iSlot > MaxClients)
 		{
-			iSlot = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-			if(iSlot > MaxClients)
-			{
-				GetEntityClassname(iSlot, sWeapon, sizeof sWeapon);
-				strcopy(this.sActive, sizeof esData::sActive, sWeapon);
-			}
+			GetEntityClassname(iSlot, sWeapon, sizeof sWeapon);
+			strcopy(this.sActive, sizeof esData::sActive, sWeapon);
 		}
 	}
 
 	void Restore(int client, bool bIdentity = true)
 	{
 		if(this.iRecorded == 0)
+			return;
+
+		if(GetClientTeam(client) != 2)
 			return;
 
 		if(bIdentity)
@@ -394,8 +389,8 @@ public Plugin myinfo =
 	name = "Player Transition Save Data",
 	author = "sorallll",
 	description = "",
-	version = "1.0.2",
-	url = ""
+	version = "1.0.3",
+	url = "https://github.com/umlka/l4d2/tree/main/transitiotransition_save_data"
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
