@@ -222,6 +222,15 @@ public void OnLibraryRemoved(const char[] name)
 		g_bWeaponHandling = false;
 }
 
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	MarkNativeAsOptional("CZ_RespawnPZ");
+	MarkNativeAsOptional("CZ_SetSpawnablePZ");
+	MarkNativeAsOptional("CZ_ResetSpawnablePZ");
+	MarkNativeAsOptional("CZ_IsSpawnablePZSupported");
+	return APLRes_Success;
+}
+
 public void OnAllPluginsLoaded()
 {
 	g_bRespawnPZ = GetFeatureStatus(FeatureType_Native, "CZ_RespawnPZ") == FeatureStatus_Available;
