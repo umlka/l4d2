@@ -410,8 +410,11 @@ esSpecial
 	g_esSpecial;
 
 
-int g_iMeleeClassCount;
-char g_sMeleeClass[16][32];
+int
+	g_iMeleeClassCount;
+
+char
+	g_sMeleeClass[16][32];
 
 static const char
 	g_sMeleeModels[][] =
@@ -721,8 +724,8 @@ void vSQL_LoadAll()
 	{
 		if(IsClientInGame(i) && !IsFakeClient(i))
 		{
-			vSQL_Load(i);
 			vSetPlayerStartPoints(i);
+			vSQL_Load(i);
 		}
 	}
 }
@@ -1250,16 +1253,12 @@ public void OnClientDisconnect(int client)
 {
 	if(!IsFakeClient(client))
 		vSQL_Save(client);
-
-	g_esPlayer[client].g_iLeechHealth = 0;
-	g_esPlayer[client].g_fRealodSpeedUp = 1.0;
 }
 
 public void OnClientDisconnect_Post(int client)
 {
 	vResetClientData(client);
 	vSetPlayerStartPoints(client);
-	g_esPlayer[client].g_sSteamID[0] = '\0';
 }
 
 public void OnClientPostAdminCheck(int client)
@@ -1267,23 +1266,25 @@ public void OnClientPostAdminCheck(int client)
 	if(IsFakeClient(client))
 		return;
 
-	//vResetClientData(client);
+	vResetClientData(client);
 	vSetPlayerStartPoints(client);
 	vSQL_Load(client);
 }
 
 void vResetClientData(int client)
 {
+	g_esPlayer[client].g_sSteamID[0] = '\0';
 	g_esPlayer[client].g_iKillCount = 0;
 	g_esPlayer[client].g_iHurtCount = 0;
 	g_esPlayer[client].g_iProtectCount = 0;
 	g_esPlayer[client].g_iHeadShotCount = 0;
+	g_esPlayer[client].g_iLeechHealth = 0;
+	g_esPlayer[client].g_fRealodSpeedUp = 1.0;
 	g_esPlayer[client].g_bDataLoaded = false;
 }
 
 void vSQL_Save(int client)
 {
-	
 	if(!g_esPlayer[client].g_bDataLoaded)
 		return;
 
