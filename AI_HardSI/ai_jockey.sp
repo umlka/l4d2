@@ -186,7 +186,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			static float fGameTime;
 			if(g_fLeapAgainTime[client] < (fGameTime = GetGameTime()))
 			{
-				if(fSurvivorProximity < g_fJockeyLeapRange && bIsBeingWatched(client, 30.0))
+				if(fSurvivorProximity < g_fJockeyLeapRange && bWithinViewAngle(client, 15.0))
 				{
 					vAng = angles;
 					vAng[0] = GetRandomFloat(-50.0, -10.0);
@@ -205,35 +205,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 
 	return Plugin_Continue;
-}
-
-bool bIsBeingWatched(int client, float fOffsetThreshold)
-{
-	static int iTarget;
-	if(bIsAliveSurvivor((iTarget = GetClientAimTarget(client))) && fGetPlayerAimOffset(client, iTarget) > fOffsetThreshold)
-		return false;
-
-	return true;
-}
-
-float fGetPlayerAimOffset(int client, int iTarget)
-{
-	static float vAng[3];
-	static float vPos[3];
-	static float vDir[3];
-
-	GetClientEyeAngles(iTarget, vAng);
-	vAng[0] = vAng[2] = 0.0;
-	GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
-	NormalizeVector(vAng, vAng);
-
-	GetClientAbsOrigin(client, vPos);
-	GetClientAbsOrigin(iTarget, vDir);
-	vPos[2] = vDir[2] = 0.0;
-	MakeVectorFromPoints(vDir, vPos, vDir);
-	NormalizeVector(vDir, vDir);
-
-	return RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vDir)));
 }
 
 bool bIsAliveSurvivor(int client)
@@ -266,4 +237,71 @@ float fNearestSurvivorDistance(int client)
 
 	SortFloats(fDists, iCount, Sort_Ascending);
 	return fDists[0];
+}
+
+bool bWithinViewAngle(int client, float fOffsetThreshold)
+{
+	static int iTarget;
+	iTarget = GetClientAimTarget(client);
+	if(!bIsAliveSurvivor(iTarget))
+		return true;
+	
+	static float vSrc[3];
+	static float vTarg[3];
+	static float vAng[3];
+	GetClientEyePosition(iTarget, vSrc);
+	GetClientEyePosition(client, vTarg);
+	GetClientEyeAngles(iTarget, vAng);
+	return PointWithinViewAngle(vSrc, vTarg, vAng, GetFOVDotProduct(fOffsetThreshold));
+}
+
+// https://github.com/nosoop/stocksoup
+
+/**
+ * Checks if a point is in the field of view of an object.  Supports up to 180 degree FOV.
+ * I forgot how the dot product stuff works.
+ * 
+ * Direct port of the function of the same name from the Source SDK:
+ * https://github.com/ValveSoftware/source-sdk-2013/blob/beaae8ac45a2f322a792404092d4482065bef7ef/sp/src/public/mathlib/vector.h#L461-L477
+ * 
+ * @param vecSrcPosition	Source position of the view.
+ * @param vecTargetPosition	Point to check if within view angle.
+ * @param vecLookDirection	The direction to look towards.  Note that this must be a forward
+ * 							angle vector.
+ * @param flCosHalfFOV		The width of the forward view cone as a dot product result. For
+ * 							subclasses of CBaseCombatCharacter, you can use the
+ * 							`m_flFieldOfView` data property.  To manually calculate for a
+ * 							desired FOV, use `GetFOVDotProduct(angle)` from math.inc.
+ * @return					True if the point is within view from the source position at the
+ * 							specified FOV.
+ */
+stock bool PointWithinViewAngle(const float vecSrcPosition[3], const float vecTargetPosition[3],
+		const float vecLookDirection[3], float flCosHalfFOV) {
+	float vecDelta[3];
+	
+	SubtractVectors(vecTargetPosition, vecSrcPosition, vecDelta);
+	
+	float cosDiff = GetVectorDotProduct(vecLookDirection, vecDelta);
+	
+	if (cosDiff < 0.0) {
+		return false;
+	}
+	
+	float flLen2 = GetVectorLength(vecDelta, true);
+	
+	// a/sqrt(b) > c  == a^2 > b * c ^2
+	return ( cosDiff * cosDiff >= flLen2 * flCosHalfFOV * flCosHalfFOV );
+}
+
+/**
+ * Calculates the width of the forward view cone as a dot product result from the given angle.
+ * This manually calculates the value of CBaseCombatCharacter's `m_flFieldOfView` data property.
+ *
+ * For reference: https://github.com/ValveSoftware/source-sdk-2013/blob/master/sp/src/game/server/hl2/npc_bullseye.cpp#L151
+ *
+ * @param angle     The FOV value in degree
+ * @return          Width of the forward view cone as a dot product result
+ */
+stock float GetFOVDotProduct(float angle) {
+	return Cosine(DegToRad(angle) / 2.0);
 }
