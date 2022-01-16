@@ -36,7 +36,7 @@ public void OnPluginStart()
 	g_hChargerBhop = CreateConVar("ai_charger_bhop", "1", "Flag to enable bhop facsimile on AI chargers");
 	g_hChargeProximity = CreateConVar("ai_charge_proximity", "300.0", "How close a client will approach before charging");
 	g_hHealthThresholdCharger = CreateConVar("ai_health_threshold_charger", "300", "Charger will charge if its health drops to this level");
-	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "20.0", "If the charger has a target, it will not straight charge if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
+	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "15.0", "If the charger has a target, it will not straight charge if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hChargeStartSpeed = FindConVar("z_charge_start_speed");
 
 	g_hChargerBhop.AddChangeHook(vConVarChanged);
@@ -81,9 +81,6 @@ void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast
 
 	int flags = GetEntityFlags(client);
 	SetEntityFlags(client, flags & ~FL_FROZEN);
-	int entity = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-	if(entity != -1)
-		SetEntPropFloat(entity, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 2.5);
 	vCharger_OnCharge(client);
 	SetEntityFlags(client, flags);
 }
@@ -98,9 +95,9 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	if(fSurvivorProximity > g_fChargeProximity && GetEntProp(client, Prop_Send, "m_iHealth") > g_iHealthThresholdCharger)
 	{
 		if(!g_bShouldCharge[client])
-			vBlockCharge(client);
+			vResetAbilityTime(client, 0.1);
 	}
-	else if(!bHitWall(client))
+	else
 		g_bShouldCharge[client] = true;
 		
 	if(g_bShouldCharge[client] && -1.0 < fSurvivorProximity < 150.0 && bChargerCanCharge(client))
@@ -113,10 +110,8 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 			static float vTarg[3];
 			GetClientAbsOrigin(client, vPos);
 			GetClientAbsOrigin(iTarget, vTarg);
-			if(GetVectorDistance(vPos, vTarg) < 150.0 && !bHitWall(client, iTarget))
+			if(GetVectorDistance(vPos, vTarg) < 150.0 && (buttons & IN_ATTACK2 || !bHitWall(client, iTarget)))
 			{
-				g_bShouldCharge[client] = true;
-
 				buttons |= IN_ATTACK;
 				buttons |= IN_ATTACK2;
 				return Plugin_Changed;
@@ -321,30 +316,18 @@ float fNearestSurvivorDistance(int client)
 	return fDists[0];
 }
 
-bool bHitWall(int client, int iTarget = -1)
+bool bHitWall(int client, int iTarget)
 {
 	static float vPos[3];
-	static float vAng[3];
+	static float vTarg[3];
 	GetClientAbsOrigin(client, vPos);
+	GetClientAbsOrigin(iTarget, vTarg);
 	vPos[2] += 20.0;
-
-	if(iTarget != -1)
-	{
-		GetClientAbsOrigin(iTarget, vAng);
-		vAng[2] += 20.0;
-	}
-	else
-	{
-		GetClientEyeAngles(client, vAng);
-		GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
-		NormalizeVector(vAng, vAng);
-		ScaleVector(vAng, g_fChargeProximity); 
-		AddVectors(vPos, vAng, vAng);
-	}
+	vTarg[2] += 20.0;
 
 	static bool bHit;
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vPos, vAng, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 36.0}), MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vPos, vTarg, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 36.0}), MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	bHit = TR_DidHit(hTrace);
 	delete hTrace;
 	return bHit;
@@ -357,18 +340,15 @@ bool bChargerCanCharge(int client)
 
 	static int iAbility;
 	iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
-	if(iAbility == -1 || !IsValidEntity(iAbility) || GetEntProp(iAbility, Prop_Send, "m_isCharging") || GetEntPropFloat(iAbility, Prop_Send, "m_timestamp") >= GetGameTime())
-		return false;
-
-	return true;
+	return iAbility != -1 && !GetEntProp(iAbility, Prop_Send, "m_isCharging") && GetEntPropFloat(iAbility, Prop_Send, "m_timestamp") < GetGameTime();
 }
 
-void vBlockCharge(int client)
+void vResetAbilityTime(int client, float fTime)
 {
 	static int iAbility;
 	iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 	if(iAbility != -1)
-		SetEntPropFloat(iAbility, Prop_Send, "m_timestamp", GetGameTime() + 0.1);	
+		SetEntPropFloat(iAbility, Prop_Send, "m_timestamp", GetGameTime() + fTime);	
 }
 
 #define CROUCHING_EYE 44.0
@@ -377,7 +357,7 @@ void vCharger_OnCharge(int client)
 {
 	static int iTarget;
 	iTarget = GetClientAimTarget(client, true);
-	if(!bIsAliveSurvivor(iTarget) || bIsIncapacitated(iTarget) || bIsPinned(iTarget) || bHitWall(client, iTarget) || bIsBeingWatched(client, g_fAimOffsetSensitivityCharger))
+	if(!bIsAliveSurvivor(iTarget) || bIsIncapacitated(iTarget) || bIsPinned(iTarget) || bHitWall(client, iTarget) || bWithinViewAngle(client, iTarget, g_fAimOffsetSensitivityCharger))
 		iTarget = iGetClosestSurvivor(client, iTarget, g_fChargeStartSpeed);
 
 	if(iTarget == -1)
@@ -440,75 +420,117 @@ bool bIsPinned(int client)
 	return false;
 }
 
-bool bIsBeingWatched(int client, float fOffsetThreshold)
-{
-	static int iTarget;
-	if(bIsAliveSurvivor((iTarget = GetClientAimTarget(client))) && fGetPlayerAimOffset(client, iTarget) > fOffsetThreshold)
-		return false;
-
-	return true;
-}
-
-float fGetPlayerAimOffset(int client, int iTarget)
-{
-	static float vAng[3];
-	static float vPos[3];
-	static float vDir[3];
-
-	GetClientEyeAngles(iTarget, vAng);
-	vAng[0] = vAng[2] = 0.0;
-	GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
-	NormalizeVector(vAng, vAng);
-
-	GetClientAbsOrigin(client, vPos);
-	GetClientAbsOrigin(iTarget, vDir);
-	vPos[2] = vDir[2] = 0.0;
-	MakeVectorFromPoints(vDir, vPos, vDir);
-	NormalizeVector(vDir, vDir);
-
-	return RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vDir)));
-}
-
 int iGetClosestSurvivor(int client, int iExclude = -1, float fDistance)
 {
 	static int i;
 	static int iCount;
+	static int iIndex;
 	static float fDist;
-	static float vPos[3];
+	static float vAng[3];
+	static float vSrc[3];
 	static float vTarg[3];
 	static int iTargets[MAXPLAYERS + 1];
 	
 	iCount = 0;
-	GetClientEyePosition(client, vPos);
-	iCount = GetClientsInRange(vPos, RangeType_Visibility, iTargets, MAXPLAYERS);
-	
+	GetClientEyePosition(client, vSrc);
+	iCount = GetClientsInRange(vSrc, RangeType_Visibility, iTargets, MAXPLAYERS);
+
 	if(iCount == 0)
 		return -1;
-			
-	static int iTarget;
-	static ArrayList aTargets;
-	aTargets = new ArrayList(2);
-	
+
+	static ArrayList aClients;
+	aClients = new ArrayList(3);
+
+	float fFOV = GetFOVDotProduct(g_fAimOffsetSensitivityCharger);
 	for(i = 0; i < iCount; i++)
 	{
-		iTarget = iTargets[i];
-		if(iTarget && iTarget != iExclude && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !bIsIncapacitated(iTarget) && !bIsPinned(iTarget) && !bHitWall(client, iTarget))
+		if(iTargets[i] && iTargets[i] != iExclude && GetClientTeam(iTargets[i]) == 2 && IsPlayerAlive(iTargets[i]) && !bIsIncapacitated(iTargets[i]) && !bIsPinned(iTargets[i]) && !bHitWall(client, iTargets[i]))
 		{
-			GetClientAbsOrigin(iTarget, vTarg);
-			fDist = GetVectorDistance(vPos, vTarg);
+			GetClientAbsOrigin(iTargets[i], vTarg);
+			fDist = GetVectorDistance(vSrc, vTarg);
 			if(fDist < fDistance)
-				aTargets.Set(aTargets.Push(fDist), iTarget, 1);
+			{
+				iIndex = aClients.Push(fDist);
+				aClients.Set(iIndex, iTargets[i], 1);
+
+				GetClientEyeAngles(iTargets[i], vAng);
+				aClients.Set(iIndex, !PointWithinViewAngle(vTarg, vSrc, vAng, fFOV) ? 0 : 1, 2);
+			}
 		}
 	}
 
-	if(aTargets.Length == 0)
+	if(aClients.Length == 0)
 	{
-		delete aTargets;
+		delete aClients;
 		return -1;
 	}
 
-	aTargets.Sort(Sort_Ascending, Sort_Float);
-	iTarget = aTargets.Get(0, 1);
-	delete aTargets;
-	return iTarget;
+	aClients.Sort(Sort_Ascending, Sort_Float);
+
+	iIndex = aClients.FindValue(0, 2);
+	i = aClients.Get(iIndex != -1 && aClients.Get(iIndex, 0) < 0.5 * fDistance ? iIndex : 0, 1);
+	delete aClients;
+	return i;
+}
+
+bool bWithinViewAngle(int client, int iViewer, float fOffsetThreshold)
+{
+	float vSrc[3];
+	float vTarg[3];
+	float vAng[3];
+	GetClientEyePosition(iViewer, vSrc);
+	GetClientEyePosition(client, vTarg);
+	GetClientEyeAngles(iViewer, vAng);
+	return PointWithinViewAngle(vSrc, vTarg, vAng, GetFOVDotProduct(fOffsetThreshold));
+}
+
+// https://github.com/nosoop/stocksoup
+
+/**
+ * Checks if a point is in the field of view of an object.  Supports up to 180 degree FOV.
+ * I forgot how the dot product stuff works.
+ * 
+ * Direct port of the function of the same name from the Source SDK:
+ * https://github.com/ValveSoftware/source-sdk-2013/blob/beaae8ac45a2f322a792404092d4482065bef7ef/sp/src/public/mathlib/vector.h#L461-L477
+ * 
+ * @param vecSrcPosition	Source position of the view.
+ * @param vecTargetPosition	Point to check if within view angle.
+ * @param vecLookDirection	The direction to look towards.  Note that this must be a forward
+ * 							angle vector.
+ * @param flCosHalfFOV		The width of the forward view cone as a dot product result. For
+ * 							subclasses of CBaseCombatCharacter, you can use the
+ * 							`m_flFieldOfView` data property.  To manually calculate for a
+ * 							desired FOV, use `GetFOVDotProduct(angle)` from math.inc.
+ * @return					True if the point is within view from the source position at the
+ * 							specified FOV.
+ */
+stock bool PointWithinViewAngle(const float vecSrcPosition[3], const float vecTargetPosition[3],
+		const float vecLookDirection[3], float flCosHalfFOV) {
+	float vecDelta[3];
+	
+	SubtractVectors(vecTargetPosition, vecSrcPosition, vecDelta);
+	
+	float cosDiff = GetVectorDotProduct(vecLookDirection, vecDelta);
+	
+	if (cosDiff < 0.0) {
+		return false;
+	}
+	
+	float flLen2 = GetVectorLength(vecDelta, true);
+	
+	// a/sqrt(b) > c  == a^2 > b * c ^2
+	return ( cosDiff * cosDiff >= flLen2 * flCosHalfFOV * flCosHalfFOV );
+}
+
+/**
+ * Calculates the width of the forward view cone as a dot product result from the given angle.
+ * This manually calculates the value of CBaseCombatCharacter's `m_flFieldOfView` data property.
+ *
+ * For reference: https://github.com/ValveSoftware/source-sdk-2013/blob/master/sp/src/game/server/hl2/npc_bullseye.cpp#L151
+ *
+ * @param angle     The FOV value in degree
+ * @return          Width of the forward view cone as a dot product result
+ */
+stock float GetFOVDotProduct(float angle) {
+	return Cosine(DegToRad(angle) / 2.0);
 }
