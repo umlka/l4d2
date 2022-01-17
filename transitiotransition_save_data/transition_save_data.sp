@@ -113,7 +113,11 @@ enum struct esData
 
 		if(!IsPlayerAlive(client))
 		{
-			this.iHealth = 50;
+			static ConVar hZSurvivorRespa;
+			if(hZSurvivorRespa == null)
+				hZSurvivorRespa = FindConVar("z_survivor_respawn_health");
+
+			this.iHealth = hZSurvivorRespa.IntValue;
 			return;
 		}
 
@@ -377,7 +381,7 @@ enum struct esData
 				FakeClientCommand(client, "use %s", this.sActive);
 		}
 		else
-			vCheatCommand(client, "give", "smg");
+			vCheatCommand(client, "give", "pistol");
 	}
 }
 
@@ -389,7 +393,7 @@ public Plugin myinfo =
 	name = "Player Transition Save Data",
 	author = "sorallll",
 	description = "",
-	version = "1.0.3",
+	version = "1.0.4",
 	url = "https://github.com/umlka/l4d2/tree/main/transitiotransition_save_data"
 };
 
