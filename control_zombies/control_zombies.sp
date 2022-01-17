@@ -2185,7 +2185,11 @@ enum struct esData
 
 		if(!IsPlayerAlive(client))
 		{
-			this.iHealth = 50;
+			static ConVar hZSurvivorRespa;
+			if(hZSurvivorRespa == null)
+				hZSurvivorRespa = FindConVar("z_survivor_respawn_health");
+
+			this.iHealth = hZSurvivorRespa.IntValue;
 			return;
 		}
 
@@ -2449,7 +2453,7 @@ enum struct esData
 				FakeClientCommand(client, "use %s", this.sActive);
 		}
 		else
-			vCheatCommand(client, "give", "smg");
+			vCheatCommand(client, "give", "pistol");
 	}
 }
 
