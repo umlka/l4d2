@@ -446,7 +446,7 @@ int iGetClosestSurvivor(int client, int iExclude = -1, float fDistance)
 	{
 		if(iTargets[i] && iTargets[i] != iExclude && GetClientTeam(iTargets[i]) == 2 && IsPlayerAlive(iTargets[i]) && !bIsIncapacitated(iTargets[i]) && !bIsPinned(iTargets[i]) && !bHitWall(client, iTargets[i]))
 		{
-			GetClientAbsOrigin(iTargets[i], vTarg);
+			GetClientEyePosition(iTargets[i], vTarg);
 			fDist = GetVectorDistance(vSrc, vTarg);
 			if(fDist < fDistance)
 			{
