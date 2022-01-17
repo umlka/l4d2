@@ -381,7 +381,8 @@ void vCharger_OnCharge(int client)
 	
 	if(GetEntityFlags(client) & FL_ONGROUND == 0)
 	{
-		vTarg[2] += CROUCHING_EYE;
+		vTarg[2] += bIsGettingUp(iTarget) ? 10.0 : CROUCHING_EYE;
+
 		vLength += g_fChargeStartSpeed;
 	}
 
@@ -533,4 +534,88 @@ stock bool PointWithinViewAngle(const float vecSrcPosition[3], const float vecTa
  */
 stock float GetFOVDotProduct(float angle) {
 	return Cosine(DegToRad(angle) / 2.0);
+}
+
+//https://github.com/LuxLuma/L4D2_Adrenaline_Recovery
+static bool bIsGettingUp(int client)
+{
+	static char sModel[31];
+	GetEntPropString(client, Prop_Data, "m_ModelName", sModel, sizeof sModel);
+	switch(sModel[29])
+	{
+		case 'b'://nick
+		{
+			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
+			{
+				case 680, 667, 671, 672, 630, 620, 627:
+					return true;
+			}
+		}
+		case 'd'://rochelle
+		{
+			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
+			{
+				case 687, 679, 678, 674, 638, 635, 629:
+					return true;
+			}
+		}
+		case 'c'://coach
+		{
+			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
+			{
+				case 669, 661, 660, 656, 630, 627, 621:
+					return true;
+			}
+		}
+		case 'h'://ellis
+		{
+			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
+			{
+				case 684, 676, 675, 671, 625, 635, 632:
+					return true;
+			}
+		}
+		case 'v'://bill
+		{
+			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
+			{
+				case 772, 764, 763, 759, 538, 535, 528:
+					return true;
+			}
+		}
+		case 'n'://zoey
+		{
+			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
+			{
+				case 824, 823, 819, 809, 547, 544, 537:
+					return true;
+			}
+		}
+		case 'e'://francis
+		{
+			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
+			{
+				case 775, 767, 766, 762, 541, 539, 531:
+					return true;
+			}
+		}
+		case 'a'://louis
+		{
+			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
+			{
+				case 772, 764, 763, 759, 538, 535, 528:
+					return true;
+			}
+		}
+		case 'w'://adawong
+		{
+			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
+			{
+				case 687, 679, 678, 674, 638, 635, 629:
+					return true;
+			}
+		}
+	}
+
+	return false;
 }
