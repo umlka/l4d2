@@ -129,8 +129,8 @@
 			}
 			"CTerrorPlayer::OnRevived::HangingPreRealHealth"
 			{
-				"linux"		"14824"	//v25
-				"windows"	"14844"	//v32
+				"linux"		"14824"	//v25 - v24
+				"windows"	"14844"	//v32 - v31
 			}
 			"CTerrorPlayer::OnRevived::HangingCurrentHealth"
 			{
