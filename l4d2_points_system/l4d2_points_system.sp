@@ -1235,18 +1235,14 @@ void vGetMeleeClasses()
 		ReadStringTable(iMeleeStringTable, i, g_sMeleeClass[i], sizeof g_sMeleeClass[]);
 }
 
-//https://forums.alliedmods.net/showthread.php?t=320247
-public void OnClientAuthorized(int client, const char[] auth)
+public void OnClientPostAdminCheck(int client)
 {
-	if(client)
-		bCacheSteamID(client);
-}
+	if(IsFakeClient(client))
+		return;
 
-bool bCacheSteamID(int client)
-{
-	if(g_esPlayer[client].g_sSteamID[0] == '\0')
-		return GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].g_sSteamID, sizeof esPlayer::g_sSteamID);
-	return true;
+	vResetClientData(client);
+	vSetPlayerStartPoints(client);
+	vSQL_Load(client);
 }
 
 public void OnClientDisconnect(int client)
@@ -1261,14 +1257,11 @@ public void OnClientDisconnect_Post(int client)
 	vSetPlayerStartPoints(client);
 }
 
-public void OnClientPostAdminCheck(int client)
+bool bCacheSteamID(int client)
 {
-	if(IsFakeClient(client))
-		return;
-
-	vResetClientData(client);
-	vSetPlayerStartPoints(client);
-	vSQL_Load(client);
+	if(g_esPlayer[client].g_sSteamID[0] == '\0')
+		return GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].g_sSteamID, sizeof esPlayer::g_sSteamID);
+	return true;
 }
 
 void vResetClientData(int client)
