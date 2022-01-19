@@ -2355,11 +2355,10 @@ enum struct esData
 		int iWeapon;
 		for(; iSlot < 5; iSlot++)
 		{
-			iWeapon = GetPlayerWeaponSlot(client, iSlot);
-			if(iWeapon > MaxClients)
+			if((iWeapon = GetPlayerWeaponSlot(client, iSlot)) > MaxClients)
 			{
-				if(RemovePlayerItem(client, iWeapon))
-					RemoveEdict(iWeapon);
+				RemovePlayerItem(client, iWeapon);
+				RemoveEdict(iWeapon);
 			}
 		}
 
@@ -2840,8 +2839,8 @@ void vSetZombieClass(int client, int iZombieClass)
 	int iWeapon = GetPlayerWeaponSlot(client, 0);
 	if(iWeapon != -1)
 	{
-		if(RemovePlayerItem(client, iWeapon))
-			RemoveEdict(iWeapon);
+		RemovePlayerItem(client, iWeapon);
+		RemoveEdict(iWeapon);
 	}
 
 	int iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
