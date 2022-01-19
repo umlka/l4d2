@@ -418,25 +418,25 @@ public void OnPluginStart()
 	g_hGameMode = FindConVar("mp_gamemode");
 	g_hGameMode.AddChangeHook(vModeConVarChanged);
 	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
-	g_hSbAllBotGame.AddChangeHook(vOtherConVarChanged);
+	g_hSbAllBotGame.AddChangeHook(vGeneralConVarChanged);
 	g_hAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
-	g_hAllowAllBotSur.AddChangeHook(vOtherConVarChanged);
+	g_hAllowAllBotSur.AddChangeHook(vGeneralConVarChanged);
 	g_hSurvivorMaxInc = FindConVar("survivor_max_incapacitated_count");
 	g_hSurvivorMaxInc.AddChangeHook(vColorConVarChanged);
 
-	g_hMaxTankPlayer.AddChangeHook(vOtherConVarChanged);
-	g_hSurvuivorLimit.AddChangeHook(vOtherConVarChanged);
-	g_hSurvuivorChance.AddChangeHook(vOtherConVarChanged);
-	g_hExchangeTeam.AddChangeHook(vOtherConVarChanged);
-	g_hPZSuicideTime.AddChangeHook(vOtherConVarChanged);
-	g_hPZRespawnTime.AddChangeHook(vOtherConVarChanged);
-	g_hPZPunishTime.AddChangeHook(vOtherConVarChanged);
-	g_hPZPunishHealth.AddChangeHook(vOtherConVarChanged);
-	g_hAutoDisplayMenu.AddChangeHook(vOtherConVarChanged);
-	g_hPZTeamLimit.AddChangeHook(vOtherConVarChanged);
-	g_hCmdCooldownTime.AddChangeHook(vOtherConVarChanged);
-	g_hCmdEnterCooling.AddChangeHook(vOtherConVarChanged);
-	g_hPZChangeTeamTo.AddChangeHook(vOtherConVarChanged);
+	g_hMaxTankPlayer.AddChangeHook(vGeneralConVarChanged);
+	g_hSurvuivorLimit.AddChangeHook(vGeneralConVarChanged);
+	g_hSurvuivorChance.AddChangeHook(vGeneralConVarChanged);
+	g_hExchangeTeam.AddChangeHook(vGeneralConVarChanged);
+	g_hPZSuicideTime.AddChangeHook(vGeneralConVarChanged);
+	g_hPZRespawnTime.AddChangeHook(vGeneralConVarChanged);
+	g_hPZPunishTime.AddChangeHook(vGeneralConVarChanged);
+	g_hPZPunishHealth.AddChangeHook(vGeneralConVarChanged);
+	g_hAutoDisplayMenu.AddChangeHook(vGeneralConVarChanged);
+	g_hPZTeamLimit.AddChangeHook(vGeneralConVarChanged);
+	g_hCmdCooldownTime.AddChangeHook(vGeneralConVarChanged);
+	g_hCmdEnterCooling.AddChangeHook(vGeneralConVarChanged);
+	g_hPZChangeTeamTo.AddChangeHook(vGeneralConVarChanged);
 
 	g_hGlowColorEnable.AddChangeHook(vColorConVarChanged);
 	int i;
@@ -480,7 +480,7 @@ public void OnPluginEnd()
 
 public void OnConfigsExecuted()
 {
-	vGetOtherCvars();
+	vGetGeneralCvars();
 	vGetColorCvars();
 	vGetSpawnCvars();
 	vGetAccessCvars();
@@ -593,12 +593,12 @@ void vToggle(bool bEnable)
 	}
 }
 
-void vOtherConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vGeneralConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	vGetOtherCvars();
+	vGetGeneralCvars();
 }
 
-void vGetOtherCvars()
+void vGetGeneralCvars()
 {
 	g_iMaxTankPlayer = g_hMaxTankPlayer.IntValue;
 	g_iSurvuivorLimit = g_hSurvuivorLimit.IntValue;
@@ -723,6 +723,13 @@ static bool bCheckClientAccess(int client, int iIndex)
 		return true;
 
 	return admin.ImmunityLevel >= g_iImmunityLevels[iIndex];
+}
+
+bool bCacheSteamID(int client)
+{
+	if(g_esPlayer[client].sSteamID[0] == '\0')
+		return GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].sSteamID, sizeof esPlayer::sSteamID);
+	return true;
 }
 
 void vSpawnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -1112,17 +1119,12 @@ public void OnMapEnd()
 	delete g_hTimer;
 }
 
-public void OnClientAuthorized(int client, const char[] auth)
+public void OnClientPutInServer(int client)
 {
-	if(client)
-		bCacheSteamID(client);
-}
+	if(IsFakeClient(client))
+		return;
 
-bool bCacheSteamID(int client)
-{
-	if(g_esPlayer[client].sSteamID[0] == '\0')
-		return GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].sSteamID, sizeof esPlayer::sSteamID);
-	return true;
+	vResetClientData(client);
 }
 
 public void OnClientDisconnect(int client)
@@ -1132,21 +1134,10 @@ public void OnClientDisconnect(int client)
 	if(IsFakeClient(client))
 		return;
 
+	g_esPlayer[client].sSteamID[0] = '\0';
+
 	if(!IsClientInGame(client) || GetClientTeam(client) != 3)
 		g_esPlayer[client].iLastTeamID = 0;
-}
-
-public void OnClientDisconnect_Post(int client)
-{
-	g_esPlayer[client].sSteamID[0] = '\0';
-}
-
-public void OnClientPutInServer(int client)
-{
-	if(IsFakeClient(client))
-		return;
-
-	vResetClientData(client);
 }
 
 void vResetClientData(int client)
