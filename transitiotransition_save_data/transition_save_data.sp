@@ -292,11 +292,10 @@ enum struct esData
 		int iWeapon;
 		for(; iSlot < 5; iSlot++)
 		{
-			iWeapon = GetPlayerWeaponSlot(client, iSlot);
-			if(iWeapon > MaxClients)
+			if((iWeapon = GetPlayerWeaponSlot(client, iSlot)) > MaxClients)
 			{
-				if(RemovePlayerItem(client, iWeapon))
-					RemoveEdict(iWeapon);
+				RemovePlayerItem(client, iWeapon);
+				RemoveEdict(iWeapon);
 			}
 		}
 
