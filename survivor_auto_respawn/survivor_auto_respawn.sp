@@ -2,6 +2,7 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
+#include <sdkhooks>
 //#include <Defib_Fix>
 
 /*****************************************************************************************************/
@@ -173,10 +174,12 @@ ConVar
 	g_hAllowSurvivorBot,
 	g_hAllowSurvivorIdle,
 	g_hGiveWeaponType,
+	g_hRemoveDeathDrop,
 	g_hSbAllBotGame,
 	g_hAllowAllBotSur;
 
 bool
+	g_bRemoveDeathDrop,
 	g_bAllowSurvivorBot,
 	g_bAllowSurvivorIdle;
 
@@ -376,7 +379,7 @@ public Plugin myinfo =
 	name = "Survivor Auto Respawn",
 	author = "sorallll",
 	description = "",
-	version = "1.3.2",
+	version = "1.3.3",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -386,17 +389,18 @@ public void OnPluginStart()
 
 	g_aMeleeScripts = new ArrayList(64);
 
-	g_hRespawnTime =       CreateConVar("sar_respawn_time", 	"15", 		"玩家自动复活时间(秒).", CVAR_FLAGS, true, 0.0);
-	g_hRespawnLimit =      CreateConVar("sar_respawn_limit", 	"5", 		"玩家每回合自动复活次数.", CVAR_FLAGS, true, 0.0);
-	g_hAllowSurvivorBot =  CreateConVar("sar_respawn_bot",		"1", 		"是否允许Bot自动复活 \n0=否,1=是.", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hAllowSurvivorIdle = CreateConVar("sar_respawn_idle",		"1", 		"是否允许闲置玩家自动复活 \n0=否,1=是.", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hGiveWeaponType =    CreateConVar("sar_give_type", 		"0", 		"根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器).", CVAR_FLAGS, true, 0.0, true, 2.0);
+	g_hRespawnTime =		CreateConVar("sar_respawn_time", 	"15", 		"玩家自动复活时间(秒).", CVAR_FLAGS);
+	g_hRespawnLimit =		CreateConVar("sar_respawn_limit", 	"5", 		"玩家每回合自动复活次数.", CVAR_FLAGS);
+	g_hAllowSurvivorBot =	CreateConVar("sar_respawn_bot",		"1", 		"是否允许Bot自动复活 \n0=否,1=是.", CVAR_FLAGS);
+	g_hAllowSurvivorIdle =	CreateConVar("sar_respawn_idle",		"1", 		"是否允许闲置玩家自动复活 \n0=否,1=是.", CVAR_FLAGS);
 
-	g_esWeapon[0].cFlags = CreateConVar("sar_respawn_slot0", 	"131071", 	"主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0.", CVAR_FLAGS, true, 0.0);
-	g_esWeapon[1].cFlags = CreateConVar("sar_respawn_slot1", 	"5160", 	"副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把.", CVAR_FLAGS, true, 0.0);
-	g_esWeapon[2].cFlags = CreateConVar("sar_respawn_slot2", 	"7", 		"投掷物给什么 \n0=不给,7=所有.", CVAR_FLAGS, true, 0.0);
-	g_esWeapon[3].cFlags = CreateConVar("sar_respawn_slot3", 	"1", 		"槽位3给什么 \n0=不给,15=所有.", CVAR_FLAGS, true, 0.0);
-	g_esWeapon[4].cFlags = CreateConVar("sar_respawn_slot4", 	"3", 		"槽位4给什么 \n0=不给,3=所有.", CVAR_FLAGS, true, 0.0);
+	g_esWeapon[0].cFlags =	CreateConVar("sar_respawn_slot0", 	"131071", 	"主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0.");
+	g_esWeapon[1].cFlags =	CreateConVar("sar_respawn_slot1", 	"5160", 	"副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把.");
+	g_esWeapon[2].cFlags =	CreateConVar("sar_respawn_slot2", 	"7", 		"投掷物给什么 \n0=不给,7=所有.", CVAR_FLAGS);
+	g_esWeapon[3].cFlags =	CreateConVar("sar_respawn_slot3", 	"1", 		"槽位3给什么 \n0=不给,15=所有.", CVAR_FLAGS);
+	g_esWeapon[4].cFlags =	CreateConVar("sar_respawn_slot4", 	"3", 		"槽位4给什么 \n0=不给,3=所有.", CVAR_FLAGS);
+	g_hGiveWeaponType =		CreateConVar("sar_give_type", 		"0", 		"根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器).");
+	g_hRemoveDeathDrop =	CreateConVar("sar_remove_drop", 	"1", 		"是否移除玩家死亡掉落的武器.", CVAR_FLAGS);
 
 	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
 	g_hAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
@@ -407,7 +411,8 @@ public void OnPluginStart()
 	g_hAllowSurvivorIdle.AddChangeHook(vConVarChanged);
 
 	for(int i; i < MAX_SLOTS; i++)
-		g_esWeapon[i].cFlags.AddChangeHook(vSlotConVarChanged);
+		g_esWeapon[i].cFlags.AddChangeHook(vWeaponConVarChanged);
+	g_hRemoveDeathDrop.AddChangeHook(vWeaponConVarChanged);
 		
 	AutoExecConfig(true, "survivor_auto_respawn");
 
@@ -428,7 +433,7 @@ public void OnPluginEnd()
 public void OnConfigsExecuted()
 {
 	vGetCvars();
-	vGetSlotCvars();
+	vGetWeaponCvars();
 }
 
 void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -436,20 +441,21 @@ void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 	vGetCvars();
 }
 
-void vSlotConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vWeaponConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	vGetSlotCvars();
+	vGetWeaponCvars();
 }
 
 void vGetCvars()
 {
 	g_iRespawnTime = g_hRespawnTime.IntValue;
 	g_iRespawnLimit = g_hRespawnLimit.IntValue;
+	g_bRemoveDeathDrop = g_hRemoveDeathDrop.BoolValue;
 	g_bAllowSurvivorBot = g_hAllowSurvivorBot.BoolValue;
 	g_bAllowSurvivorIdle = g_hAllowSurvivorIdle.BoolValue;
 }
 
-void vGetSlotCvars()
+void vGetWeaponCvars()
 {
 	for(int i; i < MAX_SLOTS; i++)
 	{
@@ -480,6 +486,21 @@ public void L4D2_OnSurvivorDeathModelCreated(int iClient, int iDeathModel)
 public void OnClientPutInServer(int client)
 {
 	g_esPlayer[client].iRespawned = 0;
+	SDKHook(client, SDKHook_WeaponDropPost, OnWeaponDropPost);
+}
+
+public void OnWeaponDropPost(int client, int weapon)
+{
+	if(!g_bRemoveDeathDrop)
+		return;
+
+	if(GetClientTeam(client) != 2 || IsPlayerAlive(client))
+		return;
+
+	if(weapon <= MaxClients || !IsValidEntity(weapon) || HasEntProp(weapon, Prop_Send, "m_isCarryable"))
+		return;
+
+	RemoveEntity(weapon);
 }
 
 public void OnClientDisconnect(int client)
@@ -574,7 +595,7 @@ int iHasIdlePlayer(int client)
 		return 0;
 
 	client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
-	if(client && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1)
+	if(client > 0 && IsClientInGame(client) && !IsFakeClient(client))
 		return client;
 
 	return 0;
@@ -701,7 +722,7 @@ void vTerror_SetAdrenalineTime(int client, float fDuration)
 */
 void vGiveWeapon(int client)
 {
-	if(!IsClientInGame(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client))
+	if(GetClientTeam(client) != 2 || !IsPlayerAlive(client))
 		return;
 
 	for(int i = 4; i >= 2; i--)
@@ -836,11 +857,10 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 
 void vRemovePlayerSlot(int client, int iSlot)
 {
-	iSlot = GetPlayerWeaponSlot(client, iSlot);
-	if(iSlot > MaxClients)
+	if((iSlot = GetPlayerWeaponSlot(client, iSlot)) > MaxClients)
 	{
-		if(RemovePlayerItem(client, iSlot))
-			RemoveEdict(iSlot);
+		RemovePlayerItem(client, iSlot);
+		RemoveEdict(iSlot);
 	}
 }
 
