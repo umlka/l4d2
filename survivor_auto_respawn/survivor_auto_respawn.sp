@@ -498,7 +498,7 @@ public void OnWeaponDropPost(int client, int weapon)
 	if(!g_bRemoveDeathDrop)
 		return;
 
-	if(GetClientTeam(client) != 2 || GetClientHealth(client) > 0 || GetEntPropFloat(client, Prop_Send, "m_healthBuffer") > 0)
+	if(GetClientTeam(client) != 2 || GetClientHealth(client) > 0)
 		return;
 
 	if(weapon <= MaxClients || !IsValidEntity(weapon) || HasEntProp(weapon, Prop_Send, "m_isCarryable"))
@@ -510,7 +510,7 @@ public void OnWeaponDropPost(int client, int weapon)
 public void OnClientDisconnect(int client)
 {
 	delete g_esPlayer[client].hTimer;
-	vRemoveSurvivorDeathModel(client);
+	//vRemoveSurvivorDeathModel(client);
 }
 
 public void OnMapEnd()
@@ -544,7 +544,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 
 	if(IsPlayerAlive(client))
 	{
-		vRemoveSurvivorDeathModel(client);
+		//vRemoveSurvivorDeathModel(client);
 		return;
 	}
 
@@ -569,8 +569,8 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 
 	if(IsFakeClient(client))
 	{
-		int iIdlePlayer = iHasIdlePlayer(client);
-		if(iIdlePlayer == 0)
+		int iIdlePlayer = iGetIdlePlayerOfBot(client);
+		if(!iIdlePlayer)
 		{
 			if(!g_bAllowSurvivorBot)
 				return;
@@ -591,18 +591,14 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 	}
 }
 
-int iHasIdlePlayer(int client)
+static int iGetIdlePlayerOfBot(int client)
 {
-	char sNetClass[64];
+	static char sNetClass[64];
 	GetEntityNetClass(client, sNetClass, sizeof sNetClass);
 	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") < 1)
 		return 0;
 
-	client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));			
-	if(client > 0 && IsClientInGame(client) && !IsFakeClient(client))
-		return client;
-
-	return 0;
+	return GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));
 }
 
 void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
@@ -668,6 +664,7 @@ void vRespawnSurvivor(int client)
 	vRoundRespawn(client);
 	vGiveWeapon(client);
 	vTeleportToSurvivor(client);
+	vRemoveSurvivorDeathModel(client);
 	g_esPlayer[client].iRespawned++;
 
 	if(!IsFakeClient(client))
