@@ -466,7 +466,7 @@ void vGetWeaponCvars()
 			iNullSlot++;
 	}
 
-	g_bGiveWeaponType = iNullSlot <= MAX_SLOTS ? g_hGiveWeaponType.BoolValue : false;
+	g_bGiveWeaponType = iNullSlot < MAX_SLOTS ? g_hGiveWeaponType.BoolValue : false;
 }
 
 int iGetSlotAllowed(int iSlot)
