@@ -179,6 +179,7 @@ ConVar
 	g_hAllowAllBotSur;
 
 bool
+	g_bGiveWeaponType,
 	g_bRemoveDeathDrop,
 	g_bAllowSurvivorBot,
 	g_bAllowSurvivorIdle;
@@ -392,7 +393,7 @@ public void OnPluginStart()
 	g_hRespawnTime =		CreateConVar("sar_respawn_time", 	"15", 		"玩家自动复活时间(秒).", CVAR_FLAGS);
 	g_hRespawnLimit =		CreateConVar("sar_respawn_limit", 	"5", 		"玩家每回合自动复活次数.", CVAR_FLAGS);
 	g_hAllowSurvivorBot =	CreateConVar("sar_respawn_bot",		"1", 		"是否允许Bot自动复活 \n0=否,1=是.", CVAR_FLAGS);
-	g_hAllowSurvivorIdle =	CreateConVar("sar_respawn_idle",		"1", 		"是否允许闲置玩家自动复活 \n0=否,1=是.", CVAR_FLAGS);
+	g_hAllowSurvivorIdle =	CreateConVar("sar_respawn_idle",	"1", 		"是否允许闲置玩家自动复活 \n0=否,1=是.", CVAR_FLAGS);
 
 	g_esWeapon[0].cFlags =	CreateConVar("sar_respawn_slot0", 	"131071", 	"主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0.");
 	g_esWeapon[1].cFlags =	CreateConVar("sar_respawn_slot1", 	"5160", 	"副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把.");
@@ -457,12 +458,15 @@ void vGetCvars()
 
 void vGetWeaponCvars()
 {
+	int iNullSlot;
 	for(int i; i < MAX_SLOTS; i++)
 	{
 		g_esWeapon[i].iCount = 0;
-		if(g_esWeapon[i].cFlags.BoolValue)
-			iGetSlotAllowed(i);
+		if(!g_esWeapon[i].cFlags.BoolValue || !iGetSlotAllowed(i))
+			iNullSlot++;
 	}
+
+	g_bGiveWeaponType = iNullSlot <= MAX_SLOTS ? g_hGiveWeaponType.BoolValue : false;
 }
 
 int iGetSlotAllowed(int iSlot)
@@ -662,9 +666,7 @@ Action tmrRespawnSurvivor(Handle timer, int client)
 void vRespawnSurvivor(int client)
 {
 	vRoundRespawn(client);
-	if(g_hGiveWeaponType.BoolValue)
-		vGiveWeapon(client);
-
+	vGiveWeapon(client);
 	vTeleportToSurvivor(client);
 	g_esPlayer[client].iRespawned++;
 
@@ -722,15 +724,16 @@ void vTerror_SetAdrenalineTime(int client, float fDuration)
 */
 void vGiveWeapon(int client)
 {
-	if(GetClientTeam(client) != 2 || !IsPlayerAlive(client))
+	if(!g_bGiveWeaponType)
 		return;
+
+	vRemovePlayerWeapons(client);
 
 	for(int i = 4; i >= 2; i--)
 	{
 		if(!g_esWeapon[i].iCount)
 			continue;
 
-		vRemovePlayerSlot(client, i);
 		vCheatCommand(client, "give", g_sWeaponName[i][g_esWeapon[i].iAllowed[GetRandomInt(0, g_esWeapon[i].iCount - 1)]]);
 	}
 
@@ -743,6 +746,19 @@ void vGiveWeapon(int client)
 		
 		case 2:
 			vGiveAveragePrimary(client);
+	}
+}
+
+void vRemovePlayerWeapons(int client)
+{
+	int iWeapon;
+	for(int i; i < MAX_SLOTS; i++)
+	{
+		if((iWeapon = GetPlayerWeaponSlot(client, i)) > MaxClients)
+		{
+			RemovePlayerItem(client, iWeapon);
+			RemoveEdict(iWeapon);
+		}
 	}
 }
 
@@ -852,15 +868,6 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 		float vPos[3];
 		GetClientAbsOrigin(iSurvivor, vPos);
 		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
-	}
-}
-
-void vRemovePlayerSlot(int client, int iSlot)
-{
-	if((iSlot = GetPlayerWeaponSlot(client, iSlot)) > MaxClients)
-	{
-		RemovePlayerItem(client, iSlot);
-		RemoveEdict(iSlot);
 	}
 }
 
