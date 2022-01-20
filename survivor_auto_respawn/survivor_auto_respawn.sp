@@ -498,7 +498,7 @@ public void OnWeaponDropPost(int client, int weapon)
 	if(!g_bRemoveDeathDrop)
 		return;
 
-	if(GetClientTeam(client) != 2 || GetClientHealth(client) > 0)
+	if(GetClientTeam(client) != 2 || GetClientHealth(client) > 0 || GetEntPropFloat(client, Prop_Send, "m_healthBuffer") > 0)
 		return;
 
 	if(weapon <= MaxClients || !IsValidEntity(weapon) || HasEntProp(weapon, Prop_Send, "m_isCarryable"))
