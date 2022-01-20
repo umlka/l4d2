@@ -3,7 +3,7 @@
 #include <sourcemod>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.9.8"
+#define PLUGIN_VERSION "1.9.9"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
 #define MAX_SLOTS		5
@@ -39,9 +39,7 @@ ConVar
 	g_hSpecCmdLimit,
 	g_hSpecNextNotify,
 	g_hGiveWeaponType,
-	g_hGiveWeaponTime,
-	g_hSbAllBotGame,
-	g_hAllowAllBotSur;
+	g_hGiveWeaponTime;
 
 int
 	g_iRoundStart,
@@ -291,7 +289,7 @@ public void OnPluginStart()
 	g_aMeleeScripts = new ArrayList(64);
 
 	g_hSurvivorLimit = 		FindConVar("survivor_limit");
-	g_hSurvivorLimitSet = 	CreateConVar("bots_survivor_limit", 		"4", 		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
+	g_hSurvivorLimitSet = 	CreateConVar("bots_survivor_limit", 	"4", 		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
 	g_hAutoJoin = 			CreateConVar("bots_auto_join_survivor", "1", 		"玩家连接后, 是否自动加入生还者. \n0=否, 1=是.", CVAR_FLAGS);
 	g_hRespawnJoin = 		CreateConVar("bots_respawn_on_join", 	"1", 		"玩家第一次进服时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是.", CVAR_FLAGS);
 	g_hSpecCmdLimit = 		CreateConVar("bots_spec_cmd_limit", 	"1", 		"当完全旁观玩家达到多少个时禁止使用sm_spec命令.", CVAR_FLAGS);
@@ -304,9 +302,6 @@ public void OnPluginStart()
 	g_hGiveWeaponType = 	CreateConVar("bots_give_type", 			"2", 		"根据什么来给玩家装备. \n0=不给, 1=每个槽位的设置, 2=当前存活生还者的平均装备质量(仅主副武器).", CVAR_FLAGS);
 	g_hGiveWeaponTime = 	CreateConVar("bots_give_time", 			"1", 		"什么时候给玩家装备. \n0=每次出生时, 1=只在本插件创建Bot和复活玩家时.", CVAR_FLAGS);
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品flags参考源码g_sWeaponName中的武器名处的数字, 多个武器里面随机则取数字和)", CVAR_FLAGS | FCVAR_DONTRECORD);
-	
-	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
-	g_hAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
 
 	g_hSurvivorLimit.Flags &= ~FCVAR_NOTIFY; // 移除ConVar变动提示
 	g_hSurvivorLimit.SetBounds(ConVarBound_Upper, true, 31.0);
@@ -344,7 +339,6 @@ public void OnPluginStart()
 	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 	HookEvent("player_team", Event_PlayerTeam);
-	HookEvent("survivor_rescued", Event_SurvivorRescued);
 	HookEvent("player_bot_replace", Event_PlayerBotReplace);
 	HookEvent("bot_player_replace", Event_BotPlayerReplace);
 	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving);
@@ -985,29 +979,6 @@ Action tmrAutoJoinSurvivorTeam(Handle timer, int client)
 	
 	cmdJoinSurvivor(client, 0);
 	return Plugin_Continue;
-}
-
-void Event_SurvivorRescued(Event event, const char[] name, bool dontBroadcast)
-{
-	int client = GetClientOfUserId(event.GetInt("victim"));
-	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client) || !bCanIdle(client))
-		return;
-
-	cmdGoAFK(client, 0); // 被从小黑屋救出来后闲置,避免有些玩家挂机
-}
-
-bool bCanIdle(int client)
-{
-	if(g_hSbAllBotGame.BoolValue || g_hAllowAllBotSur.BoolValue)
-		return true;
-
-	int iSurvivor;
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(i != client && IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == TEAM_SURVIVOR && IsPlayerAlive(i))
-			iSurvivor++;
-	}
-	return iSurvivor > 0;
 }
 
 void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
