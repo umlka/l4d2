@@ -213,37 +213,37 @@ void vStartCustomSpawnTimer(float fTime)
 void vStartSpawnTimer()
 {
 	vEndSpawnTimer();
-	g_hSpawnTimer = CreateTimer(g_iSpawnTimeMode > 0 ? g_fSpawnTimes[iGetInfecteds()] : GetRandomFloat(g_fSpawnTimeMin, g_fSpawnTimeMax), tmrSpawnInfectedAuto);
+	g_hSpawnTimer = CreateTimer(g_iSpawnTimeMode > 0 ? g_fSpawnTimes[iCountSpecialInfected()] : GetRandomFloat(g_fSpawnTimeMin, g_fSpawnTimeMax), tmrSpawnInfectedAuto);
 }
 
 void vEndSpawnTimer()
 {
+	g_hSpawnTimer = null;
 	delete g_hSpawnTimer;
 }
 
 public Action tmrSpawnInfectedAuto(Handle timer)
 { 
-	g_hSpawnTimer = null;
+	vEndSpawnTimer();
+	SetRandomSeed(GetTime());
 
 	#if BENCHMARK
 	g_profiler = new Profiler();
 	g_profiler.Start();
 	#endif
-	SetRandomSeed(GetTime());
-	vGenerateAndExecuteSpawnQueue();
+	int iCurrentSI = iCountSpecialInfected();
+	vGenerateAndExecuteSpawnQueue(iCurrentSI);
 	#if BENCHMARK
 	g_profiler.Stop();
 	PrintToServer("ProfilerTime: %f", g_profiler.Time);
 	#endif
-	vStartSpawnTimer();
 
+	g_hSpawnTimer = CreateTimer(g_iSpawnTimeMode > 0 ? g_fSpawnTimes[iCurrentSI] : GetRandomFloat(g_fSpawnTimeMin, g_fSpawnTimeMax), tmrSpawnInfectedAuto);
 	return Plugin_Continue;
 }
 
-static void vGenerateAndExecuteSpawnQueue()
+static void vGenerateAndExecuteSpawnQueue(int iCurrentSI)
 {
-	static int iCurrentSI;
-	iCurrentSI = iGetInfecteds();
 	if(iCurrentSI >= g_iSILimit)
 		return;
 
@@ -267,7 +267,7 @@ static void vGenerateAndExecuteSpawnQueue()
 			break;
 
 		aSpawnQueue.Push(iIndex);
-		g_iSpawnCounts[iIndex] += 1;
+		g_iSpawnCounts[iIndex]++;
 	}
 
 	iSize = aSpawnQueue.Length;
@@ -348,16 +348,9 @@ static void vGenerateAndExecuteSpawnQueue()
 
 	g_iPreferredDirection = SPAWN_ANYWHERE;
 
-	if(iAhead > 0)
-	{
-		g_hSpawnRange.IntValue = 1500;
-		g_hDiscardRange.IntValue = 1750;
-		vVerifySIType(iAhead, aSpawnQueue, iCurrentSI + iSize);
-	}
-	#if SPAWN_DEBUG
-	else
-		PrintToServer("[SS] 无最高路程玩家");
-	#endif
+	g_hSpawnRange.IntValue = 1500;
+	g_hDiscardRange.IntValue = 1750;
+	vVerifySIType(iAhead, aSpawnQueue, iCurrentSI + iSize);
 
 	g_bInSpawnTime = false;
 
@@ -411,27 +404,26 @@ static void vVerifySIType(int iAhead, ArrayList aSpawnQueue, int iAllowedSI)
 	}
 }
 
-static int iGetInfecteds()
+static int iCountSpecialInfected()
 {
 	static int i;
-	static int iCount;
+	static int iSICount;
 
-	iCount = 0;
-	
+	iSICount = 0;
 	for(i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientInGame(i) && !IsClientInKickQueue(i) && GetClientTeam(i) == 3)
 		{
 			if(IsPlayerAlive(i))
 			{
-				if(GetEntProp(i, Prop_Send, "m_zombieClass") != 8)
-					iCount++;
+				if(1 <= GetEntProp(i, Prop_Send, "m_zombieClass") <= 6)
+					iSICount++;
 			}
 			else if(IsFakeClient(i))
 				KickClient(i);
 		}
 	}
-	return iCount;
+	return iSICount;
 }
 
 static void vSITypeCount()
