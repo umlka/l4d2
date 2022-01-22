@@ -1187,10 +1187,10 @@ int iFindUselessSurvivorBot()
 		client = 0;
 	else
 	{
-		aClients.Sort(Sort_Ascending, Sort_Integer);
+		aClients.Sort(Sort_Descending, Sort_Integer);
 
-		client = aClients.FindValue(1);
-		client = client > 1 ? aClients.Get(GetRandomInt(0, client - 1), 1) : aClients.Get(0, 1);
+		client = aClients.Length - 1;
+		client = aClients.Get(GetRandomInt(aClients.FindValue(aClients.Get(client, 0)), client), 1);
 	}
 
 	delete aClients;
@@ -1336,15 +1336,14 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 		iSurvivor = 0;
 	else
 	{
-		aClients.Sort(Sort_Ascending, Sort_Integer);
+		aClients.Sort(Sort_Descending, Sort_Integer);
 
 		if(!bRandom)
-			iSurvivor = aClients.Get(0, 1);
+			iSurvivor = aClients.Get(aClients.Length - 1, 1);
 		else
 		{
-			iSurvivor = aClients.Get(0, 0);
-			aClients.Sort(Sort_Descending, Sort_Integer);
-			iSurvivor = aClients.Get(GetRandomInt(aClients.FindValue(iSurvivor), aClients.Length - 1), 1);
+			iSurvivor = aClients.Length - 1;
+			iSurvivor = aClients.Get(GetRandomInt(aClients.FindValue(aClients.Get(iSurvivor, 0)), iSurvivor), 1);
 		}
 	}
 
