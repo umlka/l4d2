@@ -218,7 +218,6 @@ void vStartSpawnTimer()
 
 void vEndSpawnTimer()
 {
-	g_hSpawnTimer = null;
 	delete g_hSpawnTimer;
 }
 
