@@ -223,7 +223,7 @@ void vEndSpawnTimer()
 
 public Action tmrSpawnInfectedAuto(Handle timer)
 { 
-	vEndSpawnTimer();
+	g_hSpawnTimer = null;
 	SetRandomSeed(GetTime());
 
 	#if BENCHMARK
