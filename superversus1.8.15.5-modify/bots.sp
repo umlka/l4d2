@@ -360,7 +360,7 @@ Action cmdJoinSpectator(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
+	if(!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
 	bool bIdle = !!iGetBotOfIdlePlayer(client);
@@ -402,7 +402,7 @@ Action cmdJoinSurvivor(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
+	if(!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
 	int iTeam = GetClientTeam(client);
@@ -419,7 +419,7 @@ Action cmdJoinSurvivor(int client, int args)
 		}
 		
 		int iBot = GetClientOfUserId(g_esData[client].iPlayerBot);
-		if(iBot == 0 || !bIsValidSurvivorBot(iBot, true))
+		if(!iBot || !bIsValidSurvivorBot(iBot, true))
 			iBot = iFindUselessSurvivorBot();
 
 		if(iBot)
@@ -465,7 +465,7 @@ Action cmdTakeOverBot(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
+	if(!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
 	if(!iClientTeamTakeOver(client))
@@ -608,7 +608,7 @@ Action cmdGoAFK(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != TEAM_SURVIVOR || !IsPlayerAlive(client))
+	if(!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != TEAM_SURVIVOR || !IsPlayerAlive(client))
 		return Plugin_Handled;
 
 	SDKCall(g_hSDKGoAwayFromKeyboard, client);
@@ -623,7 +623,7 @@ Action cmdTeamPanel(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
+	if(!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
 	vDisplayTeamPanel(client);
@@ -925,7 +925,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 	g_iPlayerSpawn = 1;
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) != TEAM_SURVIVOR)
+	if(!client || !IsClientInGame(client) || GetClientTeam(client) != TEAM_SURVIVOR)
 		return;
 
 	delete g_hBotsUpdateTimer;
@@ -954,7 +954,7 @@ void vAutoTakeOverBot(int client)
 void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !IsClientInGame(client) || IsFakeClient(client))
+	if(!client || !IsClientInGame(client) || IsFakeClient(client))
 		return;
 
 	switch(event.GetInt("team"))
@@ -974,7 +974,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 
 Action tmrAutoJoinSurvivorTeam(Handle timer, int client)
 {
-	if(!g_bAutoJoin || !g_iRoundStart || (client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || iGetBotOfIdlePlayer(client)) 
+	if(!g_bAutoJoin || !g_iRoundStart || !(client = GetClientOfUserId(client))  || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || iGetBotOfIdlePlayer(client)) 
 		return Plugin_Stop;
 	
 	cmdJoinSurvivor(client, 0);
@@ -985,7 +985,7 @@ void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 {
 	int playerUID = event.GetInt("player");
 	int player = GetClientOfUserId(playerUID);
-	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || GetClientTeam(player) != TEAM_SURVIVOR)
+	if(!player || !IsClientInGame(player) || IsFakeClient(player) || GetClientTeam(player) != TEAM_SURVIVOR)
 		return;
 
 	int botUID = event.GetInt("bot");
@@ -1014,7 +1014,7 @@ void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast)
 {
 	int player = GetClientOfUserId(event.GetInt("player"));
-	if(player == 0 || !IsClientInGame(player) || IsFakeClient(player) || GetClientTeam(player) != TEAM_SURVIVOR)
+	if(!player || !IsClientInGame(player) || IsFakeClient(player) || GetClientTeam(player) != TEAM_SURVIVOR)
 		return;
 
 	int bot = GetClientOfUserId(event.GetInt("bot"));
@@ -1207,7 +1207,7 @@ void vSetGodMode(int client, float fDuration)
 
 Action tmrMortal(Handle timer, int client)
 {
-	if((client = GetClientOfUserId(client)) == 0 || !IsClientInGame(client))
+	if(!(client = GetClientOfUserId(client))  || !IsClientInGame(client))
 		return Plugin_Stop;
 
 	SetEntProp(client, Prop_Data, "m_takedamage", 2);
@@ -1849,7 +1849,7 @@ bool bTakingOverBot(int client)
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == TEAM_SPECTATOR && iGetIdlePlayerOfBot(i) == client)
+		if(IsClientInGame(i) && IsFakeClient(i)/* && GetClientTeam(i) == TEAM_SPECTATOR*/ && iGetIdlePlayerOfBot(i) == client)
 			return true;
 	}
 	return false;
