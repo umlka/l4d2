@@ -1567,7 +1567,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 			if(g_bExchangeTeam && !IsFakeClient(client))
 			{
 				int attacker = GetClientOfUserId(event.GetInt("attacker"));
-				if(!attacker && IsClientInGame(attacker) && !IsFakeClient(attacker) && GetClientTeam(attacker) == 3 && GetEntProp(attacker, Prop_Send, "m_zombieClass") != 8)
+				if(attacker && IsClientInGame(attacker) && !IsFakeClient(attacker) && GetClientTeam(attacker) == 3 && GetEntProp(attacker, Prop_Send, "m_zombieClass") != 8)
 				{
 					ChangeClientTeam(client, 3);
 					CPrintToChat(client, "{green}★ {red}生还者玩家 {default}被 {red}特感玩家 {default}杀死后，{olive}二者互换队伍");
