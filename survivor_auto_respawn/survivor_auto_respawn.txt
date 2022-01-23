@@ -41,6 +41,13 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x84\x2A\x75\x2A\x8B\x2A\xE8\x2A\x2A\x2A\x2A\xC6\x86"
 				/* ? ? ? ? ? ? ? ? E8 ? ? ? ? 84 ? 75 ? 8B ? E8 ? ? ? ? C6 86 */
 			}
+			"CTerrorPlayer::GoAwayFromKeyboard"
+			{
+				"library"		"server"
+				"linux"			"@_ZN13CTerrorPlayer18GoAwayFromKeyboardEv"
+				"windows"		"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x57\x8B\xF1\x8B\x06\x8B\x90\xC8\x08\x00\x00"
+				/* ? ? ? ? ? ? 53 56 57 8B F1 8B 06 8B 90 C8 08 00 00 */
+			}
 		}
     }
 }
