@@ -539,7 +539,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 		return;
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !IsClientInGame(client))
+	if(!client || !IsClientInGame(client))
 		return;
 
 	if(IsPlayerAlive(client))
@@ -564,7 +564,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 		return;
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !IsClientInGame(client) || GetClientTeam(client) != 2)
+	if(!client || !IsClientInGame(client) || GetClientTeam(client) != 2)
 		return;
 
 	if(IsFakeClient(client))
@@ -607,7 +607,7 @@ void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 		return;
 
 	int bot = GetClientOfUserId(event.GetInt("bot"));
-	if(!IsFakeClient(bot) || IsPlayerAlive(bot))
+	if(!bot || !IsFakeClient(bot) || IsPlayerAlive(bot))
 		return;
 
 	if(bCalculateRespawnLimit(bot))
@@ -633,7 +633,7 @@ bool bCalculateRespawnLimit(int client)
 
 Action tmrRespawnSurvivor(Handle timer, int client)
 {
-	if((client = GetClientOfUserId(client)) == 0)
+	if(!(client = GetClientOfUserId(client)))
 		return Plugin_Stop;
 
 	if(IsClientInGame(client) && GetClientTeam(client) == 2 && !IsPlayerAlive(client))
