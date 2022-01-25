@@ -510,7 +510,7 @@ public void OnWeaponDropPost(int client, int weapon)
 public void OnClientDisconnect(int client)
 {
 	delete g_esPlayer[client].hTimer;
-	//vRemoveSurvivorDeathModel(client);
+	vRemoveSurvivorDeathModel(client);
 }
 
 public void OnMapEnd()
@@ -544,7 +544,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 
 	if(IsPlayerAlive(client))
 	{
-		//vRemoveSurvivorDeathModel(client);
+		vRemoveSurvivorDeathModel(client);
 		return;
 	}
 
@@ -570,7 +570,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 	if(IsFakeClient(client))
 	{
 		int iIdlePlayer = iGetIdlePlayerOfBot(client);
-		if(!iIdlePlayer)
+		if(!bIsValidSpectator(iIdlePlayer))
 		{
 			if(!g_bAllowSurvivorBot)
 				return;
@@ -599,6 +599,11 @@ static int iGetIdlePlayerOfBot(int client)
 		return 0;
 
 	return GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));
+}
+
+bool bIsValidSpectator(int client)
+{
+	return client && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1;
 }
 
 void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
@@ -664,7 +669,7 @@ void vRespawnSurvivor(int client)
 	vRoundRespawn(client);
 	vGiveWeapon(client);
 	vTeleportToSurvivor(client);
-	vRemoveSurvivorDeathModel(client);
+	//vRemoveSurvivorDeathModel(client);
 	g_esPlayer[client].iRespawned++;
 
 	if(!IsFakeClient(client))
