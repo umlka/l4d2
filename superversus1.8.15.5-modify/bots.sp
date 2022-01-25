@@ -947,7 +947,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 void vAutoTakeOverBot(int client)
 {
 	int iIdlePlayer;
-	if(IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == TEAM_SURVIVOR && (iIdlePlayer = iGetIdlePlayerOfBot(client)))
+	if(IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == TEAM_SURVIVOR && bIsValidSpectator((iIdlePlayer = iGetIdlePlayerOfBot(client))))
 		vTakeOverBot(iIdlePlayer, client);
 }
 
@@ -1112,7 +1112,7 @@ static int iGetIdlePlayerOfBot(int client)
 
 bool bIsValidSpectator(int client)
 {
-	return client > 0 && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == TEAM_SPECTATOR;
+	return client && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == TEAM_SPECTATOR;
 }
 
 static int iGetTeamPlayers(int iTeam, bool bIncludeBots)
@@ -1849,7 +1849,7 @@ bool bTakingOverBot(int client)
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(IsClientInGame(i) && IsFakeClient(i)/* && GetClientTeam(i) == TEAM_SPECTATOR*/ && iGetIdlePlayerOfBot(i) == client)
+		if(IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == TEAM_SPECTATOR && iGetIdlePlayerOfBot(i) == client)
 			return true;
 	}
 	return false;
