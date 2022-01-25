@@ -186,7 +186,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			static float fGameTime;
 			if(g_fLeapAgainTime[client] < (fGameTime = GetGameTime()))
 			{
-				if(fSurvivorProximity < g_fJockeyLeapRange && bWithinViewAngle(client, 15.0))
+				if(fSurvivorProximity < g_fJockeyLeapRange && bWithinViewAngle(client, 45.0))
 				{
 					vAng = angles;
 					vAng[0] = GetRandomFloat(-50.0, -10.0);
