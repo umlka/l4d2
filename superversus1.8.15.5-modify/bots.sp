@@ -388,7 +388,7 @@ int iGetTeamSpectator()
 	int iSpectator;
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(bIsValidSpectator(i) && !iGetBotOfIdlePlayer(i))
+		if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == TEAM_SPECTATOR && !iGetBotOfIdlePlayer(i))
 			iSpectator++;
 	}
 	return iSpectator;
@@ -681,7 +681,7 @@ Action cmdBotSet(int client, int args)
 
 Action CommandListener_SpecNext(int client, char[] command, int argc)
 {
-	if(!g_esData[client].bSpecNotify || !bIsValidSpectator(client) || iGetBotOfIdlePlayer(client))
+	if(!g_esData[client].bSpecNotify || !client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != TEAM_SPECTATOR || iGetBotOfIdlePlayer(client))
 		return Plugin_Continue;
 
 	g_esData[client].bSpecNotify = false;
@@ -947,7 +947,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 void vAutoTakeOverBot(int client)
 {
 	int iIdlePlayer;
-	if(IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == TEAM_SURVIVOR && bIsValidSpectator((iIdlePlayer = iGetIdlePlayerOfBot(client))))
+	if(IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == TEAM_SURVIVOR && bIsValidHumanSpectator((iIdlePlayer = iGetIdlePlayerOfBot(client))))
 		vTakeOverBot(iIdlePlayer, client);
 }
 
@@ -1110,7 +1110,7 @@ static int iGetIdlePlayerOfBot(int client)
 	return GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));
 }
 
-bool bIsValidSpectator(int client)
+bool bIsValidHumanSpectator(int client)
 {
 	return client && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == TEAM_SPECTATOR;
 }
@@ -1688,7 +1688,6 @@ void vStatsConditionPatch(bool bPatch)
 void vTakeOverBot(int client, int iBot)
 {
 	SDKCall(g_hSDKSetHumanSpectator, iBot, client);
-	SDKCall(g_hSDKSetObserverTarget, client, iBot);
 	SDKCall(g_hSDKTakeOverBot, client, true);
 }
 
@@ -1774,9 +1773,8 @@ MRESReturn mreGoAwayFromKeyboardPost(int pThis, DHookReturn hReturn)
 	{
 		g_bShouldIgnore = true;
 
-		SDKCall(g_hSDKSetHumanSpectator, g_iSurvivorBot, pThis);
 		SDKCall(g_hSDKSetObserverTarget, pThis, g_iSurvivorBot);
-		SetEntProp(pThis, Prop_Send, "m_iObserverMode", 5);
+		SDKCall(g_hSDKSetHumanSpectator, g_iSurvivorBot, pThis);
 
 		vWriteTakeoverPanel(pThis, g_iSurvivorBot);
 		
