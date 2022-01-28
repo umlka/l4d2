@@ -374,42 +374,42 @@ public void OnPluginStart()
 {
 	vLoadGameData();
 
-	g_hMaxTankPlayer = CreateConVar("cz_max_tank_player", "1" , "坦克玩家达到多少后插件将不再控制玩家接管(0=不接管坦克)", CVAR_FLAGS, true, 0.0);
-	g_hSurvuivorLimit = CreateConVar("cz_allow_survivor_limit", "1" , "至少有多少名正常生还者(未被控,未倒地,未死亡)时,才允许玩家接管坦克", CVAR_FLAGS, true, 0.0);
-	g_hSurvuivorChance = CreateConVar("cz_survivor_allow_chance", "0.0" , "准备叛变的玩家数量为0时,自动抽取生还者和感染者玩家的几率(排除闲置旁观玩家)(0.0=不自动抽取)", CVAR_FLAGS, true, 0.0, true, 1.0);
-	g_hExchangeTeam = CreateConVar("cz_exchange_team", "0" , "特感玩家杀死生还者玩家后是否互换队伍?(0=否,1=是)", CVAR_FLAGS);
-	g_hPZSuicideTime = CreateConVar("cz_pz_suicide_time", "120" , "特感玩家复活后自动处死的时间(0=不会处死复活后的特感玩家)", CVAR_FLAGS, true, 0.0);
-	g_hPZRespawnTime = CreateConVar("cz_pz_respawn_time", "15" , "特感玩家自动复活时间(0=插件不会接管特感玩家的复活)", CVAR_FLAGS, true, 0.0);
-	g_hPZPunishTime = CreateConVar("cz_pz_punish_time", "30" , "特感玩家在ghost状态下切换特感类型后下次复活延长的时间(0=插件不会延长复活时间)", CVAR_FLAGS, true, 0.0);
-	g_hPZPunishHealth = CreateConVar("cz_pz_punish_health", "1" , "特感玩家在ghost状态下切换特感类型后血量是否减半(0=插件不会减半血量)", CVAR_FLAGS);
-	g_hAutoDisplayMenu = CreateConVar("cz_atuo_display_menu", "1" , "在感染玩家进入灵魂状态后自动向其显示更改类型的菜单?(0=不显示,-1=每次都显示,大于0=每回合总计显示的最大次数)", CVAR_FLAGS, true, -1.0);
-	g_hPZTeamLimit = CreateConVar("cz_pz_team_limit", "2" , "感染玩家数量达到多少后将限制使用sm_team3命令(-1=感染玩家不能超过生还玩家,大于等于0=感染玩家不能超过该值)", CVAR_FLAGS, true, -1.0);
-	g_hCmdCooldownTime = CreateConVar("cz_cmd_cooldown_time", "60.0" , "sm_team2,sm_team3两个命令的冷却时间(0.0-无冷却)", CVAR_FLAGS, true, 0.0);
-	g_hCmdEnterCooling = CreateConVar("cz_return_enter_cooling", "31" , "什么情况下sm_team2,sm_team3,sm_tt命令会进入冷却(1=使用其中一个命令,2=坦克玩家掉控,4=坦克玩家死亡,8=坦克玩家未及时重生,16=特感玩家杀掉生还者玩家,31=所有)", CVAR_FLAGS);
-	g_hPZChangeTeamTo = CreateConVar("cz_pz_change_team_to", "0" , "换图,过关以及任务失败时是否自动将特感玩家切换到哪个队伍?(0=不切换,1=旁观者,2=生还者)", CVAR_FLAGS, true, 0.0, true, 2.0);
-	g_hGlowColorEnable = CreateConVar("cz_survivor_color_enable", "1" , "是否给生还者创发光建模型?(0=否,1=是)", CVAR_FLAGS);
-	g_hGlowColor[COLOR_NORMAL] = CreateConVar("cz_survivor_color_normal", "0 180 0" , "特感玩家看到的正常状态生还者发光颜色", CVAR_FLAGS);
-	g_hGlowColor[COLOR_INCAPA] = CreateConVar("cz_survivor_color_incapacitated", "180 0 0" , "特感玩家看到的倒地状态生还者发光颜色", CVAR_FLAGS);
-	g_hGlowColor[COLOR_BLACKW] = CreateConVar("cz_survivor_color_blackwhite", "255 255 255" , "特感玩家看到的黑白状态生还者发光颜色", CVAR_FLAGS);
-	g_hGlowColor[COLOR_VOMITED] = CreateConVar("cz_survivor_color_nowit", "155 0 180" , "特感玩家看到的被Boomer喷或炸中过的生还者发光颜色", CVAR_FLAGS);
-	g_hUserFlagBits = CreateConVar("cz_user_flagbits", ";z;;;;z" , "哪些标志能绕过sm_team2,sm_team3,sm_pb,sm_tt,sm_class,鼠标中键重置冷却的使用限制(留空表示所有人都不会被限制)", CVAR_FLAGS);
-	g_hImmunityLevels = CreateConVar("cz_immunity_levels", "99;99;99;99;99;99" , "要达到什么免疫级别才能绕过sm_team2,sm_team3,sm_pb,sm_tt,sm_class,鼠标中键重置冷的使用限制", CVAR_FLAGS);
+	g_hMaxTankPlayer = 				CreateConVar("cz_max_tank_player", 					"1", 					"坦克玩家达到多少后插件将不再控制玩家接管(0=不接管坦克)", CVAR_FLAGS, true, 0.0);
+	g_hSurvuivorLimit = 			CreateConVar("cz_allow_survivor_limit", 			"1", 					"至少有多少名正常生还者(未被控,未倒地,未死亡)时,才允许玩家接管坦克", CVAR_FLAGS, true, 0.0);
+	g_hSurvuivorChance = 			CreateConVar("cz_survivor_allow_chance", 			"0.0", 					"准备叛变的玩家数量为0时,自动抽取生还者和感染者玩家的几率(排除闲置旁观玩家)(0.0=不自动抽取)", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hExchangeTeam = 				CreateConVar("cz_exchange_team", 					"0", 					"特感玩家杀死生还者玩家后是否互换队伍?(0=否,1=是)", CVAR_FLAGS);
+	g_hPZSuicideTime = 				CreateConVar("cz_pz_suicide_time", 					"120", 					"特感玩家复活后自动处死的时间(0=不会处死复活后的特感玩家)", CVAR_FLAGS, true, 0.0);
+	g_hPZRespawnTime = 				CreateConVar("cz_pz_respawn_time", 					"15", 					"特感玩家自动复活时间(0=插件不会接管特感玩家的复活)", CVAR_FLAGS, true, 0.0);
+	g_hPZPunishTime = 				CreateConVar("cz_pz_punish_time", 					"30", 					"特感玩家在ghost状态下切换特感类型后下次复活延长的时间(0=插件不会延长复活时间)", CVAR_FLAGS, true, 0.0);
+	g_hPZPunishHealth = 			CreateConVar("cz_pz_punish_health", 				"1", 					"特感玩家在ghost状态下切换特感类型后血量是否减半(0=插件不会减半血量)", CVAR_FLAGS);
+	g_hAutoDisplayMenu = 			CreateConVar("cz_atuo_display_menu", 				"1", 					"在感染玩家进入灵魂状态后自动向其显示更改类型的菜单?(0=不显示,-1=每次都显示,大于0=每回合总计显示的最大次数)", CVAR_FLAGS, true, -1.0);
+	g_hPZTeamLimit = 				CreateConVar("cz_pz_team_limit", 					"2", 					"感染玩家数量达到多少后将限制使用sm_team3命令(-1=感染玩家不能超过生还玩家,大于等于0=感染玩家不能超过该值)", CVAR_FLAGS, true, -1.0);
+	g_hCmdCooldownTime = 			CreateConVar("cz_cmd_cooldown_time", 				"60.0", 				"sm_team2,sm_team3,sm_tt命令的冷却时间(0.0-无冷却)", CVAR_FLAGS, true, 0.0);
+	g_hCmdEnterCooling = 			CreateConVar("cz_return_enter_cooling", 			"31", 					"什么情况下sm_team2,sm_team3,sm_tt命令会进入冷却(1=使用其中一个命令,2=坦克玩家掉控,4=坦克玩家死亡,8=坦克玩家未及时重生,16=特感玩家杀掉生还者玩家,31=所有)", CVAR_FLAGS);
+	g_hPZChangeTeamTo = 			CreateConVar("cz_pz_change_team_to", 				"0", 					"换图,过关以及任务失败时是否自动将特感玩家切换到哪个队伍?(0=不切换,1=旁观者,2=生还者)", CVAR_FLAGS, true, 0.0, true, 2.0);
+	g_hGlowColorEnable = 			CreateConVar("cz_survivor_color_enable", 			"1", 					"是否给生还者创发光建模型?(0=否,1=是)", CVAR_FLAGS);
+	g_hGlowColor[COLOR_NORMAL] = 	CreateConVar("cz_survivor_color_normal", 			"0 180 0", 				"特感玩家看到的正常状态生还者发光颜色", CVAR_FLAGS);
+	g_hGlowColor[COLOR_INCAPA] = 	CreateConVar("cz_survivor_color_incapacitated", 	"180 0 0", 				"特感玩家看到的倒地状态生还者发光颜色", CVAR_FLAGS);
+	g_hGlowColor[COLOR_BLACKW] = 	CreateConVar("cz_survivor_color_blackwhite", 		"255 255 255", 			"特感玩家看到的黑白状态生还者发光颜色", CVAR_FLAGS);
+	g_hGlowColor[COLOR_VOMITED] = 	CreateConVar("cz_survivor_color_nowit", 			"155 0 180", 			"特感玩家看到的被Boomer喷或炸中过的生还者发光颜色", CVAR_FLAGS);
+	g_hUserFlagBits = 				CreateConVar("cz_user_flagbits", 					";z;;;;z", 				"哪些标志能绕过sm_team2,sm_team3,sm_pb,sm_tt,sm_class,鼠标中键重置冷却的使用限制(留空表示所有人都不会被限制)", CVAR_FLAGS);
+	g_hImmunityLevels = 			CreateConVar("cz_immunity_levels", 					"99;99;99;99;99;99", 	"要达到什么免疫级别才能绕过sm_team2,sm_team3,sm_pb,sm_tt,sm_class,鼠标中键重置冷的使用限制", CVAR_FLAGS);
 
 	// https://github.com/brxce/hardcoop/blob/master/addons/sourcemod/scripting/modules/SS_SpawnQueue.sp
-	g_hSILimit = CreateConVar("cz_si_limit", "31", "同时存在的最大特感数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_SMOKER] = CreateConVar("cz_smoker_limit",	"6", "同时存在的最大smoker数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_BOOMER] = CreateConVar("cz_boomer_limit",	"6", "同时存在的最大boomer数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_HUNTER] = CreateConVar("cz_hunter_limit",	"6", "同时存在的最大hunter数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_SPITTER] = CreateConVar("cz_spitter_limit", "6", "同时存在的最大spitter数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_JOCKEY] = CreateConVar("cz_jockey_limit",	"6", "同时存在的最大jockey数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnLimits[SI_CHARGER] = CreateConVar("cz_charger_limit", "6", "同时存在的最大charger数量", CVAR_FLAGS, true, 0.0, true, 32.0);
-	g_hSpawnWeights[SI_SMOKER] = CreateConVar("cz_smoker_weight", "100", "smoker产生比重", CVAR_FLAGS, true, 0.0);
-	g_hSpawnWeights[SI_BOOMER] = CreateConVar("cz_boomer_weight", "50", "boomer产生比重", CVAR_FLAGS, true, 0.0);
-	g_hSpawnWeights[SI_HUNTER] = CreateConVar("cz_hunter_weight", "100", "hunter产生比重", CVAR_FLAGS, true, 0.0);
-	g_hSpawnWeights[SI_SPITTER] = CreateConVar("cz_spitter_weight", "50", "spitter产生比重", CVAR_FLAGS, true, 0.0);
-	g_hSpawnWeights[SI_JOCKEY] = CreateConVar("cz_jockey_weight", "100", "jockey产生比重", CVAR_FLAGS, true, 0.0);
-	g_hSpawnWeights[SI_CHARGER] = CreateConVar("cz_charger_weight", "50", "charger产生比重", CVAR_FLAGS, true, 0.0);
-	g_hScaleWeights = CreateConVar("cz_scale_weights", "1",	"[ 0 = 关闭 | 1 = 开启 ] 缩放相应特感的产生比重", _, true, 0.0, true, 1.0);
+	g_hSILimit = 					CreateConVar("cz_si_limit", 						"31", 					"同时存在的最大特感数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_SMOKER] = 	CreateConVar("cz_smoker_limit",						"6", 					"同时存在的最大smoker数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_BOOMER] = 	CreateConVar("cz_boomer_limit",						"6", 					"同时存在的最大boomer数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_HUNTER] = 	CreateConVar("cz_hunter_limit",						"6", 					"同时存在的最大hunter数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_SPITTER] = 	CreateConVar("cz_spitter_limit", 					"6", 					"同时存在的最大spitter数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_JOCKEY] = 	CreateConVar("cz_jockey_limit",						"6", 					"同时存在的最大jockey数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnLimits[SI_CHARGER] = 	CreateConVar("cz_charger_limit", 					"6", 					"同时存在的最大charger数量", CVAR_FLAGS, true, 0.0, true, 32.0);
+	g_hSpawnWeights[SI_SMOKER] = 	CreateConVar("cz_smoker_weight", 					"100", 					"smoker产生比重", CVAR_FLAGS, true, 0.0);
+	g_hSpawnWeights[SI_BOOMER] = 	CreateConVar("cz_boomer_weight", 					"50", 					"boomer产生比重", CVAR_FLAGS, true, 0.0);
+	g_hSpawnWeights[SI_HUNTER] = 	CreateConVar("cz_hunter_weight", 					"100", 					"hunter产生比重", CVAR_FLAGS, true, 0.0);
+	g_hSpawnWeights[SI_SPITTER] = 	CreateConVar("cz_spitter_weight", 					"50", 					"spitter产生比重", CVAR_FLAGS, true, 0.0);
+	g_hSpawnWeights[SI_JOCKEY] = 	CreateConVar("cz_jockey_weight", 					"100", 					"jockey产生比重", CVAR_FLAGS, true, 0.0);
+	g_hSpawnWeights[SI_CHARGER] = 	CreateConVar("cz_charger_weight", 					"50", 					"charger产生比重", CVAR_FLAGS, true, 0.0);
+	g_hScaleWeights = 				CreateConVar("cz_scale_weights", 					"1",					"[ 0 = 关闭 | 1 = 开启 ] 缩放相应特感的产生比重", _, true, 0.0, true, 1.0);
 
 	AutoExecConfig(true, "controll_zombies");
 	// 想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
@@ -909,17 +909,6 @@ Action cmdTakeTank(int client, int args)
 			PrintToChat(client, "\x01请等待 \x05%.1f秒 \x01再使用该指令", g_esPlayer[client].fCmdLastUsedTime - fTime);
 			return Plugin_Handled;
 		}
-
-		if(iTeam != 2 && iTeam != 3)
-		{
-			int iTeam3 = iGetTeamPlayers(3);
-			int iTeam2 = iGetTeamPlayers(2);
-			if((g_iPZTeamLimit >= 0 && iTeam3 >= g_iPZTeamLimit) || (g_iPZTeamLimit == -1 && iTeam3 >= iTeam2))
-			{
-				PrintToChat(client, "已到达感染玩家数量限制");
-				return Plugin_Handled;
-			}
-		}
 	}
 		
 	if(iGetTankPlayers() >= g_iMaxTankPlayer)
@@ -993,10 +982,11 @@ Action cmdTakeTank(int client, int args)
 			ChangeClientTeam(client, 3);
 	}
 
+	if(GetClientTeam(client) == 3)
+		g_esPlayer[client].iLastTeamID = iTeam != 3 ? 2 : 3;
+
 	if(iTakeOverZombieBot(client, iTank) == 8 && IsPlayerAlive(client))
 	{
-		g_esPlayer[client].iLastTeamID = iTeam != 3 ? 2 : 3;
-	
 		if(g_iCmdEnterCooling & (1 << 0))
 			g_esPlayer[client].fCmdLastUsedTime = GetEngineTime() + g_fCmdCooldownTime;
 
@@ -2031,11 +2021,11 @@ int iTakeOverTank(int tank)
 			}
 		}
 
-		if(iTakeOverZombieBot(client, tank) == 8 && IsPlayerAlive(client))
-		{
+		if(GetClientTeam(client) == 3)
 			g_esPlayer[client].iLastTeamID = iTeam != 3 ? 2 : 3;
+	
+		if(iTakeOverZombieBot(client, tank) == 8 && IsPlayerAlive(client))
 			return client;
-		}
 	}
 
 	return 0;
