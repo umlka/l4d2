@@ -257,7 +257,7 @@ enum struct esData
 
 	void Restore(int client, bool bIdentity = true)
 	{
-		if(this.iRecorded == 0)
+		if(!this.iRecorded)
 			return;
 
 		if(GetClientTeam(client) != 2)
@@ -302,7 +302,7 @@ enum struct esData
 		bool bGiven;
 		if(this.sSlot0[0] != '\0')
 		{
-			vCheatCommand(client, "give", this.sSlot0);
+			GivePlayerItem(client, this.sSlot0);
 
 			iSlot = GetPlayerWeaponSlot(client, 0);
 			if(iSlot > MaxClients)
@@ -329,12 +329,12 @@ enum struct esData
 			{
 				case true:
 				{
-					vCheatCommand(client, "give", "weapon_pistol");
-					vCheatCommand(client, "give", "weapon_pistol");
+					GivePlayerItem(client, "weapon_pistol");
+					GivePlayerItem(client, "weapon_pistol");
 				}
 
 				case false:
-					vCheatCommand(client, "give", this.sSlot1);
+					GivePlayerItem(client, this.sSlot1);
 			}
 
 			iSlot = GetPlayerWeaponSlot(client, 1);
@@ -352,7 +352,7 @@ enum struct esData
 
 		if(this.sSlot2[0] != '\0')
 		{
-			vCheatCommand(client, "give", this.sSlot2);
+			GivePlayerItem(client, this.sSlot2);
 
 			if(GetPlayerWeaponSlot(client, 2) > MaxClients)
 				bGiven = true;
@@ -360,7 +360,7 @@ enum struct esData
 
 		if(this.sSlot3[0] != '\0')
 		{
-			vCheatCommand(client, "give", this.sSlot3);
+			GivePlayerItem(client, this.sSlot3);
 	
 			if(GetPlayerWeaponSlot(client, 3) > MaxClients)
 				bGiven = true;
@@ -368,7 +368,7 @@ enum struct esData
 
 		if(this.sSlot4[0] != '\0')
 		{
-			vCheatCommand(client, "give", this.sSlot4);
+			GivePlayerItem(client, this.sSlot4);
 	
 			if(GetPlayerWeaponSlot(client, 4) > MaxClients)
 				bGiven = true;
@@ -380,7 +380,7 @@ enum struct esData
 				FakeClientCommand(client, "use %s", this.sActive);
 		}
 		else
-			vCheatCommand(client, "give", "pistol");
+			GivePlayerItem(client, "weapon_pistol");
 	}
 }
 
@@ -392,7 +392,7 @@ public Plugin myinfo =
 	name = "Player Transition Save Data",
 	author = "sorallll",
 	description = "",
-	version = "1.0.4",
+	version = "1.0.5",
 	url = "https://github.com/umlka/l4d2/tree/main/transitiotransition_save_data"
 };
 
@@ -474,18 +474,6 @@ void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 	g_aSavedPlayers.Clear();
 	for(int i = 1; i <= MaxClients; i++)
 		g_esData[i].Clean();
-}
-
-void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
-{
-	static int iFlagBits, iCmdFlags;
-	iFlagBits = GetUserFlagBits(client);
-	iCmdFlags = GetCommandFlags(sCommand);
-	SetUserFlagBits(client, ADMFLAG_ROOT);
-	SetCommandFlags(sCommand, iCmdFlags & ~FCVAR_CHEAT);
-	FakeClientCommand(client, "%s %s", sCommand, sArguments);
-	SetUserFlagBits(client, iFlagBits);
-	SetCommandFlags(sCommand, iCmdFlags);
 }
 
 any aGetOrSetPlayerAmmo(int client, const char[] sWeapon, int iAmmo = -1)
