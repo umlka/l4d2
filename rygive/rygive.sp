@@ -764,15 +764,15 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	if(strncmp(sZombie, "Witch", 5, false) == 0)
 	{
 		iZombie = CreateEntityByName("witch");
-		if(iZombie != -1)
-		{
-			TeleportEntity(iZombie, vPos, vAng, NULL_VECTOR);
-			DispatchSpawn(iZombie);
-			ActivateEntity(iZombie);
+		if(iZombie == -1)
+			return -1;
 
-			if(strlen(sZombie) > 5)
-				SetEntityModel(iZombie, g_sSpecialsInfectedModels[8]);
-		}
+		TeleportEntity(iZombie, vPos, vAng, NULL_VECTOR);
+		DispatchSpawn(iZombie);
+		ActivateEntity(iZombie);
+
+		if(strlen(sZombie) > 5)
+			SetEntityModel(iZombie, g_sSpecialsInfectedModels[8]);
 	}
 	else if(strcmp(sZombie, "Smoker", false) == 0)
 	{
@@ -840,24 +840,22 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	else
 	{
 		iZombie = CreateEntityByName("infected");
-		if(iZombie != -1)
+		if(iZombie == -1)
+			return -1;
+		
+		int iPos = StringToInt(sZombie);
+		if(iPos < 7)
+			SetEntityModel(iZombie, g_sUncommonInfectedModels[iPos]);
+
+		SetEntProp(iZombie, Prop_Data, "m_nNextThinkTick", RoundToNearest(GetGameTime() / GetTickInterval()) + 5);
+
+		if(iPos != 6)
+			DispatchSpawn(iZombie);
+		else
 		{
-			int iPos = StringToInt(sZombie);
-			if(iPos < 7)
-				SetEntityModel(iZombie, g_sUncommonInfectedModels[iPos]);
-
-			SetEntProp(iZombie, Prop_Data, "m_nNextThinkTick", RoundToNearest(GetGameTime() / GetTickInterval()) + 5);
-
-			if(iPos != 6)
-				DispatchSpawn(iZombie);
-			else
-			{
-				vIsFallenSurvivorAllowedPatch(true);
-				DispatchSpawn(iZombie);
-				vIsFallenSurvivorAllowedPatch(false);
-			}
-
-			
+			vIsFallenSurvivorAllowedPatch(true);
+			DispatchSpawn(iZombie);
+			vIsFallenSurvivorAllowedPatch(false);
 		}
 	}
 	
@@ -1373,15 +1371,14 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 		iSurvivor = 0;
 	else
 	{
-		aClients.Sort(Sort_Ascending, Sort_Integer);
+		aClients.Sort(Sort_Descending, Sort_Integer);
 
 		if(!bRandom)
-			iSurvivor = aClients.Get(0, 1);
+			iSurvivor = aClients.Get(aClients.Length - 1, 1);
 		else
 		{
-			iSurvivor = aClients.Get(0, 0);
-			aClients.Sort(Sort_Descending, Sort_Integer);
-			iSurvivor = aClients.Get(GetRandomInt(aClients.FindValue(iSurvivor), aClients.Length - 1), 1);
+			iSurvivor = aClients.Length - 1;
+			iSurvivor = aClients.Get(GetRandomInt(aClients.FindValue(aClients.Get(iSurvivor, 0)), iSurvivor), 1);
 		}
 	}
 
