@@ -406,7 +406,11 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 any aNative_GetSavedCharacter(Handle plugin, int numParams)
 {
-	return g_esData[GetNativeCell(1)].iCharacter;
+	int client = GetNativeCell(1);
+	if(g_aSavedPlayers.FindValue(GetClientUserId(client)) == -1)
+		return -1;
+
+	return g_esData[client].iCharacter;
 }
 
 public void OnPluginStart()
@@ -574,8 +578,12 @@ MRESReturn mreOnEndChangeLevelPost(int pThis)
 	if(GetClientTeam(pThis) != 2)
 		return MRES_Ignored;
 
-	if(g_aSavedPlayers.FindValue(GetClientUserId(pThis)) != -1)
+	int iIndex = g_aSavedPlayers.FindValue(GetClientUserId(pThis));
+	if(iIndex != -1)
+	{
 		g_esData[pThis].Restore(pThis, true);
+		g_aSavedPlayers.Erase(iIndex);
+	}
 
 	g_esData[pThis].Clean();
 	return MRES_Ignored;
