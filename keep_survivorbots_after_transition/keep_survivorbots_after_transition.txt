@@ -1,0 +1,69 @@
+"Games"
+{
+	"left4dead2" 
+	{
+		"Addresses"
+		{
+			"MaxRestoreSurvivorBots"
+			{
+				"linux"
+				{
+					"signature"	"RestoreTransitionedSurvivorBots"
+				}
+				"windows"
+				{
+					"signature"	"RestoreTransitionedSurvivorBots"			
+				}
+			}
+			"SavedSurvivorBotCount"
+			{
+				"linux"
+				{
+					"signature"	"RestoreTransitionedSurvivorBots"
+					"read"		"1"
+				}
+				"windows"
+				{
+					"signature"	"RestoreTransitionedSurvivorBots"
+					"read"		"4"			
+				}
+			}
+		}
+
+		"Offsets"
+		{
+			"OS"
+			{
+				"linux"		"1"
+				"windows"	"0"
+			}
+			"MaxRestoreSurvivorBots_Offset"
+			{
+				"linux"		"106"	// 0x6A
+				"windows"	"80"	// 0x50
+			}
+			"MaxRestoreSurvivorBots_Byte"
+			{
+				"linux"		"131"	// 0x83
+				"windows"	"131"	// 0x83
+			}
+			"MaxRestoreSurvivorBots_Origin"
+			{
+				"linux"		"3"	// 0x03
+				"windows"	"4"	// 0x04
+			}
+		}
+
+		"Signatures"
+		{
+			/* RestoreTransitionedSurvivorBots(void) */
+			"RestoreTransitionedSurvivorBots"
+			{
+				"library"	"server"
+				"linux"		"@_Z31RestoreTransitionedSurvivorBotsv"
+				"windows"	"\x55\x8B\xEC\xA1\x2A\x2A\x2A\x2A\x83\xEC\x08\x85\xC0"
+				/* 55 8B EC A1 ? ? ? ? 83 EC 08 85 C0 */
+			}
+		}
+	}
+}
