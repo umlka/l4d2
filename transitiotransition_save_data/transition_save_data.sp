@@ -27,6 +27,7 @@ int
 
 bool
 	g_bLateLoad,
+	g_bRoundStart,
 	g_bTransitionStart;
 
 char
@@ -398,19 +399,8 @@ public Plugin myinfo =
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
-	CreateNative("SD_GetSavedCharacter", aNative_GetSavedCharacter);
-
 	g_bLateLoad = late;
 	return APLRes_Success;
-}
-
-any aNative_GetSavedCharacter(Handle plugin, int numParams)
-{
-	int client = GetNativeCell(1);
-	if(g_aSavedPlayers.FindValue(GetClientUserId(client)) == -1)
-		return -1;
-
-	return g_esData[client].iCharacter;
 }
 
 public void OnPluginStart()
@@ -441,6 +431,8 @@ public void OnPluginStart()
 	g_iAmmoOffset = FindSendPropInfo("CTerrorPlayer", "m_iAmmo");
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+	HookEvent("player_spawn", Event_PlayerSpawn);
 
 	if(g_bLateLoad)
 	{
@@ -468,6 +460,7 @@ public void OnMapStart()
 
 public void OnMapEnd()
 {
+	g_bRoundStart = false;
 	g_bTransitionStart = false;
 }
 
@@ -482,9 +475,32 @@ public void OnClientPutInServer(int client)
 
 void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
-	g_aSavedPlayers.Clear();
-	for(int i = 1; i <= MaxClients; i++)
-		g_esData[i].Clean();
+	g_bRoundStart = false;
+}
+
+void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
+{
+	g_bRoundStart = true;
+}
+
+void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+{
+	if(g_bRoundStart)
+		return;
+
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 2 || g_aSavedPlayers.FindValue(GetClientUserId(client)) == -1)
+		return;
+
+	RequestFrame(OnNextFrame_PlayerSpawn, GetClientUserId(client));
+}
+
+void OnNextFrame_PlayerSpawn(int client)
+{
+	if(!(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 2 || g_aSavedPlayers.FindValue(GetClientUserId(client)) == -1)
+		return;
+
+	g_esData[client].Restore(client, true);
 }
 
 any aGetOrSetPlayerAmmo(int client, const char[] sWeapon, int iAmmo = -1)
@@ -578,13 +594,13 @@ MRESReturn mreOnEndChangeLevelPost(int pThis)
 	if(GetClientTeam(pThis) != 2)
 		return MRES_Ignored;
 
-	int iIndex = g_aSavedPlayers.FindValue(GetClientUserId(pThis));
-	if(iIndex != -1)
+	//int iIndex = g_aSavedPlayers.FindValue(GetClientUserId(pThis));
+	if(/*iIndex*/g_aSavedPlayers.FindValue(GetClientUserId(pThis)) != -1)
 	{
 		g_esData[pThis].Restore(pThis, true);
-		g_aSavedPlayers.Erase(iIndex);
+		//g_aSavedPlayers.Erase(iIndex);
 	}
 
-	g_esData[pThis].Clean();
+	//g_esData[pThis].Clean();
 	return MRES_Ignored;
 }
