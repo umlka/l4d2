@@ -570,7 +570,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 	if(IsFakeClient(client))
 	{
 		int iIdlePlayer = iGetIdlePlayerOfBot(client);
-		if(!bIsValidSpectator(iIdlePlayer))
+		if(!bIsValidHumanSpectator(iIdlePlayer))
 		{
 			if(!g_bAllowSurvivorBot)
 				return;
@@ -601,7 +601,7 @@ static int iGetIdlePlayerOfBot(int client)
 	return GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));
 }
 
-bool bIsValidSpectator(int client)
+bool bIsValidHumanSpectator(int client)
 {
 	return client && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1;
 }
