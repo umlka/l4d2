@@ -84,7 +84,7 @@ void vRegisterMaxRestoreSurvivorBotsPatch(GameData hGameData = null)
 	
 	int iByteOrigin = LoadFromAddress(g_pMaxRestoreSurvivorBots, NumberType_Int8);
 	if(iByteOrigin != iByteMatch)
-		SetFailState("Failed to load 'CTerrorPlayer::RoundRespawn', byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
+		SetFailState("Failed to load 'MaxRestoreSurvivorBots', byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
 
 	g_iOffOrigin = hGameData.GetOffset("MaxRestoreSurvivorBots_Origin");
 	if(g_iOffOrigin == -1)
