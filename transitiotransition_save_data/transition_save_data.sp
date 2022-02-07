@@ -374,7 +374,7 @@ enum struct esData
 				bGiven = true;
 		}
 		
-		if(bGiven == true)
+		if(bGiven)
 		{
 			if(this.sActive[0] != '\0')
 				FakeClientCommand(client, "use %s", this.sActive);
@@ -392,14 +392,21 @@ public Plugin myinfo =
 	name = "Player Transition Save Data",
 	author = "sorallll",
 	description = "",
-	version = "1.0.5",
+	version = "1.0.6",
 	url = "https://github.com/umlka/l4d2/tree/main/transitiotransition_save_data"
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
+	CreateNative("SD_GetSavedCharacter", aNative_GetSavedCharacter);
+
 	g_bLateLoad = late;
 	return APLRes_Success;
+}
+
+any aNative_GetSavedCharacter(Handle plugin, int numParams)
+{
+	return g_esData[GetNativeCell(1)].iCharacter;
 }
 
 public void OnPluginStart()
