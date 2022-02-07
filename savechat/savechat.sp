@@ -159,8 +159,8 @@ void vLogChat(int client, bool bTeamChat)
 
 void vSaveMessage(const char[] sMessage)
 {
-	File hFile = OpenFile(g_sChatFilePath, "a");
-	hFile.WriteLine("%s", sMessage);
-	FlushFile(hFile);
-	delete hFile;
+	File file = OpenFile(g_sChatFilePath, "a");
+	file.WriteLine("%s", sMessage);
+	file.Flush();
+	delete file;
 }
