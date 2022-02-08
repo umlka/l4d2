@@ -104,6 +104,14 @@
 				"linux"		"117" // 0x75
 				"windows"	"117" // 0x75
 			}
+			/**
+			* CTerrorPlayer::IsAwayFromKeyboard(CTerrorPlayer *__hidden this)
+			**/
+			"CTerrorPlayer::IsAwayFromKeyboard::LastActivityTime"
+			{
+				"linux"		"9216"
+				"windows"	"9228"
+			}
 		}
 
 		"Signatures"
