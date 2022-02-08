@@ -39,7 +39,9 @@ ConVar
 	g_hSpecCmdLimit,
 	g_hSpecNextNotify,
 	g_hGiveWeaponType,
-	g_hGiveWeaponTime;
+	g_hGiveWeaponTime,
+	g_hSbAllBotGame,
+	g_hAllowAllBotSur;
 
 int
 	g_iRoundStart,
@@ -47,7 +49,8 @@ int
 	g_iSurvivorBot,
 	g_iSurvivorLimitSet,
 	g_iSpecCmdLimit,
-	g_iSpecNextNotify;
+	g_iSpecNextNotify,
+	g_iOffLastActivityTime;
 
 bool
 	g_bShouldFixAFK,
@@ -303,6 +306,9 @@ public void OnPluginStart()
 	g_hGiveWeaponTime = 	CreateConVar("bots_give_time", 			"1", 		"什么时候给玩家装备. \n0=每次出生时, 1=只在本插件创建Bot和复活玩家时.", CVAR_FLAGS);
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品flags参考源码g_sWeaponName中的武器名处的数字, 多个武器里面随机则取数字和)", CVAR_FLAGS | FCVAR_DONTRECORD);
 
+	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
+	g_hAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
+
 	g_hSurvivorLimit.Flags &= ~FCVAR_NOTIFY; // 移除ConVar变动提示
 	g_hSurvivorLimit.SetBounds(ConVarBound_Upper, true, 31.0);
 
@@ -324,7 +330,7 @@ public void OnPluginStart()
 	g_hGiveWeaponType.AddChangeHook(vWeaponConVarChanged);
 	g_hGiveWeaponTime.AddChangeHook(vWeaponConVarChanged);
 	
-	AutoExecConfig(true, "bots");
+	//AutoExecConfig(true, "bots");
 
 	RegConsoleCmd("sm_spec", cmdJoinSpectator, "加入旁观者");
 	RegConsoleCmd("sm_join", cmdJoinSurvivor, "加入生还者");
@@ -342,6 +348,7 @@ public void OnPluginStart()
 	HookEvent("player_bot_replace", Event_PlayerBotReplace);
 	HookEvent("bot_player_replace", Event_BotPlayerReplace);
 	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving);
+	HookEvent("survivor_rescued", Event_SurvivorRescued);
 
 	AddCommandListener(CommandListener_SpecNext, "spec_next");
 	HookUserMessage(GetUserMessageId("SayText2"), umSayText2, true);
@@ -974,9 +981,9 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 
 Action tmrAutoJoinSurvivorTeam(Handle timer, int client)
 {
-	if(!g_bAutoJoin || !g_iRoundStart || !(client = GetClientOfUserId(client))  || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || iGetBotOfIdlePlayer(client)) 
+	if(!g_bAutoJoin || !g_iRoundStart || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || iGetBotOfIdlePlayer(client)) 
 		return Plugin_Stop;
-	
+
 	cmdJoinSurvivor(client, 0);
 	return Plugin_Continue;
 }
@@ -1049,6 +1056,41 @@ void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadca
 		TeleportEntity(entity, vOrigin, NULL_VECTOR, NULL_VECTOR);
 		DispatchSpawn(entity);
 	}
+}
+
+void Event_SurvivorRescued(Event event, const char[] name, bool dontBroadcast)
+{
+	if(g_iOffLastActivityTime == -1)
+		return;
+
+	int client = GetClientOfUserId(event.GetInt("victim"));
+	if(!client|| !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != TEAM_SURVIVOR || !IsPlayerAlive(client) || !bCanIdle(client))
+		return;
+
+	CreateTimer(6.0, tmrAutoIdle, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+}
+
+Action tmrAutoIdle(Handle timer, int client)
+{
+	if(!(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != TEAM_SURVIVOR || !IsPlayerAlive(client) || !bCanIdle(client) || GetGameTime() - GetEntDataFloat(client, g_iOffLastActivityTime) < 5.0)
+		return Plugin_Stop;
+
+	cmdGoAFK(client, 0); // 被从小黑屋救出来之后至少有5秒钟未操作则自动闲置
+	return Plugin_Continue;
+}
+
+bool bCanIdle(int client)
+{
+	if(g_hSbAllBotGame.BoolValue || g_hAllowAllBotSur.BoolValue)
+		return true;
+
+	int iSurvivor;
+	for(int i = 1; i <= MaxClients; i++)
+	{
+		if(i != client && IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == TEAM_SURVIVOR && IsPlayerAlive(i))
+			iSurvivor++;
+	}
+	return iSurvivor > 0;
 }
 
 bool bAreAllInGame()
@@ -1202,12 +1244,12 @@ void vSetGodMode(int client, float fDuration)
 	SetEntProp(client, Prop_Data, "m_takedamage", 0);
 
 	if(fDuration > 0.0)
-		CreateTimer(fDuration, tmrMortal, GetClientUserId(client));
+		CreateTimer(fDuration, tmrMortal, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 }
 
 Action tmrMortal(Handle timer, int client)
 {
-	if(!(client = GetClientOfUserId(client))  || !IsClientInGame(client))
+	if(!(client = GetClientOfUserId(client)) || !IsClientInGame(client) || GetEntProp(client, Prop_Data, "m_takedamage") != 0)
 		return Plugin_Stop;
 
 	SetEntProp(client, Prop_Data, "m_takedamage", 2);
@@ -1565,9 +1607,13 @@ void vLoadGameData()
 	if(hGameData == null) 
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
+	g_iOffLastActivityTime = hGameData.GetOffset("CTerrorPlayer::IsAwayFromKeyboard::LastActivityTime");
+	if(g_iOffLastActivityTime == -1)
+		LogError("Failed to find offset: CTerrorPlayer::IsAwayFromKeyboard::LastActivityTime");
+
 	StartPrepSDKCall(SDKCall_Static);
 	Address pAddr = hGameData.GetAddress("NextBotCreatePlayerBot<SurvivorBot>");
-	if(pAddr == Address_Null)
+	if(!pAddr)
 		SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot> in CDirector::AddSurvivorBot");
 	if(hGameData.GetOffset("OS") == 1) // 1 - windows, 2 - linux. it's hard to get uniq. sig in windows => will use XRef.
 		pAddr += view_as<Address>(LoadFromAddress(pAddr + view_as<Address>(1), NumberType_Int32) + 5); // sizeof instruction
