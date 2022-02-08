@@ -6,22 +6,23 @@
 #define GAMEDATA	"keep_survivorbots_after_transition"
 
 Address
+	g_pSavedSurvivorBotCount,
 	g_pMaxRestoreSurvivorBots;
 
 int
 	g_iOffOrigin;
 
 bool
-	g_bLinuxOS,
-	g_bLateLoad;
+	g_bLateLoad,
+	g_bWindowsOS;
 
 public Plugin myinfo = 
 {
 	name = "Keep SurvivorBots After Transition",
 	author = "sorallll",
 	description = "",
-	version = "1.0.0",
-	url = ""
+	version = "1.0.1",
+	url = "https://forums.alliedmods.net/showthread.php?t=336245"
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -59,7 +60,11 @@ void vLoadGameData()
 	if(hGameData == null)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
-	g_bLinuxOS = hGameData.GetOffset("OS") == 1;
+	g_bWindowsOS = hGameData.GetOffset("OS") == 0;
+
+	g_pSavedSurvivorBotCount = hGameData.GetAddress("SavedSurvivorBotCount");
+	if(!g_pSavedSurvivorBotCount)
+		SetFailState("Failed to find address: SavedSurvivorBotCount");
 
 	vRegisterMaxRestoreSurvivorBotsPatch(hGameData);
 
@@ -93,30 +98,15 @@ void vRegisterMaxRestoreSurvivorBotsPatch(GameData hGameData = null)
 
 void vMaxRestoreSurvivorBotsPatch(bool bPatch)
 {
-	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false)
-		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
-
-	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null)
-		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
-
-	Address pSavedSurvivorBotCount = hGameData.GetAddress("SavedSurvivorBotCount");
-	if(pSavedSurvivorBotCount == Address_Null)
-		SetFailState("Failed to find address: SavedSurvivorBotCount");
-
 	switch(bPatch)
 	{
 		case true:
 		{
-			int iSavedSurvivorBotCount = LoadFromAddress(pSavedSurvivorBotCount, NumberType_Int32);
-			StoreToAddress(g_pMaxRestoreSurvivorBots + view_as<Address>(2), iSavedSurvivorBotCount <= g_iOffOrigin ? g_iOffOrigin : (!g_bLinuxOS ? iSavedSurvivorBotCount + 1 : iSavedSurvivorBotCount), NumberType_Int8);
+			int iSavedSurvivorBotCount = LoadFromAddress(g_pSavedSurvivorBotCount, NumberType_Int32);
+			StoreToAddress(g_pMaxRestoreSurvivorBots + view_as<Address>(2), iSavedSurvivorBotCount <= g_iOffOrigin ? g_iOffOrigin : (!g_bWindowsOS ? iSavedSurvivorBotCount : iSavedSurvivorBotCount + 1), NumberType_Int8);
 		}
 
 		case false:
 			StoreToAddress(g_pMaxRestoreSurvivorBots + view_as<Address>(2), g_iOffOrigin, NumberType_Int8);
 	}
-
-	delete hGameData;
 }
