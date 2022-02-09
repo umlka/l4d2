@@ -489,10 +489,10 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 		return;
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 2 || g_aSavedPlayers.FindValue(GetClientUserId(client)) == -1)
+	if(!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 2 || g_aSavedPlayers.FindValue(event.GetInt("userid")) == -1)
 		return;
 
-	RequestFrame(OnNextFrame_PlayerSpawn, GetClientUserId(client));
+	RequestFrame(OnNextFrame_PlayerSpawn, event.GetInt("userid"));
 }
 
 void OnNextFrame_PlayerSpawn(int client)
@@ -594,13 +594,8 @@ MRESReturn mreOnEndChangeLevelPost(int pThis)
 	if(GetClientTeam(pThis) != 2)
 		return MRES_Ignored;
 
-	//int iIndex = g_aSavedPlayers.FindValue(GetClientUserId(pThis));
-	if(/*iIndex*/g_aSavedPlayers.FindValue(GetClientUserId(pThis)) != -1)
-	{
+	if(g_aSavedPlayers.FindValue(GetClientUserId(pThis)) != -1)
 		g_esData[pThis].Restore(pThis, true);
-		//g_aSavedPlayers.Erase(iIndex);
-	}
 
-	//g_esData[pThis].Clean();
 	return MRES_Ignored;
 }
