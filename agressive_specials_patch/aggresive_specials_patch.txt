@@ -1,0 +1,69 @@
+"Games"
+{
+    "left4dead2"
+    {
+		"Addresses"
+		{
+			"CDirectorChallengeMode::SpecialsShouldAssault"
+			{
+				"linux"
+				{
+					"signature"	"CDirectorChallengeMode::SpecialsShouldAssault"
+				}
+			}
+			"CDirector::SpecialsShouldAdvanceOnSurvivors"
+			{
+				"linux"
+				{
+					"signature"	"CDirector::SpecialsShouldAdvanceOnSurvivors"
+				}
+			}
+		}
+
+		"Offsets"
+		{
+			"SpecialsShouldAssault_Offset"
+			{
+				"linux"		"15" // 0xF
+
+			}
+			"SpecialsShouldAssault_Byte"
+			{
+				"linux"		"117" // 0x75
+			}
+			"SpecialsShouldAssault_Count"
+			{
+				"linux"		"2"
+			}
+			"SpecialsShouldAdvanceOnSurvivors_Offset"
+			{
+				"linux"		"17" // 0x11
+
+			}
+			"SpecialsShouldAdvanceOnSurvivors_Byte"
+			{
+				"linux"		"117" // 0x75
+			}
+			"SpecialsShouldAdvanceOnSurvivors_Count"
+			{
+				"linux"		"1"
+			}
+		}
+
+		"Signatures"
+		{
+			/* CDirectorChallengeMode::SpecialsShouldAssault(CDirectorChallengeMode *__hidden this) */
+			"CDirectorChallengeMode::SpecialsShouldAssault"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK22CDirectorChallengeMode21SpecialsShouldAssaultEv"
+			}
+			/* CDirector::SpecialsShouldAdvanceOnSurvivors(CDirector *__hidden this) */
+			"CDirector::SpecialsShouldAdvanceOnSurvivors"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK9CDirector32SpecialsShouldAdvanceOnSurvivorsEv"
+			}
+		}
+    }
+}
