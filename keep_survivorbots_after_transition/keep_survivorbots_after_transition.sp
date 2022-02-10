@@ -1,7 +1,6 @@
 #pragma semicolon 1
 #pragma newdecls required
 #include <sourcemod>
-#include <sdktools>
 
 #define GAMEDATA	"keep_survivorbots_after_transition"
 
@@ -21,7 +20,7 @@ public Plugin myinfo =
 	name = "Keep SurvivorBots After Transition",
 	author = "sorallll",
 	description = "",
-	version = "1.0.1",
+	version = "1.0.2",
 	url = "https://forums.alliedmods.net/showthread.php?t=336245"
 };
 
