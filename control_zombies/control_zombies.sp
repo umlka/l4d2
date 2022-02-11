@@ -2373,7 +2373,7 @@ enum struct esData
 			strcopy(this.sSlot0, sizeof esData::sSlot0, sWeapon);
 
 			this.iClip0 = GetEntProp(iSlot, Prop_Send, "m_iClip1");
-			this.iAmmo = aGetOrSetPlayerAmmo(client, sWeapon);
+			this.iAmmo = aGetOrSetPlayerAmmo(client, iSlot);
 			this.iUpgrade = GetEntProp(iSlot, Prop_Send, "m_upgradeBitVec");
 			this.iUpgradeAmmo = GetEntProp(iSlot, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded");
 			this.iWeaponSkin0 = GetEntProp(iSlot, Prop_Send, "m_nSkin");
@@ -2493,7 +2493,7 @@ enum struct esData
 			if(iSlot > MaxClients)
 			{
 				SetEntProp(iSlot, Prop_Send, "m_iClip1", this.iClip0);
-				aGetOrSetPlayerAmmo(client, this.sSlot0, this.iAmmo);
+				aGetOrSetPlayerAmmo(client, iSlot, this.iAmmo);
 
 				if(this.iUpgrade > 0)
 					SetEntProp(iSlot, Prop_Send, "m_upgradeBitVec", this.iUpgrade);
@@ -2581,19 +2581,18 @@ void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = 
 	SetCommandFlags(sCommand, iCmdFlags);
 }
 
-any aGetOrSetPlayerAmmo(int client, const char[] sWeapon, int iAmmo = -1)
+// Thanks Silvers for a better way to get or set ammo
+any aGetOrSetPlayerAmmo(int client, int iWeapon, int iAmmo = -1)
 {
-	static StringMap aAmmoOffsets;
-	if(aAmmoOffsets == null)
-		aAmmoOffsets = aInitAmmoOffsets(aAmmoOffsets);
-		
 	static int iAmmoOffset;
+	static int iOffPrimaryAmmoType;
 	if(iAmmoOffset < 1)
 		iAmmoOffset = FindSendPropInfo("CTerrorPlayer", "m_iAmmo");
 
-	int iOffset;
-	aAmmoOffsets.GetValue(sWeapon, iOffset);
+	if(iOffPrimaryAmmoType < 1)
+		iOffPrimaryAmmoType = FindSendPropInfo("CBaseCombatWeapon", "m_iPrimaryAmmoType");
 
+	int iOffset = GetEntData(iWeapon, iOffPrimaryAmmoType) * 4; // Thanks to "Root" or whoever for this method of not hard-coding offsets: https://github.com/zadroot/AmmoManager/blob/master/scripting/ammo_manager.sp
 	if(iOffset)
 	{
 		if(iAmmo != -1)
@@ -2603,29 +2602,6 @@ any aGetOrSetPlayerAmmo(int client, const char[] sWeapon, int iAmmo = -1)
 	}
 
 	return 0;
-}
-
-StringMap aInitAmmoOffsets(StringMap aAmmoOffsets)
-{
-	aAmmoOffsets = new StringMap();
-	aAmmoOffsets.SetValue("weapon_rifle", 12);
-	aAmmoOffsets.SetValue("weapon_smg", 20);
-	aAmmoOffsets.SetValue("weapon_pumpshotgun", 28);
-	aAmmoOffsets.SetValue("weapon_shotgun_chrome", 28);
-	aAmmoOffsets.SetValue("weapon_autoshotgun", 32);
-	aAmmoOffsets.SetValue("weapon_hunting_rifle", 36);
-	aAmmoOffsets.SetValue("weapon_rifle_sg552", 12);
-	aAmmoOffsets.SetValue("weapon_rifle_desert", 12);
-	aAmmoOffsets.SetValue("weapon_rifle_ak47", 12);
-	aAmmoOffsets.SetValue("weapon_smg_silenced", 20);
-	aAmmoOffsets.SetValue("weapon_smg_mp5", 20);
-	aAmmoOffsets.SetValue("weapon_shotgun_spas", 32);
-	aAmmoOffsets.SetValue("weapon_sniper_scout", 40);
-	aAmmoOffsets.SetValue("weapon_sniper_military", 40);
-	aAmmoOffsets.SetValue("weapon_sniper_awp", 40);
-	aAmmoOffsets.SetValue("weapon_rifle_m60", 24);
-	aAmmoOffsets.SetValue("weapon_grenade_launcher", 68);
-	return aAmmoOffsets;
 }
 
 // https://github.com/brxce/hardcoop/blob/master/addons/sourcemod/scripting/modules/SS_SpawnQueue.sp
@@ -2859,36 +2835,36 @@ void vLoadGameData()
 
 	g_dOnEnterGhostState = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::OnEnterGhostState");
 	if(g_dOnEnterGhostState == null)
-		SetFailState("Failed to load signature: CTerrorPlayer::OnEnterGhostState");
+		SetFailState("Failed to create DynamicDetour: CTerrorPlayer::OnEnterGhostState");
 
 	g_dMaterializeFromGhost= DynamicDetour.FromConf(hGameData, "CTerrorPlayer::MaterializeFromGhost");
 	if(g_dMaterializeFromGhost== null)
-		SetFailState("Failed to load signature: CTerrorPlayer::MaterializeFromGhost");
+		SetFailState("Failed to create DynamicDetour: CTerrorPlayer::MaterializeFromGhost");
 
 	g_dPlayerZombieAbortControl = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::PlayerZombieAbortControl");
 	if(g_dPlayerZombieAbortControl == null)
-		SetFailState("Failed to load signature: CTerrorPlayer::PlayerZombieAbortControl");
+		SetFailState("Failed to create DynamicDetour: CTerrorPlayer::PlayerZombieAbortControl");
 
 	g_bIsLinuxOS = hGameData.GetOffset("OS") == 2;
 	if(g_bIsLinuxOS)
 	{
 		g_dSpawnablePZScanProtect[0] = DynamicDetour.FromConf(hGameData, "ForEachTerrorPlayer<SpawnablePZScan>");
 		if(g_dSpawnablePZScanProtect[0] == null)
-			SetFailState("Failed to load signature: ForEachTerrorPlayer<SpawnablePZScan>");
+			SetFailState("Failed to create DynamicDetour: ForEachTerrorPlayer<SpawnablePZScan>");
 	}
 	else
 	{
 		g_dSpawnablePZScanProtect[0] = DynamicDetour.FromConf(hGameData, "Script_ZSpawn");
 		if(g_dSpawnablePZScanProtect[0] == null)
-			SetFailState("Failed to load signature: Script_ZSpawn");
+			SetFailState("Failed to create DynamicDetour: Script_ZSpawn");
 
 		g_dSpawnablePZScanProtect[1] = DynamicDetour.FromConf(hGameData, "z_spawn_old");
 		if(g_dSpawnablePZScanProtect[1] == null)
-			SetFailState("Failed to load signature: z_spawn_old");
+			SetFailState("Failed to create DynamicDetour: z_spawn_old");
 
 		g_dSpawnablePZScanProtect[2] = DynamicDetour.FromConf(hGameData, "z_spawn");
 		if(g_dSpawnablePZScanProtect[2] == null)
-			SetFailState("Failed to load signature: z_spawn");
+			SetFailState("Failed to create DynamicDetour: z_spawn");
 	}
 
 	delete hGameData;
