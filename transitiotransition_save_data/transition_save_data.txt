@@ -18,12 +18,12 @@
 					}
 				}
 			}
-			"Hooks_CTerrorPlayer::OnEndChangeLevel"
+			"Detour_CTerrorPlayer::TransitionRestore"
 			{
-				"offset"	"CTerrorPlayer::OnEndChangeLevel"
-				"hooktype"	"entity"
-				"return"	"void"
-				"this"		"entity"
+				"signature"		"CTerrorPlayer::TransitionRestore"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"entity"
 			}
 		}
 
@@ -34,12 +34,6 @@
 			{
 				"linux"		"561"
 				"windows"	"560"
-			}
-			/* CTerrorPlayer::OnEndChangeLevel(CTerrorPlayer *__hidden this) */
-			"CTerrorPlayer::OnEndChangeLevel"
-			{
-				"linux"		"562"
-				"windows"	"561"
 			}
 			/**
 			 * CTerrorPlayer::OnIncapacitatedAsSurvivor(CTakeDamageInfo const&)
@@ -77,8 +71,8 @@
 			}
 			"CTerrorPlayer::OnRevived::HangingPreRealHealth"
 			{
-				"linux"		"14824"	//v25
-				"windows"	"14844"	//v32
+				"linux"		"14824"	//v25 - v24
+				"windows"	"14844"	//v32 - v31
 			}
 			"CTerrorPlayer::OnRevived::HangingCurrentHealth"
 			{
@@ -89,13 +83,13 @@
 
 		"Signatures"
 		{
-			/* CTerrorPlayer::OnRevived(CTerrorPlayer *__hidden this) */
-			"CTerrorPlayer::OnRevived"
+			/* CTerrorPlayer::TransitionRestore(CTerrorPlayer *__hidden this) */
+			"CTerrorPlayer::TransitionRestore"
 			{
 				"library"	"server"
-				"linux"		"@_ZN13CTerrorPlayer9OnRevivedEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x8B\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x57\xFF\x2A\x84\x2A\x0F\x84\x2A\x2A\x2A\x2A\x8B\x2A\xE8"
-				/* ? ? ? ? ? ? 53 56 8B ? 8B ? 8B 90 ? ? ? ? 57 FF ? 84 ? 0F 84 ? ? ? ? 8B ? E8 */
+				"linux"		"@_ZN13CTerrorPlayer17TransitionRestoreEv"
+				"windows"	"\x55\x8B\xEC\x51\x56\x8B\xF1\x80\xBE\x88\x33\x00\x00\x00"
+				/* 55 8B EC 51 56 8B F1 80 BE 88 33 00 00 00 */
 			}
 		}
 	}
