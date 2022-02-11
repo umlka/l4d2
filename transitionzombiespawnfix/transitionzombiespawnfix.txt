@@ -38,7 +38,7 @@
 			{
 				"signature"		"CDirector::IsInTransition"
 				"callconv"		"thiscall"
-				"return"		"bool"
+				"return"		"int"
 				"this"			"address"
 			}
 			"CTerrorPlayer::OnPreThinkGhostState"
