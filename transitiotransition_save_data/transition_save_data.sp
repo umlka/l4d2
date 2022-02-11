@@ -9,18 +9,16 @@
 DynamicHook
 	g_dHooksBeginChangeLevel;
 
-StringMap
-	g_aAmmoOffsets;
-
 ArrayList
 	g_aSavedPlayers;
 
 int
-	g_iAmmoOffset,
-	g_iMeleeOffset,
-	g_iHangingPreTempOffset,
-	g_iHangingPreRealOffset,
-	g_iHangingCurrentOffset;
+	g_iOffAmmo,
+	g_iOffMelee,
+	g_iOffHangingPreTemp,
+	g_iOffHangingPreReal,
+	g_iOffHangingCurrent,
+	g_iOffPrimaryAmmoType;
 
 bool
 	g_bLateLoad,
@@ -143,10 +141,10 @@ enum struct esData
 				if(hSurvivorIncapH == null)
 					hSurvivorIncapH = FindConVar("survivor_incap_health");
 
-				int iPreTemp = GetEntData(client, g_iHangingPreTempOffset);									// 玩家挂边前的虚血
-				int iPreReal = GetEntData(client, g_iHangingPreRealOffset);									// 玩家挂边前的实血
+				int iPreTemp = GetEntData(client, g_iOffHangingPreTemp);									// 玩家挂边前的虚血
+				int iPreReal = GetEntData(client, g_iOffHangingPreReal);									// 玩家挂边前的实血
 				int iPreTotal = iPreTemp + iPreReal;														// 玩家挂边前的总血量
-				int iHangingCurrent = GetEntData(client, g_iHangingCurrentOffset);							// 玩家挂边时的总血量
+				int iHangingCurrent = GetEntData(client, g_iOffHangingCurrent);							// 玩家挂边时的总血量
 				int iRevivedTotal = RoundToFloor(iHangingCurrent / hSurvivorIncapH.FloatValue * iPreTotal);	// 玩家挂边起身后的总血量
 
 				int iDelta = iPreTotal - iRevivedTotal;
@@ -185,7 +183,7 @@ enum struct esData
 			strcopy(this.sSlot0, sizeof esData::sSlot0, sWeapon);
 
 			this.iClip0 = GetEntProp(iSlot, Prop_Send, "m_iClip1");
-			this.iAmmo = aGetOrSetPlayerAmmo(client, sWeapon);
+			this.iAmmo = aGetOrSetPlayerAmmo(client, iSlot);
 			this.iUpgrade = GetEntProp(iSlot, Prop_Send, "m_upgradeBitVec");
 			this.iUpgradeAmmo = GetEntProp(iSlot, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded");
 			this.iWeaponSkin0 = GetEntProp(iSlot, Prop_Send, "m_nSkin");
@@ -193,7 +191,7 @@ enum struct esData
 
 		if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 		{
-			int iMelee = GetEntDataEnt2(client, g_iMeleeOffset);
+			int iMelee = GetEntDataEnt2(client, g_iOffMelee);
 			switch(iMelee > MaxClients && IsValidEntity(iMelee))
 			{
 				case true:
@@ -305,7 +303,7 @@ enum struct esData
 			if(iSlot > MaxClients)
 			{
 				SetEntProp(iSlot, Prop_Send, "m_iClip1", this.iClip0);
-				aGetOrSetPlayerAmmo(client, this.sSlot0, this.iAmmo);
+				aGetOrSetPlayerAmmo(client, iSlot, this.iAmmo);
 
 				if(this.iUpgrade > 0)
 					SetEntProp(iSlot, Prop_Send, "m_upgradeBitVec", this.iUpgrade);
@@ -388,9 +386,9 @@ public Plugin myinfo =
 {
 	name = "Player Transition Save Data",
 	author = "sorallll",
-	description = "",
+	description = "Fixed 4+ players' equipment chaotic bug after the transition",
 	version = "1.0.7",
-	url = "https://github.com/umlka/l4d2/tree/main/transitiotransition_save_data"
+	url = "https://forums.alliedmods.net/showthread.php?t=336287"
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -403,28 +401,10 @@ public void OnPluginStart()
 {
 	vLoadGameData();
 
-	g_aAmmoOffsets = new StringMap();
-	g_aAmmoOffsets.SetValue("weapon_rifle", 12);
-	g_aAmmoOffsets.SetValue("weapon_smg", 20);
-	g_aAmmoOffsets.SetValue("weapon_pumpshotgun", 28);
-	g_aAmmoOffsets.SetValue("weapon_shotgun_chrome", 28);
-	g_aAmmoOffsets.SetValue("weapon_autoshotgun", 32);
-	g_aAmmoOffsets.SetValue("weapon_hunting_rifle", 36);
-	g_aAmmoOffsets.SetValue("weapon_rifle_sg552", 12);
-	g_aAmmoOffsets.SetValue("weapon_rifle_desert", 12);
-	g_aAmmoOffsets.SetValue("weapon_rifle_ak47", 12);
-	g_aAmmoOffsets.SetValue("weapon_smg_silenced", 20);
-	g_aAmmoOffsets.SetValue("weapon_smg_mp5", 20);
-	g_aAmmoOffsets.SetValue("weapon_shotgun_spas", 32);
-	g_aAmmoOffsets.SetValue("weapon_sniper_scout", 40);
-	g_aAmmoOffsets.SetValue("weapon_sniper_military", 40);
-	g_aAmmoOffsets.SetValue("weapon_sniper_awp", 40);
-	g_aAmmoOffsets.SetValue("weapon_rifle_m60", 24);
-	g_aAmmoOffsets.SetValue("weapon_grenade_launcher", 68);
-
 	g_aSavedPlayers = new ArrayList();
 
-	g_iAmmoOffset = FindSendPropInfo("CTerrorPlayer", "m_iAmmo");
+	g_iOffAmmo = FindSendPropInfo("CTerrorPlayer", "m_iAmmo");
+	g_iOffPrimaryAmmoType = FindSendPropInfo("CBaseCombatWeapon", "m_iPrimaryAmmoType");
 
 	if(g_bLateLoad)
 	{
@@ -461,17 +441,16 @@ public void OnClientPutInServer(int client)
 		g_dHooksBeginChangeLevel.HookEntity(Hook_Post, client, mreOnBeginChangeLevelPost);
 }
 
-any aGetOrSetPlayerAmmo(int client, const char[] sWeapon, int iAmmo = -1)
+// Thanks Silvers for a better way to get or set ammo
+any aGetOrSetPlayerAmmo(int client, int iWeapon, int iAmmo = -1)
 {
-	int iOffset;
-	g_aAmmoOffsets.GetValue(sWeapon, iOffset);
-
+	int iOffset = GetEntData(iWeapon, g_iOffPrimaryAmmoType) * 4; // Thanks to "Root" or whoever for this method of not hard-coding offsets: https://github.com/zadroot/AmmoManager/blob/master/scripting/ammo_manager.sp
 	if(iOffset)
 	{
 		if(iAmmo != -1)
-			SetEntData(client, g_iAmmoOffset + iOffset, iAmmo);
+			SetEntData(client, g_iOffAmmo + iOffset, iAmmo);
 		else
-			return GetEntData(client, g_iAmmoOffset + iOffset);
+			return GetEntData(client, g_iOffAmmo + iOffset);
 	}
 
 	return 0;
@@ -488,20 +467,20 @@ void vLoadGameData()
 	if(hGameData == null)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
-	g_iMeleeOffset = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenMeleeWeapon");
-	if(g_iMeleeOffset == -1)
+	g_iOffMelee = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenMeleeWeapon");
+	if(g_iOffMelee == -1)
 		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenMeleeWeapon");
 
-	g_iHangingPreTempOffset = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingPreTempHealth");
-	if(g_iHangingPreTempOffset == -1)
+	g_iOffHangingPreTemp = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingPreTempHealth");
+	if(g_iOffHangingPreTemp == -1)
 		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::HangingPreTempHealth");
 
-	g_iHangingPreRealOffset = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingPreRealHealth");
-	if(g_iHangingPreRealOffset == -1)
+	g_iOffHangingPreReal = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingPreRealHealth");
+	if(g_iOffHangingPreReal == -1)
 		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::HangingPreRealHealth");
 
-	g_iHangingCurrentOffset = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingCurrentHealth");
-	if(g_iHangingCurrentOffset == -1)
+	g_iOffHangingCurrent = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingCurrentHealth");
+	if(g_iOffHangingCurrent == -1)
 		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::HangingCurrentHealth");
 
 	vSetupDynamicHooks(hGameData);
