@@ -266,10 +266,10 @@ int
 	g_iRoundStart,
 	g_iPlayerSpawn,
 	g_iSpawnablePZ,
-	g_iMeleeOffset,
-	g_iHangingPreTempOffset,
-	g_iHangingPreRealOffset,
-	g_iHangingCurrentOffset,
+	g_iOffMelee,
+	g_iOffHangingPreTemp,
+	g_iOffHangingPreReal,
+	g_iOffHangingCurrent,
 	g_iSurvivorMaxInc,
 	g_iSurvuivorLimit,
 	g_iMaxTankPlayer,
@@ -2331,10 +2331,10 @@ enum struct esData
 				if(hSurvivorIncapH == null)
 					hSurvivorIncapH = FindConVar("survivor_incap_health");
 
-				int iPreTemp = GetEntData(client, g_iHangingPreTempOffset);									// 玩家挂边前的虚血
-				int iPreReal = GetEntData(client, g_iHangingPreRealOffset);									// 玩家挂边前的实血
+				int iPreTemp = GetEntData(client, g_iOffHangingPreTemp);									// 玩家挂边前的虚血
+				int iPreReal = GetEntData(client, g_iOffHangingPreReal);									// 玩家挂边前的实血
 				int iPreTotal = iPreTemp + iPreReal;														// 玩家挂边前的总血量
-				int iHangingCurrent = GetEntData(client, g_iHangingCurrentOffset);							// 玩家挂边时的总血量
+				int iHangingCurrent = GetEntData(client, g_iOffHangingCurrent);							// 玩家挂边时的总血量
 				int iRevivedTotal = RoundToFloor(iHangingCurrent / hSurvivorIncapH.FloatValue * iPreTotal);	// 玩家挂边起身后的总血量
 
 				int iDelta = iPreTotal - iRevivedTotal;
@@ -2381,7 +2381,7 @@ enum struct esData
 
 		if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 		{
-			int iMelee = GetEntDataEnt2(client, g_iMeleeOffset);
+			int iMelee = GetEntDataEnt2(client, g_iOffMelee);
 			switch(iMelee > MaxClients && IsValidEntity(iMelee))
 			{
 				case true:
@@ -2697,20 +2697,20 @@ void vLoadGameData()
 	if(hGameData == null)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
-	g_iMeleeOffset = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenMeleeWeapon");
-	if(g_iMeleeOffset == -1)
+	g_iOffMelee = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenMeleeWeapon");
+	if(g_iOffMelee == -1)
 		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenMeleeWeapon");
 
-	g_iHangingPreTempOffset = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingPreTempHealth");
-	if(g_iHangingPreTempOffset == -1)
+	g_iOffHangingPreTemp = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingPreTempHealth");
+	if(g_iOffHangingPreTemp == -1)
 		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::HangingPreTempHealth");
 
-	g_iHangingPreRealOffset = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingPreRealHealth");
-	if(g_iHangingPreRealOffset == -1)
+	g_iOffHangingPreReal = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingPreRealHealth");
+	if(g_iOffHangingPreReal == -1)
 		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::HangingPreRealHealth");
 
-	g_iHangingCurrentOffset = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingCurrentHealth");
-	if(g_iHangingCurrentOffset == -1)
+	g_iOffHangingCurrent = hGameData.GetOffset("CTerrorPlayer::OnRevived::HangingCurrentHealth");
+	if(g_iOffHangingCurrent == -1)
 		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::HangingCurrentHealth");
 
 	StartPrepSDKCall(SDKCall_Player);
