@@ -43,7 +43,7 @@ public void OnPluginEnd()
 	vMaxRestoreSurvivorBotsPatch(false);
 }
 
-public void OnMapStart()
+public void OnMapEnd()
 {
 	vMaxRestoreSurvivorBotsPatch(true);
 }
