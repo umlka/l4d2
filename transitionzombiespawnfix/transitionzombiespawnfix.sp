@@ -22,7 +22,7 @@ public Plugin myinfo =
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
-	if (GetEngineVersion() != Engine_Left4Dead2)
+	if(GetEngineVersion() != Engine_Left4Dead2)
 	{
 		strcopy(error, err_max, "This plugin only supports Left 4 Dead 2");
 		return APLRes_SilentFailure;
@@ -61,7 +61,7 @@ void vSetupDetours(GameData hGameData = null)
 {
 	g_dDetour[0] = DynamicDetour.FromConf(hGameData, "ZombieManager::CanZombieSpawnHere");
 	if(g_dDetour[0] == null)
-		SetFailState("Failed to load signature: ZombieManager::CanZombieSpawnHere");
+		SetFailState("Failed to create DynamicDetour: ZombieManager::CanZombieSpawnHere");
 		
 	if(!g_dDetour[0].Enable(Hook_Pre, mreCanZombieSpawnHerePre))
 		SetFailState("Failed to detour pre: ZombieManager::CanZombieSpawnHere");
@@ -71,14 +71,14 @@ void vSetupDetours(GameData hGameData = null)
 
 	g_dDetour[1] = DynamicDetour.FromConf(hGameData, "CDirector::IsInTransition");
 	if(g_dDetour[1] == null)
-		SetFailState("Failed to load signature: CDirector::IsInTransition");
+		SetFailState("Failed to create DynamicDetour: CDirector::IsInTransition");
 
 	if(!g_dDetour[1].Enable(Hook_Post, mreIsInTransitionPost))
 		SetFailState("Failed to detour post: CDirector::IsInTransition");
 
 	g_dDetour[2] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::OnPreThinkGhostState");
 	if(g_dDetour[2] == null)
-		SetFailState("Failed to load signature: CTerrorPlayer::OnPreThinkGhostState");
+		SetFailState("Failed to create DynamicDetour: CTerrorPlayer::OnPreThinkGhostState");
 		
 	if(!g_dDetour[2].Enable(Hook_Pre, mreOnPreThinkGhostStatePre))
 		SetFailState("Failed to detour pre: CTerrorPlayer::OnPreThinkGhostState");
@@ -115,7 +115,7 @@ MRESReturn mreIsInTransitionPost(Address pThis, DHookReturn hReturn)
 {
 	if(g_bCanZombieSpawnHere)
 	{
-		hReturn.Value = false;
+		hReturn.Value = 0;
 		return MRES_Supercede;
 	}
 
