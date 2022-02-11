@@ -303,7 +303,7 @@ public void OnPluginStart()
 	g_esWeapon[3].cFlags =	CreateConVar("bots_give_slot3", 		"1", 		"医疗品给什么. \n0=不给, 15=所有.", CVAR_FLAGS);
 	g_esWeapon[4].cFlags =	CreateConVar("bots_give_slot4", 		"3", 		"药品给什么. \n0=不给, 3=所有.", CVAR_FLAGS);
 	g_hGiveWeaponType = 	CreateConVar("bots_give_type", 			"2", 		"根据什么来给玩家装备. \n0=不给, 1=每个槽位的设置, 2=当前存活生还者的平均装备质量(仅主副武器).", CVAR_FLAGS);
-	g_hGiveWeaponTime = 	CreateConVar("bots_give_time", 			"1", 		"什么时候给玩家装备. \n0=每次出生时, 1=只在本插件创建Bot和复活玩家时.", CVAR_FLAGS);
+	g_hGiveWeaponTime = 	CreateConVar("bots_give_time", 			"0", 		"什么时候给玩家装备. \n0=每次出生时, 1=只在本插件创建Bot和复活玩家时.", CVAR_FLAGS);
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品flags参考源码g_sWeaponName中的武器名处的数字, 多个武器里面随机则取数字和)", CVAR_FLAGS | FCVAR_DONTRECORD);
 
 	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
@@ -330,7 +330,7 @@ public void OnPluginStart()
 	g_hGiveWeaponType.AddChangeHook(vWeaponConVarChanged);
 	g_hGiveWeaponTime.AddChangeHook(vWeaponConVarChanged);
 	
-	//AutoExecConfig(true, "bots");
+	AutoExecConfig(true, "bots");
 
 	RegConsoleCmd("sm_spec", cmdJoinSpectator, "加入旁观者");
 	RegConsoleCmd("sm_join", cmdJoinSurvivor, "加入生还者");
@@ -981,7 +981,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 
 Action tmrAutoJoinSurvivorTeam(Handle timer, int client)
 {
-	if(!g_bAutoJoin || !g_iRoundStart || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || IsPlayerAlive(client) || iGetBotOfIdlePlayer(client)) 
+	if(!g_bAutoJoin || !g_iRoundStart || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || iGetBotOfIdlePlayer(client)) 
 		return Plugin_Stop;
 
 	cmdJoinSurvivor(client, 0);
@@ -1741,14 +1741,14 @@ void vSetupDetours(GameData hGameData = null)
 {
 	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "SurvivorBot::SetHumanSpectator");
 	if(dDetour == null)
-		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator");
+		SetFailState("Failed to create DynamicDetour: SurvivorBot::SetHumanSpectator");
 		
 	if(!dDetour.Enable(Hook_Pre, mreSetHumanSpectatorPre))
 		SetFailState("Failed to detour pre: SurvivorBot::SetHumanSpectator");
 
 	dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GoAwayFromKeyboard");
 	if(dDetour == null)
-		SetFailState("Failed to find signature: CTerrorPlayer::GoAwayFromKeyboard");
+		SetFailState("Failed to create DynamicDetour: CTerrorPlayer::GoAwayFromKeyboard");
 
 	if(!dDetour.Enable(Hook_Pre, mreGoAwayFromKeyboardPre))
 		SetFailState("Failed to detour pre: CTerrorPlayer::GoAwayFromKeyboard");
@@ -1758,14 +1758,14 @@ void vSetupDetours(GameData hGameData = null)
 
 	dDetour = DynamicDetour.FromConf(hGameData, "CBasePlayer::SetModel");
 	if(dDetour == null)
-		SetFailState("Failed to find signature: CBasePlayer::SetModel");
+		SetFailState("Failed to create DynamicDetour: CBasePlayer::SetModel");
 		
 	if(!dDetour.Enable(Hook_Post, mrePlayerSetModelPost))
 		SetFailState("Failed to detour pre: CBasePlayer::SetModel");
 
 	/**dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::TakeOverBot");
 	if(dDetour == null)
-		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverBot");
+		SetFailState("Failed to create DynamicDetour: CTerrorPlayer::TakeOverBot");
 		
 	if(!dDetour.Enable(Hook_Pre, mreTakeOverBotPre))
 		SetFailState("Failed to detour pre: CTerrorPlayer::TakeOverBot");
@@ -1775,7 +1775,7 @@ void vSetupDetours(GameData hGameData = null)
 
 	dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GiveDefaultItems");
 	if(dDetour == null)
-		SetFailState("Failed to find signature: CTerrorPlayer::GiveDefaultItems");
+		SetFailState("Failed to create DynamicDetour: CTerrorPlayer::GiveDefaultItems");
 		
 	if(!dDetour.Enable(Hook_Post, mreGiveDefaultItemsPost))
 		SetFailState("Failed to detour post: CTerrorPlayer::GiveDefaultItems");
