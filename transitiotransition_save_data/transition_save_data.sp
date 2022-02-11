@@ -2,21 +2,18 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <dhooks>
+#include <left4dhooks>
 
 #define GAMEDATA	"transition_save_data"
 
 DynamicHook
-	g_dHooksBeginChangeLevel,
-	g_dHooksEndChangeLevel;
+	g_dHooksBeginChangeLevel;
 
 StringMap
 	g_aAmmoOffsets;
 
 ArrayList
 	g_aSavedPlayers;
-
-Handle
-	g_hSDKOnRevived;
 
 int
 	g_iAmmoOffset,
@@ -27,7 +24,6 @@ int
 
 bool
 	g_bLateLoad,
-	g_bRoundStart,
 	g_bTransitionStart;
 
 char
@@ -277,7 +273,7 @@ enum struct esData
 			return;
 
 		if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
-			SDKCall(g_hSDKOnRevived, client); //SetEntProp(client, Prop_Send, "m_isIncapacitated", 0);
+			L4D_ReviveSurvivor(client); //SetEntProp(client, Prop_Send, "m_isIncapacitated", 0);
 
 		SetEntProp(client, Prop_Send, "m_iHealth", this.iHealth);
 		SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 1.0 * this.iTempHealth);
@@ -393,7 +389,7 @@ public Plugin myinfo =
 	name = "Player Transition Save Data",
 	author = "sorallll",
 	description = "",
-	version = "1.0.6",
+	version = "1.0.7",
 	url = "https://github.com/umlka/l4d2/tree/main/transitiotransition_save_data"
 };
 
@@ -430,10 +426,6 @@ public void OnPluginStart()
 
 	g_iAmmoOffset = FindSendPropInfo("CTerrorPlayer", "m_iAmmo");
 
-	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-	HookEvent("player_spawn", Event_PlayerSpawn);
-
 	if(g_bLateLoad)
 	{
 		for(int i = 1; i <= MaxClients; i++)
@@ -460,47 +452,13 @@ public void OnMapStart()
 
 public void OnMapEnd()
 {
-	g_bRoundStart = false;
 	g_bTransitionStart = false;
 }
 
 public void OnClientPutInServer(int client)
 {
 	if(!IsFakeClient(client))
-	{
 		g_dHooksBeginChangeLevel.HookEntity(Hook_Post, client, mreOnBeginChangeLevelPost);
-		g_dHooksEndChangeLevel.HookEntity(Hook_Post, client, mreOnEndChangeLevelPost);
-	}
-}
-
-void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
-{
-	g_bRoundStart = false;
-}
-
-void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
-{
-	g_bRoundStart = true;
-}
-
-void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
-{
-	if(g_bRoundStart)
-		return;
-
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 2 || g_aSavedPlayers.FindValue(event.GetInt("userid")) == -1)
-		return;
-
-	RequestFrame(OnNextFrame_PlayerSpawn, event.GetInt("userid"));
-}
-
-void OnNextFrame_PlayerSpawn(int client)
-{
-	if(!(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 2 || g_aSavedPlayers.FindValue(GetClientUserId(client)) == -1)
-		return;
-
-	g_esData[client].Restore(client, true);
 }
 
 any aGetOrSetPlayerAmmo(int client, const char[] sWeapon, int iAmmo = -1)
@@ -546,14 +504,8 @@ void vLoadGameData()
 	if(g_iHangingCurrentOffset == -1)
 		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::HangingCurrentHealth");
 
-	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::OnRevived") == false)
-		SetFailState("Failed to find signature: CTerrorPlayer::OnRevived");
-	g_hSDKOnRevived = EndPrepSDKCall();
-	if(g_hSDKOnRevived == null)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::OnRevived");
-
 	vSetupDynamicHooks(hGameData);
+	vSetupDetours(hGameData);
 
 	delete hGameData;
 }
@@ -562,11 +514,17 @@ void vSetupDynamicHooks(GameData hGameData = null)
 {
 	g_dHooksBeginChangeLevel = DynamicHook.FromConf(hGameData, "Hooks_CTerrorPlayer::OnBeginChangeLevel");
 	if(g_dHooksBeginChangeLevel == null)
-		SetFailState("Failed to load offset: CTerrorPlayer::OnBeginChangeLevel");
+		SetFailState("Failed to create DynamicHook: Hooks_CTerrorPlayer::OnBeginChangeLevel");
+}
 
-	g_dHooksEndChangeLevel = DynamicHook.FromConf(hGameData, "Hooks_CTerrorPlayer::OnEndChangeLevel");
-	if(g_dHooksEndChangeLevel == null)
-		SetFailState("Failed to load offset: CTerrorPlayer::OnEndChangeLevel");
+void vSetupDetours(GameData hGameData = null)
+{
+	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "Detour_CTerrorPlayer::TransitionRestore");
+	if(dDetour == null)
+		SetFailState("Failed to create DynamicDetour: Detour_CTerrorPlayer::TransitionRestore");
+		
+	if(!dDetour.Enable(Hook_Post, mreTransitionRestorePost))
+		SetFailState("Failed to detour post: Detour_CTerrorPlayer::TransitionRestore");
 }
 
 MRESReturn mreOnBeginChangeLevelPost(int pThis, DHookParam hParams)
@@ -589,9 +547,9 @@ MRESReturn mreOnBeginChangeLevelPost(int pThis, DHookParam hParams)
 	return MRES_Ignored;
 }
 
-MRESReturn mreOnEndChangeLevelPost(int pThis)
+MRESReturn mreTransitionRestorePost(int pThis)
 {
-	if(GetClientTeam(pThis) != 2)
+	if(IsFakeClient(pThis) || GetClientTeam(pThis) != 2)
 		return MRES_Ignored;
 
 	if(g_aSavedPlayers.FindValue(GetClientUserId(pThis)) != -1)
