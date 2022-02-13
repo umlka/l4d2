@@ -2247,7 +2247,6 @@ enum struct esData
 	char sActive[32];
 
 	// Save Weapon 4.3 (forked)(https://forums.alliedmods.net/showthread.php?p=2398822#post2398822)
-	// Mutant_Tanks (https://github.com/Psykotikism/Mutant_Tanks)
 	void Clean()
 	{
 		if(!this.iRecorded)
@@ -2373,12 +2372,13 @@ enum struct esData
 			strcopy(this.sSlot0, sizeof esData::sSlot0, sWeapon);
 
 			this.iClip0 = GetEntProp(iSlot, Prop_Send, "m_iClip1");
-			this.iAmmo = aGetOrSetPlayerAmmo(client, iSlot);
+			this.iAmmo = iGetOrSetPlayerAmmo(client, iSlot);
 			this.iUpgrade = GetEntProp(iSlot, Prop_Send, "m_upgradeBitVec");
 			this.iUpgradeAmmo = GetEntProp(iSlot, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded");
 			this.iWeaponSkin0 = GetEntProp(iSlot, Prop_Send, "m_nSkin");
 		}
 
+		// Mutant_Tanks (https://github.com/Psykotikism/Mutant_Tanks)
 		if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 		{
 			int iMelee = GetEntDataEnt2(client, g_iOffMelee);
@@ -2493,7 +2493,7 @@ enum struct esData
 			if(iSlot > MaxClients)
 			{
 				SetEntProp(iSlot, Prop_Send, "m_iClip1", this.iClip0);
-				aGetOrSetPlayerAmmo(client, iSlot, this.iAmmo);
+				iGetOrSetPlayerAmmo(client, iSlot, this.iAmmo);
 
 				if(this.iUpgrade > 0)
 					SetEntProp(iSlot, Prop_Send, "m_upgradeBitVec", this.iUpgrade);
@@ -2582,7 +2582,7 @@ void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = 
 }
 
 // Thanks Silvers for a better way to get or set ammo
-any aGetOrSetPlayerAmmo(int client, int iWeapon, int iAmmo = -1)
+int iGetOrSetPlayerAmmo(int client, int iWeapon, int iAmmo = -1)
 {
 	static int iAmmoOffset;
 	static int iOffPrimaryAmmoType;
