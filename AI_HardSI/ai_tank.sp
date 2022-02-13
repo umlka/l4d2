@@ -125,8 +125,8 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 
 		static float vPos[3];
 		static float vTarg[3];
-		GetAbsOrigin(client, vPos);
-		GetAbsOrigin(iTarget, vTarg);
+		GetClientAbsOrigin(client, vPos);
+		GetClientAbsOrigin(iTarget, vTarg);
 		fSpeed = GetVectorDistance(vPos, vTarg);
 		if(fSpeed < g_fTankAttackRange || fSpeed > 500.0)
 			return Plugin_Continue;
@@ -378,7 +378,6 @@ MRESReturn mreTankRockReleasePre(int pThis, DHookParam hParams)
 	static float vTarg[3];
 	static float vVectors[3];
 	GetClientAbsOrigin(iTarget, vTarg);
-
 	GetClientAbsOrigin(iThrower, vRock);
 	float fDelta = GetVectorDistance(vRock, vTarg) / g_fTankThrowForce * PLAYER_HEIGHT;
 
