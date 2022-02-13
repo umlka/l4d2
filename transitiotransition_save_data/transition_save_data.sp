@@ -30,6 +30,7 @@ char
 enum struct esData
 {
 	int iRecorded;
+	int iRestored;
 	int iCharacter;
 	int iHealth;
 	int iTempHealth;
@@ -57,13 +58,13 @@ enum struct esData
 	char sActive[32];
 
 	// Save Weapon 4.3 (forked)(https://forums.alliedmods.net/showthread.php?p=2398822#post2398822)
-	// Mutant_Tanks (https://github.com/Psykotikism/Mutant_Tanks)
 	void Clean()
 	{
 		if(!this.iRecorded)
 			return;
 	
 		this.iRecorded = 0;
+		this.iRestored = 0;
 		this.iCharacter = -1;
 		this.iReviveCount = 0;
 		this.iThirdStrike = 0;
@@ -183,12 +184,13 @@ enum struct esData
 			strcopy(this.sSlot0, sizeof esData::sSlot0, sWeapon);
 
 			this.iClip0 = GetEntProp(iSlot, Prop_Send, "m_iClip1");
-			this.iAmmo = aGetOrSetPlayerAmmo(client, iSlot);
+			this.iAmmo = iGetOrSetPlayerAmmo(client, iSlot);
 			this.iUpgrade = GetEntProp(iSlot, Prop_Send, "m_upgradeBitVec");
 			this.iUpgradeAmmo = GetEntProp(iSlot, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded");
 			this.iWeaponSkin0 = GetEntProp(iSlot, Prop_Send, "m_nSkin");
 		}
 
+		// Mutant_Tanks (https://github.com/Psykotikism/Mutant_Tanks)
 		if(GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 		{
 			int iMelee = GetEntDataEnt2(client, g_iOffMelee);
@@ -303,7 +305,7 @@ enum struct esData
 			if(iSlot > MaxClients)
 			{
 				SetEntProp(iSlot, Prop_Send, "m_iClip1", this.iClip0);
-				aGetOrSetPlayerAmmo(client, iSlot, this.iAmmo);
+				iGetOrSetPlayerAmmo(client, iSlot, this.iAmmo);
 
 				if(this.iUpgrade > 0)
 					SetEntProp(iSlot, Prop_Send, "m_upgradeBitVec", this.iUpgrade);
@@ -387,7 +389,7 @@ public Plugin myinfo =
 	name = "Player Transition Save Data",
 	author = "sorallll",
 	description = "Fixed 4+ players' equipment chaotic bug after the transition",
-	version = "1.0.7",
+	version = "1.0.8",
 	url = "https://forums.alliedmods.net/showthread.php?t=336287"
 };
 
@@ -428,10 +430,6 @@ public void OnMapStart()
 	}
 
 	g_sTargetMap[0] = '\0';
-}
-
-public void OnMapEnd()
-{
 	g_bTransitionStart = false;
 }
 
@@ -442,7 +440,7 @@ public void OnClientPutInServer(int client)
 }
 
 // Thanks Silvers for a better way to get or set ammo
-any aGetOrSetPlayerAmmo(int client, int iWeapon, int iAmmo = -1)
+int iGetOrSetPlayerAmmo(int client, int iWeapon, int iAmmo = -1)
 {
 	int iOffset = GetEntData(iWeapon, g_iOffPrimaryAmmoType) * 4; // Thanks to "Root" or whoever for this method of not hard-coding offsets: https://github.com/zadroot/AmmoManager/blob/master/scripting/ammo_manager.sp
 	if(iOffset)
@@ -532,7 +530,7 @@ MRESReturn mreTransitionRestorePost(int pThis)
 		return MRES_Ignored;
 
 	if(g_aSavedPlayers.FindValue(GetClientUserId(pThis)) != -1)
-		g_esData[pThis].Restore(pThis, true);
+		g_esData[pThis].Restore(pThis, !g_esData[pThis].iRestored);
 
 	return MRES_Ignored;
 }
