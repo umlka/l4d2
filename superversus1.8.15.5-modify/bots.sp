@@ -318,12 +318,13 @@ public void OnPluginStart()
 	g_hGiveWeaponType.AddChangeHook(vWeaponConVarChanged);
 	g_hGiveWeaponTime.AddChangeHook(vWeaponConVarChanged);
 	
-	AutoExecConfig(true, "bots");
+	//AutoExecConfig(true, "bots");
 
 	RegConsoleCmd("sm_spec", cmdJoinSpectator, "加入旁观者");
 	RegConsoleCmd("sm_join", cmdJoinSurvivor, "加入生还者");
 	RegConsoleCmd("sm_tkbot", cmdTakeOverBot, "接管指定BOT");
 	RegConsoleCmd("sm_teams", cmdTeamPanel, "团队菜单");
+
 	RegAdminCmd("sm_afk", cmdGoAFK, ADMFLAG_RCON, "闲置");
 	RegAdminCmd("sm_kb", cmdKickBot, ADMFLAG_RCON, "踢出所有生还者Bot");
 	RegAdminCmd("sm_botset", cmdBotSet, ADMFLAG_RCON, "设置开局Bot的数量");
@@ -426,6 +427,7 @@ Action cmdJoinSurvivor(int client, int args)
 					if(!IsPlayerAlive(client))
 					{
 						vRoundRespawn(client);
+						vSetGodMode(client, 3.0);
 						vTeleportToSurvivor(client);
 					}
 				}
@@ -437,7 +439,10 @@ Action cmdJoinSurvivor(int client, int args)
 			else if(IsPlayerAlive(iBot))
 			{
 				if(bCanRespawn)
+				{
+					vSetGodMode(iBot, 3.0);
 					vTeleportToSurvivor(iBot);
+				}
 				else
 				{
 					vRemovePlayerWeapons(iBot);
@@ -451,6 +456,7 @@ Action cmdJoinSurvivor(int client, int args)
 			if(!IsPlayerAlive(iBot))
 			{
 				vRoundRespawn(iBot);
+				vSetGodMode(iBot, 3.0);
 				vTeleportToSurvivor(iBot);
 			}
 
@@ -865,7 +871,7 @@ Action tmrBotsUpdate(Handle timer)
 {
 	g_hBotsUpdateTimer = null;
 
-	if(!SDKCall(g_hSDKIsInTransition, g_pDirector)/*bAreAllInGame()*/)
+	if(!SDKCall(g_hSDKIsInTransition, g_pDirector))
 		vSpawnCheck();
 	else
 		g_hBotsUpdateTimer = CreateTimer(1.0, tmrBotsUpdate);
@@ -914,6 +920,7 @@ void vSpawnFakeSurvivorClient()
 		if(!IsPlayerAlive(iBot))
 			vRoundRespawn(iBot);
 
+		vSetGodMode(iBot, 3.0);
 		vTeleportToSurvivor(iBot);
 	}
 }
@@ -1514,7 +1521,7 @@ void vDisplayTeamPanel(int client)
 		hPanel.DrawText(sBuffer);
 	}
 
-	FormatEx(sBuffer, sizeof sBuffer, "生还者 (%d/%d) - %d Bot(s)", iGetTeamPlayers(TEAM_SURVIVOR, false), g_iSurvivorLimitSet, iCountAvailableSurvivorBots());
+	FormatEx(sBuffer, sizeof sBuffer, "生还者 (%d/%d) - %d Bot(s)", iGetTeamPlayers(TEAM_SURVIVOR, false), g_iSurvivorLimitSet, iCountSurvivorBots());
 	hPanel.DrawItem(sBuffer);
 
 	for(i = 1; i <= MaxClients; i++)
@@ -1590,7 +1597,7 @@ int iTeamPanelHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-int iCountAvailableSurvivorBots()
+int iCountSurvivorBots()
 {
 	int iBot;
 	for(int i = 1; i <= MaxClients; i++)
@@ -1724,10 +1731,7 @@ int iCreateSurvivorBot()
 	g_bInSpawnTime = true;
 	int iBot = SDKCall(g_hSDKNextBotCreateSurvivorBot, NULL_STRING);
 	if(iBot)
-	{
 		ChangeClientTeam(iBot, 2);
-		vSetGodMode(iBot, 3.0);
-	}
 
 	g_bInSpawnTime = false;
 	return iBot;
@@ -1740,10 +1744,10 @@ void vRoundRespawn(int client)
 	SDKCall(g_hSDKRoundRespawn, client);
 	g_bInSpawnTime = false;
 	vStatsConditionPatch(false);
-	vSetGodMode(client, 3.0);
 }
 
 /**
+// https://github.com/bcserv/smlib/blob/transitional_syntax/scripting/include/smlib/clients.inc#:~:text=Spectator%20Movement%20modes-,enum%20Obs_Mode,-%7B
 // Spectator Movement modes
 enum Obs_Mode
 {
