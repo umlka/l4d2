@@ -44,11 +44,10 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 		return;
 
 	int entity = GetEntDataEnt2(client, g_iOffHiddenWeapon);
-	if(entity > MaxClients && IsValidEntity(entity))
+	if(entity > MaxClients && IsValidEntity(entity) && GetEntPropEnt(entity, Prop_Data, "m_hOwnerEntity") == client)
 	{
-		float vTarget[3];
-		//GetClientAbsOrigin(client, vTarget);
-		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vTarget);
-		SDKHooks_DropWeapon(client, entity, vTarget, NULL_VECTOR, false);
+		float vecTarget[3];
+		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vecTarget);
+		SDKHooks_DropWeapon(client, entity, vecTarget, NULL_VECTOR, false);
 	}
 }
