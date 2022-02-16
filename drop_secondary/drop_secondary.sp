@@ -47,7 +47,8 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 	if(entity > MaxClients && IsValidEntity(entity))
 	{
 		float vTarget[3];
-		GetClientAbsOrigin(client, vTarget);
+		//GetClientAbsOrigin(client, vTarget);
+		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vTarget);
 		SDKHooks_DropWeapon(client, entity, vTarget, NULL_VECTOR, false);
 	}
 }
