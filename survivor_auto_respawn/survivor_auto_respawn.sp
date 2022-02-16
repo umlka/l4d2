@@ -401,7 +401,7 @@ public void OnPluginStart()
 	g_esWeapon[3].cFlags =	CreateConVar("sar_respawn_slot3", 	"1", 		"槽位3给什么 \n0=不给,15=所有.", CVAR_FLAGS);
 	g_esWeapon[4].cFlags =	CreateConVar("sar_respawn_slot4", 	"3", 		"槽位4给什么 \n0=不给,3=所有.", CVAR_FLAGS);
 	g_hGiveWeaponType =		CreateConVar("sar_give_type", 		"0", 		"根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器).");
-	g_hRemoveDeathDrop =	CreateConVar("sar_remove_drop", 	"1", 		"是否移除玩家死亡掉落的武器.", CVAR_FLAGS);
+	g_hRemoveDeathDrop =	CreateConVar("sar_remove_drop", 	"0", 		"是否移除玩家死亡掉落的武器.", CVAR_FLAGS);
 
 	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
 	g_hAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
@@ -415,7 +415,7 @@ public void OnPluginStart()
 		g_esWeapon[i].cFlags.AddChangeHook(vWeaponConVarChanged);
 	g_hRemoveDeathDrop.AddChangeHook(vWeaponConVarChanged);
 		
-	AutoExecConfig(true, "survivor_auto_respawn");
+	//AutoExecConfig(true, "survivor_auto_respawn");
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
@@ -451,7 +451,6 @@ void vGetCvars()
 {
 	g_iRespawnTime = g_hRespawnTime.IntValue;
 	g_iRespawnLimit = g_hRespawnLimit.IntValue;
-	g_bRemoveDeathDrop = g_hRemoveDeathDrop.BoolValue;
 	g_bAllowSurvivorBot = g_hAllowSurvivorBot.BoolValue;
 	g_bAllowSurvivorIdle = g_hAllowSurvivorIdle.BoolValue;
 }
@@ -467,6 +466,7 @@ void vGetWeaponCvars()
 	}
 
 	g_bGiveWeaponType = iNullSlot < MAX_SLOTS ? g_hGiveWeaponType.BoolValue : false;
+	g_bRemoveDeathDrop = g_hRemoveDeathDrop.BoolValue;
 }
 
 int iGetSlotAllowed(int iSlot)
