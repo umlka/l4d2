@@ -1871,7 +1871,7 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 	if(iSurvivor)
 	{
 		SetEntProp(client, Prop_Send, "m_bDucked", 1);
-		SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
+		SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags")|FL_DUCKING);
 
 		float vPos[3];
 		GetClientAbsOrigin(iSurvivor, vPos);
@@ -1899,41 +1899,43 @@ Action tmrMortal(Handle timer, int client)
 	return Plugin_Continue;
 }
 
-int iGetAnyValidAliveSurvivorBot()
+int iFindUselessSurvivorBot(bool bAlive)
 {
 	int client;
 	ArrayList aClients = new ArrayList(2);
-	
+
 	for(int i = MaxClients; i >= 1; i--)
 	{
-		if(!bIsValidAliveSurvivorBot(i))
+		if(!IsClientInGame(i) || IsClientInKickQueue(i) || !IsFakeClient(i) || GetClientTeam(i) != 2 || iGetIdlePlayerOfBot(i))
 			continue;
 
-		aClients.Set(aClients.Push(!(client = GetClientOfUserId(g_esPlayer[i].iBotPlayer)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 2 ? 0 : 1), i, 1);
+		aClients.Set(aClients.Push(IsPlayerAlive(i) == bAlive ? (!(client = GetClientOfUserId(g_esPlayer[i].iBotPlayer)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 2 ? 0 : 1) : (!(client = GetClientOfUserId(g_esPlayer[i].iBotPlayer)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 2 ? 2 : 3)), i, 1);
 	}
 
 	if(!aClients.Length)
 		client = 0;
 	else
 	{
-		aClients.Sort(Sort_Ascending, Sort_Integer);
-		client = aClients.Get(0, 1);
+		aClients.Sort(Sort_Descending, Sort_Integer);
+
+		client = aClients.Length - 1;
+		client = aClients.Get(GetRandomInt(aClients.FindValue(aClients.Get(client, 0)), client), 1);
 	}
 
 	delete aClients;
 	return client;
 }
 
-bool bIsValidAliveSurvivorBot(int client)
+bool bIsValidSurvivorBot(int client)
 {
-	return IsClientInGame(client) && !IsClientInKickQueue(client) && IsFakeClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client) && !bIsValidSpectator(iGetIdlePlayerOfBot(client));
+	return IsClientInGame(client) && !IsClientInKickQueue(client) && IsFakeClient(client) && GetClientTeam(client) == 2 && !iGetIdlePlayerOfBot(client);
 }
 
 int iGetBotOfIdlePlayer(int client)
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == 2 && (iGetIdlePlayerOfBot(i) == client))
+		if(IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == 2 && iGetIdlePlayerOfBot(i) == client)
 			return i;
 	}
 	return 0;
@@ -1947,11 +1949,6 @@ int iGetIdlePlayerOfBot(int client)
 		return 0;
 
 	return GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));
-}
-
-bool bIsValidSpectator(int client)
-{
-	return client > 0 && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1;
 }
 
 int iTakeOverTank(int tank)
@@ -2188,8 +2185,8 @@ void vChangeTeamToSurvivor(int client)
 		SetEntProp(client, Prop_Send, "m_isGhost", 0); // SDKCall(g_hSDKMaterializeFromGhost, client);
 
 	int iBot = GetClientOfUserId(g_esPlayer[client].iPlayerBot);
-	if(!iBot || !bIsValidAliveSurvivorBot(iBot))
-		iBot = iGetAnyValidAliveSurvivorBot();
+	if(!iBot || !bIsValidSurvivorBot(iBot))
+		iBot = iFindUselessSurvivorBot(true);
 
 	if(iTeam != 1)
 		ChangeClientTeam(client, 1);
@@ -2200,17 +2197,15 @@ void vChangeTeamToSurvivor(int client)
 		SDKCall(g_hSDKTakeOverBot, client, true);
 	}
 	else
-	{
 		ChangeClientTeam(client, 2);
 
-		if(bIsRoundStarted())
-		{
-			if(!IsPlayerAlive(client))
-				vRoundRespawn(client);
+	if(bIsRoundStarted())
+	{
+		if(!IsPlayerAlive(client))
+			vRoundRespawn(client);
 
-			vSetGodMode(client, 1.0);
-			vTeleportToSurvivor(client);
-		}
+		vSetGodMode(client, 1.0);
+		vTeleportToSurvivor(client);
 	}
 
 	g_esData[client].Restore(client, false);
@@ -2581,24 +2576,15 @@ void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = 
 	SetCommandFlags(sCommand, iCmdFlags);
 }
 
-// Thanks Silvers for a better way to get or set ammo
 int iGetOrSetPlayerAmmo(int client, int iWeapon, int iAmmo = -1)
 {
-	static int iAmmoOffset;
-	static int iOffPrimaryAmmoType;
-	if(iAmmoOffset < 1)
-		iAmmoOffset = FindSendPropInfo("CTerrorPlayer", "m_iAmmo");
-
-	if(iOffPrimaryAmmoType < 1)
-		iOffPrimaryAmmoType = FindSendPropInfo("CBaseCombatWeapon", "m_iPrimaryAmmoType");
-
-	int iOffset = GetEntData(iWeapon, iOffPrimaryAmmoType) * 4; // Thanks to "Root" or whoever for this method of not hard-coding offsets: https://github.com/zadroot/AmmoManager/blob/master/scripting/ammo_manager.sp
-	if(iOffset)
+	int m_iPrimaryAmmoType = GetEntProp(iWeapon, Prop_Send, "m_iPrimaryAmmoType");
+	if(m_iPrimaryAmmoType != -1)
 	{
 		if(iAmmo != -1)
-			SetEntData(client, iAmmoOffset + iOffset, iAmmo);
+			SetEntProp(client, Prop_Send, "m_iAmmo", iAmmo, _, m_iPrimaryAmmoType);
 		else
-			return GetEntData(client, iAmmoOffset + iOffset);
+			return GetEntProp(client, Prop_Send, "m_iAmmo", _, m_iPrimaryAmmoType);
 	}
 
 	return 0;
