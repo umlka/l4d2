@@ -594,10 +594,8 @@ Action tmrTankSpawn(Handle timer, int client)
 	int iTotalWeight;
 	for(int i; i < NUM_TYPES_INFECTED; i++)
 	{
-		g_iSpawnLimitsCache[i] = g_iSpawnLimits[i];
-		iTotalLimit += g_iSpawnLimitsCache[i];
-		g_iSpawnWeightsCache[i] = g_iSpawnWeights[i];
-		iTotalWeight += g_iSpawnWeightsCache[i];
+		iTotalLimit += g_iSpawnLimits[i];
+		iTotalWeight += g_iSpawnWeights[i];
 	}
 
 	if(iTotalLimit && iTotalWeight)
@@ -610,7 +608,6 @@ void OnNextFrame_KickBot(any client)
 {
 	if((client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsClientInKickQueue(client) && IsFakeClient(client))
 		KickClient(client);
-
 }
 
 bool bFindTank(int client)
@@ -629,7 +626,6 @@ Action tmrTankDisconnectCheck(Handle timer)
 		return Plugin_Stop;
 
 	vTankSpawnDeathActoin(false);
-
 	return Plugin_Continue;
 }
 
@@ -641,6 +637,11 @@ void vTankSpawnDeathActoin(bool bIsTankAlive)
 		if(!bLoad && g_iTankSpawnAction)
 		{
 			bLoad = true;
+			for(int i; i < NUM_TYPES_INFECTED; i++)
+			{
+				g_iSpawnLimitsCache[i] = g_iSpawnLimits[i];
+				g_iSpawnWeightsCache[i] = g_iSpawnWeights[i];
+			}
 			vLoadCacheTankCustom();
 		}
 	}
