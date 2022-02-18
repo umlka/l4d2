@@ -11,7 +11,6 @@ Address
 	g_pSavedPlayerCount;
 
 MemoryPatch
-	g_mpRestoreState,
 	g_mpRestoreByUserId;
 
 Handle
@@ -38,7 +37,6 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	vLoadGameData();
-	g_mpRestoreState.Enable();
 
 	g_hRestartRestoreUid = CreateConVar("restart_restore_by_userid", "0", "Restore data by player's UserId after mission lost?", FCVAR_NOTIFY);
 	g_hRestartRestoreUid.AddChangeHook(vConVarChanged);
@@ -48,7 +46,6 @@ public void OnPluginStart()
 
 public void OnPluginEnd()
 {
-	g_mpRestoreState.Disable();
 	g_mpRestoreByUserId.Disable();
 }
 
@@ -90,13 +87,6 @@ void vLoadGameData()
 	g_pSavedPlayerCount = hGameData.GetAddress("SavedPlayerCount");
 	if(!g_pSavedPlayerCount)
 		SetFailState("Failed to find address: SavedPlayerCount");
-
-	g_mpRestoreState = MemoryPatch.CreateFromConf(hGameData, "CTerrorPlayer::OnEndChangeLevel::restoreState");
-	if(!g_mpRestoreState)
-		SetFailState("Failed to create MemoryPatch: CTerrorPlayer::OnEndChangeLevel::restoreState");
-
-	if(!g_mpRestoreState.Validate())
-		SetFailState("Failed to validate MemoryPatch: CTerrorPlayer::OnEndChangeLevel::restoreState");
 
 	g_mpRestoreByUserId = MemoryPatch.CreateFromConf(hGameData, "CTerrorPlayer::TransitionRestore::RestoreByUserId");
 	if(!g_mpRestoreByUserId)

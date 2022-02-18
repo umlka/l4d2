@@ -15,23 +15,6 @@
 
 		"MemPatches"
 		{
-			"CTerrorPlayer::OnEndChangeLevel::restoreState"
-			{
-				"signature"		"CTerrorPlayer::OnEndChangeLevel"
-				"linux"
-				{
-					"offset"	"156h"
-					"verify"	"\x74"
-					"patch"		"\x79"
-				}
-				
-				"windows"
-				{
-					"offset"	"E6h"
-					"verify"	"\x74"
-					"patch"		"\x79"
-				}
-			}
 			"CTerrorPlayer::TransitionRestore::RestoreByUserId"
 			{
 				"signature"		"CTerrorPlayer::TransitionRestore"
