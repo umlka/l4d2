@@ -6,65 +6,44 @@
 
 #define GAMEDATA	"transition_restore_fix"
 
+Address
+	//g_pSavedPlayers,
+	g_pSavedPlayerCount;
+
 MemoryPatch
 	g_mpRestoreState,
 	g_mpRestoreByUserId;
 
-DynamicHook
-	g_dBeginChangeLevel;
-
-ArrayList
-	g_aSavedPlayers;
+Handle
+	g_hSDKKeyValuesGetInt;
 
 ConVar
 	g_hRestartRestoreUid;
 
-int
-	g_iRoundEnd;
-
 bool
-	g_bLateLoad,
-	g_bTransitionStart,
 	g_bRestartRestoreUid;
 
-char
-	g_sTargetMap[64];
+int
+	g_iRoundEnd;
 
 public Plugin myinfo = 
 {
 	name = "Transition Restore Fix",
 	author = "sorallll",
 	description = "Restoring transition data by player's UserId instead of character",
-	version = "1.0.9",
+	version = "1.1.0",
 	url = "https://forums.alliedmods.net/showthread.php?t=336287"
 };
-
-public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
-{
-	g_bLateLoad = late;
-	return APLRes_Success;
-}
 
 public void OnPluginStart()
 {
 	vLoadGameData();
 	g_mpRestoreState.Enable();
 
-	g_aSavedPlayers = new ArrayList();
-
 	g_hRestartRestoreUid = CreateConVar("restart_restore_by_userid", "0", "Restore data by player's UserId after mission lost?", FCVAR_NOTIFY);
 	g_hRestartRestoreUid.AddChangeHook(vConVarChanged);
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-
-	if(g_bLateLoad)
-	{
-		for(int i = 1; i <= MaxClients; i++)
-		{
-			if(IsClientInGame(i))
-				OnClientPutInServer(i);
-		}
-	}
 }
 
 public void OnPluginEnd()
@@ -81,23 +60,6 @@ public void OnConfigsExecuted()
 void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	g_bRestartRestoreUid = g_hRestartRestoreUid.BoolValue;
-}
-
-public void OnClientPutInServer(int client)
-{
-	if(!IsFakeClient(client))
-		g_dBeginChangeLevel.HookEntity(Hook_Post, client, mreOnBeginChangeLevelPost);
-}
-
-public void OnMapStart()
-{
-	char sMap[64];
-	GetCurrentMap(sMap, sizeof sMap);
-	if(strcmp(sMap, g_sTargetMap, false) != 0)
-		g_aSavedPlayers.Clear();
-
-	g_sTargetMap[0] = '\0';
-	g_bTransitionStart = false;
 }
 
 public void OnMapEnd()
@@ -121,6 +83,14 @@ void vLoadGameData()
 	if(hGameData == null)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
+	/**g_pSavedPlayers = hGameData.GetAddress("g_SavedPlayers");
+	if(!g_pSavedPlayers)
+		SetFailState("Failed to find address: g_SavedPlayers");*/
+
+	g_pSavedPlayerCount = hGameData.GetAddress("SavedPlayerCount");
+	if(!g_pSavedPlayerCount)
+		SetFailState("Failed to find address: SavedPlayerCount");
+
 	g_mpRestoreState = MemoryPatch.CreateFromConf(hGameData, "CTerrorPlayer::OnEndChangeLevel::restoreState");
 	if(!g_mpRestoreState)
 		SetFailState("Failed to create MemoryPatch: CTerrorPlayer::OnEndChangeLevel::restoreState");
@@ -135,17 +105,19 @@ void vLoadGameData()
 	if(!g_mpRestoreByUserId.Validate())
 		SetFailState("Failed to validate MemoryPatch: CTerrorPlayer::TransitionRestore::RestoreByUserId");
 
-	vSetupHooks(hGameData);
+	StartPrepSDKCall(SDKCall_Raw);
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::GetInt"))
+		SetFailState("Failed to find signature: KeyValues::GetInt");
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	g_hSDKKeyValuesGetInt = EndPrepSDKCall();
+	if(!g_hSDKKeyValuesGetInt)
+		SetFailState("Failed to create SDKCall: KeyValues::GetInt");
+
 	vSetupDetours(hGameData);
 
 	delete hGameData;
-}
-
-void vSetupHooks(GameData hGameData = null)
-{
-	g_dBeginChangeLevel = DynamicHook.FromConf(hGameData, "Hooks_CTerrorPlayer::OnBeginChangeLevel");
-	if(!g_dBeginChangeLevel)
-		SetFailState("Failed to create DynamicHook: Hooks_CTerrorPlayer::OnBeginChangeLevel");
 }
 
 void vSetupDetours(GameData hGameData = null)
@@ -161,32 +133,15 @@ void vSetupDetours(GameData hGameData = null)
 		SetFailState("Failed to detour post: Detour_CTerrorPlayer::TransitionRestore");
 }
 
-MRESReturn mreOnBeginChangeLevelPost(int pThis, DHookParam hParams)
-{
-	if(!g_bTransitionStart)
-	{
-		g_aSavedPlayers.Clear();
-		g_bTransitionStart = true;
-		hParams.GetString(1, g_sTargetMap, sizeof g_sTargetMap);
-	}
-
-	if(GetClientTeam(pThis) != 2)
-		return MRES_Ignored;
-
-	g_aSavedPlayers.Push(GetClientUserId(pThis));
-	return MRES_Ignored;
-}
-
 MRESReturn mreTransitionRestorePre(int pThis)
 {
 	if(!g_bRestartRestoreUid && g_iRoundEnd)
 		return MRES_Ignored;
 
-	if(IsFakeClient(pThis) || g_aSavedPlayers.FindValue(GetClientUserId(pThis)) == -1)
-		g_mpRestoreByUserId.Disable();
-	else
-		g_mpRestoreByUserId.Enable();
+	if(IsFakeClient(pThis) || !bPlayerSavedData(GetClientUserId(pThis)))
+		return MRES_Ignored;
 
+	g_mpRestoreByUserId.Enable();
 	return MRES_Ignored;
 }
 
@@ -194,4 +149,29 @@ MRESReturn mreTransitionRestorePost(int pThis)
 {
 	g_mpRestoreByUserId.Disable();
 	return MRES_Ignored;
+}
+
+// 读取玩家过关时保存的userID
+bool bPlayerSavedData(int userid)
+{
+	int iSavedPlayerCount = LoadFromAddress(g_pSavedPlayerCount, NumberType_Int32);
+	if(!iSavedPlayerCount)
+		return false;
+
+	Address pSavedPlayers = LoadFromAddress(g_pSavedPlayerCount + view_as<Address>(4)/*g_pSavedPlayers*/, NumberType_Int32);
+	if(!pSavedPlayers)
+		return false;
+
+	Address pThis;
+	for(int i; i < iSavedPlayerCount; i++)
+	{
+		pThis = LoadFromAddress(pSavedPlayers + view_as<Address>(4 * i), NumberType_Int32);
+		if(!pThis)
+			continue;
+
+		if(SDKCall(g_hSDKKeyValuesGetInt, pThis, "userID", 0) == userid)
+			return true;
+	}
+
+	return false;
 }

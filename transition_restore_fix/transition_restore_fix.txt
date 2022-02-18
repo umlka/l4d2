@@ -4,20 +4,6 @@
 	{
 		"Functions"
 		{
-			"Hooks_CTerrorPlayer::OnBeginChangeLevel"
-			{
-				"offset"	"CTerrorPlayer::OnBeginChangeLevel"
-				"hooktype"	"entity"
-				"return"	"void"
-				"this"		"entity"
-				"arguments"
-				{
-					"targetMap"
-					{
-						"type"	"charptr"
-					}
-				}
-			}
 			"Detour_CTerrorPlayer::TransitionRestore"
 			{
 				"signature"		"CTerrorPlayer::TransitionRestore"
@@ -65,18 +51,42 @@
 			}
 		}
 
-		"Offsets"
+		"Addresses"
 		{
-			/* CTerrorPlayer::OnBeginChangeLevel(CTerrorPlayer *__hidden this, const char *) */
-			"CTerrorPlayer::OnBeginChangeLevel"
+			"g_SavedPlayers"
 			{
-				"linux"		"561"
-				"windows"	"560"
+				"linux"
+				{
+					"signature"	"g_SavedPlayers"
+				}
+				"windows"
+				{
+					"signature"	"CTerrorPlayer::OnEndChangeLevel"
+					"read"		"98"
+				}
+			}
+			"SavedPlayerCount"
+			{
+				"linux"
+				{
+					"signature"	"CTerrorPlayer::OnEndChangeLevel"
+					"read"		"30"
+				}
+				"windows"
+				{
+					"signature"	"CTerrorPlayer::OnEndChangeLevel"
+					"read"		"29"	
+				}
 			}
 		}
 
 		"Signatures" 
 		{
+			"g_SavedPlayers"
+			{
+				"library"	"server"
+				"linux"		"@_ZL14g_SavedPlayers"
+			}
 			/* CTerrorPlayer::OnEndChangeLevel(CTerrorPlayer *__hidden this) */
 			"CTerrorPlayer::OnEndChangeLevel"
 			{
@@ -92,6 +102,14 @@
 				"linux"		"@_ZN13CTerrorPlayer17TransitionRestoreEv"
 				"windows"	"\x55\x8B\xEC\x51\x56\x8B\xF1\x80\xBE\x88\x33\x00\x00\x00"
 				/* 55 8B EC 51 56 8B F1 80 BE 88 33 00 00 00 */
+			}
+			/* KeyValues::GetInt(KeyValues *__hidden this, const char *s, int) */
+			"KeyValues::GetInt"
+			{
+				"library"	"server"
+				"linux"		"@_ZN9KeyValues6GetIntEPKci"
+				"windows"	"\x55\x8B\x2A\x8B\x2A\x2A\x6A\x2A\x50\xE8\x2A\x2A\x2A\x2A\x85\x2A\x74\x2A\x0F\x2A\x2A\x2A\x49"
+				/* 55 8B ? 8B ? ? 6A ? 50 E8 ? ? ? ? 85 ? 74 ? 0F ? ? ? 49 */
 			}
 		}
 	}
