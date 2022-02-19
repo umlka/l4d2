@@ -7,7 +7,7 @@
 #define GAMEDATA	"transition_restore_fix"
 
 Address
-	g_pSavedPlayers,
+	//g_pSavedPlayers,
 	g_pSavedPlayerCount;
 
 Handle
@@ -80,9 +80,9 @@ void vInitGameData()
 	if(!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
-	g_pSavedPlayers = hGameData.GetAddress("g_SavedPlayers");
+	/**g_pSavedPlayers = hGameData.GetAddress("g_SavedPlayers");
 	if(!g_pSavedPlayers)
-		SetFailState("Failed to find address: g_SavedPlayers");
+		SetFailState("Failed to find address: g_SavedPlayers");*/
 
 	g_pSavedPlayerCount = hGameData.GetAddress("SavedPlayerCount");
 	if(!g_pSavedPlayerCount)
