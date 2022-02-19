@@ -41,6 +41,8 @@ public void OnPluginStart()
 	g_hRestartRestoreUid = CreateConVar("restart_restore_by_userid", "0", "Restore data by player's UserId after mission lost?", FCVAR_NOTIFY);
 	g_hRestartRestoreUid.AddChangeHook(vConVarChanged);
 
+	AutoExecConfig(true, "transition_restore_fix");
+
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 }
 
@@ -152,14 +154,14 @@ bool bPlayerSavedData(int userid)
 	if(!iSavedPlayerCount)
 		return false;
 
-	Address pSavedPlayers = LoadFromAddress(g_pSavedPlayerCount + view_as<Address>(4)/*g_pSavedPlayers*/, NumberType_Int32);
+	Address pSavedPlayers = view_as<Address>(LoadFromAddress(g_pSavedPlayerCount + view_as<Address>(4)/*g_pSavedPlayers*/, NumberType_Int32));
 	if(!pSavedPlayers)
 		return false;
 
 	Address pThis;
 	for(int i; i < iSavedPlayerCount; i++)
 	{
-		pThis = LoadFromAddress(pSavedPlayers + view_as<Address>(4 * i), NumberType_Int32);
+		pThis = view_as<Address>(LoadFromAddress(pSavedPlayers + view_as<Address>(4 * i), NumberType_Int32));
 		if(!pThis)
 			continue;
 
