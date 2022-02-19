@@ -30,7 +30,7 @@ public Plugin myinfo =
 	name = "Transition Restore Fix",
 	author = "sorallll",
 	description = "Restoring transition data by player's UserId instead of character",
-	version = "1.1.0",
+	version = "1.1.1",
 	url = "https://forums.alliedmods.net/showthread.php?t=336287"
 };
 
