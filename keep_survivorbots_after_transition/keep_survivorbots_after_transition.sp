@@ -1,7 +1,6 @@
 #pragma semicolon 1
 #pragma newdecls required
 #include <sourcemod>
-#include <dhooks>
 
 #define GAMEDATA	"keep_survivorbots_after_transition"
 
