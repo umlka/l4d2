@@ -12,7 +12,7 @@
 				}
 				"windows"
 				{
-					"signature"	"RestoreTransitionedSurvivorBots"			
+					"signature"	"RestoreTransitionedSurvivorBots"
 				}
 			}
 			"SavedSurvivorBotCount"
@@ -25,7 +25,7 @@
 				"windows"
 				{
 					"signature"	"RestoreTransitionedSurvivorBots"
-					"read"		"4"			
+					"read"		"4"
 				}
 			}
 		}

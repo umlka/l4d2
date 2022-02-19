@@ -1,6 +1,7 @@
 #pragma semicolon 1
 #pragma newdecls required
 #include <sourcemod>
+#include <dhooks>
 
 #define GAMEDATA	"keep_survivorbots_after_transition"
 
@@ -19,8 +20,8 @@ public Plugin myinfo =
 {
 	name = "Keep SurvivorBots After Transition",
 	author = "sorallll",
-	description = "",
-	version = "1.0.2",
+	description = "4 + Survivor Bots will no longer disappear after the transition",
+	version = "1.0.3",
 	url = "https://forums.alliedmods.net/showthread.php?t=336245"
 };
 
@@ -32,31 +33,31 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 public void OnPluginStart()
 {
-	vLoadGameData();
+	vInitGameData();
 
 	if(g_bLateLoad)
-		vMaxRestoreSurvivorBotsPatch(true);
+		vPatch(true);
 }
 
 public void OnPluginEnd()
 {
-	vMaxRestoreSurvivorBotsPatch(false);
+	vPatch(false);
 }
 
-public void OnMapEnd()
+public void OnMapStart()
 {
-	vMaxRestoreSurvivorBotsPatch(true);
+	vPatch(true);
 }
 
-void vLoadGameData()
+void vInitGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false)
+	if(!FileExists(sPath))
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null)
+	if(!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	g_bWindowsOS = hGameData.GetOffset("OS") == 0;
@@ -65,12 +66,12 @@ void vLoadGameData()
 	if(!g_pSavedSurvivorBotCount)
 		SetFailState("Failed to find address: SavedSurvivorBotCount");
 
-	vRegisterMaxRestoreSurvivorBotsPatch(hGameData);
+	vInitPatch(hGameData);
 
 	delete hGameData;
 }
 
-void vRegisterMaxRestoreSurvivorBotsPatch(GameData hGameData = null)
+void vInitPatch(GameData hGameData = null)
 {
 	int iOffset = hGameData.GetOffset("MaxRestoreSurvivorBots_Offset");
 	if(iOffset == -1)
@@ -95,7 +96,7 @@ void vRegisterMaxRestoreSurvivorBotsPatch(GameData hGameData = null)
 		SetFailState("Failed to find offset: MaxRestoreSurvivorBots_Origin");
 }
 
-void vMaxRestoreSurvivorBotsPatch(bool bPatch)
+void vPatch(bool bPatch)
 {
 	switch(bPatch)
 	{
