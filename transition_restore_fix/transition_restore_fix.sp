@@ -7,14 +7,14 @@
 #define GAMEDATA	"transition_restore_fix"
 
 Address
-	//g_pSavedPlayers,
+	g_pSavedPlayers,
 	g_pSavedPlayerCount;
-
-MemoryPatch
-	g_mpRestoreByUserId;
 
 Handle
 	g_hSDKKeyValuesGetInt;
+
+MemoryPatch
+	g_mpRestoreByUserId;
 
 ConVar
 	g_hRestartRestoreUid;
@@ -36,7 +36,7 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	vLoadGameData();
+	vInitGameData();
 
 	g_hRestartRestoreUid = CreateConVar("restart_restore_by_userid", "0", "Restore data by player's UserId after mission lost?", FCVAR_NOTIFY);
 	g_hRestartRestoreUid.AddChangeHook(vConVarChanged);
@@ -69,31 +69,24 @@ void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 	g_iRoundEnd++;
 }
 
-void vLoadGameData()
+void vInitGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false)
+	if(!FileExists(sPath))
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null)
+	if(!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
-	/**g_pSavedPlayers = hGameData.GetAddress("g_SavedPlayers");
+	g_pSavedPlayers = hGameData.GetAddress("g_SavedPlayers");
 	if(!g_pSavedPlayers)
-		SetFailState("Failed to find address: g_SavedPlayers");*/
+		SetFailState("Failed to find address: g_SavedPlayers");
 
 	g_pSavedPlayerCount = hGameData.GetAddress("SavedPlayerCount");
 	if(!g_pSavedPlayerCount)
 		SetFailState("Failed to find address: SavedPlayerCount");
-
-	g_mpRestoreByUserId = MemoryPatch.CreateFromConf(hGameData, "CTerrorPlayer::TransitionRestore::RestoreByUserId");
-	if(!g_mpRestoreByUserId)
-		SetFailState("Failed to create MemoryPatch: CTerrorPlayer::TransitionRestore::RestoreByUserId");
-
-	if(!g_mpRestoreByUserId.Validate())
-		SetFailState("Failed to validate MemoryPatch: CTerrorPlayer::TransitionRestore::RestoreByUserId");
 
 	StartPrepSDKCall(SDKCall_Raw);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::GetInt"))
@@ -105,9 +98,20 @@ void vLoadGameData()
 	if(!g_hSDKKeyValuesGetInt)
 		SetFailState("Failed to create SDKCall: KeyValues::GetInt");
 
+	vInitPatchs(hGameData);
 	vSetupDetours(hGameData);
 
 	delete hGameData;
+}
+
+void vInitPatchs(GameData hGameData = null)
+{
+	g_mpRestoreByUserId = MemoryPatch.CreateFromConf(hGameData, "CTerrorPlayer::TransitionRestore::RestoreByUserId");
+	if(!g_mpRestoreByUserId)
+		SetFailState("Failed to create MemoryPatch: CTerrorPlayer::TransitionRestore::RestoreByUserId");
+
+	if(!g_mpRestoreByUserId.Validate())
+		SetFailState("Failed to validate MemoryPatch: CTerrorPlayer::TransitionRestore::RestoreByUserId");
 }
 
 void vSetupDetours(GameData hGameData = null)

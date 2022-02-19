@@ -44,39 +44,31 @@
 				}
 				"windows"
 				{
-					"signature"	"CTerrorPlayer::OnEndChangeLevel"
-					"read"		"98"
+					"signature"	"CTerrorPlayer::TransitionRestore"
+					"read"		"401"
 				}
 			}
 			"SavedPlayerCount"
 			{
 				"linux"
 				{
-					"signature"	"CTerrorPlayer::OnEndChangeLevel"
-					"read"		"30"
+					"signature"	"CTerrorPlayer::TransitionRestore"
+					"read"		"107"
 				}
 				"windows"
 				{
-					"signature"	"CTerrorPlayer::OnEndChangeLevel"
-					"read"		"29"	
+					"signature"	"CTerrorPlayer::TransitionRestore"
+					"read"		"446"
 				}
 			}
 		}
 
-		"Signatures" 
+		"Signatures"
 		{
 			"g_SavedPlayers"
 			{
 				"library"	"server"
 				"linux"		"@_ZL14g_SavedPlayers"
-			}
-			/* CTerrorPlayer::OnEndChangeLevel(CTerrorPlayer *__hidden this) */
-			"CTerrorPlayer::OnEndChangeLevel"
-			{
-				"library"	"server"
-				"linux"		"@_ZN13CTerrorPlayer16OnEndChangeLevelEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x57\x8B\x2A\xE8\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x8B\x0D"
-				/* ? ? ? ? ? ? 53 56 57 8B ? E8 ? ? ? ? 8B ? ? 8B 0D */
 			}
 			/* CTerrorPlayer::TransitionRestore(CTerrorPlayer *__hidden this) */
 			"CTerrorPlayer::TransitionRestore"
