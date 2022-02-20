@@ -53,7 +53,6 @@ int
 
 bool
 	g_bShouldFixAFK,
-	g_bShouldIgnore,
 	g_bAutoJoin,
 	g_bRespawnJoin,
 	g_bGiveWeaponType,
@@ -284,7 +283,7 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	vLoadGameData();
+	vInitGameData();
 
 	g_aSteamIDs = new StringMap();
 	g_aMeleeScripts = new ArrayList(64);
@@ -1620,15 +1619,15 @@ int iGetTempHealth(int client)
 	return iTempHealth < 0 ? 0 : iTempHealth;
 }
 
-void vLoadGameData()
+void vInitGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false) 
+	if(!FileExists(sPath)) 
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null) 
+	if(!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	g_pDirector = hGameData.GetAddress("CDirector");
@@ -1784,14 +1783,7 @@ void vTakeOverBot(int client, int iBot)
 
 void vSetupDetours(GameData hGameData = null)
 {
-	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "SurvivorBot::SetHumanSpectator");
-	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: SurvivorBot::SetHumanSpectator");
-		
-	if(!dDetour.Enable(Hook_Pre, mreSetHumanSpectatorPre))
-		SetFailState("Failed to detour pre: SurvivorBot::SetHumanSpectator");
-
-	dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GoAwayFromKeyboard");
+	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GoAwayFromKeyboard");
 	if(!dDetour)
 		SetFailState("Failed to create DynamicDetour: CTerrorPlayer::GoAwayFromKeyboard");
 
@@ -1800,6 +1792,13 @@ void vSetupDetours(GameData hGameData = null)
 
 	if(!dDetour.Enable(Hook_Post, mreGoAwayFromKeyboardPost))
 		SetFailState("Failed to detour post: CTerrorPlayer::GoAwayFromKeyboard");
+
+	dDetour = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::GetPlayerByCharacter");
+	if(!dDetour)
+		SetFailState("Failed to create DynamicDetour: CTerrorPlayer::GetPlayerByCharacter");
+		
+	if(!dDetour.Enable(Hook_Post, mreGetPlayerByCharacterPost))
+		SetFailState("Failed to detour post: CTerrorPlayer::GetPlayerByCharacter");
 
 	dDetour = DynamicDetour.FromConf(hGameData, "CBasePlayer::SetModel");
 	if(!dDetour)
@@ -1828,20 +1827,6 @@ public void OnEntityCreated(int entity, const char[] classname)
 	g_iSurvivorBot = entity;
 }
 
-MRESReturn mreSetHumanSpectatorPre(int pThis, DHookParam hParams)
-{
-	if(g_bShouldIgnore)
-		return MRES_Ignored;
-	
-	if(!g_bShouldFixAFK)
-		return MRES_Ignored;
-	
-	if(g_iSurvivorBot < 1)
-		return MRES_Ignored;
-	
-	return MRES_Supercede;
-}
-
 MRESReturn mreGoAwayFromKeyboardPre(int pThis, DHookReturn hReturn)
 {
 	g_bShouldFixAFK = true;
@@ -1850,30 +1835,24 @@ MRESReturn mreGoAwayFromKeyboardPre(int pThis, DHookReturn hReturn)
 
 MRESReturn mreGoAwayFromKeyboardPost(int pThis, DHookReturn hReturn)
 {
-	if(g_bShouldFixAFK && g_iSurvivorBot > 0 && IsFakeClient(g_iSurvivorBot))
-	{
-		g_bShouldIgnore = true;
-		vSetHumanSpectator(g_iSurvivorBot, pThis);
-		vWriteTakeoverPanel(pThis, g_iSurvivorBot);
-		g_bShouldIgnore = false;
-	}
-	
 	g_iSurvivorBot = 0;
 	g_bShouldFixAFK = false;
 	return MRES_Ignored;
 }
 
-void vWriteTakeoverPanel(int client, int bot)
+MRESReturn mreGetPlayerByCharacterPost(DHookReturn hReturn, DHookParam hParams)
 {
-	char sBuffer[2];
-	IntToString(GetEntProp(bot, Prop_Send, "m_survivorCharacter"), sBuffer, sizeof sBuffer);
-	BfWrite bf = view_as<BfWrite>(StartMessageOne("VGUIMenu", client));
-	bf.WriteString("takeover_survivor_bar");
-	bf.WriteByte(true);
-	bf.WriteByte(IN_ATTACK);
-	bf.WriteString("character");
-	bf.WriteString(sBuffer);
-	EndMessage();
+	if(!g_bShouldFixAFK)
+		return MRES_Ignored;
+	
+	if(!g_iSurvivorBot)
+		return MRES_Ignored;
+
+	if(!IsFakeClient(g_iSurvivorBot))
+		return MRES_Ignored;
+
+	hReturn.Value = g_iSurvivorBot;
+	return MRES_Supercede;
 }
 
 // [L4D(2)] Survivor Identity Fix for 5+ Survivors (https://forums.alliedmods.net/showpost.php?p=2718792&postcount=36)
