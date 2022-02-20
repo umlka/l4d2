@@ -4,6 +4,13 @@
 	{
 		"Functions"
 		{
+			"Detour_CDirector::Restart"
+			{
+				"signature"		"CDirector::Restart"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"address"
+			}
 			"Detour_CTerrorPlayer::TransitionRestore"
 			{
 				"signature"		"CTerrorPlayer::TransitionRestore"
@@ -36,18 +43,6 @@
 
 		"Addresses"
 		{
-			"g_SavedPlayers"
-			{
-				"linux"
-				{
-					"signature"	"g_SavedPlayers"
-				}
-				"windows"
-				{
-					"signature"	"CTerrorPlayer::TransitionRestore"
-					"read"		"401"
-				}
-			}
 			"SavedPlayerCount"
 			{
 				"linux"
@@ -65,10 +60,13 @@
 
 		"Signatures"
 		{
-			"g_SavedPlayers"
+			/* CDirector::Restart(CDirector *__hidden this) */
+			"CDirector::Restart"
 			{
 				"library"	"server"
-				"linux"		"@_ZL14g_SavedPlayers"
+				"linux"		"@_ZN9CDirector7RestartEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\xD8\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\xA1\x90\x2A\x2A\x2A\x8B\x2A\x2A\x53\x56\x57\x8B"
+				/* ? ? ? ? ? ? ? ? ? A1 D8 ? ? ? 33 ? 89 ? ? A1 90 ? ? ? 8B ? ? 53 56 57 8B */
 			}
 			/* CTerrorPlayer::TransitionRestore(CTerrorPlayer *__hidden this) */
 			"CTerrorPlayer::TransitionRestore"
@@ -78,13 +76,23 @@
 				"windows"	"\x55\x8B\xEC\x51\x56\x8B\xF1\x80\xBE\x88\x33\x00\x00\x00"
 				/* 55 8B EC 51 56 8B F1 80 BE 88 33 00 00 00 */
 			}
-			/* KeyValues::GetInt(KeyValues *__hidden this, const char *s, int) */
-			"KeyValues::GetInt"
+			/* KeyValues::GetString(KeyValues *__hidden this, const char *, const char *) */
+			"KeyValues::GetString"
 			{
 				"library"	"server"
-				"linux"		"@_ZN9KeyValues6GetIntEPKci"
-				"windows"	"\x55\x8B\x2A\x8B\x2A\x2A\x6A\x2A\x50\xE8\x2A\x2A\x2A\x2A\x85\x2A\x74\x2A\x0F\x2A\x2A\x2A\x49"
-				/* 55 8B ? 8B ? ? 6A ? 50 E8 ? ? ? ? 85 ? 74 ? 0F ? ? ? 49 */
+				"linux"		"@_ZN9KeyValues9GetStringEPKcS1_"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x53\x8B\x2A\x2A\x56\x57\x6A\x2A\x53\x8B\x2A\xE8\x2A\x2A\x2A\x2A\x8B\x2A\x85\x2A\x0F\x84\x2A\x2A\x2A\x2A\x0F\x2A\x2A\x2A\x48\x83\x2A\x2A\x0F\x87\x2A\x2A\x2A\x2A\xFF\x24\x2A\x2A\x2A\x2A\x2A\xD9\x2A\x2A\x83\x2A\x2A\xDD\x2A\x2A\x68"
+				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 53 8B ? ? 56 57 6A ? 53 8B ? E8 ? ? ? ? 8B ? 85 ? 0F 84 ? ? ? ? 0F ? ? ? 48 83 ? ? 0F 87 ? ? ? ? FF 24 ? ? ? ? ? D9 ? ? 83 ? ? DD ? ? 68 */
+				/* Search: "WrongTeamMsg", call below is our function. */
+			}
+			/* KeyValues::SetString(KeyValues *__hidden this, const char *s, const char *) */
+			"KeyValues::SetString"
+			{
+				"library"	"server"
+				"linux"		"@_ZN9KeyValues9SetStringEPKcS1_"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x6A\x2A\x50\xE8\x2A\x2A\x2A\x2A\x8B\x2A\x85\x2A\x74\x2A\x8B\x2A\x2A\x53\x57\x51\xE8\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x52\xE8\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x83\x2A\x2A\xC7\x46\x2A\x2A\x2A\x2A\x2A\x85\x2A\x75\x2A\xBB\x2A\x2A\x2A\x2A\x53"
+				/* ? ? ? ? ? ? 56 6A ? 50 E8 ? ? ? ? 8B ? 85 ? 74 ? 8B ? ? 53 57 51 E8 ? ? ? ? 8B ? ? 52 E8 ? ? ? ? 8B ? ? 83 ? ? C7 46 ? ? ? ? ? 85 ? 75 ? BB ? ? ? ? 53 */
+				/* Search: "victimname" - below is call */
 			}
 		}
 	}
