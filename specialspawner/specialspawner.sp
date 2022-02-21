@@ -200,8 +200,6 @@ public void OnPluginStart()
 	g_hTankSpawnLimits.AddChangeHook(vTankCustomConVarChanged);
 	g_hTankSpawnWeights.AddChangeHook(vTankCustomConVarChanged);
 
-	HookEvent("player_left_start_area", Event_PlayerLeftStartArea);
-	HookEvent("player_left_checkpoint", Event_PlayerLeftStartArea);
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("player_team", Event_PlayerTeam);
@@ -261,6 +259,26 @@ public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal)
 	{
 		retVal = iValue;
 		return Plugin_Handled;
+	}
+
+	return Plugin_Continue;
+}
+
+public Action L4D_OnFirstSurvivorLeftSafeArea(int client)
+{
+	if(!g_bLeftSafeArea)
+	{
+		g_bLeftSafeArea = true;
+
+		if(g_iCurrentClass >= 6)
+		{
+			PrintToChatAll("\x03当前轮换\x01: \n");
+			PrintToChatAll("\x01[\x05%s\x01]\x04模式\x01", g_sZombieClass[g_iCurrentClass - 6]);
+		}
+		else if(g_iCurrentClass > UNINITIALISED)
+			PrintToChatAll("\x01[\x05%s\x01]\x04模式\x01", g_sZombieClass[g_iCurrentClass]);
+
+		vStartCustomSpawnTimer(0.1);
 	}
 
 	return Plugin_Continue;
@@ -442,10 +460,10 @@ public void OnClientDisconnect(int client)
 
 public void OnMapEnd()
 {
+	g_bLeftSafeArea = false;
+
 	vEndSpawnTimer();
 	vTankSpawnDeathActoin(false);
-
-	g_bLeftSafeArea = false;
 
 	if(g_iCurrentClass >= 6)
 		iSetRandomType();
@@ -461,45 +479,6 @@ void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	vEndSpawnTimer();
-}
-
-void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast)
-{ 
-	if(g_bLeftSafeArea)
-		return;
-
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client))
-		CreateTimer(0.1, tmrPlayerLeftStartArea, _, TIMER_FLAG_NO_MAPCHANGE);
-}
-
-Action tmrPlayerLeftStartArea(Handle timer)
-{
-	if(!g_bLeftSafeArea && bHasAnySurvivorLeftSafeArea())
-	{
-		g_bLeftSafeArea = true;
-
-		if(g_iCurrentClass >= 6)
-		{
-			PrintToChatAll("\x03当前轮换\x01: \n");
-			PrintToChatAll("\x01[\x05%s\x01]\x04模式\x01", g_sZombieClass[g_iCurrentClass - 6]);
-		}
-		else if(g_iCurrentClass > UNINITIALISED)
-			PrintToChatAll("\x01[\x05%s\x01]\x04模式\x01", g_sZombieClass[g_iCurrentClass]);
-
-		vStartCustomSpawnTimer(0.1);
-	}
-
-	return Plugin_Continue;
-}
-
-bool bHasAnySurvivorLeftSafeArea()
-{
-	int entity = GetPlayerResourceEntity();
-	if(entity == INVALID_ENT_REFERENCE)
-		return false;
-
-	return !!GetEntProp(entity, Prop_Send, "m_hasAnySurvivorLeftSafeArea");
 }
 
 Handle g_hUpdateTimer;
