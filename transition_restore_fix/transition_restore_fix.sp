@@ -24,11 +24,12 @@ ConVar
 
 bool
 	g_bRestart;
+
 char
 	g_sCharacter[8],
 	g_sModelName[PLATFORM_MAX_PATH];
 
-public Plugin myinfo = 
+public Plugin myinfo =
 {
 	name = "Transition Restore Fix",
 	author = "sorallll",
@@ -41,7 +42,7 @@ public void OnPluginStart()
 {
 	vInitGameData();
 
-	g_hKeepIdentity = CreateConVar("restart_keep_identity", "1", "Only restore data other than identity after mission is lost? (0=restore to pre-transition identity, 1=game default)", FCVAR_NOTIFY);
+	g_hKeepIdentity = CreateConVar("restart_keep_identity", "1", "Whether to keep the current character and model after the mission lost and restarts? (0=restore to pre-transition identity, 1=game default)", FCVAR_NOTIFY);
 	g_hKeepIdentity.AddChangeHook(vConVarChanged);
 
 	AutoExecConfig(true, "transition_restore_fix");
