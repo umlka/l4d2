@@ -2,11 +2,9 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
-#include <dhooks>
 #include <left4dhooks>
 
 #define SPEEDBOOST	90.0
-#define GAMEDATA	"ai_hardsi"
 
 ConVar
 	g_hTankBhop,
@@ -33,8 +31,6 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	vLoadGameData();
-
 	g_hTankBhop = CreateConVar("ai_tank_bhop", "1", "Flag to enable bhop facsimile on AI tanks");
 	g_hAimOffsetSensitivityTank = CreateConVar("ai_aim_offset_sensitivity_tank", "15.0", "If the tank has a target, it will not straight throw if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hTankAttackRange = FindConVar("tank_attack_range");
@@ -323,68 +319,38 @@ public Action L4D2_OnSelectTankAttack(int client, int &sequence)
 	return Plugin_Handled;
 }
 
-void vLoadGameData()
-{
-	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false)
-		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
-
-	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null)
-		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
-
-	vSetupDetours(hGameData);
-
-	delete hGameData;
-}
-
-void vSetupDetours(GameData hGameData = null)
-{
-	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "CTankRock::OnRelease");
-	if(dDetour == null)
-		SetFailState("Failed to find signature: CTankRock::OnRelease");
-
-	if(!dDetour.Enable(Hook_Pre, mreTankRockReleasePre))
-		SetFailState("Failed to detour pre: CTankRock::OnRelease");
-
-	/*if(!dDetour.Enable(Hook_Post, mreTankRockReleasePost))
-		SetFailState("Failed to detour post: CTankRock::OnRelease");*/
-}
-
 #define PLAYER_HEIGHT 72.0
-MRESReturn mreTankRockReleasePre(int pThis, DHookParam hParams)
+public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float vecAng[3], float vecVel[3], float vecRot[3])
 {
-	if(pThis <= MaxClients || !IsValidEntity(pThis))
-		return MRES_Ignored;
+	if(rock <= MaxClients || !IsValidEntity(rock))
+		return Plugin_Continue;
 
-	int iThrower = GetEntPropEnt(pThis, Prop_Data, "m_hThrower");
-	if(iThrower < 1 || iThrower > MaxClients || !IsClientInGame(iThrower)|| GetClientTeam(iThrower) != 3 || GetEntProp(iThrower, Prop_Send, "m_zombieClass") != 8)
-		return MRES_Ignored;
+	if(tank < 1 || tank > MaxClients || !IsClientInGame(tank)|| GetClientTeam(tank) != 3 || GetEntProp(tank, Prop_Send, "m_zombieClass") != 8)
+		return Plugin_Continue;
 
-	if(!IsFakeClient(iThrower) && (!CheckCommandAccess(iThrower, "", ADMFLAG_ROOT) || GetClientButtons(iThrower) & IN_SPEED == 0))
-		return MRES_Ignored;
+	if(!IsFakeClient(tank) && (!CheckCommandAccess(tank, "", ADMFLAG_ROOT) || GetClientButtons(tank) & IN_SPEED == 0))
+		return Plugin_Continue;
 
 	static int iTarget;
-	iTarget = GetClientAimTarget(iThrower, true);
-	if(bIsAliveSurvivor(iTarget) && !bIsIncapacitated(iTarget) && !bIsPinned(iTarget) && !bHitWall(iThrower, pThis, iTarget) && !bWithinViewAngle(iThrower, iTarget, g_fAimOffsetSensitivityTank))
-		return MRES_Ignored;
+	iTarget = GetClientAimTarget(tank, true);
+	if(bIsAliveSurvivor(iTarget) && !bIsIncapacitated(iTarget) && !bIsPinned(iTarget) && !bHitWall(tank, rock, iTarget) && !bWithinViewAngle(tank, iTarget, g_fAimOffsetSensitivityTank))
+		return Plugin_Continue;
 	
-	iTarget = iGetClosestSurvivor(iThrower, iTarget, pThis, 2.0 * g_fTankThrowForce);
+	iTarget = iGetClosestSurvivor(tank, iTarget, rock, 2.0 * g_fTankThrowForce);
 	if(iTarget == -1)
-		return MRES_Ignored;
+		return Plugin_Continue;
 
 	static float vRock[3];
 	static float vTarg[3];
 	static float vVectors[3];
 	GetClientAbsOrigin(iTarget, vTarg);
-	GetClientAbsOrigin(iThrower, vRock);
+	GetClientAbsOrigin(tank, vRock);
 	float fDelta = GetVectorDistance(vRock, vTarg) / g_fTankThrowForce * PLAYER_HEIGHT;
 
 	vTarg[2] += fDelta;
 	while(fDelta < PLAYER_HEIGHT)
 	{
-		if(!bHitWall(iThrower, pThis, -1, vTarg))
+		if(!bHitWall(tank, rock, -1, vTarg))
 			break;
 
 		fDelta += 10.0;
@@ -395,26 +361,20 @@ MRESReturn mreTankRockReleasePre(int pThis, DHookParam hParams)
 	if(fDelta > PLAYER_HEIGHT)
 		vTarg[2] += fDelta / PLAYER_HEIGHT * 10.0;
 
-	GetClientEyePosition(iThrower, vRock);
+	GetClientEyePosition(tank, vRock);
 	MakeVectorFromPoints(vRock, vTarg, vVectors);
 	GetVectorAngles(vVectors, vTarg);
-	hParams.SetVector(2, vTarg);
+	vecAng = vTarg;
 
 	static float vLength;
 	vLength = GetVectorLength(vVectors);
 	vLength = vLength > g_fTankThrowForce ? vLength : g_fTankThrowForce;
 	NormalizeVector(vVectors, vVectors);
 	ScaleVector(vVectors, vLength + g_fRunTopSpeed[iTarget]);
-	hParams.SetVector(3, vVectors);
-	return MRES_ChangedHandled;
+	vecVel = vVectors;
+	return Plugin_Changed;
 }
 
-/*
-MRESReturn mreTankRockReleasePost(int pThis, DHookParam hParams)
-{
-	return MRES_Ignored;
-}
-*/
 bool bIsAliveSurvivor(int client)
 {
 	return client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
