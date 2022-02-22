@@ -14,7 +14,7 @@
 			"CTerrorPlayer::GetPlayerByCharacter"
 			{
 				"signature"	"CTerrorPlayer::GetPlayerByCharacter"
-				"callconv"	"thiscall"
+				"callconv"	"cdecl"
 				"return"	"cbaseentity"
 				"this"		"ignore"
 				"arguments"
