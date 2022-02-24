@@ -10,8 +10,8 @@ Address
 	g_pSavedPlayerCount;
 
 Handle
-	g_hSDKKVGetString,
-	g_hSDKKVSetString;
+	g_hSDK_KVGetString,
+	g_hSDK_KVSetString;
 
 MemoryPatch
 	g_mpRestoreByUserId;
@@ -75,21 +75,21 @@ void vToggleDetours(bool bEnable)
 	{
 		bEnabled = true;
 
-		if(!g_dDetourRestart.Enable(Hook_Pre, mreRestartPre))
-			SetFailState("Failed to detour pre: Detour_CDirector::Restart");
+		if(!g_dDetourRestart.Enable(Hook_Pre, DD_CDirector_Restart_Pre))
+			SetFailState("Failed to detour pre: DD_CDirector::Restart");
 		
-		if(!g_dDetourRestart.Enable(Hook_Post, mreRestartPost))
-			SetFailState("Failed to detour post: Detour_CDirector::Restart");
+		if(!g_dDetourRestart.Enable(Hook_Post, DD_CDirector_Restart_Post))
+			SetFailState("Failed to detour post: DD_CDirector::Restart");
 	}
 	else if(bEnabled && !bEnable)
 	{
 		bEnabled = false;
 
-		if(!g_dDetourRestart.Disable(Hook_Pre, mreRestartPre))
-			SetFailState("Failed to disable detour pre: Detour_CDirector::Restart");
+		if(!g_dDetourRestart.Disable(Hook_Pre, DD_CDirector_Restart_Pre))
+			SetFailState("Failed to disable detour pre: DD_CDirector::Restart");
 
-		if(!g_dDetourRestart.Disable(Hook_Post, mreRestartPost))
-			SetFailState("Failed to disable detour post: Detour_CDirector::Restart");
+		if(!g_dDetourRestart.Disable(Hook_Post, DD_CDirector_Restart_Post))
+			SetFailState("Failed to disable detour post: DD_CDirector::Restart");
 	}
 }
 
@@ -114,8 +114,8 @@ void vInitGameData()
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_String, SDKPass_Pointer);
-	g_hSDKKVGetString = EndPrepSDKCall();
-	if(!g_hSDKKVGetString)
+	g_hSDK_KVGetString = EndPrepSDKCall();
+	if(!g_hSDK_KVGetString)
 		SetFailState("Failed to create SDKCall: KeyValues::GetString");
 
 	StartPrepSDKCall(SDKCall_Raw);
@@ -123,8 +123,8 @@ void vInitGameData()
 		SetFailState("Failed to find signature: KeyValues::SetString");
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
-	g_hSDKKVSetString = EndPrepSDKCall();
-	if(!g_hSDKKVSetString)
+	g_hSDK_KVSetString = EndPrepSDKCall();
+	if(!g_hSDK_KVSetString)
 		SetFailState("Failed to create SDKCall: KeyValues::SetString");
 
 	vInitPatchs(hGameData);
@@ -145,34 +145,34 @@ void vInitPatchs(GameData hGameData = null)
 
 void vSetupDetours(GameData hGameData = null)
 {
-	g_dDetourRestart = DynamicDetour.FromConf(hGameData, "Detour_CDirector::Restart");
+	g_dDetourRestart = DynamicDetour.FromConf(hGameData, "DD_CDirector::Restart");
 	if(!g_dDetourRestart)
-		SetFailState("Failed to create DynamicDetour: Detour_CDirector::Restart");
+		SetFailState("Failed to create DynamicDetour: DD_CDirector::Restart");
 
-	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "Detour_CTerrorPlayer::TransitionRestore");
+	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD_CTerrorPlayer::TransitionRestore");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: Detour_CTerrorPlayer::TransitionRestore");
-		
-	if(!dDetour.Enable(Hook_Pre, mreTransitionRestorePre))
-		SetFailState("Failed to detour pre: Detour_CTerrorPlayer::TransitionRestore");
+		SetFailState("Failed to create DynamicDetour: DD_CTerrorPlayer::TransitionRestore");
 
-	if(!dDetour.Enable(Hook_Post, mreTransitionRestorePost))
-		SetFailState("Failed to detour post: Detour_CTerrorPlayer::TransitionRestore");
+	if(!dDetour.Enable(Hook_Pre, DD_CTerrorPlayer_TransitionRestore_Pre))
+		SetFailState("Failed to detour pre: DD_CTerrorPlayer::TransitionRestore");
+
+	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_TransitionRestore_Post))
+		SetFailState("Failed to detour post: DD_CTerrorPlayer::TransitionRestore");
 }
 
-MRESReturn mreRestartPre(Address pThis)
+MRESReturn DD_CDirector_Restart_Pre(Address pThis)
 {
 	g_bRestart = true;
 	return MRES_Ignored;
 }
 
-MRESReturn mreRestartPost(Address pThis)
+MRESReturn DD_CDirector_Restart_Post(Address pThis)
 {
 	g_bRestart = false;
 	return MRES_Ignored;
 }
 
-MRESReturn mreTransitionRestorePre(int pThis)
+MRESReturn DD_CTerrorPlayer_TransitionRestore_Pre(int pThis)
 {
 	if(IsFakeClient(pThis))
 		return MRES_Ignored;
@@ -185,18 +185,18 @@ MRESReturn mreTransitionRestorePre(int pThis)
 	{
 		char sCharacter[4];
 		char sModelName[PLATFORM_MAX_PATH];
-		SDKCall(g_hSDKKVGetString, pSavedData, sCharacter, sizeof sCharacter, "character", "");
-		SDKCall(g_hSDKKVGetString, pSavedData, sModelName, sizeof sModelName, "modelName", "");
+		SDKCall(g_hSDK_KVGetString, pSavedData, sCharacter, sizeof sCharacter, "character", "");
+		SDKCall(g_hSDK_KVGetString, pSavedData, sModelName, sizeof sModelName, "modelName", "");
 		if(sCharacter[0] != '\0' && sModelName[0] != '\0')
 		{
 			strcopy(g_esSavedData.character, sizeof PlayerSaveData::character, sCharacter);
 			strcopy(g_esSavedData.modelName, sizeof PlayerSaveData::modelName, sModelName);
 
 			IntToString(GetEntProp(pThis, Prop_Send, "m_survivorCharacter"), sCharacter, sizeof sCharacter);
-			SDKCall(g_hSDKKVSetString, pSavedData, "character", sCharacter);
+			SDKCall(g_hSDK_KVSetString, pSavedData, "character", sCharacter);
 
 			GetEntPropString(pThis, Prop_Data, "m_ModelName", sModelName, sizeof sModelName);
-			SDKCall(g_hSDKKVSetString, pSavedData, "modelName", sModelName);
+			SDKCall(g_hSDK_KVSetString, pSavedData, "modelName", sModelName);
 		}
 	}
 
@@ -204,15 +204,15 @@ MRESReturn mreTransitionRestorePre(int pThis)
 	return MRES_Ignored;
 }
 
-MRESReturn mreTransitionRestorePost(int pThis)
+MRESReturn DD_CTerrorPlayer_TransitionRestore_Post(int pThis)
 {
 	if(g_esSavedData.character[0] != '\0' && g_esSavedData.modelName[0] != '\0')
 	{
 		Address pSavedData = pFindSavedDataByUserId(GetClientUserId(pThis));
 		if(pSavedData)
 		{
-			SDKCall(g_hSDKKVSetString, pSavedData, "character", g_esSavedData.character);
-			SDKCall(g_hSDKKVSetString, pSavedData, "modelName", g_esSavedData.modelName);
+			SDKCall(g_hSDK_KVSetString, pSavedData, "character", g_esSavedData.character);
+			SDKCall(g_hSDK_KVSetString, pSavedData, "modelName", g_esSavedData.modelName);
 		}
 	}
 
@@ -241,7 +241,7 @@ Address pFindSavedDataByUserId(int userid)
 		if(!pThis)
 			continue;
 
-		SDKCall(g_hSDKKVGetString, pThis, sUserId, sizeof sUserId, "userID", "");
+		SDKCall(g_hSDK_KVGetString, pThis, sUserId, sizeof sUserId, "userID", "");
 		if(sUserId[0] != '\0' && StringToInt(sUserId) == userid)
 			return pThis;
 	}

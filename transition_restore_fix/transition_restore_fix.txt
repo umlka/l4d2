@@ -4,14 +4,14 @@
 	{
 		"Functions"
 		{
-			"Detour_CDirector::Restart"
+			"DD_CDirector::Restart"
 			{
 				"signature"		"CDirector::Restart"
 				"callconv"		"thiscall"
 				"return"		"void"
 				"this"			"address"
 			}
-			"Detour_CTerrorPlayer::TransitionRestore"
+			"DD_CTerrorPlayer::TransitionRestore"
 			{
 				"signature"		"CTerrorPlayer::TransitionRestore"
 				"callconv"		"thiscall"
