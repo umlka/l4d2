@@ -25,9 +25,14 @@ ConVar
 bool
 	g_bRestart;
 
-char
-	g_sCharacter[8],
-	g_sModelName[PLATFORM_MAX_PATH];
+enum struct PlayerSaveData
+{
+	char character[4];
+	char modelName[PLATFORM_MAX_PATH];
+}
+
+PlayerSaveData
+	g_esSavedData;
 
 public Plugin myinfo =
 {
@@ -178,14 +183,14 @@ MRESReturn mreTransitionRestorePre(int pThis)
 
 	if(g_bRestart && GetClientTeam(pThis) == 2)
 	{
-		char sCharacter[8];
+		char sCharacter[4];
 		char sModelName[PLATFORM_MAX_PATH];
 		SDKCall(g_hSDKKVGetString, pSavedData, sCharacter, sizeof sCharacter, "character", "");
 		SDKCall(g_hSDKKVGetString, pSavedData, sModelName, sizeof sModelName, "modelName", "");
 		if(sCharacter[0] != '\0' && sModelName[0] != '\0')
 		{
-			strcopy(g_sCharacter, sizeof g_sCharacter, sCharacter);
-			strcopy(g_sModelName, sizeof g_sModelName, sModelName);
+			strcopy(g_esSavedData.character, sizeof PlayerSaveData::character, sCharacter);
+			strcopy(g_esSavedData.modelName, sizeof PlayerSaveData::modelName, sModelName);
 
 			IntToString(GetEntProp(pThis, Prop_Send, "m_survivorCharacter"), sCharacter, sizeof sCharacter);
 			SDKCall(g_hSDKKVSetString, pSavedData, "character", sCharacter);
@@ -201,18 +206,18 @@ MRESReturn mreTransitionRestorePre(int pThis)
 
 MRESReturn mreTransitionRestorePost(int pThis)
 {
-	if(g_sCharacter[0] != '\0' && g_sModelName[0] != '\0')
+	if(g_esSavedData.character[0] != '\0' && g_esSavedData.modelName[0] != '\0')
 	{
 		Address pSavedData = pFindSavedDataByUserId(GetClientUserId(pThis));
 		if(pSavedData)
 		{
-			SDKCall(g_hSDKKVSetString, pSavedData, "character", g_sCharacter);
-			SDKCall(g_hSDKKVSetString, pSavedData, "modelName", g_sModelName);
+			SDKCall(g_hSDKKVSetString, pSavedData, "character", g_esSavedData.character);
+			SDKCall(g_hSDKKVSetString, pSavedData, "modelName", g_esSavedData.modelName);
 		}
 	}
 
-	g_sCharacter[0] = '\0';
-	g_sModelName[0] = '\0';
+	g_esSavedData.character[0] = '\0';
+	g_esSavedData.modelName[0] = '\0';
 	g_mpRestoreByUserId.Disable();
 	return MRES_Ignored;
 }
