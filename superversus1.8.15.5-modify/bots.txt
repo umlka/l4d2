@@ -4,14 +4,14 @@
     {
 		"Functions"
 		{
-			"CTerrorPlayer::GoAwayFromKeyboard"
+			"DD_CTerrorPlayer::GoAwayFromKeyboard"
 			{
 				"signature"	"CTerrorPlayer::GoAwayFromKeyboard"
 				"callconv"	"thiscall"
 				"return"	"void"
 				"this"		"entity"
 			}
-			"CTerrorPlayer::GetPlayerByCharacter"
+			"DD_CTerrorPlayer::GetPlayerByCharacter"
 			{
 				"signature"	"CTerrorPlayer::GetPlayerByCharacter"
 				"callconv"	"cdecl"
@@ -25,7 +25,7 @@
 					}
 				}
 			}
-			"CBasePlayer::SetModel"
+			"DD_CBasePlayer::SetModel"
 			{
 				"signature"	"CBasePlayer::SetModel"
 				"callconv"	"thiscall"
@@ -39,7 +39,7 @@
 					}
 				}
 			}
-			"CTerrorPlayer::GiveDefaultItems"
+			"DD_CTerrorPlayer::GiveDefaultItems"
 			{
 				"signature"	"CTerrorPlayer::GiveDefaultItems"
 				"callconv"	"thiscall"
