@@ -20,12 +20,12 @@
 				"linux"
 				{
 					"signature"	"RestoreTransitionedSurvivorBots"
-					"read"		"1"
+					"read"		"57"
 				}
 				"windows"
 				{
 					"signature"	"RestoreTransitionedSurvivorBots"
-					"read"		"4"
+					"read"		"53"
 				}
 			}
 		}

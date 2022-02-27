@@ -43,7 +43,7 @@ public void OnPluginEnd()
 	vPatch(false);
 }
 
-public void OnMapStart()
+public void OnMapend()
 {
 	vPatch(true);
 }
