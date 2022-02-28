@@ -1,0 +1,51 @@
+"Games"
+{
+    "left4dead2"
+    {
+		"Addresses"
+		{
+			"ZoeyUnlock"
+			{
+				"windows"
+				{
+					"signature"	"ZoeyUnlock_Sig"
+				}
+			}
+		}
+
+		"Offsets"
+		{
+			"ZoeyUnlock_Offset"
+			{
+				"windows"	"58"
+			}
+		}
+
+		"Signatures"
+		{
+			/* SurvivorResponseCachedInfo::Update(void) */
+			"ZoeyUnlock_Sig"
+			{
+				"library"	"server"
+				"windows"	"\x53\x8B\x2A\x83\x2A\x08\x83\x2A\x2A\x83\x2A\x04\x55\x8B\x2A\x2A\x89\x2A\x2A\x2A\x8B\x2A\x83\x2A\x68\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x56\x33"
+				/* 53 8B ? 83 ? 08 83 ? ? 83 ? 04 55 8B ? ? 89 ? ? ? 8B ? 83 ? 68 A1 ? ? ? ? 33 ? 89 ? ? 56 33 */
+			}
+			/* CDirector::IsInTransition(CDirector *__hidden this) */
+			"CDirector::IsInTransition"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK9CDirector14IsInTransitionEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x75\x2A\x80\xB9\xCC"
+				/* ? ? ? ? ? ? ? 75 ? 80 B9 CC */
+			}
+			/* CTerrorPlayer::IsTransitioned(CTerrorPlayer *__hidden this) */
+			"CTerrorPlayer::IsTransitioned"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK13CTerrorPlayer14IsTransitionedEv"
+				"windows"	"\x55\x8B\xEC\x8A\x45\x08\x88\x81\x88\x33\x00\x00"
+				/* 55 8B EC 8A 45 08 88 81 88 33 00 00 */
+			}
+		}
+    }
+}
