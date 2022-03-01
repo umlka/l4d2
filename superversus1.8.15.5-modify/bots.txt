@@ -1,3 +1,4 @@
+// Many thanks to Psykotikism for sharing the Windows signature (https://github.com/Psykotikism/L4D1-2_Signatures)
 "Games"
 {
 	"left4dead2"
@@ -16,7 +17,6 @@
 				"signature"	"CTerrorPlayer::GetPlayerByCharacter"
 				"callconv"	"cdecl"
 				"return"	"cbaseentity"
-				"this"		"ignore"
 				"arguments"
 				{
 					"SurvivorCharacterType"
@@ -50,21 +50,6 @@
 		
 		"Addresses"
 		{
-			"NextBotCreatePlayerBot<SurvivorBot>"
-			{
-				"signature" "NextBotCreatePlayerBot<SurvivorBot>"
-			}
-			"CTerrorPlayer::RoundRespawn"
-			{
-				"linux"
-				{
-					"signature"	"CTerrorPlayer::RoundRespawn"
-				}
-				"windows"
-				{
-					"signature"	"CTerrorPlayer::RoundRespawn"			
-				}
-			}
 			"CDirector"
 			{
 				"linux"
@@ -77,6 +62,17 @@
 					"read"		"12"
 				}
 				"read"	"0"
+			}
+			"CTerrorPlayer::RoundRespawn"
+			{
+				"linux"
+				{
+					"signature"	"CTerrorPlayer::RoundRespawn"
+				}
+				"windows"
+				{
+					"signature"	"CTerrorPlayer::RoundRespawn"			
+				}
 			}
 		}
 

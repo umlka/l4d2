@@ -288,6 +288,9 @@ public void OnPluginStart()
 	g_aSteamIDs = new StringMap();
 	g_aMeleeScripts = new ArrayList(64);
 
+	AddCommandListener(CommandListener_SpecNext, "spec_next");
+	HookUserMessage(GetUserMessageId("SayText2"), umSayText2, true);
+
 	g_hSurvivorLimit = 		FindConVar("survivor_limit");
 	g_hSurvivorLimitSet = 	CreateConVar("bots_survivor_limit", 	"4", 		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
 	g_hAutoJoin = 			CreateConVar("bots_auto_join_survivor", "1", 		"玩家连接后, 是否自动加入生还者. \n0=否, 1=是.", CVAR_FLAGS);
@@ -318,7 +321,7 @@ public void OnPluginStart()
 	g_hGiveWeaponType.AddChangeHook(vWeaponConVarChanged);
 	g_hGiveWeaponTime.AddChangeHook(vWeaponConVarChanged);
 	
-	AutoExecConfig(true, "bots");
+	//AutoExecConfig(true, "bots");
 
 	RegConsoleCmd("sm_spec", cmdJoinSpectator, "加入旁观者");
 	RegConsoleCmd("sm_join", cmdJoinSurvivor, "加入生还者");
@@ -337,9 +340,6 @@ public void OnPluginStart()
 	HookEvent("player_bot_replace", Event_PlayerBotReplace);
 	HookEvent("bot_player_replace", Event_BotPlayerReplace);
 	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving);
-
-	AddCommandListener(CommandListener_SpecNext, "spec_next");
-	HookUserMessage(GetUserMessageId("SayText2"), umSayText2, true);
 }
 
 public void OnPluginEnd()
@@ -1015,7 +1015,7 @@ Action tmrAutoJoinSurvivorTeam(Handle timer, int client)
 	if(!g_bAutoJoin || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || iGetBotOfIdlePlayer(client)) 
 		return Plugin_Stop;
 
-	if(!g_iRoundStart || GetClientTeam(client) == TEAM_NOTEAM || SDKCall(g_hSDK_IsInTransition, g_pDirector))
+	if(!g_iRoundStart || GetClientTeam(client) <= TEAM_NOTEAM || SDKCall(g_hSDK_IsInTransition, g_pDirector))
 		return Plugin_Continue;
 
 	cmdJoinSurvivor(client, 0);
@@ -1809,6 +1809,9 @@ public void OnEntityCreated(int entity, const char[] classname)
 {
 	if(!g_bShouldFixAFK)
 		return;
+
+	if(entity < 1 || entity > MaxClients)
+		return;
 	
 	if(classname[0] != 's' || strcmp(classname, "survivor_bot", false) != 0)
 		return;
@@ -1866,10 +1869,16 @@ MRESReturn DD_CBasePlayer_SetModel_Post(int pThis, DHookParam hParams)
 
 MRESReturn DD_CTerrorPlayer_GiveDefaultItems_Post(int pThis)
 {
-	if(!g_bGiveWeaponType || g_bShouldFixAFK || g_bGiveWeaponTime && !g_bInSpawnTime)
+	if(!g_bGiveWeaponType)
 		return MRES_Ignored;
 
-	if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis) || GetClientTeam(pThis) != TEAM_SURVIVOR || !IsPlayerAlive(pThis) || bTakingOverBot(pThis))
+	if(g_bShouldFixAFK || g_bGiveWeaponTime && !g_bInSpawnTime)
+		return MRES_Ignored;
+
+	if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis))
+		return MRES_Ignored;
+
+	if(GetClientTeam(pThis) != TEAM_SURVIVOR || !IsPlayerAlive(pThis) || bTakingOverBot(pThis))
 		return MRES_Ignored;
 
 	vGiveDefaultItems(pThis);
