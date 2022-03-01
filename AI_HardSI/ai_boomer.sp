@@ -244,16 +244,12 @@ bool bTraceEntityFilter(int entity, int contentsMask)
 {
 	if(entity <= MaxClients)
 		return false;
-	else
-	{
-		static char classname[9];
-		GetEntityClassname(entity, classname, sizeof classname);
-		if(classname[0] == 'i' || classname[0] == 'w')
-		{
-			if(strcmp(classname, "infected") == 0 || strcmp(classname, "witch") == 0)
-				return false;
-		}
-	}
+
+	static char classname[9];
+	GetEntityClassname(entity, classname, sizeof classname);
+	if((classname[0] == 'i' && strcmp(classname, "infected") == 0) || (classname[0] == 'w' && strcmp(classname, "witch") == 0))
+		return false;
+
 	return true;
 }
 

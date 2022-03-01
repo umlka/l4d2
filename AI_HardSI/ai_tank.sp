@@ -266,20 +266,16 @@ bool bWontFall(int client, const float vVel[3])
 	return false;
 }
  
-bool bTraceEntityFilter(int entity, int contentsMask)
+bool bTraceEntityFilter(int entity, int contentsMask, any data)
 {
-	if(entity <= MaxClients)
+	if(entity <= MaxClients || entity == data)
 		return false;
-	else
-	{
-		static char classname[9];
-		GetEntityClassname(entity, classname, sizeof classname);
-		if(classname[0] == 'i' || classname[0] == 'w')
-		{
-			if(strcmp(classname, "infected") == 0 || strcmp(classname, "witch") == 0)
-				return false;
-		}
-	}
+
+	static char classname[9];
+	GetEntityClassname(entity, classname, sizeof classname);
+	if((classname[0] == 'i' && strcmp(classname, "infected") == 0) || (classname[0] == 'w' && strcmp(classname, "witch") == 0))
+		return false;
+
 	return true;
 }
 
@@ -418,7 +414,7 @@ bool bHitWall(int iTank, int entity, int iTarget = -1, const float vEnd[3] = NUL
 
 	static bool bHit;
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vSrc, vTarg, vMins, vMaxs, MASK_SOLID, bTraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vSrc, vTarg, vMins, vMaxs, MASK_SOLID, bTraceEntityFilter, entity);
 	bHit = TR_DidHit(hTrace);
 	delete hTrace;
 	return bHit;
