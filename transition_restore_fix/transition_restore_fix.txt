@@ -1,3 +1,4 @@
+// Many thanks to Psykotikism for sharing the Windows signature (https://github.com/Psykotikism/L4D1-2_Signatures)
 "Games"
 {
 	"left4dead2"

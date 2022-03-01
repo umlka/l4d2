@@ -13,22 +13,22 @@ Handle
 	g_hSDK_KVGetString,
 	g_hSDK_KVSetString;
 
-MemoryPatch
-	g_mpRestoreByUserId;
+ConVar
+	g_hKeepIdentity;
 
 DynamicDetour
 	g_dDetourRestart;
 
-ConVar
-	g_hKeepIdentity;
+MemoryPatch
+	g_mpRestoreByUserId;
 
 bool
-	g_bRestart;
+	g_bCDirectorRestart;
 
 enum struct PlayerSaveData
 {
 	char character[4];
-	char modelName[PLATFORM_MAX_PATH];
+	char modelName[128];
 }
 
 PlayerSaveData
@@ -39,7 +39,7 @@ public Plugin myinfo =
 	name = "Transition Restore Fix",
 	author = "sorallll",
 	description = "Restoring transition data by player's UserId instead of character",
-	version = "1.1.2",
+	version = "1.1.3",
 	url = "https://forums.alliedmods.net/showthread.php?t=336287"
 };
 
@@ -162,13 +162,13 @@ void vSetupDetours(GameData hGameData = null)
 
 MRESReturn DD_CDirector_Restart_Pre(Address pThis)
 {
-	g_bRestart = true;
+	g_bCDirectorRestart = true;
 	return MRES_Ignored;
 }
 
 MRESReturn DD_CDirector_Restart_Post(Address pThis)
 {
-	g_bRestart = false;
+	g_bCDirectorRestart = false;
 	return MRES_Ignored;
 }
 
@@ -181,10 +181,10 @@ MRESReturn DD_CTerrorPlayer_TransitionRestore_Pre(int pThis)
 	if(!pSavedData)
 		return MRES_Ignored;
 
-	if(g_bRestart && GetClientTeam(pThis) == 2)
+	if(g_bCDirectorRestart && GetClientTeam(pThis) == 2)
 	{
 		char sCharacter[4];
-		char sModelName[PLATFORM_MAX_PATH];
+		char sModelName[128];
 		SDKCall(g_hSDK_KVGetString, pSavedData, sCharacter, sizeof sCharacter, "character", "");
 		SDKCall(g_hSDK_KVGetString, pSavedData, sModelName, sizeof sModelName, "modelName", "");
 		if(sCharacter[0] != '\0' && sModelName[0] != '\0')
