@@ -4,31 +4,29 @@
     {
 		"Functions"
 		{
-			"CTerrorPlayer::SelectWeightedSequence"
+			"DH_CTerrorPlayer::SelectWeightedSequence"
 			{
-				"signature"	"CTerrorPlayer::SelectWeightedSequence"
-				"callconv"	"thiscall"
+				"offset"	"CTerrorPlayer::SelectWeightedSequence"
+				"hooktype"	"entity"
 				"return"	"int"
 				"this"		"entity"
 				"arguments"
 				{
 					"activity"
 					{
-						"type"		"int"
+						"type"	"int"
 					}
 				}
 			}
 		}
 
-		"Signatures"
+		"Offsets"
 		{
 			/* CTerrorPlayer::SelectWeightedSequence(Activity) */
 			"CTerrorPlayer::SelectWeightedSequence"
 			{
-				"library"	"server"
-				"linux"		"@_ZN13CTerrorPlayer22SelectWeightedSequenceE8Activity"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x81\xFF\x2A\x2A\x2A\x2A\x75"
-				/* ? ? ? ? ? ? ? ? 8B ? 81 FF ? ? ? ? 75 */
+				"linux"		"208"
+				"windows"	"207"
 			}
 		}
     }
