@@ -8,8 +8,8 @@
 #define GAMEDATA		"end_safedoor_witch"
 
 Handle
-	g_hSDKIsCheckpointDoor,
-	g_hSDKIsCheckpointExitDoor;
+	g_hSDK_IsCheckpointDoor,
+	g_hSDK_IsCheckpointExitDoor;
 
 int
 	g_iRoundStart,
@@ -20,7 +20,7 @@ public Plugin myinfo =
 	name = 			"End Safedoor Witch",
 	author = 		"sorallll",
 	description = 	"",
-	version = 		"1.0.2",
+	version = 		"1.0.3",
 	url = 			"https://forums.alliedmods.net/showthread.php?t=335777"
 }
 
@@ -83,10 +83,10 @@ Action tmrSpawnWitch(Handle timer)
 			if(i & 8192 == 0 || i & 32768 != 0)
 				continue;
 		
-			if(!SDKCall(g_hSDKIsCheckpointDoor, entity))
+			if(!SDKCall(g_hSDK_IsCheckpointDoor, entity))
 				continue;
 
-			if(SDKCall(g_hSDKIsCheckpointExitDoor, entity))
+			if(SDKCall(g_hSDK_IsCheckpointExitDoor, entity))
 				continue;
 
 			GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vPos);
@@ -166,16 +166,12 @@ bool bTraceEntityFilter(int entity, int contentsMask, any data)
 {
 	if(entity == data || entity <= MaxClients)
 		return false;
-	else
-	{
-		static char classname[9];
-		GetEntityClassname(entity, classname, sizeof classname);
-		if(classname[0] == 'i' || classname[0] == 'w')
-		{
-			if(strcmp(classname, "infected") == 0 || strcmp(classname, "witch") == 0)
-				return false;
-		}
-	}
+
+	static char classname[9];
+	GetEntityClassname(entity, classname, sizeof classname);
+	if((classname[0] == 'i' && strcmp(classname, "infected") == 0) || (classname[0] == 'w' && strcmp(classname, "witch") == 0))
+		return false;
+
 	return true;
 }
 
@@ -210,23 +206,23 @@ void vLoadGameData()
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null)
+	if(!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	StartPrepSDKCall(SDKCall_Entity);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointDoor") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointDoor"))
 		SetFailState("Failed to find offset: CPropDoorRotatingCheckpoint::IsCheckpointDoor");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDKIsCheckpointDoor = EndPrepSDKCall();
-	if(g_hSDKIsCheckpointDoor == null)
+	g_hSDK_IsCheckpointDoor = EndPrepSDKCall();
+	if(!g_hSDK_IsCheckpointDoor)
 		SetFailState("Failed to create SDKCall: CPropDoorRotatingCheckpoint::IsCheckpointDoor");
 
 	StartPrepSDKCall(SDKCall_Entity);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointExitDoor") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointExitDoor"))
 		SetFailState("Failed to find offset: CPropDoorRotatingCheckpoint::IsCheckpointExitDoor");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDKIsCheckpointExitDoor = EndPrepSDKCall();
-	if(g_hSDKIsCheckpointExitDoor == null)
+	g_hSDK_IsCheckpointExitDoor = EndPrepSDKCall();
+	if(!g_hSDK_IsCheckpointExitDoor)
 		SetFailState("Failed to create SDKCall: CPropDoorRotatingCheckpoint::IsCheckpointExitDoor");
 
 	delete hGameData;
