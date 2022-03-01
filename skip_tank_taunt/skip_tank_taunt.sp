@@ -83,7 +83,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 
 void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
-	if(event.GetInt("team") != 3 && event.GetInt("oldteam") != 3)
+	if(event.GetInt("oldteam") != 3)
 		return;
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
