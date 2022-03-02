@@ -9,6 +9,12 @@
 DynamicHook
 	g_dHooksSelectWeightedSequence;
 
+ConVar
+	g_hAnimationPlaybackRate;
+
+float
+	g_fAnimationPlaybackRate;
+
 bool
 	g_bLateLoad;
 
@@ -17,7 +23,7 @@ public Plugin myinfo =
 	name = "Skip Tank Taunt",
 	author = "sorallll",
 	description = "",
-	version = "1.0.2",
+	version = "1.0.3",
 	url = ""
 }
 
@@ -30,6 +36,10 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 public void OnPluginStart()
 {
 	vInitGameData();
+
+	g_hAnimationPlaybackRate = CreateConVar("tank_animation_playbackrate", "10.0", "动画播放倍率", _, true, 0.0);
+	g_hAnimationPlaybackRate.AddChangeHook(vConVarChanged);
+	AutoExecConfig(true);
 
 	HookEvent("round_end", Event_RoundEnd);
 	HookEvent("tank_spawn", Event_TankSpawn);
@@ -48,6 +58,21 @@ public void OnPluginStart()
 			}
 		}
 	}
+}
+
+public void OnConfigsExecuted()
+{
+	vGetCvars();
+}
+
+void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+{
+	vGetCvars();
+}
+
+void vGetCvars()
+{
+	g_fAnimationPlaybackRate = g_hAnimationPlaybackRate.FloatValue;
 }
 
 public void OnClientPutInServer(int client)
@@ -116,14 +141,14 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 **/
 void OnPreThink(int client)
 {
-	switch(IsPlayerAlive(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 8)
+	switch(IsPlayerAlive(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 8 && GetEntProp(client, Prop_Send, "m_isGhost") == 0)
 	{
 		case true:
 		{
 			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
 			{
 				case 16, 17, 18, 19, 20, 21, 22, 23:
-					SetEntPropFloat(client, Prop_Send, "m_flPlaybackRate", 10.0);
+					SetEntPropFloat(client, Prop_Send, "m_flPlaybackRate", g_fAnimationPlaybackRate);
 			}
 		}
 
