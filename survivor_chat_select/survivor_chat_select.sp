@@ -203,7 +203,7 @@ Action cmdCsc(int client, int args)
 	}
 
 	menu.ExitBackButton = true;
-	menu.Display(client, 30);
+	menu.Display(client, MENU_TIME_FOREVER);
 	return Plugin_Handled;
 }
 
@@ -246,7 +246,7 @@ void vShowMenuAdmin(int client)
 	menu.AddItem("7", "Louis");
 
 	menu.ExitBackButton = true;
-	menu.Display(client, 30);
+	menu.Display(client, MENU_TIME_FOREVER);
 }
 
 int iShowMenuAdminMenuHandler(Menu menu, MenuAction action, int client, int param2)
@@ -300,7 +300,7 @@ Action cmdCsm(int client, int args)
 	menu.AddItem("7", "Louis");
 
 	menu.ExitBackButton = true;
-	menu.Display(client, 30);
+	menu.Display(client, MENU_TIME_FOREVER);
 	return Plugin_Handled;
 }
 
@@ -354,6 +354,12 @@ bool bCanUse(int client, bool bCheckAdmin = true)
 	if(GetClientTeam(client) != 2)
 	{
 		ReplyToCommand(client, "角色选择菜单仅适用于幸存者.");
+		return false;
+	}
+
+	if(L4D_IsPlayerStaggering(client))
+	{
+		ReplyToCommand(client, "硬直状态下无法使用该指令.");
 		return false;
 	}
 
