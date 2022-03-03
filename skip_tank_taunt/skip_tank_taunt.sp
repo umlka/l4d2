@@ -141,7 +141,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 **/
 void OnPreThink(int client)
 {
-	switch(IsPlayerAlive(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 8 && GetEntProp(client, Prop_Send, "m_isGhost") == 0)
+	switch(GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") == 8)
 	{
 		case true:
 		{
@@ -160,7 +160,7 @@ void vInitGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false)
+	if(!FileExists(sPath))
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
