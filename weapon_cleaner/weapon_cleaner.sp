@@ -538,7 +538,7 @@ int CleanWeapons(char[] classname="", char[] itemname="", bool equipped = false)
 			if(noname || strcmp(name, itemname) == 0){
 				if(!equipped && IsWeaponEquipped(ent))
 					continue;
-				AcceptEntityInput(ent, "Kill");
+				RemoveEntity(ent);
 				count++;
 			}
 		}
@@ -679,7 +679,7 @@ Action CleaningWeapons(Handle timer)
 					continue;
 				} else if (g_iItemTime[weapon] == 0) {
 					UnSetWeaponClean(weapon);
-					AcceptEntityInput(weapon, "kill");
+					RemoveEntity(weapon);
 					continue;
 				}else if (g_bVisible && IsVisibleToPlayers(weapon)) {
 					SetEffects(weapon);
