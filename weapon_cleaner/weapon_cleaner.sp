@@ -201,7 +201,7 @@ float g_fEffectTime;
 StringMap g_smWhiteList;
 Handle g_hTimerCleaning;
 Handle g_hTimerCheckSpawnWeapons;
-int g_iItemTime[MAXENTITIES + 1] = -1;
+int g_iItemTime[MAXENTITIES + 1] = {-1, ...};
 int g_iWeaponsRef[MAXENTITIES + 1];
 bool g_bLateLoad;
 bool g_bIsL4D2;
@@ -283,7 +283,7 @@ public void OnMapEnd(){
 	g_bSpawnedWeapons = false;
 }
 
-public Action CmdReloadWhiteList(int client, int args)
+Action CmdReloadWhiteList(int client, int args)
 {
 	if (!g_bEnable)
 		return Plugin_Continue;
@@ -293,7 +293,7 @@ public Action CmdReloadWhiteList(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action CmdCleanWeapon(int client, int args)
+Action CmdCleanWeapon(int client, int args)
 {
 	if (!g_bEnable)
 		return Plugin_Continue;
@@ -315,7 +315,7 @@ public Action CmdCleanWeapon(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action CmdCleanAllWeapons(int client, int args)
+Action CmdCleanAllWeapons(int client, int args)
 {
 	if (!g_bEnable)
 		return Plugin_Continue;
@@ -325,7 +325,7 @@ public Action CmdCleanAllWeapons(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action CmdClearWeapon(int client, int args)
+Action CmdClearWeapon(int client, int args)
 {
 	if (!g_bEnable)
 		return Plugin_Continue;
@@ -347,7 +347,7 @@ public Action CmdClearWeapon(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action CmdClearAllWeapons(int client, int args)
+Action CmdClearAllWeapons(int client, int args)
 {
 	if (!g_bEnable)
 		return Plugin_Continue;
@@ -357,7 +357,7 @@ public Action CmdClearAllWeapons(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action CmdListenWeaponDrop(int client, const char[] command, int argc)
+Action CmdListenWeaponDrop(int client, const char[] command, int argc)
 {
 	if(IsValidClient(client)){
 		int weapon = GetActiveWeapon(client);
@@ -366,9 +366,11 @@ public Action CmdListenWeaponDrop(int client, const char[] command, int argc)
 			SetWeaponClean(weapon);
 		}
 	}
+
+	return Plugin_Continue;
 }
 
-public void CvarChange_Enable(ConVar cvar, const char[] oldVal, const char[] newVal)
+void CvarChange_Enable(ConVar cvar, const char[] oldVal, const char[] newVal)
 {
 	g_bEnable = cvar.BoolValue;
 	if (g_bEnable && (strcmp(oldVal, "0") == 0) )
@@ -377,7 +379,7 @@ public void CvarChange_Enable(ConVar cvar, const char[] oldVal, const char[] new
 		DisablePlugin();
 }
 
-public void CvarsChange(ConVar cvar, const char[] oldVal, const char[] newVal)
+void CvarsChange(ConVar cvar, const char[] oldVal, const char[] newVal)
 {
 	GetCvars();
 }
@@ -430,42 +432,42 @@ void LoadWhiteList(){
 		hCfg.WriteLine("");
 		delete hCfg;
 		
-		if(KvJumpToKey(hFile, "guns", true))
+		if(hFile.JumpToKey("guns", true))
 		{
 			for( int i = 0; i < sizeof(g_sItemNameGun); i++ )
 				hFile.SetNum(g_sItemNameGun[i], 0);
 			hFile.Rewind();
 			hFile.ExportToFile(sPath);
 		}
-		if(KvJumpToKey(hFile, "melees", true))
+		if(hFile.JumpToKey("melees", true))
 		{
 			for( int i = 0; i < sizeof(g_sItemNameMelee); i++ )
 				hFile.SetNum(g_sItemNameMelee[i], 0);
 			hFile.Rewind();
 			hFile.ExportToFile(sPath);
 		}
-		if(KvJumpToKey(hFile, "grenades", true))
+		if(hFile.JumpToKey("grenades", true))
 		{
 			for( int i = 0; i < sizeof(g_sItemNameGrenade); i++ )
 				hFile.SetNum(g_sItemNameGrenade[i], 0);
 			hFile.Rewind();
 			hFile.ExportToFile(sPath);
 		}
-		if(KvJumpToKey(hFile, "packs", true))
+		if(hFile.JumpToKey("packs", true))
 		{
 			for( int i = 0; i < sizeof(g_sItemNamePack); i++ )
 				hFile.SetNum(g_sItemNamePack[i], 0);
 			hFile.Rewind();
 			hFile.ExportToFile(sPath);
 		}
-		if(KvJumpToKey(hFile, "consumables", true))
+		if(hFile.JumpToKey("consumables", true))
 		{
 			for( int i = 0; i < sizeof(g_sItemNameConsumable); i++ )
 				hFile.SetNum(g_sItemNameConsumable[i], 0);
 			hFile.Rewind();
 			hFile.ExportToFile(sPath);
 		}
-		if(KvJumpToKey(hFile, "carryables", true))
+		if(hFile.JumpToKey("carryables", true))
 		{
 			for( int i = 0; i < sizeof(g_sItemNameCarry); i++ )
 				hFile.SetNum(g_sItemNameCarry[i], 1);
@@ -478,42 +480,42 @@ void LoadWhiteList(){
 	g_smWhiteList.Clear();
 	if( hFile.ImportFromFile(sPath) )
 	{
-		if(KvJumpToKey(hFile, "guns", true)){
+		if(hFile.JumpToKey("guns", true)){
 			for( int i = 0; i < sizeof(g_sItemNameGun); i++ ){
 				if(hFile.GetNum(g_sItemNameGun[i]) == 1)
 					g_smWhiteList.SetValue(g_sItemNameGun[i], true);
 			}
 			hFile.Rewind();
 		}
-		if(KvJumpToKey(hFile, "melees", true)){
+		if(hFile.JumpToKey("melees", true)){
 			for( int i = 0; i < sizeof(g_sItemNameMelee); i++ ){
 				if(hFile.GetNum(g_sItemNameMelee[i]) == 1)
 					g_smWhiteList.SetValue(g_sItemNameMelee[i],true);
 			}
 			hFile.Rewind();
 		}
-		if(KvJumpToKey(hFile, "grenades", true)){
+		if(hFile.JumpToKey("grenades", true)){
 			for( int i = 0; i < sizeof(g_sItemNameGrenade); i++ ){
 				if(hFile.GetNum(g_sItemNameGrenade[i]) == 1)
 					g_smWhiteList.SetValue(g_sItemNameGrenade[i],true);
 			}
 			hFile.Rewind();
 		}
-		if(KvJumpToKey(hFile, "packs", true)){
+		if(hFile.JumpToKey("packs", true)){
 			for( int i = 0; i < sizeof(g_sItemNamePack); i++ ){
 				if(hFile.GetNum(g_sItemNamePack[i]) == 1)
 					g_smWhiteList.SetValue(g_sItemNamePack[i],true);
 			}
 			hFile.Rewind();
 		}
-		if(KvJumpToKey(hFile, "consumables", true)){
+		if(hFile.JumpToKey("consumables", true)){
 			for( int i = 0; i < sizeof(g_sItemNameConsumable); i++ ){
 				if(hFile.GetNum(g_sItemNameConsumable[i]) == 1)
 					g_smWhiteList.SetValue(g_sItemNameConsumable[i],true);
 			}
 			hFile.Rewind();
 		}
-		if(KvJumpToKey(hFile, "carryables", true)){
+		if(hFile.JumpToKey("carryables", true)){
 			for( int i = 0; i < sizeof(g_sItemNameCarry); i++ ){
 				if(hFile.GetNum(g_sItemNameCarry[i]) == 1)
 					g_smWhiteList.SetValue(g_sItemNameCarry[i],true);
@@ -544,7 +546,7 @@ int CleanWeapons(char[] classname="", char[] itemname="", bool equipped = false)
 	return count;
 }
 
-public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
 	LoadWhiteList();
 	StopTimerClean();
@@ -552,7 +554,7 @@ public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 	g_bSpawnedWeapons = false;
 }
 
-public void Event_RoundStarted(Event event, const char[] name, bool dontBroadcast) //postcheck weapons spowned on map or when round started
+void Event_RoundStarted(Event event, const char[] name, bool dontBroadcast) //postcheck weapons spowned on map or when round started
 {	
 	if(g_iSpawn == 1)
 		g_bSpawnedWeapons = true;
@@ -561,7 +563,7 @@ public void Event_RoundStarted(Event event, const char[] name, bool dontBroadcas
 	StartTimerClean();
 }
 
-public void Event_WeaponDrop(Event event, const char[] name, bool dontBroadcast)
+void Event_WeaponDrop(Event event, const char[] name, bool dontBroadcast)
 {
 	int weapon = event.GetInt("propid");
 	if(IsItemToClean(weapon)){
@@ -606,7 +608,6 @@ public void OnClientPutInServer(int client)
 		
 	SDKHook(client, SDKHook_WeaponEquipPost, OnWeaponEquip);
 	SDKHook(client, SDKHook_WeaponDropPost, OnWeaponDrop);
-	//SDKHook(client, SDKHook_WeaponCanUsePost, OnWeaponCanUse);
 }
 
 public void OnClientDisconnect(int client) 
@@ -625,7 +626,7 @@ public void OnClientDisconnect(int client)
 	}
 }
 
-public void OnSpawnPost(int entity) {
+void OnSpawnPost(int entity) {
 	
 	if (IsItemToClean(entity)) {
 		SetWeaponClean(entity);
@@ -633,7 +634,7 @@ public void OnSpawnPost(int entity) {
 	}
 }
 
-public void OnWeaponEquip(int client, int weapon) {
+void OnWeaponEquip(int client, int weapon) {
 	
 	if (IsValidSurvivor(client) && IsItemToClean(weapon))
 	{
@@ -643,7 +644,7 @@ public void OnWeaponEquip(int client, int weapon) {
 	}
 }
 
-public void OnWeaponDrop(int client, int weapon) {
+void OnWeaponDrop(int client, int weapon) {
 	
 	if (IsValidSurvivor(client) && IsItemToClean(weapon) && !IsWeaponEquipped(weapon) )
 	{
@@ -653,22 +654,14 @@ public void OnWeaponDrop(int client, int weapon) {
 	}
 }
 
-public void OnWeaponCanUse(int client, int weapon) {
-	
-	if (IsValidSurvivor(client) && IsItemToClean(weapon) && !IsWeaponEquipped(weapon) && g_iItemTime[weapon] <= 0)
-	{
-		RemoveEffects(weapon);
-		SetWeaponClean(weapon);
-		_debug("HOOK-player:%d CanUse : %d", client, weapon);
-	}
-}
-
-public Action CheckSpawnWeapons(Handle timer) {
+Action CheckSpawnWeapons(Handle timer) {
 	g_hTimerCheckSpawnWeapons = null;
 	g_bSpawnedWeapons = true;
+
+	return Plugin_Continue;
 }
 
-public Action CleaningWeapons(Handle timer) 
+Action CleaningWeapons(Handle timer) 
 {
 	for(int i = MaxClients+1; i < sizeof(g_iWeaponsRef); i++){
 		if(!g_iWeaponsRef[i])
@@ -1067,7 +1060,7 @@ stock bool IsWeaponSpawnClass(int weapon){
 	if(IsValidWeapon(weapon)){
 		char class_name[64];
 		GetEntityClassname(weapon, class_name, sizeof(class_name));
-		return ( strcmp(classname, "weapon_spawn") == 0);
+		return ( strcmp(class_name, "weapon_spawn") == 0);
 	}
 	return false;
 }
@@ -1189,7 +1182,6 @@ void ReloadPlugin() {
 		if (IsValidClient(i)) {
 			SDKHook(i, SDKHook_WeaponEquipPost, OnWeaponEquip);
 			SDKHook(i, SDKHook_WeaponDropPost, OnWeaponDrop);
-			//SDKHook(i, SDKHook_WeaponCanUsePost, OnWeaponCanUse);
 		}
 	}
 	StartTimerClean();
@@ -1202,7 +1194,6 @@ void DisablePlugin() {
 		if (IsValidClient(i)) {
 			SDKUnhook(i, SDKHook_WeaponEquipPost, OnWeaponEquip);
 			SDKUnhook(i, SDKHook_WeaponDropPost, OnWeaponDrop);
-			//SDKUnhook(i, SDKHook_WeaponCanUsePost, OnWeaponCanUse);
 		}
 	}
 	StopTimerClean();
