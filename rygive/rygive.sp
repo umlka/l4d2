@@ -746,15 +746,11 @@ void OnNextFrame_CreateInfected(DataPack dPack)
 //https://github.com/ProdigySim/DirectInfectedSpawn
 int iCreateInfectedWithParams(int client, const char[] sZombie)
 {
-	float vPos[3];
-	float vAng[3];
-	GetClientAbsAngles(client, vAng);
-	GetClientEyePosition(client, vPos);
-	bGetSpawnEndPoint(client, vPos);
+	float vEnd[3];
+	if(!bGetDirectionEndPoint(client, vEnd))
+		return -1;
 
-	vAng[0] = 0.0;
-	vAng[2] = 0.0;
-	return iCreateInfected(sZombie, vPos, vAng);
+	return iCreateInfected(sZombie, vEnd, NULL_VECTOR);
 }
 
 int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[3])
@@ -1623,7 +1619,7 @@ int iTeleportTargetMenuHandler(Menu menu, MenuAction action, int client, int par
 void vForceCrouch(int client)
 {
 	SetEntProp(client, Prop_Send, "m_bDucked", 1);
-	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
+	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags")|FL_DUCKING);
 }
 
 //https://forums.alliedmods.net/showthread.php?p=2693455
@@ -1634,7 +1630,6 @@ bool bGetSpawnEndPoint(int client, float vSpawnVec[3])
 	{
 		GetClientEyePosition(client, vEye);
 		vScaleVectorDirection(vEye, vEnd, 0.1);
-		
 		if(bGetNonCollideEndPoint(client, vEnd, vSpawnVec))
 			return true;
 	}
@@ -1644,44 +1639,41 @@ bool bGetSpawnEndPoint(int client, float vSpawnVec[3])
 
 void vScaleVectorDirection(float vStart[3], float vEnd[3], float fMultiple)
 {
-    float vDir[3];
-    SubtractVectors(vEnd, vStart, vDir);
-    ScaleVector(vDir, fMultiple);
-    AddVectors(vEnd, vDir, vEnd);
+	float vDir[3];
+	MakeVectorFromPoints(vStart, vEnd, vDir);
+	ScaleVector(vDir, fMultiple);
+	AddVectors(vEnd, vDir, vEnd);
 }
 
-bool bGetDirectionEndPoint(int client, float vEndPos[3])
+bool bGetDirectionEndPoint(int client, float vEnd[3])
 {
 	float vDir[3], vPos[3];
-	GetClientEyePosition(client, vPos);
 	GetClientEyeAngles(client, vDir);
-	
+	GetClientEyePosition(client, vPos);
 	Handle hTrace = TR_TraceRayFilterEx(vPos, vDir, MASK_PLAYERSOLID_BRUSHONLY, RayType_Infinite, bTraceEntityFilter);
-	if(hTrace)
+	if(TR_DidHit(hTrace))
 	{
-		if(TR_DidHit(hTrace))
-		{
-			TR_GetEndPosition(vEndPos, hTrace);
-			delete hTrace;
-			return true;
-		}
+		TR_GetEndPosition(vEnd, hTrace);
 		delete hTrace;
+		return true;
 	}
+
+	delete hTrace;
 	return false;
 }
 
-bool bGetNonCollideEndPoint(int client, float vEnd[3], float vEndNonCol[3], bool bEyeOrigin = true) // similar to bGetDirectionEndPoint, but with respect to player size
+bool bGetNonCollideEndPoint(int client, float vEnd[3], float vNonCol[3], bool bEye = true) // similar to bGetDirectionEndPoint, but with respect to player size
 {
 	float vStart[3];
-	if(bEyeOrigin)
+	if(bEye)
 	{
 		GetClientEyePosition(client, vStart);
 		if(bIsPlayerStuckPos(vStart)) // If we attempting to spawn from stucked position, let's start our hull trace from the middle of the ray in hope there are no collision
 		{
-			float vMiddle[3];
-			AddVectors(vStart, vEnd, vMiddle);
-			ScaleVector(vMiddle, 0.5);
-			vStart = vMiddle;
+			float vMid[3];
+			AddVectors(vStart, vEnd, vMid);
+			ScaleVector(vMid, 0.5);
+			vStart = vMid;
 		}
 	}
 	else
@@ -1690,13 +1682,10 @@ bool bGetNonCollideEndPoint(int client, float vEnd[3], float vEndNonCol[3], bool
 	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 56.0}), MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if(TR_DidHit(hTrace))
 	{
-		TR_GetEndPosition(vEndNonCol, hTrace);
+		TR_GetEndPosition(vNonCol, hTrace);
+		if(bEye && bIsPlayerStuckPos(vNonCol))
+			bGetNonCollideEndPoint(client, vEnd, vNonCol, false); // if eyes position doesn't allow to build reliable TraceHull, repeat from the feet (client's origin)
 		delete hTrace;
-		if(bEyeOrigin)
-		{
-			if(bIsPlayerStuckPos(vEndNonCol)) // if eyes position doesn't allow to build reliable TraceHull, repeat from the feet (client's origin)
-				bGetNonCollideEndPoint(client, vEnd, vEndNonCol, false);
-		}
 		return true;
 	}
 	delete hTrace;
@@ -1716,16 +1705,12 @@ bool bTraceEntityFilter(int entity, int contentsMask)
 {
 	if(entity <= MaxClients)
 		return false;
-	else
-	{
-		static char classname[9];
-		GetEntityClassname(entity, classname, sizeof classname);
-		if(classname[0] == 'i' || classname[0] == 'w')
-		{
-			if(strcmp(classname, "infected") == 0 || strcmp(classname, "witch") == 0)
-				return false;
-		}
-	}
+
+	static char classname[9];
+	GetEntityClassname(entity, classname, sizeof classname);
+	if((classname[0] == 'i' && strcmp(classname, "infected") == 0) || (classname[0] == 'w' && strcmp(classname, "witch") == 0))
+		return false;
+
 	return true;
 }
 
@@ -2746,4 +2731,258 @@ float SpeedModifier(int client, float speedmodifier)
 		speedmodifier = speedmodifier * g_fSpeedUp[client];// multiply current modifier to not overwrite any existing modifiers already
 
 	return speedmodifier;
+}eam = GetClientTeam(i)) == 2 || iTeam == 3) && !IsPlayerAlive(i))
+		{
+			FormatEx(sUID, sizeof sUID, "%d", GetClientUserId(i));
+			FormatEx(sName, sizeof sName, "%s - %N", g_sTargetTeam[iTeam], i);
+			menu.AddItem(sUID, sName);
+		}
+	}
+	menu.ExitBackButton = true;
+	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
 }
+
+int iRespawnplayerMenuHandler(Menu menu, MenuAction action, int client, int param2)
+{
+	switch(action)
+	{
+		case MenuAction_Select:
+		{
+			char sItem[16];
+			menu.GetItem(param2, sItem, sizeof sItem);
+			if(sItem[0] == 's')
+			{
+					for(int i = 1; i <= MaxClients; i++)
+					{
+						if(IsClientInGame(i) && GetClientTeam(i) == 2 && !IsPlayerAlive(i))
+						{
+							vStatsConditionPatch(true);
+							SDKCall(g_hSDKRoundRespawn, i);
+							vStatsConditionPatch(false);
+							vTeleportToSurvivor(i);
+						}
+					}
+					vMisc(client, 0);
+			}
+			else
+			{
+				int iTarget = GetClientOfUserId(StringToInt(sItem));
+				if(iTarget && IsClientInGame(iTarget) && !IsPlayerAlive(iTarget))
+				{
+					switch(GetClientTeam(iTarget))
+					{
+						case 2:
+						{
+							vStatsConditionPatch(true);
+							SDKCall(g_hSDKRoundRespawn, iTarget);
+							vStatsConditionPatch(false);
+							vTeleportToSurvivor(iTarget);
+							vRespawnPlayer(client, menu.Selection);
+						}
+
+						case 3:
+							vSelectZombieClassMenu(client, iTarget, 0);
+					}
+				}
+			}
+		}
+		case MenuAction_Cancel:
+		{
+			if(param2 == MenuCancel_ExitBack)
+				vMisc(client, 0);
+		}
+		case MenuAction_End:
+			delete menu;
+	}
+
+	return 0;
+}
+
+void vSelectZombieClassMenu(int client, int iTarget, int index)
+{
+	char sUID[2][16];
+	char sUserInfo[32];
+	Menu menu = new Menu(iSelectZombieClassMenuHandler);
+	menu.SetTitle("目标特感类型");
+	FormatEx(sUID[0], sizeof sUID[], "%d", GetClientUserId(iTarget));
+	for(int i; i < 7; i++)
+	{
+		FormatEx(sUID[1], sizeof sUID[], "%d", i);
+		ImplodeStrings(sUID, 2, "|", sUserInfo, sizeof sUserInfo);
+		menu.AddItem(sUserInfo, g_sZombieClass[i]);
+	}
+	menu.ExitButton = true;
+	menu.ExitBackButton = false;
+	menu.DisplayAt(client, index, MENU_TIME_FOREVER);
+}
+
+int iSelectZombieClassMenuHandler(Menu menu, MenuAction action, int client, int param2)
+{
+	switch(action)
+	{
+		case MenuAction_Select:
+		{
+			char sItem[32];
+			menu.GetItem(param2, sItem, sizeof sItem);
+			char sInfo[2][16];
+			ExplodeString(sItem, "|", sInfo, 2, 16);
+			int iTarget = GetClientOfUserId(StringToInt(sInfo[0]));
+			if(iTarget && IsClientInGame(iTarget) && GetClientTeam(iTarget) == 3 && !IsFakeClient(iTarget) && !IsPlayerAlive(iTarget))
+				vRespawnPZ(iTarget, StringToInt(sInfo[1]));
+
+			vSelectZombieClassMenu(client, iTarget, menu.Selection);
+		}
+		case MenuAction_End:
+			delete menu;
+	}
+
+	return 0;
+}
+
+void vRespawnPZ(int client, int iZombieClass)
+{
+	if(g_bRespawnPZ)
+		CZ_RespawnPZ(client, iZombieClass != 6 ? iZombieClass + 1 : 8);
+	else
+	{
+		char sCmd[64];
+		Format(sCmd, sizeof sCmd, "z_spawn_old %s", g_sZombieClass[iZombieClass]);
+		vSpawnablePZScanProtect(0, client);
+		vCheatCommand(client, sCmd);
+		vSpawnablePZScanProtect(1, client);
+	}
+}
+
+void vSpawnablePZScanProtect(int iState, int client = -1)
+{
+	static int i;
+	static bool bResetGhost[MAXPLAYERS + 1];
+	static bool bResetLifeState[MAXPLAYERS + 1];
+
+	switch(iState)
+	{
+		case 0: 
+		{
+			if(g_bControlZombies && CZ_IsSpawnablePZSupported())
+				CZ_SetSpawnablePZ(client);
+			else
+			{
+				for(i = 1; i <= MaxClients; i++)
+				{
+					if(i == client || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
+						continue;
+
+					if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
+					{
+						bResetGhost[i] = true;
+						SetEntProp(i, Prop_Send, "m_isGhost", 0);
+					}
+					else if(!IsPlayerAlive(i))
+					{
+						bResetLifeState[i] = true;
+						SetEntProp(i, Prop_Send, "m_lifeState", 0);
+					}
+				}
+			}
+		}
+
+		case 1: 
+		{
+			if(g_bControlZombies && CZ_IsSpawnablePZSupported())
+				CZ_ResetSpawnablePZ();
+			else
+			{
+				for(i = 1; i <= MaxClients; i++)
+				{
+					if(bResetGhost[i])
+						SetEntProp(i, Prop_Send, "m_isGhost", 1);
+					if(bResetLifeState[i])
+						SetEntProp(i, Prop_Send, "m_lifeState", 1);
+			
+					bResetGhost[i] = false;
+					bResetLifeState[i] = false;
+				}
+			}
+		}
+	}
+}
+
+void vTeleportToSurvivor(int client, bool bRandom = true)
+{
+	int iSurvivor = 1;
+	ArrayList aClients = new ArrayList(2);
+
+	for(; iSurvivor <= MaxClients; iSurvivor++)
+	{
+		if(iSurvivor == client || !IsClientInGame(iSurvivor) || GetClientTeam(iSurvivor) != 2 || !IsPlayerAlive(iSurvivor))
+			continue;
+	
+		aClients.Set(aClients.Push(!GetEntProp(iSurvivor, Prop_Send, "m_isIncapacitated") ? 0 : !GetEntProp(iSurvivor, Prop_Send, "m_isHangingFromLedge") ? 1 : 2), iSurvivor, 1);
+	}
+
+	if(!aClients.Length)
+		iSurvivor = 0;
+	else
+	{
+		aClients.Sort(Sort_Descending, Sort_Integer);
+
+		if(!bRandom)
+			iSurvivor = aClients.Get(aClients.Length - 1, 1);
+		else
+		{
+			iSurvivor = aClients.Length - 1;
+			iSurvivor = aClients.Get(GetRandomInt(aClients.FindValue(aClients.Get(iSurvivor, 0)), iSurvivor), 1);
+		}
+	}
+
+	delete aClients;
+
+	if(iSurvivor)
+	{
+		vForceCrouch(client);
+
+		float vPos[3];
+		GetClientAbsOrigin(iSurvivor, vPos);
+		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
+	}
+
+	char sScriptName[64];
+	g_aMeleeScripts.GetString(GetRandomInt(0, g_aMeleeScripts.Length - 1), sScriptName, sizeof sScriptName);
+	Format(sScriptName, sizeof sScriptName, "give %s", sScriptName);
+	vCheatCommand(client, sScriptName);
+	vCheatCommand(client, "give smg");
+}
+
+void vSetFriendlyFire(int client)
+{
+	Menu menu = new Menu(iSetFriendlyFireMenuHandler);
+	menu.SetTitle("友伤");
+	menu.AddItem("999", "恢复默认");
+	menu.AddItem("0.0", "0.0(简单)");
+	menu.AddItem("0.1", "0.1(普通)");
+	menu.AddItem("0.2", "0.2");
+	menu.AddItem("0.3", "0.3(困难)");
+	menu.AddItem("0.4", "0.4");
+	menu.AddItem("0.5", "0.5(专家)");
+	menu.AddItem("0.6", "0.6");
+	menu.AddItem("0.7", "0.7");
+	menu.AddItem("0.8", "0.8");
+	menu.AddItem("0.9", "0.9");
+	menu.AddItem("1.0", "1.0");
+	menu.ExitBackButton = true;
+	menu.Display(client, MENU_TIME_FOREVER);
+}
+
+int iSetFriendlyFireMenuHandler(Menu menu, MenuAction action, int client, int param2)
+{
+	switch(action)
+	{
+		case MenuAction_Select:
+		{
+			char sItem[16];
+			menu.GetItem(param2, sItem, sizeof sItem);
+			switch(param2)
+			{
+				case 0:
+				{
+			
