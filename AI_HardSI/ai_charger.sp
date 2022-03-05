@@ -279,7 +279,7 @@ bool bTraceEntityFilter(int entity, int contentsMask)
 
 	static char classname[9];
 	GetEntityClassname(entity, classname, sizeof classname);
-	if((classname[0] == 'i' && strcmp(classname, "infected") == 0) || (classname[0] == 'w' && strcmp(classname, "witch") == 0))
+	if((classname[0] == 'i' && strcmp(classname[1], "nfected") == 0) || (classname[0] == 'w' && strcmp(classname[1], "itch") == 0))
 		return false;
 
 	return true;
