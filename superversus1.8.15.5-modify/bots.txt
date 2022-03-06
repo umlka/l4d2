@@ -105,7 +105,7 @@
 			 * 4. The variable that is being assigned a value below those two function calls has an offset.
 			 * 5. Multiply the offset by 4 to get the offset for the hidden melee weapon.
 			 **/
-			"CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenWeapon"
+			"CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon"
 			{
 				"linux"		"16288"
 				"windows"	"16308"
