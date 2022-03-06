@@ -15,12 +15,12 @@
 
 Handle
 	g_hBotsTimer,
-	g_hSDK_CreateSurvivorBot,
-	g_hSDK_RoundRespawn,
-	g_hSDK_SetHumanSpectator,
-	g_hSDK_TakeOverBot,
-	g_hSDK_GoAwayFromKeyboard,
-	g_hSDK_IsInTransition;
+	g_hSDK_NextBotCreatePlayerBot_SurvivorBot,
+	g_hSDK_CTerrorPlayer_RoundRespawn,
+	g_hSDK_SurvivorBot_SetHumanSpectator,
+	g_hSDK_CTerrorPlayer_TakeOverBot,
+	g_hSDK_CTerrorPlayer_GoAwayFromKeyboard,
+	g_hSDK_CDirector_IsInTransition;
 
 StringMap
 	g_aSteamIDs;
@@ -49,7 +49,7 @@ int
 	g_iSurvivorLimitSet,
 	g_iSpecCmdLimit,
 	g_iSpecNextNotify,
-	g_iOffHiddenWeapon;
+	g_iOff_m_hHiddenWeapon;
 
 bool
 	g_bShouldFixAFK,
@@ -321,7 +321,7 @@ public void OnPluginStart()
 	g_hGiveWeaponType.AddChangeHook(vWeaponConVarChanged);
 	g_hGiveWeaponTime.AddChangeHook(vWeaponConVarChanged);
 	
-	//AutoExecConfig(true, "bots");
+	AutoExecConfig(true, "bots");
 
 	RegConsoleCmd("sm_spec", cmdJoinSpectator, "加入旁观者");
 	RegConsoleCmd("sm_join", cmdJoinSurvivor, "加入生还者");
@@ -372,7 +372,7 @@ Action cmdJoinSpectator(int client, int args)
 	}
 
 	if(bIdle)
-		SDKCall(g_hSDK_TakeOverBot, client, true);
+		SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 
 	ChangeClientTeam(client, TEAM_SPECTATOR);
 	return Plugin_Handled;
@@ -407,7 +407,7 @@ Action cmdJoinSurvivor(int client, int args)
 			ChangeClientTeam(client, TEAM_SPECTATOR);
 		else if(iGetBotOfIdlePlayer(client))
 		{
-			SDKCall(g_hSDK_TakeOverBot, client, true);
+			SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 			return Plugin_Handled;
 		}
 		
@@ -468,8 +468,8 @@ Action cmdJoinSurvivor(int client, int args)
 				vSetHumanSpectator(iBot, client);
 			else
 			{
-				SDKCall(g_hSDK_SetHumanSpectator, iBot, client);
-				SDKCall(g_hSDK_TakeOverBot, client, true);
+				SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, iBot, client);
+				SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 				ReplyToCommand(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
 			}		
 		}
@@ -643,7 +643,7 @@ Action cmdGoAFK(int client, int args)
 	if(!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != TEAM_SURVIVOR || !IsPlayerAlive(client))
 		return Plugin_Handled;
 
-	SDKCall(g_hSDK_GoAwayFromKeyboard, client);
+	SDKCall(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard, client);
 	return Plugin_Handled;
 }
 
@@ -871,7 +871,7 @@ Action tmrBotsUpdate(Handle timer)
 {
 	g_hBotsTimer = null;
 
-	if(!SDKCall(g_hSDK_IsInTransition, g_pDirector))
+	if(!SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector))
 		vSpawnCheck();
 	else
 		g_hBotsTimer = CreateTimer(1.0, tmrBotsUpdate);
@@ -1015,7 +1015,7 @@ Action tmrAutoJoinSurvivorTeam(Handle timer, int client)
 	if(!g_bAutoJoin || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || iGetBotOfIdlePlayer(client)) 
 		return Plugin_Stop;
 
-	if(!g_iRoundStart || GetClientTeam(client) <= TEAM_NOTEAM || SDKCall(g_hSDK_IsInTransition, g_pDirector))
+	if(!g_iRoundStart || GetClientTeam(client) <= TEAM_NOTEAM || SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector))
 		return Plugin_Continue;
 
 	cmdJoinSurvivor(client, 0);
@@ -1353,7 +1353,7 @@ void vRemovePlayerWeapons(int client)
 		}
 	}
 
-	iWeapon = GetEntDataEnt2(client, g_iOffHiddenWeapon);
+	iWeapon = GetEntDataEnt2(client, g_iOff_m_hHiddenWeapon);
 	if(iWeapon > MaxClients && IsValidEntity(iWeapon) && GetEntPropEnt(iWeapon, Prop_Data, "m_hOwnerEntity") == client)
 	{
 		RemovePlayerItem(client, iWeapon);
@@ -1623,66 +1623,65 @@ void vInitGameData()
 	if(!g_pDirector)
 		SetFailState("Failed to find address: CDirector");
 
-	g_iOffHiddenWeapon = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenWeapon");
-	if(g_iOffHiddenWeapon == -1)
-		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenWeapon");
+	g_iOff_m_hHiddenWeapon = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon");
+	if(g_iOff_m_hHiddenWeapon == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon");
 
 	StartPrepSDKCall(SDKCall_Static);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "NextBotCreatePlayerBot<SurvivorBot>"))
 		SetFailState("Failed to find signature: NextBotCreatePlayerBot<SurvivorBot>");
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDK_CreateSurvivorBot = EndPrepSDKCall();
-	if(!g_hSDK_CreateSurvivorBot)
+	g_hSDK_NextBotCreatePlayerBot_SurvivorBot = EndPrepSDKCall();
+	if(!g_hSDK_NextBotCreatePlayerBot_SurvivorBot)
 		SetFailState("Failed to create SDKCall: NextBotCreatePlayerBot<SurvivorBot>");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn"))
 		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
-	g_hSDK_RoundRespawn = EndPrepSDKCall();
-	if(!g_hSDK_RoundRespawn)
+	g_hSDK_CTerrorPlayer_RoundRespawn = EndPrepSDKCall();
+	if(!g_hSDK_CTerrorPlayer_RoundRespawn)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
-
-	vRegisterStatsConditionPatch(hGameData);
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SurvivorBot::SetHumanSpectator"))
 		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDK_SetHumanSpectator = EndPrepSDKCall();
-	if(!g_hSDK_SetHumanSpectator)
+	g_hSDK_SurvivorBot_SetHumanSpectator = EndPrepSDKCall();
+	if(!g_hSDK_SurvivorBot_SetHumanSpectator)
 		SetFailState("Failed to create SDKCall: SurvivorBot::SetHumanSpectator");
 	
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TakeOverBot"))
 		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverBot");
 	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_TakeOverBot = EndPrepSDKCall();
-	if(!g_hSDK_TakeOverBot)
+	g_hSDK_CTerrorPlayer_TakeOverBot = EndPrepSDKCall();
+	if(!g_hSDK_CTerrorPlayer_TakeOverBot)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::TakeOverBot");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::GoAwayFromKeyboard"))
 		SetFailState("Failed to find signature: CTerrorPlayer::GoAwayFromKeyboard");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_GoAwayFromKeyboard = EndPrepSDKCall();
-	if(!g_hSDK_GoAwayFromKeyboard)
+	g_hSDK_CTerrorPlayer_GoAwayFromKeyboard = EndPrepSDKCall();
+	if(!g_hSDK_CTerrorPlayer_GoAwayFromKeyboard)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard");
 
 	StartPrepSDKCall(SDKCall_Raw);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CDirector::IsInTransition"))
 		SetFailState("Failed to find signature: CDirector::IsInTransition");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_IsInTransition = EndPrepSDKCall();
-	if(!g_hSDK_IsInTransition)
+	g_hSDK_CDirector_IsInTransition = EndPrepSDKCall();
+	if(!g_hSDK_CDirector_IsInTransition)
 		SetFailState("Failed to create SDKCall: CDirector::IsInTransition");
 
+	vInitPatchs(hGameData);
 	vSetupDetours(hGameData);
 
 	delete hGameData;
 }
 
-void vRegisterStatsConditionPatch(GameData hGameData = null)
+void vInitPatchs(GameData hGameData = null)
 {
 	int iOffset = hGameData.GetOffset("RoundRespawn_Offset");
 	if(iOffset == -1)
@@ -1723,7 +1722,7 @@ void vStatsConditionPatch(bool bPatch)
 int iCreateSurvivorBot()
 {
 	g_bInSpawnTime = true;
-	int iBot = SDKCall(g_hSDK_CreateSurvivorBot, NULL_STRING);
+	int iBot = SDKCall(g_hSDK_NextBotCreatePlayerBot_SurvivorBot, NULL_STRING);
 	if(iBot)
 		ChangeClientTeam(iBot, 2);
 
@@ -1735,7 +1734,7 @@ void vRoundRespawn(int client)
 {			
 	vStatsConditionPatch(true);
 	g_bInSpawnTime = true;
-	SDKCall(g_hSDK_RoundRespawn, client);
+	SDKCall(g_hSDK_CTerrorPlayer_RoundRespawn, client);
 	g_bInSpawnTime = false;
 	vStatsConditionPatch(false);
 }
@@ -1758,7 +1757,7 @@ enum Obs_Mode
 **/
 void vSetHumanSpectator(int iBot, int client)
 {
-	SDKCall(g_hSDK_SetHumanSpectator, iBot, client);
+	SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, iBot, client);
 	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", iBot);
 	if(GetEntProp(client, Prop_Send, "m_iObserverMode") == 6)
 		SetEntProp(client, Prop_Send, "m_iObserverMode", 5);
@@ -1766,8 +1765,8 @@ void vSetHumanSpectator(int iBot, int client)
 
 void vTakeOverBot(int client, int iBot)
 {
-	SDKCall(g_hSDK_SetHumanSpectator, iBot, client);
-	SDKCall(g_hSDK_TakeOverBot, client, true);
+	SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, iBot, client);
+	SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 }
 
 void vSetupDetours(GameData hGameData = null)
