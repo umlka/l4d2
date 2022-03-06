@@ -4,54 +4,51 @@
 	{
 		"Functions"
 		{
-			"CTerrorPlayer::OnEnterGhostState"
+			"DD_CTerrorPlayer::OnEnterGhostState"
 			{
 				"signature"	"CTerrorPlayer::OnEnterGhostState"
 				"callconv"	"thiscall"
 				"return"	"void"
 				"this"		"entity"
 			}
-			"CTerrorPlayer::MaterializeFromGhost"
+			"DD_CTerrorPlayer::MaterializeFromGhost"
 			{
 				"signature"		"CTerrorPlayer::MaterializeFromGhost"
 				"callconv"		"thiscall"
 				"return"		"void"
 				"this"			"entity"
 			}
-			"CTerrorPlayer::PlayerZombieAbortControl"
+			"DD_CTerrorPlayer::PlayerZombieAbortControl"
 			{
 				"signature"		"CTerrorPlayer::PlayerZombieAbortControl"
 				"callconv"		"thiscall"
 				"return"		"void"
 				"this"			"entity"
 			}
-			"ForEachTerrorPlayer<SpawnablePZScan>"
+			"DD_ForEachTerrorPlayer<SpawnablePZScan>"
 			{
 				"signature"		"ForEachTerrorPlayer<SpawnablePZScan>"
-				"callconv"		"thiscall"
+				"callconv"		"cdecl"
 				"return"		"void"
-				"this"			"ignore"
 			}
-			"Script_ZSpawn"
+			"DD_Script_ZSpawn"
 			{
 				"signature"		"Script_ZSpawn"
 				"callconv"		"thiscall"
+				"callconv"		"cdecl"
 				"return"		"void"
-				"this"			"ignore"
 			}
-			"z_spawn_old"
+			"DD_z_spawn_old"
 			{
 				"signature"		"z_spawn_old"
-				"callconv"		"thiscall"
+				"callconv"		"cdecl"
 				"return"		"void"
-				"this"			"address"
 			}
-			"z_spawn"
+			"DD_z_spawn"
 			{
 				"signature"		"z_spawn"
-				"callconv"		"thiscall"
+				"callconv"		"cdecl"
 				"return"		"void"
-				"this"			"ignore"
 			}
 		}
 
@@ -65,7 +62,7 @@
 				}
 				"windows"
 				{
-					"signature"	"CTerrorPlayer::RoundRespawn"			
+					"signature"	"CTerrorPlayer::RoundRespawn"		
 				}
 			}
 		}
@@ -110,7 +107,7 @@
 			 * 4. The variable that is being assigned a value below those two function calls has an offset.
 			 * 5. Multiply the offset by 4 to get the offset for the hidden melee weapon.
 			 **/
-			"CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenMeleeWeapon"
+			"CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon"
 			{
 				"linux"		"16288"
 				"windows"	"16308"
@@ -122,20 +119,15 @@
 			* 1. 搜索 "RevivedByFrien" 定位到 "CTerrorPlayer::OnRevived" 函数内部
 			* 2. 下面有个函数设置的最后一个参数是0.0, 往下数2行就到v24或v31, Linux和Windows都是一样的位置
 			**/
-			"CTerrorPlayer::OnRevived::HangingPreTempHealth"
-			{
-				"linux"		"14828"	//v24
-				"windows"	"14848"	//v31
-			}
-			"CTerrorPlayer::OnRevived::HangingPreRealHealth"
+			"CTerrorPlayer::OnRevived::m_preHangingHealth" //或参考left4dhooks "m_preIncapacitatedHealth"
 			{
 				"linux"		"14824"	//v25 - v24
 				"windows"	"14844"	//v32 - v31
 			}
-			"CTerrorPlayer::OnRevived::HangingCurrentHealth"
+			"CTerrorPlayer::OnRevived::m_preHangingHealthBuffer" //或参考left4dhooks "m_preIncapacitatedHealthBuffer"
 			{
-				"linux"		"256"	//v50
-				"windows"	"236"	//v47
+				"linux"		"14828"	//v24
+				"windows"	"14848"	//v31
 			}
 		}
 
@@ -148,14 +140,6 @@
 				"linux"		"@_ZN13CTerrorPlayer9OnRevivedEv"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x8B\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x57\xFF\x2A\x84\x2A\x0F\x84\x2A\x2A\x2A\x2A\x8B\x2A\xE8"
 				/* ? ? ? ? ? ? 53 56 8B ? 8B ? 8B 90 ? ? ? ? 57 FF ? 84 ? 0F 84 ? ? ? ? 8B ? E8 */
-			}
-			/* CTerrorPlayer::OnEnterGhostState(void) */
-			"CTerrorPlayer::OnEnterGhostState"
-			{
-				"library"	"server"
-				"linux"		"@_ZN13CTerrorPlayer17OnEnterGhostStateEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x8B\x2A\x8B\x86\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x8D\x8E\x2A\x2A\x2A\x2A\x57"
-				/* ? ? ? ? ? ? 53 56 8B ? 8B 86 ? ? ? ? 8B ? ? 8D 8E ? ? ? ? 57 */
 			}
 			/* Tank::LeaveStasis(void) */
 			"Tank::LeaveStasis"
@@ -172,6 +156,14 @@
 				"linux"		"@_ZN9CCSPlayer16State_TransitionE13CSPlayerState"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x86\x2A\x2A\x2A\x2A\x57\x8B\x2A\x2A\x85\x2A\x74\x2A\x83"
 				/* ? ? ? ? ? ? 8B 86 ? ? ? ? 57 8B ? ? 85 ? 74 ? 83 */
+			}
+			/* CTerrorPlayer::OnEnterGhostState(void) */
+			"CTerrorPlayer::OnEnterGhostState"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer17OnEnterGhostStateEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x8B\x2A\x8B\x86\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x8D\x8E\x2A\x2A\x2A\x2A\x57"
+				/* ? ? ? ? ? ? 53 56 8B ? 8B 86 ? ? ? ? 8B ? ? 8D 8E ? ? ? ? 57 */
 			}
 			/* CTerrorPlayer::MaterializeFromGhost(void) */
 			"CTerrorPlayer::MaterializeFromGhost"
@@ -281,7 +273,7 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\xBE\x2A\x2A\x2A\x2A\x2A\x7E\x2A\x32\x2A\x5E\x5D\xC2\x2A\x2A\x8B\x0D"
                 /* ? ? ? ? ? ? 83 BE ? ? ? ? ? 7E ? 32 ? 5E 5D C2 ? ? 8B 0D */
 			}
-			/* CTerrorPlayer::TakeOverBot(bool) */
+			/* CTerrorPlayer::TakeOverBot(CTerrorPlayer *__hidden this, bool) */
 			"CTerrorPlayer::TakeOverBot"
 			{
 				"library"  "server"
