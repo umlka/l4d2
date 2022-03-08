@@ -22,8 +22,8 @@
 #define	 LOUIS		7, 7
 
 Handle
-	g_hSDK_IsInTransition,
-	g_hSDK_IsTransitioned;
+	g_hSDK_CDirector_IsInTransition,
+	g_hSDK_CTerrorPlayer_IsTransitioned;
 
 Cookie
 	g_ckClientID,
@@ -722,7 +722,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 
 	if((classname[0] == 'p' && strcmp(classname, "player", false) == 0) || (classname[0] == 's' && strcmp(classname, "survivor_bot", false) == 0))
 	{
-		if(g_bInTransition && SDKCall(g_hSDK_IsInTransition, g_pDirector) && !SDKCall(g_hSDK_IsTransitioned, entity))
+		if(g_bInTransition && SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector) && !SDKCall(g_hSDK_CTerrorPlayer_IsTransitioned, entity))
 			return;
 
 		SDKHook(entity, SDKHook_SpawnPost, OnSpawnPost);
@@ -880,7 +880,7 @@ void vSetCharacterInfo(int client, int iCharacter, int iModelIndex)
 void vRemovePlayerWeapon(int client, int iWeapon)
 {
 	RemovePlayerItem(client, iWeapon);
-	RemoveEdict(iWeapon);
+	RemoveEntity(iWeapon);
 }
 
 void vReEquipWeapons(int client)
@@ -1014,7 +1014,7 @@ void vInitGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(!FileExists(sPath)) 
+	if(!FileExists(sPath))
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
@@ -1043,16 +1043,16 @@ void vInitGameData()
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CDirector::IsInTransition"))
 		SetFailState("Failed to find signature: CDirector::IsInTransition");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_IsInTransition = EndPrepSDKCall();
-	if(!g_hSDK_IsInTransition)
+	g_hSDK_CDirector_IsInTransition = EndPrepSDKCall();
+	if(!g_hSDK_CDirector_IsInTransition)
 		SetFailState("Failed to create SDKCall: CDirector::IsInTransition");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::IsTransitioned"))
 		SetFailState("Failed to find signature: CTerrorPlayer::IsTransitioned");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_IsTransitioned = EndPrepSDKCall();
-	if(!g_hSDK_IsTransitioned)
+	g_hSDK_CTerrorPlayer_IsTransitioned = EndPrepSDKCall();
+	if(!g_hSDK_CTerrorPlayer_IsTransitioned)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::IsTransitioned");
 
 	delete hGameData;
