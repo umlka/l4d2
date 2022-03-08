@@ -1742,8 +1742,8 @@ void vSetupDetours(GameData hGameData = null)
 	if(!dDetour)
 		SetFailState("Failed to create DynamicDetour: DD_CTerrorPlayer::GetPlayerByCharacter");
 		
-	if(!dDetour.Enable(Hook_Pre, DD_CTerrorPlayer_GetPlayerByCharacter_Pre))
-		SetFailState("Failed to detour pre: DD_CTerrorPlayer::GetPlayerByCharacter");
+	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_GetPlayerByCharacter_Post))
+		SetFailState("Failed to detour post: DD_CTerrorPlayer::GetPlayerByCharacter");
 
 	dDetour = DynamicDetour.FromConf(hGameData, "DD_CBasePlayer::SetModel");
 	if(!dDetour)
@@ -1788,7 +1788,7 @@ MRESReturn DD_CTerrorPlayer_GoAwayFromKeyboard_Post(int pThis, DHookReturn hRetu
 	return MRES_Ignored;
 }
 
-MRESReturn DD_CTerrorPlayer_GetPlayerByCharacter_Pre(DHookReturn hReturn, DHookParam hParams)
+MRESReturn DD_CTerrorPlayer_GetPlayerByCharacter_Post(DHookReturn hReturn, DHookParam hParams)
 {
 	if(!g_bShouldFixAFK)
 		return MRES_Ignored;
