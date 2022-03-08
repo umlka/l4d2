@@ -17,6 +17,7 @@ Handle
 	g_hBotsTimer,
 	g_hSDK_NextBotCreatePlayerBot_SurvivorBot,
 	g_hSDK_CTerrorPlayer_RoundRespawn,
+	g_hSDK_CCSPlayer_State_Transition,
 	g_hSDK_SurvivorBot_SetHumanSpectator,
 	g_hSDK_CTerrorPlayer_TakeOverBot,
 	g_hSDK_CTerrorPlayer_GoAwayFromKeyboard,
@@ -397,94 +398,74 @@ Action cmdJoinSurvivor(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if(!client || !IsClientInGame(client) || IsFakeClient(client))
+	int iTeam;
+	if(!client || !IsClientInGame(client) || IsFakeClient(client) || (iTeam = GetClientTeam(client)) == TEAM_SURVIVOR)
 		return Plugin_Handled;
 
-	int iTeam = GetClientTeam(client);
-	if(iTeam != TEAM_SURVIVOR)
+	if(iTeam == TEAM_SPECTATOR)
 	{
-		if(iTeam != TEAM_SPECTATOR)
-			ChangeClientTeam(client, TEAM_SPECTATOR);
-		else if(iGetBotOfIdlePlayer(client))
+		if(iGetBotOfIdlePlayer(client))
 		{
 			SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 			return Plugin_Handled;
 		}
-		
-		bool bCanRespawn = g_bRespawnJoin && bIsFirstTime(client);
-		int iBot = GetClientOfUserId(g_esPlayer[client].iPlayerBot);
-		if(!iBot || !bIsValidSurvivorBot(iBot, -1))
-			iBot = iFindUselessSurvivorBot(true);
+	}
+	else
+		ChangeClientTeam(client, TEAM_SPECTATOR);
 
-		if(!iBot)
+	bool bCanRespawn = g_bRespawnJoin && bIsFirstTime(client);
+	int iBot = GetClientOfUserId(g_esPlayer[client].iPlayerBot);
+	if(!iBot || !bIsValidSurvivorBot(iBot, -1))
+		iBot = iFindUselessSurvivorBot(true);
+
+	if(!iBot)
+	{
+		if(!(iBot = iAddSurvivorBot()))
 		{
-			iBot = iCreateSurvivorBot();
-			if(!iBot)
-			{
-				ChangeClientTeam(client, TEAM_SURVIVOR);
-				if(bCanRespawn)
-				{
-					if(!IsPlayerAlive(client))
-					{
-						vRoundRespawn(client);
-						vSetGodMode(client, 3.0);
-						vTeleportToSurvivor(client);
-					}
-				}
-				else if(!IsPlayerAlive(client))
-					ReplyToCommand(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
-
-				return Plugin_Handled;
-			}
-			else if(IsPlayerAlive(iBot))
+			ChangeClientTeam(client, TEAM_SURVIVOR);
+			if(!IsPlayerAlive(client))
 			{
 				if(bCanRespawn)
-				{
-					vSetGodMode(iBot, 3.0);
-					vTeleportToSurvivor(iBot);
-				}
+					vRoundRespawn(client);
 				else
-				{
-					vRemovePlayerWeapons(iBot);
-					ForcePlayerSuicide(iBot);
-				}
+					ReplyToCommand(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
 			}
-		}
+	
+			if(IsPlayerAlive(client))
+				vTeleportToSurvivor(client);
 
-		if(bCanRespawn)
+			return Plugin_Handled;
+		}
+		else if(IsPlayerAlive(iBot))
 		{
-			if(!IsPlayerAlive(iBot))
-			{
-				vRoundRespawn(iBot);
-				vSetGodMode(iBot, 3.0);
+			if(bCanRespawn)
 				vTeleportToSurvivor(iBot);
-			}
-
-			vSetHumanSpectator(iBot, client);
-		}
-		else
-		{
-			if(IsPlayerAlive(iBot))
-				vSetHumanSpectator(iBot, client);
 			else
-			{
-				SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, iBot, client);
-				SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
-				ReplyToCommand(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
-			}		
+				SDKCall(g_hSDK_CCSPlayer_State_Transition, iBot, 6);
 		}
 	}
-	/*else if(!IsPlayerAlive(client))
+
+	if(bCanRespawn)
 	{
-		int iBot = iFindUselessSurvivorBot(true);
-		if(iBot && IsPlayerAlive(iBot))
+		if(!IsPlayerAlive(iBot))
 		{
-			ChangeClientTeam(client, TEAM_SPECTATOR);
-			vTakeOverBot(client, iBot);
+			vRoundRespawn(iBot);
+			vTeleportToSurvivor(iBot);
 		}
+
+		vSetHumanSpectator(iBot, client);
+	}
+	else
+	{
+		if(IsPlayerAlive(iBot))
+			vSetHumanSpectator(iBot, client);
 		else
-			ReplyToCommand(client, "\x01你已经 \x04死亡\x01. 没有 \x05空闲的电脑BOT \x01可以接管\x01.");
-	}*/
+		{
+			SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, iBot, client);
+			SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
+			ReplyToCommand(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
+		}		
+	}
 
 	return Plugin_Handled;
 }
@@ -914,13 +895,12 @@ void vKickUnusedSurvivorBot()
 
 void vSpawnFakeSurvivorClient()
 {
-	int iBot = iCreateSurvivorBot();
+	int iBot = iAddSurvivorBot();
 	if(iBot)
 	{
 		if(!IsPlayerAlive(iBot))
 			vRoundRespawn(iBot);
 
-		vSetGodMode(iBot, 3.0);
 		vTeleportToSurvivor(iBot);
 	}
 }
@@ -975,7 +955,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 	if(!IsFakeClient(client) && bIsFirstTime(client))
 		vRecordSteamID(client);
 
-	vSetGhostStatus(client, 0);
+	SetEntProp(client, Prop_Send, "m_isGhost", 0);
 }
 
 void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
@@ -1006,7 +986,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		}
 
 		case TEAM_SURVIVOR:
-			vSetGhostStatus(client, 0);
+			SetEntProp(client, Prop_Send, "m_isGhost", 0);
 	}
 }
 
@@ -1086,12 +1066,12 @@ void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadca
 			continue;
 			
 		entity = CreateEntityByName("info_survivor_position");
-		if(entity == INVALID_ENT_REFERENCE)
-			continue;
-
-		DispatchKeyValue(entity, "Order", sOrder[iSurvivor - RoundToFloor(iSurvivor / 4.0) * 4]);
-		TeleportEntity(entity, vOrigin, NULL_VECTOR, NULL_VECTOR);
-		DispatchSpawn(entity);
+		if(entity != INVALID_ENT_REFERENCE)
+		{
+			DispatchKeyValue(entity, "Order", sOrder[iSurvivor - RoundToFloor(iSurvivor / 4.0) * 4]);
+			TeleportEntity(entity, vOrigin, NULL_VECTOR, NULL_VECTOR);
+			DispatchSpawn(entity);
+		}
 	}
 }
 
@@ -1190,33 +1170,6 @@ int iFindUnusedSurvivorBot()
 	return client;
 }
 
-/*int iFindUselessSurvivorBot()
-{
-	int client;
-	ArrayList aClients = new ArrayList(2);
-
-	for(int i = MaxClients; i >= 1; i--)
-	{
-		if(!bIsValidSurvivorBot(i, 1))
-			continue;
-
-		aClients.Set(aClients.Push(!(client = GetClientOfUserId(g_esPlayer[i].iBotPlayer)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == TEAM_SURVIVOR ? 0 : 1), i, 1);
-	}
-
-	if(!aClients.Length)
-		client = 0;
-	else
-	{
-		aClients.Sort(Sort_Descending, Sort_Integer);
-
-		client = aClients.Length - 1;
-		client = aClients.Get(GetRandomInt(aClients.FindValue(aClients.Get(client, 0)), client), 1);
-	}
-
-	delete aClients;
-	return client;
-}*/
-
 int iFindUselessSurvivorBot(bool bAlive)
 {
 	int client;
@@ -1242,23 +1195,6 @@ int iFindUselessSurvivorBot(bool bAlive)
 
 	delete aClients;
 	return client;
-}
-
-void vSetGodMode(int client, float fDuration)
-{
-	SetEntProp(client, Prop_Data, "m_takedamage", 0);
-
-	if(fDuration > 0.0)
-		CreateTimer(fDuration, tmrMortal, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
-}
-
-Action tmrMortal(Handle timer, int client)
-{
-	if(!(client = GetClientOfUserId(client)) || !IsClientInGame(client) || GetEntProp(client, Prop_Data, "m_takedamage") != 0)
-		return Plugin_Stop;
-
-	SetEntProp(client, Prop_Data, "m_takedamage", 2);
-	return Plugin_Continue;
 }
 
 void vGiveDefaultItems(int client)
@@ -1349,7 +1285,7 @@ void vRemovePlayerWeapons(int client)
 		if((iWeapon = GetPlayerWeaponSlot(client, i)) > MaxClients)
 		{
 			RemovePlayerItem(client, iWeapon);
-			RemoveEdict(iWeapon);
+			RemoveEntity(iWeapon);
 		}
 	}
 
@@ -1357,7 +1293,7 @@ void vRemovePlayerWeapons(int client)
 	if(iWeapon > MaxClients && IsValidEntity(iWeapon) && GetEntPropEnt(iWeapon, Prop_Data, "m_hOwnerEntity") == client)
 	{
 		RemovePlayerItem(client, iWeapon);
-		RemoveEdict(iWeapon);
+		RemoveEntity(iWeapon);
 	}
 }
 
@@ -1373,6 +1309,23 @@ void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = 
 	SetCommandFlags(sCommand, iCmdFlags);
 }
 
+void vSetGodMode(int client, float fDuration)
+{
+	SetEntProp(client, Prop_Data, "m_takedamage", 0);
+
+	if(fDuration > 0.0)
+		CreateTimer(fDuration, tmrMortal, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+}
+
+Action tmrMortal(Handle timer, int client)
+{
+	if(!(client = GetClientOfUserId(client)) || !IsClientInGame(client) || GetEntProp(client, Prop_Data, "m_takedamage") != 0)
+		return Plugin_Stop;
+
+	SetEntProp(client, Prop_Data, "m_takedamage", 2);
+	return Plugin_Continue;
+}
+
 void vTeleportToSurvivor(int client, bool bRandom = true)
 {
 	int iSurvivor = 1;
@@ -1380,7 +1333,7 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 
 	for(; iSurvivor <= MaxClients; iSurvivor++)
 	{
-		if(iSurvivor == client || !IsClientInGame(iSurvivor) || GetClientTeam(iSurvivor) != 2 || !IsPlayerAlive(iSurvivor))
+		if(iSurvivor == client || !IsClientInGame(iSurvivor) || GetClientTeam(iSurvivor) != TEAM_SURVIVOR || !IsPlayerAlive(iSurvivor))
 			continue;
 	
 		aClients.Set(aClients.Push(!GetEntProp(iSurvivor, Prop_Send, "m_isIncapacitated") ? 0 : !GetEntProp(iSurvivor, Prop_Send, "m_isHangingFromLedge") ? 1 : 2), iSurvivor, 1);
@@ -1405,6 +1358,7 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 
 	if(iSurvivor)
 	{
+		vSetGodMode(client, 3.0);
 		SetEntProp(client, Prop_Send, "m_bDucked", 1);
 		SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags")|FL_DUCKING);
 
@@ -1412,11 +1366,6 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 		GetClientAbsOrigin(iSurvivor, vPos);
 		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
 	}
-}
-
-void vSetGhostStatus(int client, int iGhost)
-{
-	SetEntProp(client, Prop_Send, "m_isGhost", iGhost);
 }
 
 // 给玩家近战
@@ -1612,7 +1561,7 @@ void vInitGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(!FileExists(sPath)) 
+	if(!FileExists(sPath))
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
@@ -1642,6 +1591,14 @@ void vInitGameData()
 	g_hSDK_CTerrorPlayer_RoundRespawn = EndPrepSDKCall();
 	if(!g_hSDK_CTerrorPlayer_RoundRespawn)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
+
+	StartPrepSDKCall(SDKCall_Player);
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CCSPlayer::State_Transition"))
+		SetFailState("Failed to find signature: CCSPlayer::State_Transition");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	g_hSDK_CCSPlayer_State_Transition = EndPrepSDKCall();
+	if(!g_hSDK_CCSPlayer_State_Transition)
+		SetFailState("Failed to create SDKCall: CCSPlayer::State_Transition");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SurvivorBot::SetHumanSpectator"))
@@ -1719,7 +1676,7 @@ void vStatsConditionPatch(bool bPatch)
 }
 
 // Left 4 Dead 2 - CreateSurvivorBot (https://forums.alliedmods.net/showpost.php?p=2729883&postcount=16)
-int iCreateSurvivorBot()
+int iAddSurvivorBot()
 {
 	g_bInSpawnTime = true;
 	int iBot = SDKCall(g_hSDK_NextBotCreatePlayerBot_SurvivorBot, NULL_STRING);
@@ -1888,7 +1845,7 @@ bool bTakingOverBot(int client)
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(IsClientInGame(i) && IsFakeClient(i) && iGetIdlePlayerOfBot(i) == client)
+		if(IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == TEAM_SPECTATOR && iGetIdlePlayerOfBot(i) == client)
 			return true;
 	}
 	return false;
