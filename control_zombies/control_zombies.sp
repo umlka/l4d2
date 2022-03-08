@@ -287,7 +287,6 @@ int
 
 float
 	g_fSurvuivorChance,
-	g_fMapStartTime,
 	g_fCmdCooldownTime;
 
 enum struct esPlayer
@@ -1218,7 +1217,6 @@ void vResetInfectedAbility(int client, float fTime)
 public void OnMapStart()
 {
 	PrecacheSound(SOUND_CLASSMENU);
-	g_fMapStartTime = GetGameTime();
 	for(int i = 1; i <= MaxClients; i++)
 		g_esPlayer[i].fBugExploitTime[0] = g_esPlayer[i].fBugExploitTime[1] = 0.0;
 }
@@ -2130,8 +2128,7 @@ static int iGetColorType(int client)
 			return 1;
 		else
 		{
-			static float fFadeStartTime;
-			if((fFadeStartTime = GetEntPropFloat(client, Prop_Send, "m_vomitFadeStart")) > g_fMapStartTime && fFadeStartTime >= GetGameTime() - 15.0)
+			if(GetEntPropFloat(client, Prop_Send, "m_itTimer", 1) > GetGameTime())
 				return 3;
 			else
 				return 0;
@@ -2465,7 +2462,7 @@ enum struct esData
 			if((iWeapon = GetPlayerWeaponSlot(client, iSlot)) > MaxClients)
 			{
 				RemovePlayerItem(client, iWeapon);
-				RemoveEdict(iWeapon);
+				RemoveEntity(iWeapon);
 			}
 		}
 
@@ -2895,12 +2892,12 @@ void vSetZombieClass(int client, int iZombieClass)
 	if(iWeapon != -1)
 	{
 		RemovePlayerItem(client, iWeapon);
-		RemoveEdict(iWeapon);
+		RemoveEntity(iWeapon);
 	}
 
 	int iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 	if(iAbility != -1)
-		RemoveEdict(iAbility);
+		RemoveEntity(iAbility);
 
 	SDKCall(g_hSDK_CTerrorPlayer_SetClass, client, iZombieClass);
 
