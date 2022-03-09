@@ -2,8 +2,7 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
-#include <sdkhooks>
-//#include <Defib_Fix>
+#include <defib_fix>
 
 /*****************************************************************************************************/
 // ====================================================================================================
@@ -158,8 +157,8 @@ stock void CSayText2(int client, int author, const char[] szMessage)
 #define MAX_SLOTS	5
 
 Handle
-	g_hSDKRoundRespawn,
-	g_hSDKGoAwayFromKeyboard;
+	g_hSDK_CTerrorPlayer_RoundRespawn,
+	g_hSDK_CTerrorPlayer_GoAwayFromKeyboard;
 
 ArrayList
 	g_aMeleeScripts;
@@ -174,13 +173,11 @@ ConVar
 	g_hAllowSurvivorBot,
 	g_hAllowSurvivorIdle,
 	g_hGiveWeaponType,
-	g_hRemoveDeathDrop,
 	g_hSbAllBotGame,
 	g_hAllowAllBotSur;
 
 bool
 	g_bGiveWeaponType,
-	g_bRemoveDeathDrop,
 	g_bAllowSurvivorBot,
 	g_bAllowSurvivorIdle;
 
@@ -401,7 +398,6 @@ public void OnPluginStart()
 	g_esWeapon[3].cFlags =	CreateConVar("sar_respawn_slot3", 	"1", 		"槽位3给什么 \n0=不给,15=所有.", CVAR_FLAGS);
 	g_esWeapon[4].cFlags =	CreateConVar("sar_respawn_slot4", 	"3", 		"槽位4给什么 \n0=不给,3=所有.", CVAR_FLAGS);
 	g_hGiveWeaponType =		CreateConVar("sar_give_type", 		"0", 		"根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器).");
-	g_hRemoveDeathDrop =	CreateConVar("sar_remove_drop", 	"0", 		"是否移除玩家死亡掉落的武器.", CVAR_FLAGS);
 
 	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
 	g_hAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
@@ -413,9 +409,8 @@ public void OnPluginStart()
 
 	for(int i; i < MAX_SLOTS; i++)
 		g_esWeapon[i].cFlags.AddChangeHook(vWeaponConVarChanged);
-	g_hRemoveDeathDrop.AddChangeHook(vWeaponConVarChanged);
 		
-	//AutoExecConfig(true, "survivor_auto_respawn");
+	AutoExecConfig(true, "survivor_auto_respawn");
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
@@ -466,7 +461,6 @@ void vGetWeaponCvars()
 	}
 
 	g_bGiveWeaponType = iNullSlot < MAX_SLOTS ? g_hGiveWeaponType.BoolValue : false;
-	g_bRemoveDeathDrop = g_hRemoveDeathDrop.BoolValue;
 }
 
 int iGetSlotAllowed(int iSlot)
@@ -487,29 +481,10 @@ public void L4D2_OnSurvivorDeathModelCreated(int iClient, int iDeathModel)
 	g_esPlayer[iClient].iDeathModel = EntIndexToEntRef(iDeathModel);
 }
 
-public void OnClientPutInServer(int client)
-{
-	g_esPlayer[client].iRespawned = 0;
-	SDKHook(client, SDKHook_WeaponDropPost, OnWeaponDropPost);
-}
-
-public void OnWeaponDropPost(int client, int weapon)
-{
-	if(!g_bRemoveDeathDrop)
-		return;
-
-	if(GetClientTeam(client) != 2 || GetClientHealth(client) > 0)
-		return;
-
-	if(weapon <= MaxClients || !IsValidEntity(weapon) || HasEntProp(weapon, Prop_Send, "m_isCarryable"))
-		return;
-
-	RemoveEntity(weapon);
-}
-
 public void OnClientDisconnect(int client)
 {
 	delete g_esPlayer[client].hTimer;
+	g_esPlayer[client].iRespawned = 0;
 	vRemoveSurvivorDeathModel(client);
 }
 
@@ -669,13 +644,12 @@ void vRespawnSurvivor(int client)
 	vRoundRespawn(client);
 	vGiveWeapon(client);
 	vTeleportToSurvivor(client);
-	//vRemoveSurvivorDeathModel(client);
 	g_esPlayer[client].iRespawned++;
 
 	if(!IsFakeClient(client))
 	{
 		if(bCanIdle(client))
-			SDKCall(g_hSDKGoAwayFromKeyboard, client);
+			SDKCall(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard, client);
 
 		CPrintToChat(client, "{olive}剩余复活次数 {default}-> {blue}%d", g_iRespawnLimit - g_esPlayer[client].iRespawned);
 	}
@@ -708,22 +682,7 @@ bool bIsValidEntRef(int entity)
 {
 	return entity && EntRefToEntIndex(entity) != INVALID_ENT_REFERENCE;
 }
-/*
-//https://forums.alliedmods.net/showthread.php?t=327928
-void vTerror_SetAdrenalineTime(int client, float fDuration)
-{
-    // Get CountdownTimer address
-    static int iTimerAddress = -1;
-    if(iTimerAddress == -1)
-        iTimerAddress = FindSendPropInfo("CTerrorPlayer", "m_bAdrenalineActive") - 12;
-    
-    //iTimerAddress + 4 = Duration
-    //iTimerAddress + 8 = TimeStamp
-    SetEntDataFloat(client, iTimerAddress + 4, fDuration);
-    SetEntDataFloat(client, iTimerAddress + 8, GetGameTime() + fDuration);
-    SetEntProp(client, Prop_Send, "m_bAdrenalineActive", 1);
-} 
-*/
+
 void vGiveWeapon(int client)
 {
 	if(!g_bGiveWeaponType)
@@ -759,7 +718,7 @@ void vRemovePlayerWeapons(int client)
 		if((iWeapon = GetPlayerWeaponSlot(client, i)) > MaxClients)
 		{
 			RemovePlayerItem(client, iWeapon);
-			RemoveEdict(iWeapon);
+			RemoveEntity(iWeapon);
 		}
 	}
 }
@@ -928,34 +887,34 @@ void vLoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false) 
+	if(!FileExists(sPath))
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null) 
+	if(!hGameData) 
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn"))
 		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
-	g_hSDKRoundRespawn = EndPrepSDKCall();
-	if(g_hSDKRoundRespawn == null)
+	g_hSDK_CTerrorPlayer_RoundRespawn = EndPrepSDKCall();
+	if(!g_hSDK_CTerrorPlayer_RoundRespawn)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::GoAwayFromKeyboard") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::GoAwayFromKeyboard"))
 		SetFailState("Failed to find signature: CTerrorPlayer::GoAwayFromKeyboard");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDKGoAwayFromKeyboard = EndPrepSDKCall();
-	if(g_hSDKGoAwayFromKeyboard == null)
+	g_hSDK_CTerrorPlayer_GoAwayFromKeyboard = EndPrepSDKCall();
+	if(!g_hSDK_CTerrorPlayer_GoAwayFromKeyboard)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard");
 
-	vRegisterStatsConditionPatch(hGameData);
+	vInitPatchs(hGameData);
 
 	delete hGameData;
 }
 
-void vRegisterStatsConditionPatch(GameData hGameData = null)
+void vInitPatchs(GameData hGameData = null)
 {
 	int iOffset = hGameData.GetOffset("RoundRespawn_Offset");
 	if(iOffset == -1)
@@ -976,14 +935,7 @@ void vRegisterStatsConditionPatch(GameData hGameData = null)
 		SetFailState("Failed to load 'CTerrorPlayer::RoundRespawn', byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
 }
 
-void vRoundRespawn(int client)
-{
-	vStatsConditionPatch(true);
-	SDKCall(g_hSDKRoundRespawn, client);
-	vStatsConditionPatch(false);
-}
-
-//https://forums.alliedmods.net/showthread.php?t=323220
+// [L4D1 & L4D2] SM Respawn Improved (https://forums.alliedmods.net/showthread.php?t=323220)
 void vStatsConditionPatch(bool bPatch)
 {
 	static bool bPatched;
@@ -997,4 +949,11 @@ void vStatsConditionPatch(bool bPatch)
 		bPatched = false;
 		StoreToAddress(g_pStatsCondition, 0x75, NumberType_Int8);
 	}
+}
+
+void vRoundRespawn(int client)
+{
+	vStatsConditionPatch(true);
+	SDKCall(g_hSDK_CTerrorPlayer_RoundRespawn, client);
+	vStatsConditionPatch(false);
 }
