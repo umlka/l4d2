@@ -6,7 +6,7 @@
 #define GAMEDATA	"drop_secondary"
 
 int
-	g_iOffHiddenWeapon;
+	g_iOff_m_hHiddenWeapon;
 
 public Plugin myinfo =
 {
@@ -21,16 +21,16 @@ public void OnPluginStart()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false)
+	if(!FileExists(sPath))
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null)
+	if(!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
-	g_iOffHiddenWeapon = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenWeapon");
-	if(g_iOffHiddenWeapon == -1)
-		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::HiddenWeapon");
+	g_iOff_m_hHiddenWeapon = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon");
+	if(g_iOff_m_hHiddenWeapon == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon");
 	
 	delete hGameData;
 
@@ -43,7 +43,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 	if(!client || !IsClientInGame(client) || GetClientTeam(client) != 2)
 		return;
 
-	int entity = GetEntDataEnt2(client, g_iOffHiddenWeapon);
+	int entity = GetEntDataEnt2(client, g_iOff_m_hHiddenWeapon);
 	if(entity > MaxClients && IsValidEntity(entity) && GetEntPropEnt(entity, Prop_Data, "m_hOwnerEntity") == client)
 	{
 		float vecTarget[3];
