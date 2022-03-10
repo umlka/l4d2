@@ -90,7 +90,7 @@ public void OnPluginStart()
 	if(!dDetour)
 		SetFailState("Failed to create DynamicDetour: DD_CTerrorPlayer::GetPlayerByCharacter");
 
-	if(!dDetour.Enable(Hook_Pre, DD_CTerrorPlayer_GetPlayerByCharacter_Pre))
+	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_GetPlayerByCharacter_Post))
 		SetFailState("Failed to detour post: DD_CTerrorPlayer::GetPlayerByCharacter");
 	
 	g_dDH_OnStartAction = DynamicHook.FromConf(hGameData, "DH_CItemDefibrillator::OnStartAction");
@@ -139,7 +139,7 @@ void Event_BotPlayerReplace(Event event, char[] name, bool dontBroadcast)
 	if(bot)
 	{
 		if(!g_aDeathModel[bot].Length)
-			g_aDeathModel[bot].Clear();
+			g_aDeathModel[player].Clear();
 		else
 		{
 			delete g_aDeathModel[player];
@@ -268,7 +268,7 @@ MRESReturn DH_CItemDefibrillator_OnActionComplete_Post(DHookReturn hReturn, DHoo
 	return MRES_Ignored;
 }
 
-MRESReturn DD_CTerrorPlayer_GetPlayerByCharacter_Pre(DHookReturn hReturn, DHookParam hParams)
+MRESReturn DD_CTerrorPlayer_GetPlayerByCharacter_Post(DHookReturn hReturn, DHookParam hParams)
 {
 	if(!g_bOnActionComplete)
 		return MRES_Ignored;
