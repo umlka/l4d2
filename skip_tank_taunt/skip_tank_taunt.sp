@@ -23,8 +23,8 @@ public Plugin myinfo =
 	name = "Skip Tank Taunt",
 	author = "sorallll",
 	description = "",
-	version = "1.0.3",
-	url = ""
+	version = "1.0.4",
+	url = "https://forums.alliedmods.net/showthread.php?t=336707"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -188,7 +188,7 @@ void vSetupHooks(GameData hGameData = null)
 **/
 MRESReturn DH_CTerrorPlayer_SelectWeightedSequence_Pre(int pThis, DHookReturn hReturn, DHookParam hParams)
 {
-	if(GetClientTeam(pThis) != 3 || !IsPlayerAlive(pThis) || GetEntProp(pThis, Prop_Send, "m_zombieClass") != 8 || GetEntProp(pThis, Prop_Send, "m_isGhost") == 1)
+	if(!IsClientInGame(pThis) || GetClientTeam(pThis) != 3 || !IsPlayerAlive(pThis) || GetEntProp(pThis, Prop_Send, "m_zombieClass") != 8 || GetEntProp(pThis, Prop_Send, "m_isGhost") == 1)
 		return MRES_Ignored;
 
 	if(792 <= hParams.Get(1) <= 795)
