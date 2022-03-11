@@ -377,7 +377,7 @@ public Plugin myinfo =
 	name = "Survivor Auto Respawn",
 	author = "sorallll",
 	description = "",
-	version = "1.3.3",
+	version = "1.3.4",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -411,14 +411,6 @@ public void OnPluginStart()
 		g_esWeapon[i].cFlags.AddChangeHook(vWeaponConVarChanged);
 		
 	AutoExecConfig(true, "survivor_auto_respawn");
-
-	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("finale_vehicle_leaving", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
-	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
-	HookEvent("player_bot_replace", Event_PlayerBotReplace, EventHookMode_Pre);
 }
 
 public void OnPluginEnd()
@@ -446,8 +438,47 @@ void vGetCvars()
 {
 	g_iRespawnTime = g_hRespawnTime.IntValue;
 	g_iRespawnLimit = g_hRespawnLimit.IntValue;
+	vToggle(g_iRespawnTime && g_iRespawnLimit);
 	g_bAllowSurvivorBot = g_hAllowSurvivorBot.BoolValue;
 	g_bAllowSurvivorIdle = g_hAllowSurvivorIdle.BoolValue;
+}
+
+void vToggle(bool bEnable)
+{
+	static bool bEnabled;
+	if(!bEnabled && bEnable)
+	{
+		bEnabled = true;
+
+		HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+		HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
+		HookEvent("finale_vehicle_leaving", Event_RoundEnd, EventHookMode_PostNoCopy);
+		HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+		HookEvent("player_spawn", Event_PlayerSpawn);
+		HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
+		HookEvent("player_bot_replace", Event_PlayerBotReplace);
+		HookEvent("bot_player_replace", Event_BotPlayerReplace);
+
+	}
+	else if(bEnabled && !bEnable)
+	{
+		bEnabled = false;
+		
+		UnhookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+		UnhookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
+		UnhookEvent("finale_vehicle_leaving", Event_RoundEnd, EventHookMode_PostNoCopy);
+		UnhookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+		UnhookEvent("player_spawn", Event_PlayerSpawn);
+		UnhookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
+		UnhookEvent("player_bot_replace", Event_PlayerBotReplace);
+		UnhookEvent("bot_player_replace", Event_BotPlayerReplace);
+
+		for(int i = 1; i <= MaxClients; i++)
+		{
+			g_esPlayer[i].iRespawned = 0;
+			delete g_esPlayer[i].hTimer;
+		}
+	}
 }
 
 void vGetWeaponCvars()
@@ -510,9 +541,6 @@ void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
-	if(g_iRespawnTime == 0 || g_iRespawnLimit == 0)
-		return;
-
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if(!client || !IsClientInGame(client))
 		return;
@@ -523,7 +551,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 		return;
 	}
 
-	if(g_esPlayer[client].hTimer != null || GetClientTeam(client) != 2 || (!g_bAllowSurvivorBot && IsFakeClient(client)))
+	if(g_esPlayer[client].hTimer != null || (!g_bAllowSurvivorBot && IsFakeClient(client)) || GetClientTeam(client) != 2)
 		return;
 
 	if(bCalculateRespawnLimit(client))
@@ -535,29 +563,9 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 
 void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
-	if(g_iRespawnTime == 0 || g_iRespawnLimit == 0)
-		return;
-
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(!client || !IsClientInGame(client) || GetClientTeam(client) != 2)
+	if(!client || !IsClientInGame(client) || (!g_bAllowSurvivorBot && IsFakeClient(client)) || GetClientTeam(client) != 2)
 		return;
-
-	if(IsFakeClient(client))
-	{
-		int iIdlePlayer = iGetIdlePlayerOfBot(client);
-		if(!bIsValidHumanSpectator(iIdlePlayer))
-		{
-			if(!g_bAllowSurvivorBot)
-				return;
-		}
-		else
-		{
-			if(!g_bAllowSurvivorIdle)
-				return;
-			else
-				client = iIdlePlayer;
-		}
-	}
 
 	if(bCalculateRespawnLimit(client))
 	{
@@ -566,34 +574,32 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 	}
 }
 
-static int iGetIdlePlayerOfBot(int client)
-{
-	static char sNetClass[64];
-	GetEntityNetClass(client, sNetClass, sizeof sNetClass);
-	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") < 1)
-		return 0;
-
-	return GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));
-}
-
-bool bIsValidHumanSpectator(int client)
-{
-	return client && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 1;
-}
-
 void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 {
-	if(g_iRespawnTime == 0 || g_iRespawnLimit == 0 || !g_bAllowSurvivorBot)
-		return;
-
 	int bot = GetClientOfUserId(event.GetInt("bot"));
-	if(!bot || !IsFakeClient(bot) || IsPlayerAlive(bot))
+	if(!bot || !IsClientInGame(bot) || (!g_bAllowSurvivorBot && IsFakeClient(bot)) || GetClientTeam(bot) != 2 || IsPlayerAlive(bot))
 		return;
 
 	if(bCalculateRespawnLimit(bot))
 	{
 		delete g_esPlayer[bot].hTimer;
-		g_esPlayer[bot].hTimer = CreateTimer(1.0, tmrRespawnSurvivor, GetClientUserId(bot), TIMER_REPEAT);
+		g_esPlayer[bot].hTimer = CreateTimer(1.0, tmrRespawnSurvivor, event.GetInt("bot"), TIMER_REPEAT);
+	}
+}
+
+void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast)
+{
+	if(!g_bAllowSurvivorIdle)
+		return;
+
+	int player = GetClientOfUserId(event.GetInt("player"));
+	if(!player || !IsClientInGame(player) || GetClientTeam(player) != 2 || IsPlayerAlive(player))
+		return;
+
+	if(bCalculateRespawnLimit(player))
+	{
+		delete g_esPlayer[player].hTimer;
+		g_esPlayer[player].hTimer = CreateTimer(1.0, tmrRespawnSurvivor, event.GetInt("player"), TIMER_REPEAT);
 	}
 }
 
@@ -602,7 +608,7 @@ bool bCalculateRespawnLimit(int client)
 	if(g_esPlayer[client].iRespawned >= g_iRespawnLimit)
 	{
 		if(!IsFakeClient(client))
-			PrintHintText(client, "复活次数已耗尽，请等待队友救援");
+			PrintHintText(client, "复活次数已耗尽, 请等待队友救援");
 
 		return false;
 	}
