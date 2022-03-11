@@ -557,7 +557,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 	if(bCalculateRespawnLimit(client))
 	{
 		delete g_esPlayer[client].hTimer;
-		g_esPlayer[client].hTimer = CreateTimer(1.0, tmrRespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
+		g_esPlayer[client].hTimer = CreateTimer(1.0, tmrRespawnSurvivor, event.GetInt("userid"), TIMER_REPEAT);
 	}
 }
 
@@ -570,7 +570,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 	if(bCalculateRespawnLimit(client))
 	{
 		delete g_esPlayer[client].hTimer;
-		g_esPlayer[client].hTimer = CreateTimer(1.0, tmrRespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
+		g_esPlayer[client].hTimer = CreateTimer(1.0, tmrRespawnSurvivor, event.GetInt("userid"), TIMER_REPEAT);
 	}
 }
 
