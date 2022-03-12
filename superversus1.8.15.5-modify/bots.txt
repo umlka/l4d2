@@ -88,6 +88,21 @@
 				"linux"		"117" // 0x75
 				"windows"	"117" // 0x75
 			}
+			"CTerrorPlayer::RestoreWeapons::m_iRestoreCSWeaponID"
+			{
+				"linux"		"16272"
+				"windows"	"16292"
+			}
+			"CTerrorPlayer::RestoreWeapons::m_iRestoreAmmoMax"
+			{
+				"linux"		"16276"
+				"windows"	"16296"
+			}
+			"CTerrorPlayer::RestoreWeapons::m_iRestoreWeaponID"
+			{
+				"linux"		"16280"
+				"windows"	"16300"
+			}
 			/**
 			 * CTerrorPlayer::OnIncapacitatedAsSurvivor(CTakeDamageInfo const&)
 			 *
