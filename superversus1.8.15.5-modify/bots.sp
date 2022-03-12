@@ -1842,6 +1842,7 @@ void vRemovePlayerWeapons(int client)
 	}
 
 	iWeapon = GetEntDataEnt2(client, g_iOff_m_hHiddenWeapon);
+	SetEntData(client, g_iOff_m_hHiddenWeapon, -1);
 	if(iWeapon > MaxClients && IsValidEntity(iWeapon) && GetEntPropEnt(iWeapon, Prop_Data, "m_hOwnerEntity") == client)
 	{
 		RemovePlayerItem(client, iWeapon);
