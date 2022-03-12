@@ -726,9 +726,14 @@ static bool bCheckClientAccess(int client, int iIndex)
 
 bool bCacheSteamID(int client)
 {
-	if(g_esPlayer[client].sSteamID[0] == '\0')
-		return GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].sSteamID, sizeof esPlayer::sSteamID);
-	return true;
+	if(g_esPlayer[client].sSteamID[0] != '\0')
+		return true;
+
+	if(GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].sSteamID, sizeof esPlayer::sSteamID))
+		return true;
+
+	g_esPlayer[client].sSteamID[0] = '\0';
+	return false;
 }
 
 void vSpawnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
