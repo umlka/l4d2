@@ -292,7 +292,6 @@ public void OnPluginStart()
 	AddCommandListener(CommandListener_SpecNext, "spec_next");
 	HookUserMessage(GetUserMessageId("SayText2"), umSayText2, true);
 
-	g_hSurvivorLimit = 		FindConVar("survivor_limit");
 	g_hSurvivorLimitSet = 	CreateConVar("bots_survivor_limit", 	"4", 		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
 	g_hAutoJoin = 			CreateConVar("bots_auto_join_survivor", "1", 		"玩家连接后, 是否自动加入生还者. \n0=否, 1=是.", CVAR_FLAGS);
 	g_hRespawnJoin = 		CreateConVar("bots_respawn_on_join", 	"1", 		"玩家第一次进服时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是.", CVAR_FLAGS);
@@ -307,8 +306,14 @@ public void OnPluginStart()
 	g_hGiveWeaponTime = 	CreateConVar("bots_give_time", 			"0", 		"什么时候给玩家装备. \n0=每次出生时, 1=只在本插件创建Bot和复活玩家时.", CVAR_FLAGS);
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品flags参考源码g_sWeaponName中的武器名处的数字, 多个武器里面随机则取数字和)", CVAR_FLAGS|FCVAR_DONTRECORD);
 
+	g_hSurvivorLimit = FindConVar("survivor_limit");
 	g_hSurvivorLimit.Flags &= ~FCVAR_NOTIFY; // 移除ConVar变动提示
 	g_hSurvivorLimit.SetBounds(ConVarBound_Upper, true, 31.0);
+
+	ConVar hConVar = FindConVar("survivor_respawn_with_guns");
+	hConVar.SetBounds(ConVarBound_Upper, true);
+	hConVar.SetBounds(ConVarBound_Lower, true);
+	hConVar.IntValue = 0;
 
 	g_hSurvivorLimitSet.AddChangeHook(vLimitConVarChanged);
 
@@ -324,13 +329,12 @@ public void OnPluginStart()
 	
 	AutoExecConfig(true, "bots");
 
+	RegConsoleCmd("sm_teams", cmdTeamPanel, "团队菜单");
 	RegConsoleCmd("sm_spec", cmdJoinSpectator, "加入旁观者");
 	RegConsoleCmd("sm_join", cmdJoinSurvivor, "加入生还者");
 	RegConsoleCmd("sm_tkbot", cmdTakeOverBot, "接管指定BOT");
-	RegConsoleCmd("sm_teams", cmdTeamPanel, "团队菜单");
 
 	RegAdminCmd("sm_afk", cmdGoAFK, ADMFLAG_RCON, "闲置");
-	RegAdminCmd("sm_kb", cmdKickBot, ADMFLAG_RCON, "踢出所有生还者Bot");
 	RegAdminCmd("sm_botset", cmdBotSet, ADMFLAG_RCON, "设置开局Bot的数量");
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
@@ -346,6 +350,25 @@ public void OnPluginStart()
 public void OnPluginEnd()
 {
 	vStatsConditionPatch(false);
+
+	ConVar hConVar = FindConVar("survivor_respawn_with_guns");
+	hConVar.SetBounds(ConVarBound_Upper, false);
+	hConVar.SetBounds(ConVarBound_Lower, false);
+}
+
+Action cmdTeamPanel(int client, int args)
+{
+	if(!g_iRoundStart || !g_iPlayerSpawn)
+	{
+		ReplyToCommand(client, "回合尚未开始.");
+		return Plugin_Handled;
+	}
+
+	if(!client || !IsClientInGame(client) || IsFakeClient(client))
+		return Plugin_Handled;
+
+	vDisplayTeamPanel(client);
+	return Plugin_Handled;
 }
 
 Action cmdJoinSpectator(int client, int args)
@@ -625,38 +648,6 @@ Action cmdGoAFK(int client, int args)
 		return Plugin_Handled;
 
 	SDKCall(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard, client);
-	return Plugin_Handled;
-}
-
-Action cmdTeamPanel(int client, int args)
-{
-	if(!g_iRoundStart || !g_iPlayerSpawn)
-	{
-		ReplyToCommand(client, "回合尚未开始.");
-		return Plugin_Handled;
-	}
-
-	if(!client || !IsClientInGame(client) || IsFakeClient(client))
-		return Plugin_Handled;
-
-	vDisplayTeamPanel(client);
-	return Plugin_Handled;
-}
-
-Action cmdKickBot(int client, int args)
-{
-	if(!g_iRoundStart || !g_iPlayerSpawn)
-	{
-		ReplyToCommand(client, "回合尚未开始.");
-		return Plugin_Handled;
-	}
-
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == 2 && !iGetIdlePlayerOfBot(i))
-			KickClient(i);
-	}
-
 	return Plugin_Handled;
 }
 
@@ -1093,9 +1084,14 @@ void vRecordSteamID(int client)
 
 bool bCacheSteamID(int client)
 {
-	if(g_esPlayer[client].sSteamID[0] == '\0')
-		return GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].sSteamID, sizeof esPlayer::sSteamID);
-	return true;
+	if(g_esPlayer[client].sSteamID[0] != '\0')
+		return true;
+
+	if(GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].sSteamID, sizeof esPlayer::sSteamID))
+		return true;
+
+	g_esPlayer[client].sSteamID[0] = '\0';
+	return false;
 }
 
 int iGetBotOfIdlePlayer(int client)
@@ -1195,118 +1191,6 @@ int iFindUselessSurvivorBot(bool bAlive)
 
 	delete aClients;
 	return client;
-}
-
-void vGiveDefaultItems(int client)
-{
-	vRemovePlayerWeapons(client);
-
-	for(int i = 4; i >= 2; i--)
-	{
-		if(!g_esWeapon[i].iCount)
-			continue;
-
-		vCheatCommand(client, "give", g_sWeaponName[i][g_esWeapon[i].iAllowed[GetRandomInt(0, g_esWeapon[i].iCount - 1)]]);
-	}
-
-	vGiveSecondary(client);
-
-	switch(g_hGiveWeaponType.IntValue)
-	{
-		case 1:
-			vGivePresetPrimary(client);
-		
-		case 2:
-			vGiveAveragePrimary(client);
-	}
-}
-
-void vGiveSecondary(int client)
-{
-	if(g_esWeapon[1].iCount)
-	{
-		int iRandom = g_esWeapon[1].iAllowed[GetRandomInt(0, g_esWeapon[1].iCount - 1)];
-		if(iRandom > 2)
-			vGiveMelee(client, g_sWeaponName[1][iRandom]);
-		else
-			vCheatCommand(client, "give", g_sWeaponName[1][iRandom]);
-	}
-}
-
-void vGivePresetPrimary(int client)
-{
-	if(g_esWeapon[0].iCount)
-		vCheatCommand(client, "give", g_sWeaponName[0][g_esWeapon[0].iAllowed[GetRandomInt(0, g_esWeapon[0].iCount - 1)]]);
-}
-
-bool bIsWeaponTier1(int iWeapon)
-{
-	char sWeapon[32];
-	GetEntityClassname(iWeapon, sWeapon, sizeof sWeapon);
-	for(int i; i < 5; i++)
-	{
-		if(strcmp(sWeapon[7], g_sWeaponName[0][i]) == 0)
-			return true;
-	}
-	return false;
-}
-
-void vGiveAveragePrimary(int client)
-{
-	int i = 1, iWeapon, iTier, iTotal;
-	for(; i <= MaxClients; i++)
-	{
-		if(i == client || !IsClientInGame(i) || GetClientTeam(i) != TEAM_SURVIVOR || !IsPlayerAlive(i))
-			continue;
-
-		iTotal += 1;	
-		iWeapon = GetPlayerWeaponSlot(i, 0);
-		if(iWeapon <= MaxClients || !IsValidEntity(iWeapon))
-			continue;
-
-		iTier += bIsWeaponTier1(iWeapon) ? 1 : 2;
-	}
-
-	switch(iTotal > 0 ? RoundToNearest(1.0 * iTier / iTotal) : 0)
-	{
-		case 1:
-			vCheatCommand(client, "give", g_sWeaponName[0][GetRandomInt(0, 4)]); // 随机给一把tier1武器
-
-		case 2:
-			vCheatCommand(client, "give", g_sWeaponName[0][GetRandomInt(5, 14)]); // 随机给一把tier2武器	
-	}
-}
-
-void vRemovePlayerWeapons(int client)
-{
-	int iWeapon;
-	for(int i; i < MAX_SLOTS; i++)
-	{
-		if((iWeapon = GetPlayerWeaponSlot(client, i)) > MaxClients)
-		{
-			RemovePlayerItem(client, iWeapon);
-			RemoveEntity(iWeapon);
-		}
-	}
-
-	iWeapon = GetEntDataEnt2(client, g_iOff_m_hHiddenWeapon);
-	if(iWeapon > MaxClients && IsValidEntity(iWeapon) && GetEntPropEnt(iWeapon, Prop_Data, "m_hOwnerEntity") == client)
-	{
-		RemovePlayerItem(client, iWeapon);
-		RemoveEntity(iWeapon);
-	}
-}
-
-void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
-{
-	static int iFlagBits, iCmdFlags;
-	iFlagBits = GetUserFlagBits(client);
-	iCmdFlags = GetCommandFlags(sCommand);
-	SetUserFlagBits(client, ADMFLAG_ROOT);
-	SetCommandFlags(sCommand, iCmdFlags & ~FCVAR_CHEAT);
-	FakeClientCommand(client, "%s %s", sCommand, sArguments);
-	SetUserFlagBits(client, iFlagBits);
-	SetCommandFlags(sCommand, iCmdFlags);
 }
 
 void vSetGodMode(int client, float fDuration)
@@ -1755,7 +1639,7 @@ void vSetupDetours(GameData hGameData = null)
 	dDetour = DynamicDetour.FromConf(hGameData, "DD_CTerrorPlayer::GiveDefaultItems");
 	if(!dDetour)
 		SetFailState("Failed to create DynamicDetour: DD_CTerrorPlayer::GiveDefaultItems");
-		
+
 	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_GiveDefaultItems_Post))
 		SetFailState("Failed to detour post: DD_CTerrorPlayer::GiveDefaultItems");
 }
@@ -1849,4 +1733,116 @@ bool bTakingOverBot(int client)
 			return true;
 	}
 	return false;
+}
+
+void vGiveDefaultItems(int client)
+{
+	vRemovePlayerWeapons(client);
+
+	for(int i = 4; i >= 2; i--)
+	{
+		if(!g_esWeapon[i].iCount)
+			continue;
+
+		vCheatCommand(client, "give", g_sWeaponName[i][g_esWeapon[i].iAllowed[GetRandomInt(0, g_esWeapon[i].iCount - 1)]]);
+	}
+
+	vGiveSecondary(client);
+
+	switch(g_hGiveWeaponType.IntValue)
+	{
+		case 1:
+			vGivePresetPrimary(client);
+		
+		case 2:
+			vGiveAveragePrimary(client);
+	}
+}
+
+void vGiveSecondary(int client)
+{
+	if(g_esWeapon[1].iCount)
+	{
+		int iRandom = g_esWeapon[1].iAllowed[GetRandomInt(0, g_esWeapon[1].iCount - 1)];
+		if(iRandom > 2)
+			vGiveMelee(client, g_sWeaponName[1][iRandom]);
+		else
+			vCheatCommand(client, "give", g_sWeaponName[1][iRandom]);
+	}
+}
+
+void vGivePresetPrimary(int client)
+{
+	if(g_esWeapon[0].iCount)
+		vCheatCommand(client, "give", g_sWeaponName[0][g_esWeapon[0].iAllowed[GetRandomInt(0, g_esWeapon[0].iCount - 1)]]);
+}
+
+bool bIsWeaponTier1(int iWeapon)
+{
+	char sWeapon[32];
+	GetEntityClassname(iWeapon, sWeapon, sizeof sWeapon);
+	for(int i; i < 5; i++)
+	{
+		if(strcmp(sWeapon[7], g_sWeaponName[0][i], false) == 0)
+			return true;
+	}
+	return false;
+}
+
+void vGiveAveragePrimary(int client)
+{
+	int i = 1, iWeapon, iTier, iTotal;
+	for(; i <= MaxClients; i++)
+	{
+		if(i == client || !IsClientInGame(i) || GetClientTeam(i) != TEAM_SURVIVOR || !IsPlayerAlive(i))
+			continue;
+
+		iTotal += 1;
+		iWeapon = GetPlayerWeaponSlot(i, 0);
+		if(iWeapon <= MaxClients || !IsValidEntity(iWeapon))
+			continue;
+
+		iTier += bIsWeaponTier1(iWeapon) ? 1 : 2;
+	}
+
+	switch(iTotal > 0 ? RoundToNearest(float(iTier) / float(iTotal)) : 0)
+	{
+		case 1:
+			vCheatCommand(client, "give", g_sWeaponName[0][GetRandomInt(0, 4)]); // 随机给一把tier1武器
+
+		case 2:
+			vCheatCommand(client, "give", g_sWeaponName[0][GetRandomInt(5, 14)]); // 随机给一把tier2武器	
+	}
+}
+
+void vRemovePlayerWeapons(int client)
+{
+	int iWeapon;
+	for(int i; i < MAX_SLOTS; i++)
+	{
+		if((iWeapon = GetPlayerWeaponSlot(client, i)) > MaxClients)
+		{
+			RemovePlayerItem(client, iWeapon);
+			RemoveEntity(iWeapon);
+		}
+	}
+
+	iWeapon = GetEntDataEnt2(client, g_iOff_m_hHiddenWeapon);
+	if(iWeapon > MaxClients && IsValidEntity(iWeapon) && GetEntPropEnt(iWeapon, Prop_Data, "m_hOwnerEntity") == client)
+	{
+		RemovePlayerItem(client, iWeapon);
+		RemoveEntity(iWeapon);
+	}
+}
+
+void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
+{
+	static int iFlagBits, iCmdFlags;
+	iFlagBits = GetUserFlagBits(client);
+	iCmdFlags = GetCommandFlags(sCommand);
+	SetUserFlagBits(client, ADMFLAG_ROOT);
+	SetCommandFlags(sCommand, iCmdFlags & ~FCVAR_CHEAT);
+	FakeClientCommand(client, "%s %s", sCommand, sArguments);
+	SetUserFlagBits(client, iFlagBits);
+	SetCommandFlags(sCommand, iCmdFlags);
 }
