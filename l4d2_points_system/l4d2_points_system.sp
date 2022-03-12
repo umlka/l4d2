@@ -1259,9 +1259,14 @@ public void OnClientDisconnect_Post(int client)
 
 bool bCacheSteamID(int client)
 {
-	if(g_esPlayer[client].g_sSteamID[0] == '\0')
-		return GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].g_sSteamID, sizeof esPlayer::g_sSteamID);
-	return true;
+	if(g_esPlayer[client].g_sSteamID[0] != '\0')
+		return true;
+
+	if(GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].g_sSteamID, sizeof esPlayer::g_sSteamID))
+		return true;
+
+	g_esPlayer[client].g_sSteamID[0] = '\0';
+	return false;
 }
 
 void vResetClientData(int client)
