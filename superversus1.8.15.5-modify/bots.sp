@@ -50,6 +50,9 @@ int
 	g_iSurvivorLimitSet,
 	g_iSpecCmdLimit,
 	g_iSpecNextNotify,
+	g_iOff_m_iRestoreCSWeaponID,
+	g_iOff_m_iRestoreAmmoMax,
+	g_iOff_m_iRestoreWeaponID,
 	g_iOff_m_hHiddenWeapon;
 
 bool
@@ -310,11 +313,6 @@ public void OnPluginStart()
 	g_hSurvivorLimit.Flags &= ~FCVAR_NOTIFY; // 移除ConVar变动提示
 	g_hSurvivorLimit.SetBounds(ConVarBound_Upper, true, 31.0);
 
-	ConVar hConVar = FindConVar("survivor_respawn_with_guns");
-	hConVar.SetBounds(ConVarBound_Upper, true);
-	hConVar.SetBounds(ConVarBound_Lower, true);
-	hConVar.IntValue = 0;
-
 	g_hSurvivorLimitSet.AddChangeHook(vLimitConVarChanged);
 
 	g_hAutoJoin.AddChangeHook(vGeneralConVarChanged);
@@ -350,10 +348,6 @@ public void OnPluginStart()
 public void OnPluginEnd()
 {
 	vStatsConditionPatch(false);
-
-	ConVar hConVar = FindConVar("survivor_respawn_with_guns");
-	hConVar.SetBounds(ConVarBound_Upper, false);
-	hConVar.SetBounds(ConVarBound_Lower, false);
 }
 
 Action cmdTeamPanel(int client, int args)
@@ -1456,6 +1450,18 @@ void vInitGameData()
 	if(!g_pDirector)
 		SetFailState("Failed to find address: CDirector");
 
+	g_iOff_m_iRestoreCSWeaponID = hGameData.GetOffset("CTerrorPlayer::RestoreWeapons::m_iRestoreCSWeaponID");
+	if(g_iOff_m_iRestoreCSWeaponID == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::RestoreWeapons::m_iRestoreCSWeaponID");
+	
+	g_iOff_m_iRestoreAmmoMax = hGameData.GetOffset("CTerrorPlayer::RestoreWeapons::m_iRestoreAmmoMax");
+	if(g_iOff_m_iRestoreAmmoMax == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::RestoreWeapons::m_iRestoreAmmoMax");
+
+	g_iOff_m_iRestoreWeaponID = hGameData.GetOffset("CTerrorPlayer::RestoreWeapons::m_iRestoreWeaponID");
+	if(g_iOff_m_iRestoreWeaponID == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::RestoreWeapons::m_iRestoreWeaponID");
+
 	g_iOff_m_hHiddenWeapon = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon");
 	if(g_iOff_m_hHiddenWeapon == -1)
 		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon");
@@ -1722,6 +1728,7 @@ MRESReturn DD_CTerrorPlayer_GiveDefaultItems_Post(int pThis)
 		return MRES_Ignored;
 
 	vGiveDefaultItems(pThis);
+	vResetRestoreWeapons(pThis);
 	return MRES_Ignored;
 }
 
@@ -1733,6 +1740,13 @@ bool bTakingOverBot(int client)
 			return true;
 	}
 	return false;
+}
+
+void vResetRestoreWeapons(int client)
+{
+	SetEntData(client, g_iOff_m_iRestoreCSWeaponID, 0);
+	SetEntData(client, g_iOff_m_iRestoreAmmoMax, 0);
+	SetEntData(client, g_iOff_m_iRestoreWeaponID, 0);
 }
 
 void vGiveDefaultItems(int client)
