@@ -1,5 +1,17 @@
 "Games"
 {
+	"#default"
+	{
+		"Offsets"
+		{
+			"OS"
+			{
+				"linux"		"1"
+				"windows"	"0"
+			}
+		}
+	}
+
 	"left4dead2"
 	{
 		"Functions"
@@ -25,55 +37,22 @@
 				"return"		"void"
 				"this"			"entity"
 			}
-			"DD_ForEachTerrorPlayer<SpawnablePZScan>"
-			{
-				"signature"		"ForEachTerrorPlayer<SpawnablePZScan>"
-				"callconv"		"cdecl"
-				"return"		"void"
-			}
-			"DD_Script_ZSpawn"
-			{
-				"signature"		"Script_ZSpawn"
-				"callconv"		"thiscall"
-				"callconv"		"cdecl"
-				"return"		"void"
-			}
-			"DD_z_spawn_old"
-			{
-				"signature"		"z_spawn_old"
-				"callconv"		"cdecl"
-				"return"		"void"
-			}
-			"DD_z_spawn"
-			{
-				"signature"		"z_spawn"
-				"callconv"		"cdecl"
-				"return"		"void"
-			}
 		}
 
 		"Addresses"
 		{
 			"CTerrorPlayer::RoundRespawn"
 			{
-				"linux"
-				{
-					"signature"	"CTerrorPlayer::RoundRespawn"
-				}
-				"windows"
-				{
-					"signature"	"CTerrorPlayer::RoundRespawn"		
-				}
+				"signature"	"CTerrorPlayer::RoundRespawn"
+			}
+			"ForEachTerrorPlayer<SpawnablePZScan>"
+			{
+				"signature"	"ForEachTerrorPlayer<SpawnablePZScan>"
 			}
 		}
 
 		"Offsets"
 		{
-			"OS"
-			{
-				"linux"		"2"
-				"windows"	"1"
-			}
 			/* CBaseEntity::IsInStasis(CBaseEntity *__hidden this) */
 			"CBaseEntity::IsInStasis"
 			{
@@ -187,27 +166,8 @@
 			{
 				"library"	"server"
 				"linux"		"@_Z19ForEachTerrorPlayerI15SpawnablePZScanEbRT_"
-			}
-			/* Script_ZSpawn(HSCRIPT__ *) */
-			"Script_ZSpawn"
-			{
-				"library"	"server"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x0D\x2A\x2A\x2A\x2A\x53\x8B\x2A\x2A\x56\x33"
-				/* ? ? ? ? ? ? 8B 0D ? ? ? ? 53 8B ? ? 56 33 */
-			}
-			/* z_spawn_old(const CCommand *) */
-			"z_spawn_old"
-			{
-				"library"	"server"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x56\x57\x8B\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x8B\x2A\x85\x2A\x0F\x84\x2A\x2A\x2A\x2A\xA1"
-				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 56 57 8B ? ? E8 ? ? ? ? 8B ? 85 ? 0F 84 ? ? ? ? A1 */
-			}
-			/* z_spawn(const CCommand *) */
-			"z_spawn"
-			{
-				"library"	"server"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x53\x56\x57\x8B\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x8B\x2A\x85"
-				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 53 56 57 8B ? ? E8 ? ? ? ? 8B ? 85 */
+				"windows"	"\xE8\x2A\x2A\x2A\x2A\x8B\x75\x80"
+				/* E8 ? ? ? ? 8B 75 80 */
 			}
 			/* CTerrorPlayer::SetClass(ZombieClassType) */
 			"CTerrorPlayer::SetClass"
