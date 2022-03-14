@@ -2961,7 +2961,7 @@ void vToggleDetours(bool bEnable)
 			SetFailState("Failed to detour post: DD_CTerrorPlayer::PlayerZombieAbortControl");
 
 		if(!(g_bIsSpawnablePZSupported = g_dForEachTerrorPlayer_SpawnablePZScan.Enable(Hook_Pre, DD_ForEachTerrorPlayer_SpawnablePZScan_Pre)))
-				SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
+			SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
 		
 		if(!(g_bIsSpawnablePZSupported = g_dForEachTerrorPlayer_SpawnablePZScan.Enable(Hook_Post, DD_ForEachTerrorPlayer_SpawnablePZScan_Post)))
 			SetFailState("Failed to detour post: ForEachTerrorPlayer<SpawnablePZScan>");
@@ -2982,7 +2982,7 @@ void vToggleDetours(bool bEnable)
 			SetFailState("Failed to disable detour: DD_CTerrorPlayer::PlayerZombieAbortControl");
 
 		if(!g_dForEachTerrorPlayer_SpawnablePZScan.Disable(Hook_Pre, DD_ForEachTerrorPlayer_SpawnablePZScan_Pre) || !g_dForEachTerrorPlayer_SpawnablePZScan.Disable(Hook_Post, DD_ForEachTerrorPlayer_SpawnablePZScan_Post))
-				SetFailState("Failed to disable detour: DD_ForEachTerrorPlayer<SpawnablePZScan>");
+			SetFailState("Failed to disable detour: DD_ForEachTerrorPlayer<SpawnablePZScan>");
 	}
 }
 
