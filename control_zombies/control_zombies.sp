@@ -3055,7 +3055,7 @@ MRESReturn DD_ForEachTerrorPlayer_SpawnablePZScan_Pre()
 MRESReturn DD_ForEachTerrorPlayer_SpawnablePZScan_Post()
 {
 	if(!g_iSpawnablePZ)
-		return MRES_Supercede;
+		return MRES_Ignored;
 
 	vSpawnablePZScanProtect(1);
 	return MRES_Ignored;
