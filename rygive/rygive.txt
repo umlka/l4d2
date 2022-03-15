@@ -4,6 +4,10 @@
 	{
 		"Addresses"
 		{
+			"CTerrorPlayer::RoundRespawn"
+			{
+				"signature"	"CTerrorPlayer::RoundRespawn"
+			}
 			"NextBotCreatePlayerBot.jumptable"
 			{
 				"windows"
@@ -12,27 +16,18 @@
 					"offset"	"7"
 				}
 			}
-			"CTerrorPlayer::RoundRespawn"
+			"ZombieManager"
 			{
 				"linux"
 				{
-					"signature"	"CTerrorPlayer::RoundRespawn"
+					"signature"	"TheZombieManager"
 				}
 				"windows"
 				{
-					"signature"	"CTerrorPlayer::RoundRespawn"			
+					"signature"	"InfoChangelevel::StartChangeLevel"
+					"read"		"293"
 				}
-			}
-			"IsFallenSurvivorAllowed"
-			{
-				"linux"
-				{
-					"signature"	"Infected::Spawn"
-				}
-				"windows"
-				{
-					"signature"	"Infected::Spawn"			
-				}
+				"read"	"0"
 			}
 		}
 
@@ -48,25 +43,25 @@
 				"linux"		"117" // 0x75
 				"windows"	"117" // 0x75
 			}
-			"IsFallenSurvivorAllowed_Offset"
+			"m_nFallenSurvivors"
 			{
-				"linux"		"2012" // 0x7DC
-				"windows"	"268" // 0x10C
+				"linux"		"8"
+				"windows"	"8"
 			}
-			"IsFallenSurvivorAllowed_Byte"
+			"m_FallenSurvivorTimer"
 			{
-				"linux"		"15" // 0x0F
-				"windows"	"116" // 0x74
-			}
-			"IsFallenSurvivorAllowed_Count"
-			{
-				"linux"		"2"
-				"windows"	"2"
+				"linux"		"12"
+				"windows"	"12"
 			}
 		}
 
 		"Signatures"
 		{
+			"TheZombieManager"
+			{
+				"library"	"server"
+				"linux"		"@TheZombieManager"
+			}
 			/* CTerrorPlayer::RoundRespawn(void) */
 			"CTerrorPlayer::RoundRespawn"
 			{
@@ -154,13 +149,13 @@
 				"library"	"server"
 				"linux"		"@_Z22NextBotCreatePlayerBotI4TankEPT_PKc"
 			}
-			/* Infected::Spawn(Infected *__hidden this) */
-			"Infected::Spawn"
+			/* InfoChangelevel::StartChangeLevel(InfoChangelevel *__hidden this, const Checkpoint *) */
+			"InfoChangelevel::StartChangeLevel"
 			{
 				"library"	"server"
-				"linux"		"@_ZN8Infected5SpawnEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x8B\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x57\xFF\x2A\xF7"
-				/* ? ? ? ? ? ? 56 8B ? 8B ? 8B 90 ? ? ? ? 57 FF ? F7 */
+				"linux"		"@_ZN15InfoChangelevel16StartChangeLevelEPK10Checkpoint"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x2A\x56\x8B\x2A\x74\x2A\x68"
+				/* ? ? ? ? ? ? ? ? 83 ? ? ? 56 8B ? 74 ? 68 */
 			}
 		}
 	}

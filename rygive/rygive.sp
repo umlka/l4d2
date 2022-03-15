@@ -18,32 +18,31 @@ StringMap
 	g_aMeleeTrans;
 
 ArrayList
-	g_aByteSaved,
-	g_aBytePatch,
 	g_aMeleeScripts;
 
 Handle
-	g_hSDKRoundRespawn,
-	g_hSDKSetHumanSpectator,
-	g_hSDKTakeOverBot,
-	g_hSDKGoAwayFromKeyboard,
-	g_hSDKCleanupPlayerState,
-	g_hSDKCreateSmoker,
-	g_hSDKCreateBoomer,
-	g_hSDKCreateHunter,
-	g_hSDKCreateSpitter,
-	g_hSDKCreateJockey,
-	g_hSDKCreateCharger,
-	g_hSDKCreateTank;
+	g_hSDK_CTerrorPlayer_RoundRespawn,
+	g_hSDK_SurvivorBot_SetHumanSpectator,
+	g_hSDK_CTerrorPlayer_TakeOverBot,
+	g_hSDK_CTerrorPlayer_GoAwayFromKeyboard,
+	g_hSDK_CTerrorPlayer_CleanupPlayerState,
+	g_hSDK_NextBotCreatePlayerBot_Smoker,
+	g_hSDK_NextBotCreatePlayerBot_Boomer,
+	g_hSDK_NextBotCreatePlayerBot_Hunter,
+	g_hSDK_NextBotCreatePlayerBot_Spitter,
+	g_hSDK_NextBotCreatePlayerBot_Jockey,
+	g_hSDK_NextBotCreatePlayerBot_Charger,
+	g_hSDK_NextBotCreatePlayerBot_Tank;
 
 Address
-	g_pStatsCondition,
-	g_pIsFallenSurvivorAllowed;
+	g_pZombieManager,
+	g_pStatsCondition;
 
 int
-	g_iClipSize[2],
 	g_iFunction[MAXPLAYERS + 1],
-	g_iCurrentPage[MAXPLAYERS + 1];
+	g_iCurrentPage[MAXPLAYERS + 1],
+	g_iOff_m_nFallenSurvivors,
+	g_iOff_m_FallenSurvivorTimer;
 
 static const int
 	g_iTargetTeam[4] =
@@ -247,7 +246,7 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	vLoadGameData();
+	vInitGameData();
 
 	g_aSteamIDs = new StringMap();
 	g_aMeleeTrans = new StringMap();
@@ -276,7 +275,6 @@ public void OnPluginStart()
 public void OnPluginEnd()
 {
 	vStatsConditionPatch(false);
-	vIsFallenSurvivorAllowedPatch(false);
 }
 
 public void OnClientDisconnect(int client)
@@ -329,21 +327,7 @@ public void OnMapStart()
 			PrecacheGeneric(sBuffer, true);
 	}
 
-	vGetMaxClipSize();
 	vGetMeleeWeaponsStringTable();
-}
-
-void vGetMaxClipSize()
-{
-	int entity = CreateEntityByName("weapon_rifle_m60");
-	DispatchSpawn(entity);
-	g_iClipSize[0] = GetEntProp(entity, Prop_Send, "m_iClip1");
-	RemoveEdict(entity);
-
-	entity = CreateEntityByName("weapon_grenade_launcher");
-	DispatchSpawn(entity);
-	g_iClipSize[1] = GetEntProp(entity, Prop_Send, "m_iClip1");
-	RemoveEdict(entity);
 }
 
 void vGetMeleeWeaponsStringTable()
@@ -366,7 +350,7 @@ void vGetMeleeWeaponsStringTable()
 void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if((client == 0 || !IsFakeClient(client)) && !bRealPlayerExist(client))
+	if((!client || !IsFakeClient(client)) && !bRealPlayerExist(client))
 	{
 		g_aSteamIDs.Clear();
 		g_bDebug = false;
@@ -772,7 +756,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	}
 	else if(strcmp(sZombie, "Smoker", false) == 0)
 	{
-		iZombie = SDKCall(g_hSDKCreateSmoker, "Smoker");
+		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Smoker, "Smoker");
 		if(bIsValidClient(iZombie))
 		{
 			SetEntityModel(iZombie, g_sSpecialsInfectedModels[0]);
@@ -781,7 +765,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	}
 	else if(strcmp(sZombie, "Boomer", false) == 0)
 	{
-		iZombie = SDKCall(g_hSDKCreateBoomer, "Boomer");
+		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Boomer, "Boomer");
 		if(bIsValidClient(iZombie))
 		{
 			SetEntityModel(iZombie, g_sSpecialsInfectedModels[1]);
@@ -790,7 +774,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	}
 	else if(strcmp(sZombie, "Hunter", false) == 0)
 	{
-		iZombie = SDKCall(g_hSDKCreateHunter, "Hunter");
+		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Hunter, "Hunter");
 		if(bIsValidClient(iZombie))
 		{
 			SetEntityModel(iZombie, g_sSpecialsInfectedModels[2]);
@@ -799,7 +783,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	}
 	else if(strcmp(sZombie, "Spitter", false) == 0)
 	{
-		iZombie = SDKCall(g_hSDKCreateSpitter, "Spitter");
+		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Spitter, "Spitter");
 		if(bIsValidClient(iZombie))
 		{
 			SetEntityModel(iZombie, g_sSpecialsInfectedModels[3]);
@@ -808,7 +792,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	}
 	else if(strcmp(sZombie, "Jockey", false) == 0)
 	{
-		iZombie = SDKCall(g_hSDKCreateJockey, "Jockey");
+		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Jockey, "Jockey");
 		if(bIsValidClient(iZombie))
 		{
 			SetEntityModel(iZombie, g_sSpecialsInfectedModels[4]);
@@ -817,7 +801,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	}
 	else if(strcmp(sZombie, "Charger", false) == 0)
 	{
-		iZombie = SDKCall(g_hSDKCreateCharger, "Charger");
+		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Charger, "Charger");
 		if(bIsValidClient(iZombie))
 		{
 			SetEntityModel(iZombie, g_sSpecialsInfectedModels[5]);
@@ -826,7 +810,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	}
 	else if(strcmp(sZombie, "Tank", false) == 0)
 	{
-		iZombie = SDKCall(g_hSDKCreateTank, "Tank");
+		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Tank, "Tank");
 		if(bIsValidClient(iZombie))
 		{
 			SetEntityModel(iZombie, g_sSpecialsInfectedModels[6]);
@@ -849,9 +833,16 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 			DispatchSpawn(iZombie);
 		else
 		{
-			vIsFallenSurvivorAllowedPatch(true);
+			int m_nFallenSurvivor = LoadFromAddress(g_pZombieManager + view_as<Address>(g_iOff_m_nFallenSurvivors), NumberType_Int32);
+			float m_timestamp = view_as<float>(LoadFromAddress(g_pZombieManager + view_as<Address>(g_iOff_m_FallenSurvivorTimer) + view_as<Address>(8), NumberType_Int32));
+
+			StoreToAddress(g_pZombieManager + view_as<Address>(g_iOff_m_nFallenSurvivors), 0, NumberType_Int32);
+			StoreToAddress(g_pZombieManager + view_as<Address>(g_iOff_m_FallenSurvivorTimer) + view_as<Address>(8), view_as<int>(0.0), NumberType_Int32);
+
 			DispatchSpawn(iZombie);
-			vIsFallenSurvivorAllowedPatch(false);
+		
+			StoreToAddress(g_pZombieManager + view_as<Address>(g_iOff_m_nFallenSurvivors), m_nFallenSurvivor + 1, NumberType_Int32);
+			StoreToAddress(g_pZombieManager + view_as<Address>(g_iOff_m_FallenSurvivorTimer) + view_as<Address>(8), view_as<int>(m_timestamp), NumberType_Int32);
 		}
 	}
 	
@@ -1200,7 +1191,7 @@ int iRespawnplayerMenuHandler(Menu menu, MenuAction action, int client, int para
 						if(IsClientInGame(i) && GetClientTeam(i) == 2 && !IsPlayerAlive(i))
 						{
 							vStatsConditionPatch(true);
-							SDKCall(g_hSDKRoundRespawn, i);
+							SDKCall(g_hSDK_CTerrorPlayer_RoundRespawn, i);
 							vStatsConditionPatch(false);
 							vTeleportToSurvivor(i);
 						}
@@ -1217,7 +1208,7 @@ int iRespawnplayerMenuHandler(Menu menu, MenuAction action, int client, int para
 						case 2:
 						{
 							vStatsConditionPatch(true);
-							SDKCall(g_hSDKRoundRespawn, iTarget);
+							SDKCall(g_hSDK_CTerrorPlayer_RoundRespawn, iTarget);
 							vStatsConditionPatch(false);
 							vTeleportToSurvivor(iTarget);
 							vRespawnPlayer(client, menu.Selection);
@@ -1729,7 +1720,7 @@ void vTeleportFix(int client)
 		int attacker = L4D2_GetInfectedAttacker(client);
 		if(attacker > 0 && IsClientInGame(attacker) && IsPlayerAlive(attacker))
 		{
-			SDKCall(g_hSDKCleanupPlayerState, attacker);
+			SDKCall(g_hSDK_CTerrorPlayer_CleanupPlayerState, attacker);
 			ForcePlayerSuicide(attacker);
 		}
 	}
@@ -1982,7 +1973,7 @@ int iSwitchPlayerTeamMenuHandler(Menu menu, MenuAction action, int client, int p
 						case 0:
 						{
 							if(iOnTeam == 2)
-								SDKCall(g_hSDKGoAwayFromKeyboard, iTarget);
+								SDKCall(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard, iTarget);
 							else
 								PrintToChat(client, "只有生还者才能进行闲置");
 						}
@@ -1990,7 +1981,7 @@ int iSwitchPlayerTeamMenuHandler(Menu menu, MenuAction action, int client, int p
 						case 1:
 						{
 							if(iOnTeam == 0)
-								SDKCall(g_hSDKTakeOverBot, iTarget, true);
+								SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, iTarget, true);
 
 							ChangeClientTeam(iTarget, iTargetTeam);
 						}
@@ -2033,7 +2024,7 @@ void vChangeTeamToSurvivor(int client, int iTeam)
 	int iBot;
 	if((iBot = iGetBotOfIdlePlayer(client)))
 	{
-		SDKCall(g_hSDKTakeOverBot, client, true);
+		SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 		return;
 	}
 	else
@@ -2041,8 +2032,8 @@ void vChangeTeamToSurvivor(int client, int iTeam)
 
 	if(iBot)
 	{
-		SDKCall(g_hSDKSetHumanSpectator, iBot, client);
-		SDKCall(g_hSDKTakeOverBot, client, true);
+		SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, iBot, client);
+		SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 	}
 	else
 		ChangeClientTeam(client, 2);
@@ -2067,7 +2058,7 @@ int iGetBotOfIdlePlayer(int client)
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == 2 && (iGetIdlePlayerOfBot(i) == client))
+		if(IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == 2 && iGetIdlePlayerOfBot(i) == client)
 			return i;
 	}
 	return 0;
@@ -2313,28 +2304,28 @@ void vPageExitBackSwitch(int client, int iFunction, int index)
 void vReloadAmmo(int client)
 {
 	int iWeapon = GetPlayerWeaponSlot(client, 0);
-	if(iWeapon > MaxClients && IsValidEntity(iWeapon))
+	if(iWeapon <= MaxClients || !IsValidEntity(iWeapon))
+		return;
+
+	int m_iPrimaryAmmoType = GetEntProp(iWeapon, Prop_Send, "m_iPrimaryAmmoType");
+	if(m_iPrimaryAmmoType == -1)
+		return;
+
+	char sWeapon[32];
+	GetEdictClassname(iWeapon, sWeapon, sizeof sWeapon);
+	if(strcmp(sWeapon[7], "grenade_launcher") == 0)
 	{
-		char sWeapon[32];
-		GetEdictClassname(iWeapon, sWeapon, sizeof sWeapon);
-		if(strcmp(sWeapon, "weapon_rifle_m60") == 0)
-			SetEntProp(iWeapon, Prop_Send, "m_iClip1", g_iClipSize[0]);
-		else if(strcmp(sWeapon, "weapon_grenade_launcher") == 0)
-		{
-			SetEntProp(iWeapon, Prop_Send, "m_iClip1", g_iClipSize[1]);
+		static ConVar hAmmoGrenadelau;
+		if(hAmmoGrenadelau == null)
+			hAmmoGrenadelau = FindConVar("ammo_grenadelauncher_max");
 
-			int iAmmoMax = FindConVar("ammo_grenadelauncher_max").IntValue;
-			if(iAmmoMax < 1)
-				iAmmoMax = 30;
-
-			SetEntData(client, FindSendPropInfo("CTerrorPlayer", "m_iAmmo") + 68, iAmmoMax);
-		}
+		SetEntProp(client, Prop_Send, "m_iAmmo", hAmmoGrenadelau.IntValue, _, m_iPrimaryAmmoType);
 	}
 }
 
 void vCheatCommand(int client, const char[] sCommand)
 {
-	if(client == 0 || !IsClientInGame(client))
+	if(!client || !IsClientInGame(client))
 		return;
 
 	char sCmd[32];
@@ -2346,7 +2337,7 @@ void vCheatCommand(int client, const char[] sCommand)
 		int attacker = L4D2_GetInfectedAttacker(client);
 		if(attacker > 0 && IsClientInGame(attacker) && IsPlayerAlive(attacker))
 		{
-			SDKCall(g_hSDKCleanupPlayerState, attacker);
+			SDKCall(g_hSDK_CTerrorPlayer_CleanupPlayerState, attacker);
 			ForcePlayerSuicide(attacker);
 		}
 	}
@@ -2365,59 +2356,69 @@ void vCheatCommand(int client, const char[] sCommand)
 		if(strcmp(sCommand[5], "health") == 0)
 			SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 0.0); //防止有虚血时give health会超过100血
 		else if(strcmp(sCommand[5], "ammo") == 0)
-			vReloadAmmo(client); //M60和榴弹发射器加子弹
+			vReloadAmmo(client); //榴弹发射器加子弹
 	}
 }
 
-void vLoadGameData()
+void vInitGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false) 
+	if(!FileExists(sPath))
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null) 
+	if(!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
-	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn") == false)
-		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
-	g_hSDKRoundRespawn = EndPrepSDKCall();
-	if(g_hSDKRoundRespawn == null)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
-		
-	vRegisterStatsConditionPatch(hGameData);
+	g_pZombieManager = hGameData.GetAddress("ZombieManager");
+	if(!g_pZombieManager)
+		SetFailState("Failed to find address: ZombieManager");
+
+	g_iOff_m_nFallenSurvivors = hGameData.GetOffset("m_nFallenSurvivors");
+	if(g_iOff_m_nFallenSurvivors== -1)
+		SetFailState("Failed to find offset: m_nFallenSurvivors");
+
+	g_iOff_m_FallenSurvivorTimer = hGameData.GetOffset("m_FallenSurvivorTimer");
+	if(g_iOff_m_FallenSurvivorTimer== -1)
+		SetFailState("Failed to find offset: m_FallenSurvivorTimer");
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SurvivorBot::SetHumanSpectator") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn"))
+		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
+	g_hSDK_CTerrorPlayer_RoundRespawn = EndPrepSDKCall();
+	if(!g_hSDK_CTerrorPlayer_RoundRespawn)
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
+
+	StartPrepSDKCall(SDKCall_Player);
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SurvivorBot::SetHumanSpectator"))
 		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDKSetHumanSpectator = EndPrepSDKCall();
-	if(g_hSDKSetHumanSpectator == null)
+	g_hSDK_SurvivorBot_SetHumanSpectator = EndPrepSDKCall();
+	if(!g_hSDK_SurvivorBot_SetHumanSpectator)
 		SetFailState("Failed to create SDKCall: SurvivorBot::SetHumanSpectator");
 	
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TakeOverBot") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TakeOverBot"))
 		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverBot");
 	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
-	g_hSDKTakeOverBot = EndPrepSDKCall();
-	if(g_hSDKTakeOverBot == null)
+	g_hSDK_CTerrorPlayer_TakeOverBot = EndPrepSDKCall();
+	if(!g_hSDK_CTerrorPlayer_TakeOverBot)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::TakeOverBot");
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::GoAwayFromKeyboard") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::GoAwayFromKeyboard"))
 		SetFailState("Failed to find signature: CTerrorPlayer::GoAwayFromKeyboard");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDKGoAwayFromKeyboard = EndPrepSDKCall();
-	if(g_hSDKGoAwayFromKeyboard == null)
+	g_hSDK_CTerrorPlayer_GoAwayFromKeyboard = EndPrepSDKCall();
+	if(!g_hSDK_CTerrorPlayer_GoAwayFromKeyboard)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard");
 
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::CleanupPlayerState") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::CleanupPlayerState"))
 		SetFailState("Failed to find signature: CTerrorPlayer::CleanupPlayerState");
-	g_hSDKCleanupPlayerState = EndPrepSDKCall();
-	if(g_hSDKCleanupPlayerState == null)
+	g_hSDK_CTerrorPlayer_CleanupPlayerState = EndPrepSDKCall();
+	if(!g_hSDK_CTerrorPlayer_CleanupPlayerState)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::CleanupPlayerState");
 
 	Address pReplaceWithBot = hGameData.GetAddress("NextBotCreatePlayerBot.jumptable");
@@ -2426,12 +2427,12 @@ void vLoadGameData()
 	else
 		vPrepLinuxCreateBotCalls(hGameData);
 
-	vRegisterIsFallenSurvivorAllowedPatch(hGameData);
+	vInitPatchs(hGameData);
 
 	delete hGameData;
 }
 
-void vRegisterStatsConditionPatch(GameData hGameData = null)
+void vInitPatchs(GameData hGameData = null)
 {
 	int iOffset = hGameData.GetOffset("RoundRespawn_Offset");
 	if(iOffset == -1)
@@ -2468,85 +2469,21 @@ void vStatsConditionPatch(bool bPatch)
 	}
 }
 
-void vRegisterIsFallenSurvivorAllowedPatch(GameData hGameData = null)
-{
-	int iOffset = hGameData.GetOffset("IsFallenSurvivorAllowed_Offset");
-	if(iOffset == -1)
-		SetFailState("Failed to load offset: IsFallenSurvivorAllowed_Offset");
-
-	int iByteMatch = hGameData.GetOffset("IsFallenSurvivorAllowed_Byte");
-	if(iByteMatch == -1)
-		SetFailState("Failed to load byte: IsFallenSurvivorAllowed_Byte");
-
-	int iByteCount = hGameData.GetOffset("IsFallenSurvivorAllowed_Count");
-	if(iByteCount == -1)
-		SetFailState("Failed to load count: IsFallenSurvivorAllowed_Count");
-
-	g_pIsFallenSurvivorAllowed = hGameData.GetAddress("IsFallenSurvivorAllowed");
-	if(!g_pIsFallenSurvivorAllowed)
-		SetFailState("Failed to load address: IsFallenSurvivorAllowed");
-	
-	g_pIsFallenSurvivorAllowed += view_as<Address>(iOffset);
-
-	g_aByteSaved = new ArrayList();
-	g_aBytePatch = new ArrayList();
-
-	for(int i; i < iByteCount; i++)
-		g_aByteSaved.Push(LoadFromAddress(g_pIsFallenSurvivorAllowed + view_as<Address>(i), NumberType_Int8));
-	
-	if(g_aByteSaved.Get(0) != iByteMatch)
-		LogError("Failed to load 'IsFallenSurvivorAllowed', byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, g_aByteSaved.Get(0), iByteMatch);
-
-	switch(iByteMatch)
-	{
-		case 0x0F:
-		{
-			g_aBytePatch.Push(0x90);
-			g_aBytePatch.Push(0xE9);
-		}
-
-		case 0x74:
-		{
-			g_aBytePatch.Push(0x90);
-			g_aBytePatch.Push(0x90);
-		}
-	}
-}
-
-void vIsFallenSurvivorAllowedPatch(bool bPatch)
-{
-	static bool bPatched;
-	if(!bPatched && bPatch)
-	{
-		bPatched = true;
-		int iLength = g_aBytePatch.Length;
-		for(int i; i < iLength; i++)
-			StoreToAddress(g_pIsFallenSurvivorAllowed + view_as<Address>(i), g_aBytePatch.Get(i), NumberType_Int8);
-	}
-	else if(bPatched && !bPatch)
-	{
-		bPatched = false;
-		int iLength = g_aByteSaved.Length;
-		for(int i; i < iLength; i++)
-			StoreToAddress(g_pIsFallenSurvivorAllowed + view_as<Address>(i), g_aByteSaved.Get(i), NumberType_Int8);
-	}
-}
-
-void vLoadStringFromAdddress(Address pAddr, char[] sBuffer, int iMaxlength)
+void vLoadStringFromAdddress(Address pAddr, char[] buffer, int maxlength)
 {
 	int i;
-	while(i < iMaxlength)
+	while(i < maxlength)
 	{
 		char val = LoadFromAddress(pAddr + view_as<Address>(i), NumberType_Int8);
 		if(val == 0)
 		{
-			sBuffer[i] = 0;
+			buffer[i] = '\0';
 			break;
 		}
-		sBuffer[i] = val;
+		buffer[i] = val;
 		i++;
 	}
-	sBuffer[iMaxlength - 1] = 0;
+	buffer[maxlength - 1] = '\0';
 }
 
 Handle hPrepCreateBotCallFromAddress(StringMap aSiFuncHashMap, const char[] sSIName)
@@ -2587,98 +2524,98 @@ void vPrepWindowsCreateBotCalls(Address pJumpTableAddr)
 		aInfectedHashMap.SetValue(sSIName, pNextBotCreatePlayerBotTAddr);
 	}
 
-	g_hSDKCreateSmoker = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Smoker");
-	if(g_hSDKCreateSmoker == null)
+	g_hSDK_NextBotCreatePlayerBot_Smoker = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Smoker");
+	if(!g_hSDK_NextBotCreatePlayerBot_Smoker)
 		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateSmoker);
 
-	g_hSDKCreateBoomer = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Boomer");
-	if(g_hSDKCreateBoomer == null)
+	g_hSDK_NextBotCreatePlayerBot_Boomer = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Boomer");
+	if(!g_hSDK_NextBotCreatePlayerBot_Boomer)
 		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateBoomer);
 
-	g_hSDKCreateHunter = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Hunter");
-	if(g_hSDKCreateHunter == null)
+	g_hSDK_NextBotCreatePlayerBot_Hunter = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Hunter");
+	if(!g_hSDK_NextBotCreatePlayerBot_Hunter)
 		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateHunter);
 
-	g_hSDKCreateTank = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Tank");
-	if(g_hSDKCreateTank == null)
-		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateTank);
-	
-	g_hSDKCreateSpitter = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Spitter");
-	if(g_hSDKCreateSpitter == null)
+	g_hSDK_NextBotCreatePlayerBot_Spitter = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Spitter");
+	if(!g_hSDK_NextBotCreatePlayerBot_Spitter)
 		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateSpitter);
 	
-	g_hSDKCreateJockey = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Jockey");
-	if(g_hSDKCreateJockey == null)
+	g_hSDK_NextBotCreatePlayerBot_Jockey = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Jockey");
+	if(!g_hSDK_NextBotCreatePlayerBot_Jockey)
 		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateJockey);
 
-	g_hSDKCreateCharger = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Charger");
-	if(g_hSDKCreateCharger == null)
+	g_hSDK_NextBotCreatePlayerBot_Charger = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Charger");
+	if(!g_hSDK_NextBotCreatePlayerBot_Charger)
 		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateCharger);
+
+	g_hSDK_NextBotCreatePlayerBot_Tank = hPrepCreateBotCallFromAddress(aInfectedHashMap, "Tank");
+	if(!g_hSDK_NextBotCreatePlayerBot_Tank)
+		SetFailState("Cannot initialize %s SDKCall, address lookup failed.", NAME_CreateTank);
 }
 
 void vPrepLinuxCreateBotCalls(GameData hGameData = null)
 {
 	StartPrepSDKCall(SDKCall_Static);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateSmoker) == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateSmoker))
 		SetFailState("Failed to find signature: %s", NAME_CreateSmoker);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDKCreateSmoker = EndPrepSDKCall();
-	if(g_hSDKCreateSmoker == null)
+	g_hSDK_NextBotCreatePlayerBot_Smoker = EndPrepSDKCall();
+	if(!g_hSDK_NextBotCreatePlayerBot_Smoker)
 		SetFailState("Failed to create SDKCall: %s", NAME_CreateSmoker);
 	
 	StartPrepSDKCall(SDKCall_Static);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateBoomer) == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateBoomer))
 		SetFailState("Failed to find signature: %s", NAME_CreateBoomer);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDKCreateBoomer = EndPrepSDKCall();
-	if(g_hSDKCreateBoomer == null)
+	g_hSDK_NextBotCreatePlayerBot_Boomer = EndPrepSDKCall();
+	if(!g_hSDK_NextBotCreatePlayerBot_Boomer)
 		SetFailState("Failed to create SDKCall: %s", NAME_CreateBoomer);
 		
 	StartPrepSDKCall(SDKCall_Static);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateHunter) == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateHunter))
 		SetFailState("Failed to find signature: %s", NAME_CreateHunter);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDKCreateHunter = EndPrepSDKCall();
-	if(g_hSDKCreateHunter == null)
+	g_hSDK_NextBotCreatePlayerBot_Hunter = EndPrepSDKCall();
+	if(!g_hSDK_NextBotCreatePlayerBot_Hunter)
 		SetFailState("Failed to create SDKCall: %s", NAME_CreateHunter);
 	
 	StartPrepSDKCall(SDKCall_Static);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateSpitter) == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateSpitter))
 		SetFailState("Failed to find signature: %s", NAME_CreateSpitter);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDKCreateSpitter = EndPrepSDKCall();
-	if(g_hSDKCreateSpitter == null)
+	g_hSDK_NextBotCreatePlayerBot_Spitter = EndPrepSDKCall();
+	if(!g_hSDK_NextBotCreatePlayerBot_Spitter)
 		SetFailState("Failed to create SDKCall: %s", NAME_CreateSpitter);
 	
 	StartPrepSDKCall(SDKCall_Static);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateJockey) == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateJockey))
 		SetFailState("Failed to find signature: %s", NAME_CreateJockey);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDKCreateJockey = EndPrepSDKCall();
-	if(g_hSDKCreateJockey == null)
+	g_hSDK_NextBotCreatePlayerBot_Jockey = EndPrepSDKCall();
+	if(!g_hSDK_NextBotCreatePlayerBot_Jockey)
 		SetFailState("Failed to create SDKCall: %s", NAME_CreateJockey);
 		
 	StartPrepSDKCall(SDKCall_Static);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateCharger) == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateCharger))
 		SetFailState("Failed to find signature: %s", NAME_CreateCharger);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDKCreateCharger = EndPrepSDKCall();
-	if(g_hSDKCreateCharger == null)
+	g_hSDK_NextBotCreatePlayerBot_Charger = EndPrepSDKCall();
+	if(!g_hSDK_NextBotCreatePlayerBot_Charger)
 		SetFailState("Failed to create SDKCall: %s", NAME_CreateCharger);
 		
 	StartPrepSDKCall(SDKCall_Static);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateTank) == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, NAME_CreateTank))
 		SetFailState("Failed to find signature: %s", NAME_CreateTank);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDKCreateTank = EndPrepSDKCall();
-	if(g_hSDKCreateTank == null)
+	g_hSDK_NextBotCreatePlayerBot_Tank = EndPrepSDKCall();
+	if(!g_hSDK_NextBotCreatePlayerBot_Tank)
 		SetFailState("Failed to create SDKCall: %s", NAME_CreateTank);
 }
 
