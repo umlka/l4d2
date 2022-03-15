@@ -48,7 +48,6 @@ int
 	g_iSelectedClient[MAXPLAYERS + 1];
 
 bool
-	g_bLateLoad,
 	g_bCookie,
 	g_bAutoModel,
 	g_bAdminsOnly,
@@ -90,19 +89,9 @@ public Plugin myinfo =
 	url = "https://forums.alliedmods.net/showthread.php?p=2399163#post2399163"
 }
 
-public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
-{
-	g_bLateLoad = late;
-	return APLRes_Success;
-}
-
 public void OnPluginStart()
 {
 	vInitGameData();
-
-	if(g_bLateLoad)
-		g_pDirector = L4D_GetPointer(POINTER_DIRECTOR);
-
 	HookUserMessage(GetUserMessageId("SayText2"), umSayText2, true);
 
 	g_ckClientID = new Cookie("Player_Character", "Player's default character ID.", CookieAccess_Protected);
@@ -152,6 +141,11 @@ public void OnPluginStart()
 	TopMenu topmenu;
 	if(LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != null))
 		OnAdminMenuReady(topmenu);
+}
+
+public void OnAllPluginsLoaded()
+{
+	g_pDirector = L4D_GetPointer(POINTER_DIRECTOR);
 }
 
 public void OnAdminMenuReady(Handle aTopMenu)
@@ -466,8 +460,6 @@ public void OnMapStart()
 
 	for(int i; i < 8; i++)
 		PrecacheModel(g_sSurvivorModels[i], true);
-
-	g_pDirector = L4D_GetPointer(POINTER_DIRECTOR);
 }
 
 public void OnConfigsExecuted()
