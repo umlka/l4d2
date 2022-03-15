@@ -179,9 +179,9 @@ public void OnPluginStart()
 	g_aRescueVehicle = new ArrayList();
 
 	g_hSafeAreaFlags = CreateConVar("st_enable", "3", "Where is it enabled? (1=Safe Room, 2=Rescue Vehicle, 3=Both)", _, true, 0.0, true, 3.0);
-	g_hSafeAreaType = CreateConVar("st_type", "1", "How to deal with players who have not entered the destination safe navarea (1=teleport, 2=slay)", _, true, 1.0, true, 2.0);
+	g_hSafeAreaType = CreateConVar("st_type", "1", "How to deal with players who have not entered the destination safe area (1=teleport, 2=slay)", _, true, 1.0, true, 2.0);
 	g_hSafeAreaTime = CreateConVar("st_time", "30", "How many seconds to count down before processing (0=disable the function)", _, true, 0.0);
-	g_hMinSurvivorPercent = CreateConVar("st_min_percent", "50", "What percentage of the survivors start the countdown when they reach the finish navarea", _, true, 0.0, true, 100.0);
+	g_hMinSurvivorPercent = CreateConVar("st_min_percent", "50", "What percentage of the survivors start the countdown when they reach the finish area", _, true, 0.0, true, 100.0);
 	
 	g_hSafeAreaFlags.AddChangeHook(vAllowConVarChanged);
 	g_hSafeAreaType.AddChangeHook(vConVarChanged);
@@ -196,7 +196,7 @@ public void OnPluginStart()
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_PostNoCopy);
 	
-	RegAdminCmd("sm_warpend", cmdWarpEnd, ADMFLAG_RCON, "Send all survivors to the destination safe navarea");
+	RegAdminCmd("sm_warpend", cmdWarpEnd, ADMFLAG_RCON, "Send all survivors to the destination safe area");
 	RegAdminCmd("sm_st", cmdSt, ADMFLAG_ROOT, "Test");
 	
 	HookEntityOutput("trigger_finale", "FinaleStart", vOnFinaleStart);
@@ -243,7 +243,7 @@ Action cmdWarpEnd(int client, int args)
 
 	if(!g_aEndNavArea.Length)
 	{
-		ReplyToCommand(client, "No endpoint Nav navarea found");
+		ReplyToCommand(client, "No endpoint nav area found");
 		return Plugin_Handled;
 	}
 
