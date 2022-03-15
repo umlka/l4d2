@@ -16,21 +16,21 @@
 	{
 		"Functions"
 		{
-			"DD_CTerrorPlayer::OnEnterGhostState"
+			"DD::CTerrorPlayer::OnEnterGhostState"
 			{
 				"signature"	"CTerrorPlayer::OnEnterGhostState"
 				"callconv"	"thiscall"
 				"return"	"void"
 				"this"		"entity"
 			}
-			"DD_CTerrorPlayer::MaterializeFromGhost"
+			"DD::CTerrorPlayer::MaterializeFromGhost"
 			{
 				"signature"		"CTerrorPlayer::MaterializeFromGhost"
 				"callconv"		"thiscall"
 				"return"		"void"
 				"this"			"entity"
 			}
-			"DD_CTerrorPlayer::PlayerZombieAbortControl"
+			"DD::CTerrorPlayer::PlayerZombieAbortControl"
 			{
 				"signature"		"CTerrorPlayer::PlayerZombieAbortControl"
 				"callconv"		"thiscall"
