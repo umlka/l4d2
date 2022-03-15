@@ -20,17 +20,17 @@
 
 Handle
 	g_hTimer,
-	g_hSDKCleanupPlayerState,
-	g_hSDKGetLastCheckpoint,
-	g_hSDKCheckpointContainsArea,
-	g_hSDKCheckpointGetLargestArea,
-	g_hSDKFindRescueAreaTrigger,
-	g_hSDKIsTouching,
-	g_hSDKIsCheckpointDoor,
-	g_hSDKIsCheckpointExitDoor;
+	g_hSDK_CTerrorPlayer_CleanupPlayerState,
+	g_hSDK_TerrorNavMesh_GetLastCheckpoint,
+	g_hSDK_Checkpoint_ContainsArea,
+	g_hSDK_Checkpoint_GetLargestArea,
+	g_hSDK_CDirectorChallengeMode_FindRescueAreaTrigger,
+	g_hSDK_CBaseTrigger_IsTouching,
+	g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointDoor,
+	g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointExitDoor;
 
 Address
-	g_pTheNavAreas;
+	g_pTheCount;
 
 ArrayList
 	g_aLastDoor,
@@ -51,8 +51,10 @@ int
 	g_iChangelevel,
 	g_iRescueVehicle,
 	g_iTriggerFinale,
-	g_iSpawnAttributesOffset,
-	g_iFlowDistanceOffset,
+	g_iOff_m_iMissionWipes,
+	g_iOff_m_flow,
+	g_iOff_m_attributeFlags,
+	g_iOff_m_spawnAttributes,
 	g_iSafeAreaFlags,
 	g_iSafeAreaType,
 	g_iSafeAreaTime,
@@ -64,13 +66,12 @@ float
 	g_vOrigin[3];
 
 bool
-	g_bFirstRound,
+	g_bTranslation,
 	g_bIsFinaleMap,
 	g_bIsTriggered,
-	g_bIsSacrificeFinale,
-	g_bTranslation;
+	g_bIsSacrificeFinale;
 
-methodmap CNavArea
+methodmap TerrorNavArea
 {
 	public bool IsNull()
 	{
@@ -115,39 +116,39 @@ methodmap CNavArea
 		result[1] = GetRandomFloat(vMins[1], vMaxs[1]);
 		result[2] = GetRandomFloat(vMins[2], vMaxs[2]);*/
 	}
+
+	property float m_flow
+	{
+		public get()
+		{
+			return view_as<float>(LoadFromAddress(view_as<Address>(this) + view_as<Address>(g_iOff_m_flow), NumberType_Int32));
+		}
+	}
 	
-	property int BaseAttributes
+	property int m_attributeFlags
 	{
 		public get()
 		{
-			return LoadFromAddress(view_as<Address>(this) + view_as<Address>(84), NumberType_Int32);
+			return LoadFromAddress(view_as<Address>(this) + view_as<Address>(g_iOff_m_attributeFlags), NumberType_Int32);
 		}
 		/*
 		public set(int value)
 		{
-			StoreToAddress(view_as<Address>(this) + view_as<Address>(84), value, NumberType_Int32);
+			StoreToAddress(view_as<Address>(this) + view_as<Address>(g_iOff_m_attributeFlags), value, NumberType_Int32);
 		}*/
 	}
 
-	property int SpawnAttributes
+	property int m_spawnAttributes
 	{
 		public get()
 		{
-			return LoadFromAddress(view_as<Address>(this) + view_as<Address>(g_iSpawnAttributesOffset), NumberType_Int32);
+			return LoadFromAddress(view_as<Address>(this) + view_as<Address>(g_iOff_m_spawnAttributes), NumberType_Int32);
 		}
 		/*
 		public set(int value)
 		{
-			StoreToAddress(view_as<Address>(this) + view_as<Address>(g_iSpawnAttributesOffset), value, NumberType_Int32);
+			StoreToAddress(view_as<Address>(this) + view_as<Address>(g_iOff_m_spawnAttributes), value, NumberType_Int32);
 		}*/
-	}
-
-	property float Flow
-	{
-		public get()
-		{
-			return view_as<float>(LoadFromAddress(view_as<Address>(this) + view_as<Address>(g_iFlowDistanceOffset), NumberType_Int32));
-		}
 	}
 };
 
@@ -157,7 +158,7 @@ public Plugin myinfo =
 	name = 			"SafeArea Teleport",
 	author = 		"sorallll",
 	description = 	"",
-	version = 		"1.1.6",
+	version = 		"1.1.8",
 	url = 			"https://forums.alliedmods.net/showthread.php?p=2766514#post2766514"
 }
 
@@ -178,9 +179,9 @@ public void OnPluginStart()
 	g_aRescueVehicle = new ArrayList();
 
 	g_hSafeAreaFlags = CreateConVar("st_enable", "3", "Where is it enabled? (1=Safe Room, 2=Rescue Vehicle, 3=Both)", _, true, 0.0, true, 3.0);
-	g_hSafeAreaType = CreateConVar("st_type", "1", "How to deal with players who have not entered the destination safe area (1=teleport, 2=slay)", _, true, 1.0, true, 2.0);
+	g_hSafeAreaType = CreateConVar("st_type", "1", "How to deal with players who have not entered the destination safe navarea (1=teleport, 2=slay)", _, true, 1.0, true, 2.0);
 	g_hSafeAreaTime = CreateConVar("st_time", "30", "How many seconds to count down before processing (0=disable the function)", _, true, 0.0);
-	g_hMinSurvivorPercent = CreateConVar("st_min_percent", "50", "What percentage of the survivors start the countdown when they reach the finish area", _, true, 0.0);
+	g_hMinSurvivorPercent = CreateConVar("st_min_percent", "50", "What percentage of the survivors start the countdown when they reach the finish navarea", _, true, 0.0, true, 100.0);
 	
 	g_hSafeAreaFlags.AddChangeHook(vAllowConVarChanged);
 	g_hSafeAreaType.AddChangeHook(vConVarChanged);
@@ -195,7 +196,7 @@ public void OnPluginStart()
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_PostNoCopy);
 	
-	RegAdminCmd("sm_warpend", cmdWarpEnd, ADMFLAG_RCON, "Send all survivors to the destination safe area");
+	RegAdminCmd("sm_warpend", cmdWarpEnd, ADMFLAG_RCON, "Send all survivors to the destination safe navarea");
 	RegAdminCmd("sm_st", cmdSt, ADMFLAG_ROOT, "Test");
 	
 	HookEntityOutput("trigger_finale", "FinaleStart", vOnFinaleStart);
@@ -203,30 +204,30 @@ public void OnPluginStart()
 
 void vOnFinaleStart(const char[] output, int caller, int activator, float delay)
 {
-	if(!g_bIsFinaleMap || g_iSafeAreaFlags & RESCUE_VEHICLE == 0)
+	if(!g_bIsFinaleMap || g_iSafeAreaFlags & RESCUE_VEHICLE == 0 || bIsValidEntRef(g_iTriggerFinale))
 		return;
 
-	if(!bIsValidEntRef(g_iTriggerFinale)) //c5m5, c13m4
+	g_iTriggerFinale = EntIndexToEntRef(caller);
+	g_bIsSacrificeFinale = !!GetEntProp(g_iTriggerFinale, Prop_Data, "m_bIsSacrificeFinale");
+
+	if(g_bIsSacrificeFinale)
 	{
-		g_iTriggerFinale = EntIndexToEntRef(caller);
-		g_bIsSacrificeFinale = !!GetEntProp(g_iTriggerFinale, Prop_Data, "m_bIsSacrificeFinale");
-
-		if(g_bIsSacrificeFinale)
+		if(!iGetMissionWipes())
 		{
-			if(g_bFirstRound)
-			{
-				if(g_bTranslation)
-					PrintToChatAll("\x05%t", "IsSacrificeFinale");
-				else
-					PrintToChatAll("\x05该地图是牺牲结局，已关闭当前功能");
-			}
+			if(g_bTranslation)
+				PrintToChatAll("\x05%t", "IsSacrificeFinale");
+			else
+				PrintToChatAll("\x05该地图是牺牲结局, 已关闭当前功能");
+		}
 
-			int iEntRef;
-			int iLength = g_aRescueVehicle.Length;
-			for(int i; i < iLength; i++)
+		int iEntRef;
+		int iLength = g_aRescueVehicle.Length;
+		for(int i; i < iLength; i++)
+		{
+			if(EntRefToEntIndex((iEntRef = g_aRescueVehicle.Get(i))) != INVALID_ENT_REFERENCE)
 			{
-				if(bIsValidEntRef((iEntRef = g_aRescueVehicle.Get(i))))
-					UnhookSingleEntityOutput(iEntRef, "OnStartTouch",  vOnStartTouch);
+				UnhookSingleEntityOutput(iEntRef, "OnStartTouch",  OnStartTouch);
+				UnhookSingleEntityOutput(iEntRef, "OnEndTouch", OnEndTouch);
 			}
 		}
 	}
@@ -234,15 +235,15 @@ void vOnFinaleStart(const char[] output, int caller, int activator, float delay)
 
 Action cmdWarpEnd(int client, int args)
 {
-	if(g_iRoundStart == 0 || g_iPlayerSpawn == 0)
+	if(!g_iRoundStart || !g_iPlayerSpawn)
 	{
 		ReplyToCommand(client, "Round has not yet started");
 		return Plugin_Handled;
 	}
 
-	if(g_aEndNavArea.Length == 0)
+	if(!g_aEndNavArea.Length)
 	{
-		ReplyToCommand(client, "No endpoint Nav area found");
+		ReplyToCommand(client, "No endpoint Nav navarea found");
 		return Plugin_Handled;
 	}
 
@@ -252,7 +253,7 @@ Action cmdWarpEnd(int client, int args)
 
 Action cmdSt(int client, int args)
 {
-	ReplyToCommand(client, "ChangeLevel->%d RescueAreaTrigger->%d EndNavArea->%d", g_iChangelevel ? EntRefToEntIndex(g_iChangelevel) : -1, SDKCall(g_hSDKFindRescueAreaTrigger), g_aEndNavArea.Length);
+	ReplyToCommand(client, "ChangeLevel->%d RescueAreaTrigger->%d EndNavArea->%d", g_iChangelevel ? EntRefToEntIndex(g_iChangelevel) : -1, SDKCall(g_hSDK_CDirectorChallengeMode_FindRescueAreaTrigger), g_aEndNavArea.Length);
 	return Plugin_Handled;
 }
 
@@ -280,15 +281,21 @@ void vIsAllowed()
 	if(iLast != g_iSafeAreaFlags)
 	{
 		if(bIsValidEntRef(g_iChangelevel))
-			UnhookSingleEntityOutput(g_iChangelevel, "OnStartTouch",  vOnStartTouch);
+		{
+			UnhookSingleEntityOutput(g_iChangelevel, "OnStartTouch",  OnStartTouch);
+			UnhookSingleEntityOutput(g_iChangelevel, "OnEndTouch", OnEndTouch);
+		}
 
 		int i;
 		int iEntRef;
 		int iLength = g_aRescueVehicle.Length;
 		for(; i < iLength; i++)
 		{
-			if((iEntRef = g_aRescueVehicle.Get(i)) != g_iRescueVehicle && bIsValidEntRef(iEntRef))
-				UnhookSingleEntityOutput(iEntRef, "OnStartTouch",  vOnStartTouch);
+			if((iEntRef = g_aRescueVehicle.Get(i)) != g_iRescueVehicle && EntRefToEntIndex(iEntRef) != INVALID_ENT_REFERENCE)
+			{
+				UnhookSingleEntityOutput(iEntRef, "OnStartTouch",  OnStartTouch);
+				UnhookSingleEntityOutput(iEntRef, "OnEndTouch", OnEndTouch);
+			}
 		}
 
 		vInitPlugin();
@@ -304,10 +311,9 @@ void vGetCvars()
 
 public void OnMapStart()
 {
-	vLateLoadGameData();
+	vGetNavAreaCount();
 	PrecacheSound(SOUND_COUNTDOWN);
 
-	g_bFirstRound = true;
 	g_bIsFinaleMap = L4D_IsMissionFinalMap();
 }
 
@@ -321,7 +327,6 @@ void vResetPlugin()
 {
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
-	g_bFirstRound = false;
 	g_bIsTriggered = false;
 	g_bIsSacrificeFinale = false;
 }
@@ -352,13 +357,13 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 
 void vInitPlugin()
 {
-	if(g_iTheCount == 0)
+	if(!g_iTheCount)
 		return;
 
 	vHookEndAreaEntity();
 	vFindSafeRoomDoors();
 
-	if(g_bFirstRound)
+	if(!iGetMissionWipes())
 		vFindTerrorNavAreas();
 }
 
@@ -377,37 +382,41 @@ void vFindTerrorNavAreas()
 
 	g_aEndNavArea.Clear();
 
-	CNavArea area;
-	int iSpawn;
+	int iSpawnAttributes;
+	TerrorNavArea navarea;
 
 	Address pLastCheckpoint;
 	if(!g_bIsFinaleMap)
-		pLastCheckpoint = SDKCall(g_hSDKGetLastCheckpoint, L4D_GetPointer(POINTER_NAVMESH));
+		pLastCheckpoint = SDKCall(g_hSDK_TerrorNavMesh_GetLastCheckpoint, L4D_GetPointer(POINTER_NAVMESH));
+
+	Address pTheNavAreas = view_as<Address>(LoadFromAddress(g_pTheCount + view_as<Address>(4), NumberType_Int32));
+	if(!pTheNavAreas)
+		SetFailState("Failed to find address: TheNavAreas");
 
 	for(int i; i < g_iTheCount; i++)
 	{
-		if((area = view_as<CNavArea>(LoadFromAddress(g_pTheNavAreas + view_as<Address>(i * 4), NumberType_Int32))).IsNull() == true)
+		if((navarea = view_as<TerrorNavArea>(LoadFromAddress(pTheNavAreas + view_as<Address>(i * 4), NumberType_Int32))).IsNull() == true)
 			continue;
 
-		if(area.Flow == -9999.0)
+		if(navarea.m_flow == -9999.0)
 			continue;
 	
-		if(area.BaseAttributes & NAV_MESH_OUTSIDE_WORLD)
+		if(navarea.m_attributeFlags & NAV_MESH_OUTSIDE_WORLD)
 			continue;
 
-		iSpawn = area.SpawnAttributes;
+		iSpawnAttributes = navarea.m_spawnAttributes;
 		if(g_bIsFinaleMap)
 		{
-			if(iSpawn & TERROR_NAV_RESCUE_VEHICLE)
-				g_aEndNavArea.Push(area);
+			if(iSpawnAttributes & TERROR_NAV_RESCUE_VEHICLE)
+				g_aEndNavArea.Push(navarea);
 		}
 		else
 		{
-			if(iSpawn & TERROR_NAV_CHECKPOINT == 0 || iSpawn & TERROR_NAV_DOOR)
+			if(iSpawnAttributes & TERROR_NAV_CHECKPOINT == 0 || iSpawnAttributes & TERROR_NAV_DOOR)
 				continue;
 			
-			if(SDKCall(g_hSDKCheckpointContainsArea, pLastCheckpoint, area))
-				g_aEndNavArea.Push(area);
+			if(SDKCall(g_hSDK_Checkpoint_ContainsArea, pLastCheckpoint, navarea))
+				g_aEndNavArea.Push(navarea);
 		}
 	}
 }
@@ -436,7 +445,8 @@ void vHookEndAreaEntity()
 		if(g_iSafeAreaFlags & SAFE_ROOM)
 		{
 			vGetBrushEntityVector((g_iChangelevel = EntIndexToEntRef(entity)));
-			HookSingleEntityOutput(entity, "OnStartTouch", vOnStartTouch);
+			HookSingleEntityOutput(entity, "OnStartTouch", OnStartTouch);
+			HookSingleEntityOutput(entity, "OnEndTouch", OnEndTouch);
 		}
 	}
 	else if(g_iSafeAreaFlags & RESCUE_VEHICLE)
@@ -450,12 +460,12 @@ void vHookEndAreaEntity()
 
 		if(g_bIsSacrificeFinale)
 		{
-			if(g_bFirstRound)
+			if(!iGetMissionWipes())
 			{
 				if(g_bTranslation)
 					PrintToChatAll("\x05%t", "IsSacrificeFinale");
 				else
-					PrintToChatAll("\x05该地图是牺牲结局，已关闭当前功能");
+					PrintToChatAll("\x05该地图是牺牲结局, 已关闭当前功能");
 			}
 		}
 		else
@@ -467,7 +477,8 @@ void vHookEndAreaEntity()
 					continue;
 
 				g_aRescueVehicle.Push(EntIndexToEntRef(entity));
-				HookSingleEntityOutput(entity, "OnStartTouch",  vOnStartTouch);
+				HookSingleEntityOutput(entity, "OnStartTouch",  OnStartTouch);
+				HookSingleEntityOutput(entity, "OnEndTouch", OnEndTouch);
 			}
 
 			if(g_aRescueVehicle.Length == 1)
@@ -508,36 +519,39 @@ void vFindSafeRoomDoors()
 		if(iFlags & 8192 == 0 || iFlags & 32768 != 0)
 			continue;
 		
-		if(!SDKCall(g_hSDKIsCheckpointDoor, entity))
+		if(!SDKCall(g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointDoor, entity))
 			continue;
 
-		if(SDKCall(g_hSDKIsCheckpointExitDoor, entity))
+		if(SDKCall(g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointExitDoor, entity))
 			continue;
 
 		g_aLastDoor.Set(g_aLastDoor.Push(EntIndexToEntRef(entity)), GetEntPropFloat(entity, Prop_Data, "m_flSpeed"), 1);
 	}
 }
 
-void  vOnStartTouch(const char[] output, int caller, int activator, float delay)
+void  OnStartTouch(const char[] output, int caller, int activator, float delay)
 {
-	if(g_bIsTriggered || g_bIsSacrificeFinale || activator < 1 || activator > MaxClients || !IsClientInGame(activator) || GetClientTeam(activator) != 2 || !IsPlayerAlive(activator))
+	if(g_bIsTriggered || g_bIsSacrificeFinale || !g_iSafeAreaTime || activator < 1 || activator > MaxClients || !IsClientInGame(activator) || GetClientTeam(activator) != 2 || !IsPlayerAlive(activator))
 		return;
 	
-	static int iTemp;
+	static int iParam;
 	if(!g_iChangelevel && !g_iRescueVehicle)
 	{
-		if(caller != SDKCall(g_hSDKFindRescueAreaTrigger))
+		if(caller != SDKCall(g_hSDK_CDirectorChallengeMode_FindRescueAreaTrigger))
 			return;
 
 		vGetBrushEntityVector((g_iRescueVehicle = EntIndexToEntRef(caller)));
 
-		iTemp = 0;
+		iParam = 0;
 		int iEntRef;
 		int iLength = g_aRescueVehicle.Length;
-		for(; iTemp < iLength; iTemp++)
+		for(; iParam < iLength; iParam++)
 		{
-			if((iEntRef = g_aRescueVehicle.Get(iTemp)) != g_iRescueVehicle && bIsValidEntRef(iEntRef))
-				UnhookSingleEntityOutput(iEntRef, "OnStartTouch",  vOnStartTouch);
+			if((iEntRef = g_aRescueVehicle.Get(iParam)) != g_iRescueVehicle && EntRefToEntIndex(iEntRef) != INVALID_ENT_REFERENCE)
+			{
+				UnhookSingleEntityOutput(iEntRef, "OnStartTouch",  OnStartTouch);
+				UnhookSingleEntityOutput(iEntRef, "OnEndTouch", OnEndTouch);
+			}
 		}
 
 		float vMins[3];
@@ -551,18 +565,18 @@ void  vOnStartTouch(const char[] output, int caller, int activator, float delay)
 		vMaxs[2] -= 20.0;
 		vCalculateBoundingBoxSize(vMins, vMaxs, vOrigin);
 
-		iTemp = 0;
+		iParam = 0;
 		iLength = g_aEndNavArea.Length;
-		while(iTemp < iLength)
+		while(iParam < iLength)
 		{
-			view_as<CNavArea>(g_aEndNavArea.Get(iTemp)).Center(vOrigin);
+			view_as<TerrorNavArea>(g_aEndNavArea.Get(iParam)).Center(vOrigin);
 			if(!bIsPosInArea(vOrigin, vMins, vMaxs))
 			{
-				g_aEndNavArea.Erase(iTemp);
+				g_aEndNavArea.Erase(iParam);
 				iLength--;
 			}
 			else
-				iTemp++;
+				iParam++;
 		}
 	}
 
@@ -572,40 +586,119 @@ void  vOnStartTouch(const char[] output, int caller, int activator, float delay)
 		return;
 	}
 
-	iTemp = iGetReachedSurvivorPercent();
-	if(iTemp < g_iMinSurvivorPercent)
-	{
-		if(g_bTranslation)
-			vPrintHintToSurvivor("%t", "SurvivorReached", iTemp, g_iMinSurvivorPercent);
-		else
-			vPrintHintToSurvivor("%d/100存活玩家已到达终点区域 %d/100开始倒计时", iTemp, g_iMinSurvivorPercent);
-
-		return;
-	}
-
-	if(g_iSafeAreaTime > 0)
-	{
-		g_bIsTriggered = true;
-		g_iCountdown = g_iSafeAreaTime;
-
-		delete g_hTimer;
-		g_hTimer = CreateTimer(1.0, tmrCountdown, _, TIMER_REPEAT);
-	}
-}
-
-int iGetReachedSurvivorPercent()
-{
-	int iReached, iAliveSurvivors;
+	iParam = 0;
+	int iReached;
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 		{
-			iAliveSurvivors++;
+			iParam++;
 			if(bIsPlayerInEndArea(i, false))
 				iReached++;
 		}	
 	}
-	return RoundToCeil(float(iReached) / float(iAliveSurvivors) * 100.0);
+
+	iParam = RoundToCeil(g_iMinSurvivorPercent / 100.0 * iParam);
+	if(iReached < iParam)
+	{
+		if(g_bTranslation)
+			vPrintHintToSurvivor("%t", "SurvivorReached", iReached, iParam);
+		else
+			vPrintHintToSurvivor("%d名生还者已到达终点区域(需要%d名)", iReached, iParam);
+		return;
+	}
+
+	g_bIsTriggered = true;
+	g_iCountdown = g_iSafeAreaTime;
+
+	delete g_hTimer;
+	g_hTimer = CreateTimer(1.0, tmrCountdown, _, TIMER_REPEAT);
+}
+
+void OnEndTouch(const char[] output, int caller, int activator, float delay)
+{
+	if(g_bIsTriggered || g_bIsSacrificeFinale || !g_iSafeAreaTime || activator < 1 || activator > MaxClients || !IsClientInGame(activator) || GetClientTeam(activator) != 2)
+		return;
+	
+	static int iParam;
+	if(!g_iChangelevel && !g_iRescueVehicle)
+	{
+		if(caller != SDKCall(g_hSDK_CDirectorChallengeMode_FindRescueAreaTrigger))
+			return;
+
+		vGetBrushEntityVector((g_iRescueVehicle = EntIndexToEntRef(caller)));
+
+		iParam = 0;
+		int iEntRef;
+		int iLength = g_aRescueVehicle.Length;
+		for(; iParam < iLength; iParam++)
+		{
+			if((iEntRef = g_aRescueVehicle.Get(iParam)) != g_iRescueVehicle && EntRefToEntIndex(iEntRef) != INVALID_ENT_REFERENCE)
+			{
+				UnhookSingleEntityOutput(iEntRef, "OnStartTouch",  OnStartTouch);
+				UnhookSingleEntityOutput(iEntRef, "OnEndTouch", OnEndTouch);
+			}
+		}
+
+		float vMins[3];
+		float vMaxs[3];
+		float vOrigin[3];
+		vMins = g_vMins;
+		vMaxs = g_vMaxs;
+		vOrigin = g_vOrigin;
+
+		vMins[2] -= 20.0;
+		vMaxs[2] -= 20.0;
+		vCalculateBoundingBoxSize(vMins, vMaxs, vOrigin);
+
+		iParam = 0;
+		iLength = g_aEndNavArea.Length;
+		while(iParam < iLength)
+		{
+			view_as<TerrorNavArea>(g_aEndNavArea.Get(iParam)).Center(vOrigin);
+			if(!bIsPosInArea(vOrigin, vMins, vMaxs))
+			{
+				g_aEndNavArea.Erase(iParam);
+				iLength--;
+			}
+			else
+				iParam++;
+		}
+	}
+
+	if(!g_aEndNavArea.Length)
+	{
+		g_bIsTriggered = true;
+		return;
+	}
+
+	iParam = 0;
+	int iReached;
+	for(int i = 1; i <= MaxClients; i++)
+	{
+		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
+		{
+			iParam++;
+			if(bIsPlayerInEndArea(i, false))
+				iReached++;
+		}	
+	}
+
+	iParam = RoundToCeil(g_iMinSurvivorPercent / 100.0 * iParam);
+	if(iReached < iParam)
+	{
+		if(g_bTranslation)
+			vPrintHintToSurvivor("%t", "SurvivorReached", iReached, iParam);
+		else
+			vPrintHintToSurvivor("%d名生还者已到达终点区域(需要%d名)", iReached, iParam);
+		return;
+	}
+
+	g_bIsTriggered = true;
+	g_iCountdown = g_iSafeAreaTime;
+
+	delete g_hTimer;
+	g_hTimer = CreateTimer(1.0, tmrCountdown, _, TIMER_REPEAT);
 }
 
 Action tmrCountdown(Handle timer)
@@ -624,7 +717,7 @@ Action tmrCountdown(Handle timer)
 			}
 		}
 		else
-			vPrintHintToSurvivor("%d 秒后%s所有未进入终点区域的玩家", g_iCountdown--, g_iSafeAreaType == 1 ? "传送" : "处死");
+			vPrintHintToSurvivor("%d 秒后%s未进入终点区域的生还者", g_iCountdown--, g_iSafeAreaType == 1 ? "传送" : "处死");
 
 		vEmitSoundToSurvivor(SOUND_COUNTDOWN, SOUND_FROM_PLAYER, SNDCHAN_STATIC, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
 	}
@@ -671,23 +764,6 @@ void vPerform(int iType)
 				if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPlayerInEndArea(i, false))
 					ForcePlayerSuicide(i);
 			}
-			/*if(bNoPlayerInEndArea())
-			{
-				if(g_bTranslation)
-					vPrintHintToSurvivor("%t", "NoPlayerInEndArea");
-				else
-					vPrintHintToSurvivor("终点区域无玩家存在, 已改为自动传送");
-
-				vPerform(1);
-			}
-			else
-			{
-				for(int i = 1; i <= MaxClients; i++)
-				{
-					if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPlayerInEndArea(i, false))
-						ForcePlayerSuicide(i);
-				}
-			}*/
 		}
 	}
 }
@@ -702,7 +778,7 @@ void vCloseAndLockLastSafeDoor()
 		char sBuffer[64];
 		while(i < iLength)
 		{
-			if(bIsValidEntRef((iEntRef = g_aLastDoor.Get(i))))
+			if(EntRefToEntIndex((iEntRef = g_aLastDoor.Get(i))) != INVALID_ENT_REFERENCE)
 			{
 				SetEntPropFloat(iEntRef, Prop_Data, "m_flSpeed", 1000.0);
 				SetEntProp(iEntRef, Prop_Data, "m_hasUnlockSequence", 0);
@@ -746,18 +822,17 @@ void vTeleportToCheckpoint()
 		{
 			if(IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i))
 			{
-				SDKCall(g_hSDKCleanupPlayerState, i);
+				SDKCall(g_hSDK_CTerrorPlayer_CleanupPlayerState, i);
 				ForcePlayerSuicide(i);
 			}
 		}
 
-		CNavArea area;
-		CNavArea CArea;
 		float vPos[3];
-		ArrayList aVerify = new ArrayList(2);
-
+		TerrorNavArea largest;
+		TerrorNavArea navarea;
+	
 		if(!g_bIsFinaleMap)
-			CArea = SDKCall(g_hSDKCheckpointGetLargestArea, SDKCall(g_hSDKGetLastCheckpoint, L4D_GetPointer(POINTER_NAVMESH)));
+			largest = SDKCall(g_hSDK_Checkpoint_GetLargestArea, SDKCall(g_hSDK_TerrorNavMesh_GetLastCheckpoint, L4D_GetPointer(POINTER_NAVMESH)));
 		
 		for(i = 1; i <= MaxClients; i++)
 		{
@@ -765,99 +840,12 @@ void vTeleportToCheckpoint()
 			{
 				vTeleportFix(i);
 
-				area = CArea ? CArea : g_aEndNavArea.Get(GetRandomInt(0, iLength - 1));
-				area.FindRandomSpot(vPos);
-				TeleportEntity(i, vPos, NULL_VECTOR, NULL_VECTOR);
-				aVerify.Set(aVerify.Push(GetClientUserId(i)), area, 1);
-			}
-		}
-
-		DataPack dPack = new DataPack();
-		dPack.WriteCell(aVerify);
-		CreateTimer(1.0, tmrTeleportVerify, dPack, TIMER_FLAG_NO_MAPCHANGE);
-	}
-}
-
-Action tmrTeleportVerify(Handle timer, DataPack dPack)
-{
-	dPack.Reset();
-	ArrayList aVerify = dPack.ReadCell();
-	delete dPack;
-
-	if(!g_bIsTriggered)
-		return Plugin_Stop;
-
-	ArrayList aSuccess = new ArrayList();
-
-	int i = 1;
-	int iTemp;
-	float vPos[3];
-	for(; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-		{
-			iTemp = aVerify.FindValue(GetClientUserId(i), 0);
-			if(iTemp != -1)
-			{
-				iTemp = g_aEndNavArea.FindValue(aVerify.Get(iTemp, 1));
-				if(iTemp != -1)
-				{
-					if(bIsPlayerInEndArea(i))
-						aSuccess.Push(g_aEndNavArea.Get(iTemp));
-					else
-						g_aEndNavArea.Erase(iTemp);
-				}
-			}
-			else
-			{
-				GetClientAbsOrigin(i, vPos);
-				iTemp = L4D_GetNearestNavArea(vPos);
-				if(iTemp)
-				{
-					iTemp = g_aEndNavArea.FindValue(iTemp);
-					if(iTemp != -1)
-						g_aEndNavArea.Erase(iTemp);
-				}
-			}
-		}
-	}
-
-	delete aVerify;
-
-	int iLength = aSuccess.Length;
-	if(iLength > 0)
-	{
-		for(i = 1; i <= MaxClients; i++)
-		{
-			if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPlayerInEndArea(i))
-			{
-				vTeleportFix(i);
-
-				view_as<CNavArea>(aSuccess.Get(GetRandomInt(0, iLength - 1))).FindRandomSpot(vPos);
+				navarea = largest ? largest : g_aEndNavArea.Get(GetRandomInt(0, iLength - 1));
+				navarea.FindRandomSpot(vPos);
 				TeleportEntity(i, vPos, NULL_VECTOR, NULL_VECTOR);
 			}
 		}
 	}
-	else
-	{
-		iLength = g_aEndNavArea.Length;
-		if(iLength > 0)
-		{
-			for(i = 1; i <= MaxClients; i++)
-			{
-				if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPlayerInEndArea(i))
-				{
-					vTeleportFix(i);
-
-					view_as<CNavArea>(g_aEndNavArea.Get(GetRandomInt(0, iLength - 1))).FindRandomSpot(vPos);
-					TeleportEntity(i, vPos, NULL_VECTOR, NULL_VECTOR);
-				}
-			}
-		}
-	}
-
-	delete aSuccess;
-	return Plugin_Continue;
 }
 
 void vTeleportFix(int client)
@@ -907,17 +895,7 @@ void vRemoveInfecteds()
 		RemoveEntity(i);
 	}
 }
-/*
-bool bNoPlayerInEndArea()
-{
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && bIsPlayerInEndArea(i, false))
-			return false;
-	}
-	return true;
-}
-*/
+
 bool bIsPosInArea(const float vPos[3], const float vMins[3], const float vMaxs[3])
 {
 	return vMins[0] < vPos[0] < vMaxs[0] && vMins[1] < vPos[1] < vMaxs[1] && vMins[2] < vPos[2] < vMaxs[2];
@@ -961,130 +939,128 @@ void vLoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false)
+	if(!FileExists(sPath))
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null)
+	if(!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
-	g_iSpawnAttributesOffset = hGameData.GetOffset("TerrorNavArea::ScriptGetSpawnAttributes");
-	if(g_iSpawnAttributesOffset == -1)
-		SetFailState("Failed to find offset: TerrorNavArea::ScriptGetSpawnAttributes");
+	g_pTheCount = hGameData.GetAddress("TheCount");
+	if(!g_pTheCount)
+		SetFailState("Failed to find address: TheCount");
 
-	g_iFlowDistanceOffset = hGameData.GetOffset("CTerrorPlayer::GetFlowDistance::m_flow");
-	if(g_iSpawnAttributesOffset == -1)
+	g_iOff_m_iMissionWipes = hGameData.GetOffset("m_iMissionWipes");
+	if(g_iOff_m_iMissionWipes== -1)
+		SetFailState("Failed to find offset: m_iMissionWipes");
+
+	g_iOff_m_flow = hGameData.GetOffset("CTerrorPlayer::GetFlowDistance::m_flow");
+	if(g_iOff_m_flow == -1)
 		SetFailState("Failed to find offset: CTerrorPlayer::GetFlowDistance::m_flow");
 
+	g_iOff_m_attributeFlags = hGameData.GetOffset("CNavArea::InheritAttributes::m_attributeFlags");
+	if(g_iOff_m_attributeFlags == -1)
+		SetFailState("Failed to find offset: CNavArea::InheritAttributes::m_attributeFlags");
+
+	g_iOff_m_spawnAttributes = hGameData.GetOffset("TerrorNavArea::SetSpawnAttributes::m_spawnAttributes");
+	if(g_iOff_m_spawnAttributes == -1)
+		SetFailState("Failed to find offset: TerrorNavArea::SetSpawnAttributes::m_spawnAttributes");
+
 	StartPrepSDKCall(SDKCall_Player);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::CleanupPlayerState") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::CleanupPlayerState"))
 		SetFailState("Failed to find signature: CTerrorPlayer::CleanupPlayerState");
-	g_hSDKCleanupPlayerState = EndPrepSDKCall();
-	if(g_hSDKCleanupPlayerState == null)
+	g_hSDK_CTerrorPlayer_CleanupPlayerState = EndPrepSDKCall();
+	if(!g_hSDK_CTerrorPlayer_CleanupPlayerState)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::CleanupPlayerState");
 
 	StartPrepSDKCall(SDKCall_Raw);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "TerrorNavMesh::GetLastCheckpoint") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "TerrorNavMesh::GetLastCheckpoint"))
 		SetFailState("Failed to find signature: TerrorNavMesh::GetLastCheckpoint");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	g_hSDKGetLastCheckpoint = EndPrepSDKCall();
-	if(g_hSDKGetLastCheckpoint == null)
+	g_hSDK_TerrorNavMesh_GetLastCheckpoint = EndPrepSDKCall();
+	if(!g_hSDK_TerrorNavMesh_GetLastCheckpoint)
 		SetFailState("Failed to create SDKCall: TerrorNavMesh::GetLastCheckpoint");
 
 	StartPrepSDKCall(SDKCall_Raw);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "Checkpoint::ContainsArea") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "Checkpoint::ContainsArea"))
 		SetFailState("Failed to find signature: Checkpoint::ContainsArea");
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDKCheckpointContainsArea = EndPrepSDKCall();
-	if(g_hSDKCheckpointContainsArea == null)
+	g_hSDK_Checkpoint_ContainsArea = EndPrepSDKCall();
+	if(!g_hSDK_Checkpoint_ContainsArea)
 		SetFailState("Failed to create SDKCall: Checkpoint::ContainsArea");
 
 	StartPrepSDKCall(SDKCall_Raw);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "Checkpoint::GetLargestArea") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "Checkpoint::GetLargestArea"))
 		SetFailState("Failed to find signature: Checkpoint::GetLargestArea");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	g_hSDKCheckpointGetLargestArea = EndPrepSDKCall();
-	if(g_hSDKCheckpointGetLargestArea == null)
+	g_hSDK_Checkpoint_GetLargestArea = EndPrepSDKCall();
+	if(!g_hSDK_Checkpoint_GetLargestArea)
 		SetFailState("Failed to create SDKCall: Checkpoint::GetLargestArea");
 
 	StartPrepSDKCall(SDKCall_GameRules);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CDirectorChallengeMode::FindRescueAreaTrigger") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CDirectorChallengeMode::FindRescueAreaTrigger"))
 		SetFailState("Failed to find signature: CDirectorChallengeMode::FindRescueAreaTrigger");
 	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
-	g_hSDKFindRescueAreaTrigger = EndPrepSDKCall();
-	if(g_hSDKFindRescueAreaTrigger == null)
+	g_hSDK_CDirectorChallengeMode_FindRescueAreaTrigger = EndPrepSDKCall();
+	if(!g_hSDK_CDirectorChallengeMode_FindRescueAreaTrigger)
 		SetFailState("Failed to create SDKCall: CDirectorChallengeMode::FindRescueAreaTrigger");
 
 	StartPrepSDKCall(SDKCall_Entity);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CBaseTrigger::IsTouching") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CBaseTrigger::IsTouching"))
 		SetFailState("Failed to find signature: CBaseTrigger::IsTouching");
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDKIsTouching = EndPrepSDKCall();
-	if(g_hSDKIsTouching == null)
+	g_hSDK_CBaseTrigger_IsTouching = EndPrepSDKCall();
+	if(!g_hSDK_CBaseTrigger_IsTouching)
 		SetFailState("Failed to create SDKCall: CBaseTrigger::IsTouching");
 
 	StartPrepSDKCall(SDKCall_Entity);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointDoor") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointDoor"))
 		SetFailState("Failed to find offset: CPropDoorRotatingCheckpoint::IsCheckpointDoor");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDKIsCheckpointDoor = EndPrepSDKCall();
-	if(g_hSDKIsCheckpointDoor == null)
+	g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointDoor = EndPrepSDKCall();
+	if(!g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointDoor)
 		SetFailState("Failed to create SDKCall: CPropDoorRotatingCheckpoint::IsCheckpointDoor");
 
 	StartPrepSDKCall(SDKCall_Entity);
-	if(PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointExitDoor") == false)
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointExitDoor"))
 		SetFailState("Failed to find offset: CPropDoorRotatingCheckpoint::IsCheckpointExitDoor");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDKIsCheckpointExitDoor = EndPrepSDKCall();
-	if(g_hSDKIsCheckpointExitDoor == null)
+	g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointExitDoor = EndPrepSDKCall();
+	if(!g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointExitDoor)
 		SetFailState("Failed to create SDKCall: CPropDoorRotatingCheckpoint::IsCheckpointExitDoor");
 
 	delete hGameData;
 }
 
-void vLateLoadGameData()
+void vGetNavAreaCount()
 {
-	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false)
-		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
-
-	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null)
-		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
-
-	Address pTheCount = hGameData.GetAddress("TheCount");
-	if(pTheCount == Address_Null)
-		SetFailState("Failed to find address: TheCount");
-
-	g_iTheCount = LoadFromAddress(pTheCount, NumberType_Int32);
-	if(g_iTheCount == 0)
+	g_iTheCount = LoadFromAddress(g_pTheCount, NumberType_Int32);
+	if(!g_iTheCount)
 	{
 		#if DEBUG
 		PrintToServer("The current number of Nav areas is 0, which may be some test maps");
 		#endif
 	}
+}
 
-	g_pTheNavAreas = view_as<Address>(LoadFromAddress(pTheCount + view_as<Address>(4), NumberType_Int32));
-	if(g_pTheNavAreas == Address_Null)
-		SetFailState("Failed to find address: TheNavAreas");
-
-	delete hGameData;
+int iGetMissionWipes()
+{
+	return LoadFromAddress(L4D_GetPointer(POINTER_DIRECTOR) + view_as<Address>(g_iOff_m_iMissionWipes), NumberType_Int32);
 }
 
 bool bIsPlayerInEndArea(int client, bool bCheckArea = true)
 {
-	int area = L4D_GetLastKnownArea(client);
-	if(!area)
+	int navarea = L4D_GetLastKnownArea(client);
+	if(!navarea)
 		return false;
 
-	if(bCheckArea && g_aEndNavArea.FindValue(area) == -1)
+	if(bCheckArea && g_aEndNavArea.FindValue(navarea) == -1)
 		return false;
 
 	if(g_bIsFinaleMap)
-		return bIsValidEntRef(g_iRescueVehicle) && SDKCall(g_hSDKIsTouching, g_iRescueVehicle, client);
+		return bIsValidEntRef(g_iRescueVehicle) && SDKCall(g_hSDK_CBaseTrigger_IsTouching, g_iRescueVehicle, client);
 	
-	return bIsValidEntRef(g_iChangelevel) && SDKCall(g_hSDKIsTouching, g_iChangelevel, client);
+	return bIsValidEntRef(g_iChangelevel) && SDKCall(g_hSDK_CBaseTrigger_IsTouching, g_iChangelevel, client);
 }

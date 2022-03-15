@@ -21,11 +21,28 @@
 
 		"Offsets"
 		{
-			/* TerrorNavArea::ScriptGetSpawnAttributes(TerrorNavArea *__hidden this) */
-			"TerrorNavArea::ScriptGetSpawnAttributes"
+			"m_iMissionWipes"
 			{
-				"linux"		"300"	//mov	 eax, [eax+12Ch]
-				"windows"	"296"	//mov	 eax, [ecx+128h]
+				"linux"		"896"
+				"windows"	"896"
+			}
+			/* CTerrorPlayer::GetFlowDistance(TerrorNavArea::FlowType)const */
+			"CTerrorPlayer::GetFlowDistance::m_flow"
+			{
+				"linux"		"340"
+				"windows"	"332"
+			}
+			/* CNavArea::InheritAttributes(CNavArea *__hidden this, CNavArea *, CNavArea *) */
+			"CNavArea::InheritAttributes::m_attributeFlags"
+			{
+				"linux"		"84"
+				"windows"	"84"
+			}
+			/* TerrorNavArea::SetSpawnAttributes(TerrorNavArea *__hidden this, unsigned int) */
+			"TerrorNavArea::SetSpawnAttributes::m_spawnAttributes"
+			{
+				"linux"		"300"
+				"windows"	"296"
 			}
 			/* CPropDoorRotatingCheckpoint::IsCheckpointDoor(CPropDoorRotatingCheckpoint *__hidden this) */
 			"CPropDoorRotatingCheckpoint::IsCheckpointDoor"
@@ -38,27 +55,6 @@
 			{
 				"linux"		"287"
 				"windows"	"239"
-			}
-			/**
-			 * CTerrorPlayer::GetFlowDistance(CNavArea const*)
-			 *
-			 * How to find on Windows:
-			 * 1. Find the function's offsets with asherkin's VTable dump.
-			 * 2. Use IDA to get the VTable dump for the "CTerrorPlayer" class on Windows.
-			 * 3. Compare your dump's offsets with asherkin's dump's offsets to find the target function.
-			 * 4. Look for the target function in the Windows binary.
-			 * 5. Look for the 7-byte float (FLD) instruction.
-			 * 6. The offset at the very end of that line of code is the offset for "m_flow".
-			 *
-			 * How to find on Linux:
-			 * 1. Locate the function.
-			 * 2. Look for the 9-byte move (MOVSS) instruction.
-			 * 3. The offset at the very end of that line of code is the offset for "m_flow".
-			 **/
-			"CTerrorPlayer::GetFlowDistance::m_flow"
-			{
-				"linux"		"340"
-				"windows"	"332"
 			}
 		}
 	
