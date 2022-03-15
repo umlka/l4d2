@@ -4,14 +4,14 @@
 	{
 		"Functions"
 		{
-			"DD_CSurvivorDeathModel::Create"
+			"DD::CSurvivorDeathModel::Create"
 			{
 				"signature"		"CSurvivorDeathModel::Create"
 				"callconv"		"thiscall"
 				"return"		"cbaseentity"
 				"this"			"entity"
 			}
-			"DH_CItemDefibrillator::OnStartAction"
+			"DH::CItemDefibrillator::OnStartAction"
 			{
 				"offset"		"CItemDefibrillator::OnStartAction"
 				"hooktype"		"entity"
@@ -37,7 +37,7 @@
 					}
 				}
 			}
-			"DH_CItemDefibrillator::OnActionComplete"
+			"DH::CItemDefibrillator::OnActionComplete"
 			{
 				"offset"		"CItemDefibrillator::OnActionComplete"
 				"hooktype"		"entity"
@@ -55,7 +55,7 @@
 					}
 				}
 			}
-			"DD_CTerrorPlayer::GetPlayerByCharacter"
+			"DD::CTerrorPlayer::GetPlayerByCharacter"
 			{
 				"signature"		"CTerrorPlayer::GetPlayerByCharacter"
 				"callconv"		"cdecl"

@@ -76,30 +76,30 @@ public void OnPluginStart()
 	if(!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
-	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD_CSurvivorDeathModel::Create");
+	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD::CSurvivorDeathModel::Create");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD_CSurvivorDeathModel::Create");
+		SetFailState("Failed to create DynamicDetour: DD::CSurvivorDeathModel::Create");
 		
 	if(!dDetour.Enable(Hook_Pre, DD_CSurvivorDeathModel_Create_Pre))
-		SetFailState("Failed to detour pre: DD_CSurvivorDeathModel::Create");
+		SetFailState("Failed to detour pre: DD::CSurvivorDeathModel::Create");
 
 	if(!dDetour.Enable(Hook_Post, DD_CSurvivorDeathModel_Create_Post))
-		SetFailState("Failed to detour post: DD_CSurvivorDeathModel::Create");
+		SetFailState("Failed to detour post: DD::CSurvivorDeathModel::Create");
 
-	dDetour = DynamicDetour.FromConf(hGameData, "DD_CTerrorPlayer::GetPlayerByCharacter");
+	dDetour = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::GetPlayerByCharacter");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD_CTerrorPlayer::GetPlayerByCharacter");
+		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::GetPlayerByCharacter");
 
 	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_GetPlayerByCharacter_Post))
-		SetFailState("Failed to detour post: DD_CTerrorPlayer::GetPlayerByCharacter");
+		SetFailState("Failed to detour post: DD::CTerrorPlayer::GetPlayerByCharacter");
 	
-	g_dDH_OnStartAction = DynamicHook.FromConf(hGameData, "DH_CItemDefibrillator::OnStartAction");
+	g_dDH_OnStartAction = DynamicHook.FromConf(hGameData, "DH::CItemDefibrillator::OnStartAction");
 	if(!g_dDH_OnStartAction)
-		SetFailState("Failed to create DynamicHook: DH_CItemDefibrillator::OnStartAction");
+		SetFailState("Failed to create DynamicHook: DH::CItemDefibrillator::OnStartAction");
 	
-	g_dDH_OnActionComplete = DynamicHook.FromConf(hGameData, "DH_CItemDefibrillator::OnActionComplete");
+	g_dDH_OnActionComplete = DynamicHook.FromConf(hGameData, "DH::CItemDefibrillator::OnActionComplete");
 	if(!g_dDH_OnActionComplete)
-		SetFailState("Failed to create DynamicHook: DH_CItemDefibrillator::OnActionComplete");
+		SetFailState("Failed to create DynamicHook: DH::CItemDefibrillator::OnActionComplete");
 
 	delete hGameData;
 
