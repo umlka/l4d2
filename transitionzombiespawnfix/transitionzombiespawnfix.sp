@@ -1,135 +1,146 @@
 #pragma semicolon 1
 #pragma newdecls required
 #include <sourcemod>
+#include <sourcescramble>
 #include <dhooks>
+#include <left4dhooks>
 
 #define GAMEDATA "transitionzombiespawnfix"
 
-DynamicDetour
-	g_dDetour[3];
+ArrayStack
+	g_aMemPatches;
+
+Address
+	g_pScriptedEventManager;
 
 bool
-	g_bCanZombieSpawnHere;
+	g_bLateLoad,
+	g_bShouldFix,
+	g_bIsFinaleMap;
 
+// some code from [L4D2] Air Ability Patch (https://forums.alliedmods.net/showthread.php?p=2660278)
 public Plugin myinfo = 
 {
 	name = "[L4D2]Transition Zombie Spawn Fix",
 	author = "sorallll & Psyk0tik (Crasher_3637)",
 	description = "To Fix z_spawn_old/ZombieManager::GetRandomPZSpawnPosition spawn SI failed during player transition(\"could not find a XX spawn position in 5 tries\")",
-	version = "1.0.2",
+	version = "1.0.4",
 	url = "https://forums.alliedmods.net/showthread.php?t=333351"
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
-	if(GetEngineVersion() != Engine_Left4Dead2)
-	{
-		strcopy(error, err_max, "This plugin only supports Left 4 Dead 2");
-		return APLRes_SilentFailure;
-	}
-
+	g_bLateLoad = late;
 	return APLRes_Success;
 }
 
 public void OnPluginStart()
 {
-	vLoadGameData();
-}
-
-public void OnPluginEnd()
-{
-	vDisableDetours();
-}
-
-void vLoadGameData()
-{
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false)
+	if(!FileExists(sPath))
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(hGameData == null)
+	if(!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
+
+	static const char sPatchNames[][] =
+	{
+		"ZombieManager::CanZombieSpawnHere::IsInTransitionCheck",
+		"CTerrorPlayer::OnPreThinkGhostState::IsInTransitionCheck",
+		"CTerrorPlayer::OnPreThinkGhostState::SpawnDisabledCheck"
+	};
+
+	MemoryPatch mpPatch;
+	g_aMemPatches = new ArrayStack();
+	for(int i; i < sizeof sPatchNames; i++)
+	{
+		mpPatch = MemoryPatch.CreateFromConf(hGameData, sPatchNames[i]);
+		if(!mpPatch)
+			SetFailState("Failed to create MemoryPatch: \"%s\"", sPatchNames[i]);
+
+		if(!mpPatch.Validate())
+			SetFailState("Failed to validate MemoryPatch: \"%s\"", sPatchNames[i]);
+
+		mpPatch.Enable();
+		g_aMemPatches.Push(mpPatch);
+	}
 
 	vSetupDetours(hGameData);
 
 	delete hGameData;
+
+	if(g_bLateLoad)
+		g_bIsFinaleMap = L4D_IsMissionFinalMap();
+}
+
+public void OnAllPluginsLoaded()
+{
+	g_pScriptedEventManager = L4D_GetPointer(POINTER_EVENTMANAGER);
+}
+
+public void OnPluginEnd()
+{
+	MemoryPatch mpPatch;
+	while(!g_aMemPatches.Empty)
+	{
+		mpPatch = g_aMemPatches.Pop();
+		mpPatch.Disable();
+	}
+}
+
+public void OnMapStart()
+{
+	g_bIsFinaleMap = L4D_IsMissionFinalMap();
 }
 
 void vSetupDetours(GameData hGameData = null)
 {
-	g_dDetour[0] = DynamicDetour.FromConf(hGameData, "ZombieManager::CanZombieSpawnHere");
-	if(g_dDetour[0] == null)
-		SetFailState("Failed to create DynamicDetour: ZombieManager::CanZombieSpawnHere");
+	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD::ZombieManager::GetRandomPZSpawnPosition");
+	if(!dDetour)
+		SetFailState("Failed to create DynamicDetour: DD::ZombieManager::GetRandomPZSpawnPosition");
 		
-	if(!g_dDetour[0].Enable(Hook_Pre, mreCanZombieSpawnHerePre))
-		SetFailState("Failed to detour pre: ZombieManager::CanZombieSpawnHere");
+	if(!dDetour.Enable(Hook_Pre, DD_ZombieManager_GetRandomPZSpawnPosition_Pre))
+		SetFailState("Failed to detour pre: DD::ZombieManager::GetRandomPZSpawnPosition");
 		
-	if(!g_dDetour[0].Enable(Hook_Post, mreCanZombieSpawnHerePost))
-		SetFailState("Failed to detour post: ZombieManager::CanZombieSpawnHere");
-
-	g_dDetour[1] = DynamicDetour.FromConf(hGameData, "CDirector::IsInTransition");
-	if(g_dDetour[1] == null)
-		SetFailState("Failed to create DynamicDetour: CDirector::IsInTransition");
-
-	if(!g_dDetour[1].Enable(Hook_Post, mreIsInTransitionPost))
-		SetFailState("Failed to detour post: CDirector::IsInTransition");
-
-	g_dDetour[2] = DynamicDetour.FromConf(hGameData, "CTerrorPlayer::OnPreThinkGhostState");
-	if(g_dDetour[2] == null)
-		SetFailState("Failed to create DynamicDetour: CTerrorPlayer::OnPreThinkGhostState");
-		
-	if(!g_dDetour[2].Enable(Hook_Pre, mreOnPreThinkGhostStatePre))
-		SetFailState("Failed to detour pre: CTerrorPlayer::OnPreThinkGhostState");
-		
-	if(!g_dDetour[2].Enable(Hook_Post, mreOnPreThinkGhostStatePost))
-		SetFailState("Failed to detour post: CTerrorPlayer::OnPreThinkGhostState");
+	if(!dDetour.Enable(Hook_Post, DD_ZombieManager_GetRandomPZSpawnPosition_Post))
+		SetFailState("Failed to detour post: DD::ZombieManager::GetRandomPZSpawnPosition");
 }
 
-void vDisableDetours()
+int m_FinaleType;
+MRESReturn DD_ZombieManager_GetRandomPZSpawnPosition_Pre(DHookReturn hReturn, DHookParam hParams)
 {
-	if(!g_dDetour[0].Disable(Hook_Pre, mreCanZombieSpawnHerePre) || !g_dDetour[0].Disable(Hook_Post, mreCanZombieSpawnHerePost))
-		SetFailState("Failed to disable detour: ZombieManager::CanZombieSpawnHere");
+	if(!g_bIsFinaleMap || bIsFinaleActive())
+		return MRES_Ignored;
 
-	if(!g_dDetour[1].Disable(Hook_Post, mreIsInTransitionPost))
-		SetFailState("Failed to disable detour: CDirector::IsInTransition");
+	m_FinaleType = LoadFromAddress(g_pScriptedEventManager, NumberType_Int32);
+	if(m_FinaleType != 5)
+		return MRES_Ignored;
 
-	if(!g_dDetour[2].Disable(Hook_Pre, mreOnPreThinkGhostStatePre) || !g_dDetour[2].Disable(Hook_Post, mreOnPreThinkGhostStatePost))
-		SetFailState("Failed to disable detour: CTerrorPlayer::OnPreThinkGhostState");
-}
-
-MRESReturn mreCanZombieSpawnHerePre(DHookReturn hReturn, DHookParam hParams)
-{
-	g_bCanZombieSpawnHere = true;
+	g_bShouldFix = true;
+	StoreToAddress(g_pScriptedEventManager, 1, NumberType_Int32);
 	return MRES_Ignored;
 }
 
-MRESReturn mreCanZombieSpawnHerePost(DHookReturn hReturn, DHookParam hParams)
+MRESReturn DD_ZombieManager_GetRandomPZSpawnPosition_Post(DHookReturn hReturn, DHookParam hParams)
 {
-	g_bCanZombieSpawnHere = false;
+	if(g_bShouldFix)
+		StoreToAddress(g_pScriptedEventManager, m_FinaleType, NumberType_Int32);
+
+	g_bShouldFix = false;
 	return MRES_Ignored;
 }
 
-MRESReturn mreIsInTransitionPost(Address pThis, DHookReturn hReturn)
+bool bIsFinaleActive()
 {
-	if(g_bCanZombieSpawnHere)
+	static int iPlayerResource = INVALID_ENT_REFERENCE;
+	if(iPlayerResource == INVALID_ENT_REFERENCE || !IsValidEntity(iPlayerResource))
 	{
-		hReturn.Value = 0;
-		return MRES_Supercede;
+		iPlayerResource = EntIndexToEntRef(GetPlayerResourceEntity());
+		if(iPlayerResource == INVALID_ENT_REFERENCE || !IsValidEntity(iPlayerResource))
+			return false;
 	}
 
-	return MRES_Ignored;
-}
-
-MRESReturn mreOnPreThinkGhostStatePre(int pThis)
-{
-	g_bCanZombieSpawnHere = true;
-	return MRES_Ignored;
-}
-
-MRESReturn mreOnPreThinkGhostStatePost(int pThis)
-{
-	g_bCanZombieSpawnHere = false;
-	return MRES_Ignored;
+	return !!GetEntProp(iPlayerResource, Prop_Send, "m_isFinale", 1);
 }

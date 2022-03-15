@@ -4,49 +4,85 @@
 	{
 		"Functions"
 		{
-			"ZombieManager::CanZombieSpawnHere"
+			"DD::ZombieManager::GetRandomPZSpawnPosition"
 			{
-				"signature"		"ZombieManager::CanZombieSpawnHere"
+				"signature"		"ZombieManager::GetRandomPZSpawnPosition"
 				"callconv"		"thiscall"
 				"return"		"int"
 				"this"			"ignore"
 				"arguments"
 				{
-					"spawnpos"
+					"zombieClass"
 					{
-						"type"		"vectorptr"
+						"type"	"int"
 					}
-					"navarea"
+					"attempts"
 					{
-						"type"		"objectptr"
+						"type"	"int"
 					}
-					"zombieclass"
+					"client"
 					{
-						"type"		"int"
+						"type"	"cbaseentity"
 					}
-					"mobrush"
+					"vecPos"
 					{
-						"type"		"bool"
-					}
-					"entity"
-					{
-						"type"		"cbaseentity"
+						"type"	"vectorptr"
 					}
 				}
 			}
-			"CDirector::IsInTransition"
+		}
+		"MemPatches"
+		{
+			"ZombieManager::CanZombieSpawnHere::IsInTransitionCheck"
 			{
-				"signature"		"CDirector::IsInTransition"
-				"callconv"		"thiscall"
-				"return"		"int"
-				"this"			"address"
+				"signature"		"ZombieManager::CanZombieSpawnHere"
+				"linux"
+				{
+					"offset"	"29h"
+					"verify"	"\x0F\x85\x39\x03\x00\x00"
+					"patch"		"\x0F\x88\x39\x03\x00\x00"
+				}
+				
+				"windows"
+				{
+					"offset"	"32h"
+					"verify"	"\x0F\x85\x33\x04\x00\x00"
+					"patch"		"\x0F\x88\x33\x04\x00\x00"
+				}
 			}
-			"CTerrorPlayer::OnPreThinkGhostState"
+			"CTerrorPlayer::OnPreThinkGhostState::IsInTransitionCheck"
 			{
 				"signature"		"CTerrorPlayer::OnPreThinkGhostState"
-				"callconv"		"thiscall"
-				"return"		"void"
-				"this"			"entity"
+				"linux"
+				{
+					"offset"	"1Eh"
+					"verify"	"\x74\x10"
+					"patch"		"\x79\x10"
+				}
+				
+				"windows"
+				{
+					"offset"	"37h"
+					"verify"	"\x0F\x85\xA5\x07\x00\x00"
+					"patch"		"\x0F\x88\xA5\x07\x00\x00"
+				}
+			}
+			"CTerrorPlayer::OnPreThinkGhostState::SpawnDisabledCheck"
+			{
+				"signature"		"CTerrorPlayer::OnPreThinkGhostState"
+				"linux"
+				{
+					"offset"	"104h"
+					"verify"	"\x74\x3A"
+					"patch"		"\x79\x3A"
+				}
+				
+				"windows"
+				{
+					"offset"	"FAh"
+					"verify"	"\x74\x39"
+					"patch"		"\x79\x39"
+				}
 			}
 		}
 
@@ -60,14 +96,6 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x8B\x2A\x2A\x8B\x0D\x2A\x2A\x2A\x2A\x53\x8B\x2A\x2A\x56\x8B\x2A\x2A\x57"
 				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 8B ? ? 8B 0D ? ? ? ? 53 8B ? ? 56 8B ? ? 57 */
 			}
-			/* CDirector::IsInTransition(CDirector *__hidden this) */
-			"CDirector::IsInTransition"
-			{
-				"library"	"server"
-				"linux"		"@_ZNK9CDirector14IsInTransitionEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x75\x2A\x80\xB9\xCC"
-				/* ? ? ? ? ? ? ? 75 ? 80 B9 CC */
-			}
 			/* CTerrorPlayer::OnPreThinkGhostState(CTerrorPlayer *__hidden this) */
 			"CTerrorPlayer::OnPreThinkGhostState"
 			{
@@ -75,6 +103,14 @@
 				"linux"		"@_ZN13CTerrorPlayer20OnPreThinkGhostStateEv"
 				"windows"	"\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x81\xEC\xD8\x00\x00\x00\xA1\x2A\x2A\x2A\x2A\x33\xC5\x89\x45\xFC\x56\x8B\xF1\x8B\x0D\x2A\x2A\x2A\x2A"
 				/* 53 8B DC 83 EC 08 83 E4 F0 83 C4 04 55 8B 6B 04 89 6C 24 04 8B EC 81 EC D8 00 00 00 A1 ? ? ? ? 33 C5 89 45 FC 56 8B F1 8B 0D ? ? ? ? */
+			}
+			/* ZombieManager::GetRandomPZSpawnPosition(ZombieManager *_ZombieManager, int zombieClass, int attempts, int a4, int a5) */
+			"ZombieManager::GetRandomPZSpawnPosition"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK13ZombieManager24GetRandomPZSpawnPositionE15ZombieClassTypeiP13CTerrorPlayerP6Vector"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x57\x8B\x2A\x2A\x8B\x2A\x89\x2A\x2A\x85\x2A\x75\x2A\x5F"
+				/* ? ? ? ? ? ? 53 57 8B ? ? 8B ? 89 ? ? 85 ? 75 ? 5F */
 			}
 		}
 	}
