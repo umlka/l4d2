@@ -392,7 +392,6 @@ enum struct esGeneral
 	ConVar g_cPointRewards[cRewardMax];
 
 	int g_iCounter[2];
-	int g_iClipSize[2];
 
 	char g_sCurrentMap[64];
 }
@@ -1208,22 +1207,8 @@ public void OnMapStart()
 		if(!IsGenericPrecached(sBuffer))
 			PrecacheGeneric(sBuffer, true);
 	}
-	
-	vGetMaxClipSize();
+
 	vGetMeleeClasses();
-}
-
-void vGetMaxClipSize()
-{
-	int entity = CreateEntityByName("weapon_rifle_m60");
-	DispatchSpawn(entity);
-	g_esGeneral.g_iClipSize[0] = GetEntProp(entity, Prop_Send, "m_iClip1");
-	RemoveEdict(entity);
-
-	entity = CreateEntityByName("weapon_grenade_launcher");
-	DispatchSpawn(entity);
-	g_esGeneral.g_iClipSize[1] = GetEntProp(entity, Prop_Send, "m_iClip1");
-	RemoveEdict(entity);
 }
 
 void vGetMeleeClasses()
@@ -3334,26 +3319,29 @@ int iHealthConfirmMenuHandler(Menu menu, MenuAction action, int param1, int para
 void vReloadAmmo(int client, int iCost, const char[] sItem)
 {
 	int iWeapon = GetPlayerWeaponSlot(client, 0);
-	if(iWeapon > MaxClients && IsValidEntity(iWeapon))
+	if(iWeapon <= MaxClients || !IsValidEntity(iWeapon))
 	{
-		char sWeapon[32];
-		GetEdictClassname(iWeapon, sWeapon, sizeof sWeapon);
-		if(strcmp(sWeapon, "weapon_rifle_m60") == 0)
-			SetEntProp(iWeapon, Prop_Send, "m_iClip1", g_esGeneral.g_iClipSize[0]);
-		else if(strcmp(sWeapon, "weapon_grenade_launcher") == 0)
-		{
-			SetEntProp(iWeapon, Prop_Send, "m_iClip1", g_esGeneral.g_iClipSize[1]);
-			int iAmmoMax = FindConVar("ammo_grenadelauncher_max").IntValue;
-			if(iAmmoMax < 1)
-				iAmmoMax = 30;
-
-			SetEntData(client, FindSendPropInfo("CTerrorPlayer", "m_iAmmo") + 68, iAmmoMax);
-		}
-		vCheatCommand(client, sItem);
-		vRemovePoints(client, iCost);
-	}
-	else
 		PrintToChat(client, "%s %T", MSGTAG, "Primary Warning", client);
+		return;
+	}
+
+	int m_iPrimaryAmmoType = GetEntProp(iWeapon, Prop_Send, "m_iPrimaryAmmoType");
+	if(m_iPrimaryAmmoType == -1)
+		return;
+
+	char sWeapon[32];
+	GetEdictClassname(iWeapon, sWeapon, sizeof sWeapon);
+	if(strcmp(sWeapon[7], "grenade_launcher") == 0)
+	{
+		static ConVar hAmmoGrenadelau;
+		if(hAmmoGrenadelau == null)
+			hAmmoGrenadelau = FindConVar("ammo_grenadelauncher_max");
+
+		SetEntProp(client, Prop_Send, "m_iAmmo", hAmmoGrenadelau.IntValue, _, m_iPrimaryAmmoType);
+	}
+
+	vCheatCommand(client, sItem);
+	vRemovePoints(client, iCost);
 }
 
 int iUpgradeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
