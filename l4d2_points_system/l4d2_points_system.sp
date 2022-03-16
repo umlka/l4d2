@@ -256,6 +256,7 @@ enum
 	cSettingWitchLimit,
 	cSettingStartPoints,
 	cSettingTraitorLimit,
+	cSettingSurvivorRequired,
 	cSettingMax
 }
 
@@ -468,17 +469,18 @@ void vInitSettings()
 {
 	CreateConVar("em_points_sys_version", PLUGIN_VERSION, "该服务器上的积分系统版本.", FCVAR_NOTIFY|FCVAR_DONTRECORD|FCVAR_REPLICATED);
 
-	g_esGeneral.g_cSettings[cSettingAllow] 			= CreateConVar("l4d2_points_allow", "1", "0=Plugin off, 1=Plugin on.");
-	g_esGeneral.g_cSettings[cSettingModes] 			= CreateConVar("l4d2_points_modes", "", "Turn on the plugin in these game modes, separate by commas (no spaces). (Empty = all).");
-	g_esGeneral.g_cSettings[cSettingModesOff] 		= CreateConVar("l4d2_points_modes_off", "", "Turn off the plugin in these game modes, separate by commas (no spaces). (Empty = none).");
-	g_esGeneral.g_cSettings[cSettingModesTog] 		= CreateConVar("l4d2_points_modes_tog", "0", "Turn on the plugin in these game modes. 0=All, 1=Coop, 2=Survival, 4=Versus, 8=Scavenge. Add numbers together.");
-	g_esGeneral.g_cSettings[cSettingStartPoints]	= CreateConVar("l4d2_points_start", "10", "玩家初始积分");
-	g_esGeneral.g_cSettings[cSettingNotifications]	= CreateConVar("l4d2_points_notify", "0", "开关提示信息?");
-	g_esGeneral.g_cSettings[cSettingTankLimit] 		= CreateConVar("l4d2_points_tank_limit", "1", "每回合允许产生多少只坦克");
-	g_esGeneral.g_cSettings[cSettingWitchLimit]		= CreateConVar("l4d2_points_witch_limit", "5", "每回合允许产生多少只女巫");
-	g_esGeneral.g_cSettings[cSettingKillSpreeNum] 	= CreateConVar("l4d2_points_cikills", "15", "你需要杀多少普通感染者才能获得杀戮赏金");
-	g_esGeneral.g_cSettings[cSettingHeadShotNum] 	= CreateConVar("l4d2_points_headshots", "15", "你需要多少次爆头感染者才能获得猎头奖金");
-	g_esGeneral.g_cSettings[cSettingTraitorLimit] 	= CreateConVar("l4d2_points_traitor_limit", "2", "允许同时存在多少个被感染者玩家");
+	g_esGeneral.g_cSettings[cSettingAllow] 				= CreateConVar("l4d2_points_allow", "1", "0=Plugin off, 1=Plugin on.");
+	g_esGeneral.g_cSettings[cSettingModes] 				= CreateConVar("l4d2_points_modes", "", "Turn on the plugin in these game modes, separate by commas (no spaces). (Empty = all).");
+	g_esGeneral.g_cSettings[cSettingModesOff] 			= CreateConVar("l4d2_points_modes_off", "", "Turn off the plugin in these game modes, separate by commas (no spaces). (Empty = none).");
+	g_esGeneral.g_cSettings[cSettingModesTog] 			= CreateConVar("l4d2_points_modes_tog", "0", "Turn on the plugin in these game modes. 0=All, 1=Coop, 2=Survival, 4=Versus, 8=Scavenge. Add numbers together.");
+	g_esGeneral.g_cSettings[cSettingStartPoints]		= CreateConVar("l4d2_points_start", "10", "玩家初始积分");
+	g_esGeneral.g_cSettings[cSettingNotifications]		= CreateConVar("l4d2_points_notify", "0", "开关提示信息?");
+	g_esGeneral.g_cSettings[cSettingTankLimit] 			= CreateConVar("l4d2_points_tank_limit", "1", "每回合允许产生多少只坦克");
+	g_esGeneral.g_cSettings[cSettingWitchLimit]			= CreateConVar("l4d2_points_witch_limit", "5", "每回合允许产生多少只女巫");
+	g_esGeneral.g_cSettings[cSettingKillSpreeNum] 		= CreateConVar("l4d2_points_cikills", "15", "你需要杀多少普通感染者才能获得杀戮赏金");
+	g_esGeneral.g_cSettings[cSettingHeadShotNum] 		= CreateConVar("l4d2_points_headshots", "15", "你需要多少次爆头感染者才能获得猎头奖金");
+	g_esGeneral.g_cSettings[cSettingTraitorLimit] 		= CreateConVar("l4d2_points_traitor_limit", "2", "允许同时存在多少个被感染者玩家");
+	g_esGeneral.g_cSettings[cSettingSurvivorRequired]	= CreateConVar("l4d2_points_survivor_required", "0", "至少需要存在多少名真人生还者才允许购买到感染者团队");
 
 	g_esGeneral.g_cGameMode = FindConVar("mp_gamemode");
 	g_esGeneral.g_cGameMode.AddChangeHook(vAllowConVarChanged);
@@ -1924,7 +1926,7 @@ int iTraitorMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 					if(!bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
 						return 0;
 
-					if(iGetPlayerZombie() >= g_esGeneral.g_cSettings[cSettingTraitorLimit].IntValue)
+					if(g_esGeneral.g_cSettings[cSettingSurvivorRequired].IntValue < iGetPlayerSurvivor() || iGetPlayerZombie() >= g_esGeneral.g_cSettings[cSettingTraitorLimit].IntValue)
 						PrintToChat(param1,  "%T", "Traitor Limit", param1);
 					else
 						vJoinInfected(param1, g_esPlayer[param1].g_iItemCost);
@@ -1941,6 +1943,17 @@ int iTraitorMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	}
 
 	return 0;
+}
+
+int iGetPlayerSurvivor()
+{
+	int iSurvivor;
+	for(int i = 1; i <= MaxClients; i++)
+	{
+		if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 2)
+			iSurvivor++;
+	}
+	return iSurvivor;
 }
 
 int iGetPlayerZombie()
@@ -3330,7 +3343,7 @@ void vReloadAmmo(int client, int iCost, const char[] sItem)
 		return;
 
 	char sWeapon[32];
-	GetEdictClassname(iWeapon, sWeapon, sizeof sWeapon);
+	GetEntityClassname(iWeapon, sWeapon, sizeof sWeapon);
 	if(strcmp(sWeapon[7], "grenade_launcher") == 0)
 	{
 		static ConVar hAmmoGrenadelau;
