@@ -675,7 +675,7 @@ int iInfectedsMenuHandler(Menu menu, MenuAction action, int client, int param2)
 				iKicked = iKickDeadInfectedBots(client);
 			}
 
-			if(iKicked == 0)
+			if(!iKicked)
 				iCreateInfectedWithParams(client, sItem);
 			else
 			{
@@ -740,82 +740,80 @@ int iCreateInfectedWithParams(int client, const char[] sZombie)
 int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[3])
 {
 	int iZombie = -1;
-	bool bSuccessed;
 	if(strncmp(sZombie, "Witch", 5, false) == 0)
 	{
 		iZombie = CreateEntityByName("witch");
 		if(iZombie == -1)
 			return -1;
 
-		TeleportEntity(iZombie, vPos, vAng, NULL_VECTOR);
-		DispatchSpawn(iZombie);
-		ActivateEntity(iZombie);
-
 		if(strlen(sZombie) > 5)
 			SetEntityModel(iZombie, g_sSpecialsInfectedModels[8]);
+
+		TeleportEntity(iZombie, vPos, vAng, NULL_VECTOR);
+		DispatchSpawn(iZombie);
 	}
 	else if(strcmp(sZombie, "Smoker", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Smoker, "Smoker");
-		if(bIsValidClient(iZombie))
-		{
-			SetEntityModel(iZombie, g_sSpecialsInfectedModels[0]);
-			bSuccessed = true;
-		}
+		if(!iZombie)
+			return -1;
+		
+		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[0]);
+		vInitializeSpecial(iZombie, vPos, vAng);
 	}
 	else if(strcmp(sZombie, "Boomer", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Boomer, "Boomer");
-		if(bIsValidClient(iZombie))
-		{
-			SetEntityModel(iZombie, g_sSpecialsInfectedModels[1]);
-			bSuccessed = true;
-		}
+		if(!iZombie)
+			return -1;
+		
+		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[1]);
+		vInitializeSpecial(iZombie, vPos, vAng);
 	}
 	else if(strcmp(sZombie, "Hunter", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Hunter, "Hunter");
-		if(bIsValidClient(iZombie))
-		{
-			SetEntityModel(iZombie, g_sSpecialsInfectedModels[2]);
-			bSuccessed = true;
-		}
+		if(!iZombie)
+			return -1;
+		
+		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[2]);
+		vInitializeSpecial(iZombie, vPos, vAng);
 	}
 	else if(strcmp(sZombie, "Spitter", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Spitter, "Spitter");
-		if(bIsValidClient(iZombie))
-		{
-			SetEntityModel(iZombie, g_sSpecialsInfectedModels[3]);
-			bSuccessed = true;
-		}
+		if(!iZombie)
+			return -1;
+		
+		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[3]);
+		vInitializeSpecial(iZombie, vPos, vAng);
 	}
 	else if(strcmp(sZombie, "Jockey", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Jockey, "Jockey");
-		if(bIsValidClient(iZombie))
-		{
-			SetEntityModel(iZombie, g_sSpecialsInfectedModels[4]);
-			bSuccessed = true;
-		}
+		if(!iZombie)
+			return -1;
+		
+		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[4]);
+		vInitializeSpecial(iZombie, vPos, vAng);
 	}
 	else if(strcmp(sZombie, "Charger", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Charger, "Charger");
-		if(bIsValidClient(iZombie))
-		{
-			SetEntityModel(iZombie, g_sSpecialsInfectedModels[5]);
-			bSuccessed = true;
-		}
+		if(!iZombie)
+			return -1;
+	
+		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[5]);
+		vInitializeSpecial(iZombie, vPos, vAng);
 	}
 	else if(strcmp(sZombie, "Tank", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Tank, "Tank");
-		if(bIsValidClient(iZombie))
-		{
-			SetEntityModel(iZombie, g_sSpecialsInfectedModels[6]);
-			bSuccessed = true;
-		}
+		if(!iZombie)
+			return -1;
+
+		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[6]);
+		vInitializeSpecial(iZombie, vPos, vAng);
 	}
 	else
 	{
@@ -828,6 +826,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 			SetEntityModel(iZombie, g_sUncommonInfectedModels[iPos]);
 
 		SetEntProp(iZombie, Prop_Data, "m_nNextThinkTick", RoundToNearest(GetGameTime() / GetTickInterval()) + 5);
+		TeleportEntity(iZombie, vPos, vAng, NULL_VECTOR);
 
 		if(iPos != 6)
 			DispatchSpawn(iZombie);
@@ -835,39 +834,29 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 		{
 			int m_nFallenSurvivor = LoadFromAddress(g_pZombieManager + view_as<Address>(g_iOff_m_nFallenSurvivors), NumberType_Int32);
 			float m_timestamp = view_as<float>(LoadFromAddress(g_pZombieManager + view_as<Address>(g_iOff_m_FallenSurvivorTimer) + view_as<Address>(8), NumberType_Int32));
-
 			StoreToAddress(g_pZombieManager + view_as<Address>(g_iOff_m_nFallenSurvivors), 0, NumberType_Int32);
 			StoreToAddress(g_pZombieManager + view_as<Address>(g_iOff_m_FallenSurvivorTimer) + view_as<Address>(8), view_as<int>(0.0), NumberType_Int32);
-
 			DispatchSpawn(iZombie);
-		
-			StoreToAddress(g_pZombieManager + view_as<Address>(g_iOff_m_nFallenSurvivors), m_nFallenSurvivor + 1, NumberType_Int32);
+			StoreToAddress(g_pZombieManager + view_as<Address>(g_iOff_m_nFallenSurvivors), m_nFallenSurvivor + LoadFromAddress(g_pZombieManager + view_as<Address>(g_iOff_m_nFallenSurvivors), NumberType_Int32), NumberType_Int32);
 			StoreToAddress(g_pZombieManager + view_as<Address>(g_iOff_m_FallenSurvivorTimer) + view_as<Address>(8), view_as<int>(m_timestamp), NumberType_Int32);
 		}
 	}
-	
-	if(bSuccessed)
-	{
-		ChangeClientTeam(iZombie, 3);
-		SetEntProp(iZombie, Prop_Send, "m_usSolidFlags", 16);
-		SetEntProp(iZombie, Prop_Send, "movetype", 2);
-		SetEntProp(iZombie, Prop_Send, "deadflag", 0);
-		SetEntProp(iZombie, Prop_Send, "m_lifeState", 0);
-		SetEntProp(iZombie, Prop_Send, "m_iObserverMode", 0);
-		SetEntProp(iZombie, Prop_Send, "m_iPlayerState", 0);
-		SetEntProp(iZombie, Prop_Send, "m_zombieState", 0);
-		DispatchSpawn(iZombie);
-	}
-
-	ActivateEntity(iZombie);
-	TeleportEntity(iZombie, vPos, vAng, NULL_VECTOR);
 
 	return iZombie;
 }
 
-bool bIsValidClient(int client)
+void vInitializeSpecial(int iZombie, const float vPos[3], const float vAng[3])
 {
-	return 0 < client <= MaxClients && IsClientInGame(client);
+	ChangeClientTeam(iZombie, 3);
+	SetEntProp(iZombie, Prop_Send, "m_usSolidFlags", 16);
+	SetEntProp(iZombie, Prop_Send, "movetype", 2);
+	SetEntProp(iZombie, Prop_Send, "deadflag", 0);
+	SetEntProp(iZombie, Prop_Send, "m_lifeState", 0);
+	SetEntProp(iZombie, Prop_Send, "m_iObserverMode", 0);
+	SetEntProp(iZombie, Prop_Send, "m_iPlayerState", 0);
+	SetEntProp(iZombie, Prop_Send, "m_zombieState", 0);
+	DispatchSpawn(iZombie);
+	TeleportEntity(iZombie, vPos, vAng, NULL_VECTOR);
 }
 
 void vMisc(int client, int index)
@@ -2312,7 +2301,7 @@ void vReloadAmmo(int client)
 		return;
 
 	char sWeapon[32];
-	GetEdictClassname(iWeapon, sWeapon, sizeof sWeapon);
+	GetEntityClassname(iWeapon, sWeapon, sizeof sWeapon);
 	if(strcmp(sWeapon[7], "grenade_launcher") == 0)
 	{
 		static ConVar hAmmoGrenadelau;
