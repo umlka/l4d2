@@ -1926,7 +1926,7 @@ int iTraitorMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 					if(!bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
 						return 0;
 
-					if(g_esGeneral.g_cSettings[cSettingSurvivorRequired].IntValue < iGetPlayerSurvivor() || iGetPlayerZombie() >= g_esGeneral.g_cSettings[cSettingTraitorLimit].IntValue)
+					if(iGetPlayerSurvivor() < g_esGeneral.g_cSettings[cSettingSurvivorRequired].IntValue || iGetPlayerZombie() >= g_esGeneral.g_cSettings[cSettingTraitorLimit].IntValue)
 						PrintToChat(param1,  "%T", "Traitor Limit", param1);
 					else
 						vJoinInfected(param1, g_esPlayer[param1].g_iItemCost);
