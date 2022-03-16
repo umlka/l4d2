@@ -242,7 +242,7 @@
 	
 	"Traitor Limit"
 	{
-		"chi"		"达到特感玩家数量限制"
+		"chi"		"达到特感玩家限制"
 	}
 
 	"Tank Limit"
