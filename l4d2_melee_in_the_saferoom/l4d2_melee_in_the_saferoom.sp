@@ -144,18 +144,16 @@ Action cmdMelee(int client, int args)
 public void OnMapStart()
 {
 	int i;
-	int iLen;
-
-	iLen = sizeof g_sMeleeModels;
-	for(i = 0; i < iLen; i++)
+	int iLength = sizeof g_sMeleeModels;
+	for(; i < iLength; i++)
 	{
 		if(!IsModelPrecached(g_sMeleeModels[i]))
 			PrecacheModel(g_sMeleeModels[i], true);
 	}
 
-	iLen = sizeof g_sMeleeName;
+	iLength = sizeof g_sMeleeName;
 	char sBuffer[64];
-	for(i = 0; i < iLen; i++)
+	for(i = 0; i < iLength; i++)
 	{
 		FormatEx(sBuffer, sizeof sBuffer, "scripts/melee/%s.txt", g_sMeleeName[i]);
 		if(!IsGenericPrecached(sBuffer))
@@ -231,7 +229,6 @@ void vStartSpawnMelee()
 	vAngles[0] = 90.0;
 
 	int iLength = g_aMeleeScripts.Length;
-
 	if(g_hSpawnType.IntValue == 1)
 	{
 		static ArrayList aRandomMelee;
@@ -239,7 +236,7 @@ void vStartSpawnMelee()
 		if(bIsGameInFirstHalf())
 		{
 			if(aRandomMelee != null)
-				aRandomMelee.Clear();
+				delete aRandomMelee;
 
 			aRandomMelee = g_aMeleeScripts.Clone();
 			aRandomMelee.Sort(Sort_Random, Sort_String);
