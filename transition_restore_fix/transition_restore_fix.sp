@@ -39,7 +39,7 @@ public Plugin myinfo =
 	name = "Transition Restore Fix",
 	author = "sorallll",
 	description = "Restoring transition data by player's UserId instead of character",
-	version = "1.1.3",
+	version = "1.1.4",
 	url = "https://forums.alliedmods.net/showthread.php?t=336287"
 };
 
@@ -76,20 +76,20 @@ void vToggleDetours(bool bEnable)
 		bEnabled = true;
 
 		if(!g_dDetourRestart.Enable(Hook_Pre, DD_CDirector_Restart_Pre))
-			SetFailState("Failed to detour pre: DD_CDirector::Restart");
+			SetFailState("Failed to detour pre: DD::CDirector::Restart");
 		
 		if(!g_dDetourRestart.Enable(Hook_Post, DD_CDirector_Restart_Post))
-			SetFailState("Failed to detour post: DD_CDirector::Restart");
+			SetFailState("Failed to detour post: DD::CDirector::Restart");
 	}
 	else if(bEnabled && !bEnable)
 	{
 		bEnabled = false;
 
 		if(!g_dDetourRestart.Disable(Hook_Pre, DD_CDirector_Restart_Pre))
-			SetFailState("Failed to disable detour pre: DD_CDirector::Restart");
+			SetFailState("Failed to disable detour pre: DD::CDirector::Restart");
 
 		if(!g_dDetourRestart.Disable(Hook_Post, DD_CDirector_Restart_Post))
-			SetFailState("Failed to disable detour post: DD_CDirector::Restart");
+			SetFailState("Failed to disable detour post: DD::CDirector::Restart");
 	}
 }
 
@@ -145,19 +145,19 @@ void vInitPatchs(GameData hGameData = null)
 
 void vSetupDetours(GameData hGameData = null)
 {
-	g_dDetourRestart = DynamicDetour.FromConf(hGameData, "DD_CDirector::Restart");
+	g_dDetourRestart = DynamicDetour.FromConf(hGameData, "DD::CDirector::Restart");
 	if(!g_dDetourRestart)
-		SetFailState("Failed to create DynamicDetour: DD_CDirector::Restart");
+		SetFailState("Failed to create DynamicDetour: DD::CDirector::Restart");
 
-	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD_CTerrorPlayer::TransitionRestore");
+	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::TransitionRestore");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD_CTerrorPlayer::TransitionRestore");
+		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::TransitionRestore");
 
 	if(!dDetour.Enable(Hook_Pre, DD_CTerrorPlayer_TransitionRestore_Pre))
-		SetFailState("Failed to detour pre: DD_CTerrorPlayer::TransitionRestore");
+		SetFailState("Failed to detour pre: DD::CTerrorPlayer::TransitionRestore");
 
 	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_TransitionRestore_Post))
-		SetFailState("Failed to detour post: DD_CTerrorPlayer::TransitionRestore");
+		SetFailState("Failed to detour post: DD::CTerrorPlayer::TransitionRestore");
 }
 
 MRESReturn DD_CDirector_Restart_Pre(Address pThis)
@@ -174,14 +174,14 @@ MRESReturn DD_CDirector_Restart_Post(Address pThis)
 
 MRESReturn DD_CTerrorPlayer_TransitionRestore_Pre(int pThis)
 {
-	if(IsFakeClient(pThis))
+	if(IsFakeClient(pThis) || GetClientTeam(pThis) != 2)
 		return MRES_Ignored;
 
 	Address pSavedData = pFindSavedDataByUserId(GetClientUserId(pThis));
 	if(!pSavedData)
 		return MRES_Ignored;
 
-	if(g_bCDirectorRestart && GetClientTeam(pThis) == 2)
+	if(g_bCDirectorRestart)
 	{
 		char sCharacter[4];
 		char sModelName[128];
