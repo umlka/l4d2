@@ -240,7 +240,7 @@ public Plugin myinfo =
 	name = "Give Item Menu",
 	description = "Gives Item Menu",
 	author = "Ryanx, sorallll",
-	version = "1.1.9",
+	version = "1.2.0",
 	url = ""
 };
 
@@ -755,7 +755,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	else if(strcmp(sZombie, "Smoker", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Smoker, "Smoker");
-		if(!iZombie)
+		if(!bIsValidClient(iZombie))
 			return -1;
 		
 		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[0]);
@@ -764,7 +764,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	else if(strcmp(sZombie, "Boomer", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Boomer, "Boomer");
-		if(!iZombie)
+		if(!bIsValidClient(iZombie))
 			return -1;
 		
 		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[1]);
@@ -773,7 +773,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	else if(strcmp(sZombie, "Hunter", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Hunter, "Hunter");
-		if(!iZombie)
+		if(!bIsValidClient(iZombie))
 			return -1;
 		
 		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[2]);
@@ -782,7 +782,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	else if(strcmp(sZombie, "Spitter", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Spitter, "Spitter");
-		if(!iZombie)
+		if(!bIsValidClient(iZombie))
 			return -1;
 		
 		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[3]);
@@ -791,7 +791,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	else if(strcmp(sZombie, "Jockey", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Jockey, "Jockey");
-		if(!iZombie)
+		if(!bIsValidClient(iZombie))
 			return -1;
 		
 		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[4]);
@@ -800,7 +800,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	else if(strcmp(sZombie, "Charger", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Charger, "Charger");
-		if(!iZombie)
+		if(!bIsValidClient(iZombie))
 			return -1;
 	
 		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[5]);
@@ -809,7 +809,7 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	else if(strcmp(sZombie, "Tank", false) == 0)
 	{
 		iZombie = SDKCall(g_hSDK_NextBotCreatePlayerBot_Tank, "Tank");
-		if(!iZombie)
+		if(!bIsValidClient(iZombie))
 			return -1;
 
 		//SetEntityModel(iZombie, g_sSpecialsInfectedModels[6]);
@@ -843,6 +843,11 @@ int iCreateInfected(const char[] sZombie, const float vPos[3], const float vAng[
 	}
 
 	return iZombie;
+}
+
+bool bIsValidClient(int client)
+{
+	return 0 < client <= MaxClients && IsClientInGame(client);
 }
 
 void vInitializeSpecial(int iZombie, const float vPos[3], const float vAng[3])
