@@ -3,7 +3,7 @@
 #include <sourcemod>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.10.1"
+#define PLUGIN_VERSION "1.10.3"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
 #define MAX_SLOTS		5
@@ -301,7 +301,7 @@ public void OnPluginStart()
 	g_hSpecCmdLimit = 		CreateConVar("bots_spec_cmd_limit", 	"1", 		"当完全旁观玩家达到多少个时禁止使用sm_spec命令.", CVAR_FLAGS);
 	g_hSpecNextNotify = 	CreateConVar("bots_spec_next_notify", 	"3", 		"完全旁观玩家点击鼠标左键时, 提示加入生还者的方式 \n0=不提示, 1=聊天栏, 2=屏幕中央, 3=弹出菜单.", CVAR_FLAGS);
 	g_esWeapon[0].cFlags = 	CreateConVar("bots_give_slot0", 		"131071", 	"主武器给什么. \n0=不给, 131071=所有, 7=微冲, 1560=霰弹, 30720=狙击, 31=Tier1, 32736=Tier2, 98304=Tier0.", CVAR_FLAGS);
-	g_esWeapon[1].cFlags = 	CreateConVar("bots_give_slot1", 		"1066", 	"副武器给什么. \n0=不给, 131071=所有.(如果选中了近战且该近战在当前地图上未解锁,则会随机给一把).", CVAR_FLAGS);
+	g_esWeapon[1].cFlags = 	CreateConVar("bots_give_slot1", 		"1064", 	"副武器给什么. \n0=不给, 131071=所有.(如果选中了近战且该近战在当前地图上未解锁,则会随机给一把).", CVAR_FLAGS);
 	g_esWeapon[2].cFlags = 	CreateConVar("bots_give_slot2", 		"0", 		"投掷物给什么. \n0=不给, 7=所有.", CVAR_FLAGS);
 	g_esWeapon[3].cFlags =	CreateConVar("bots_give_slot3", 		"1", 		"医疗品给什么. \n0=不给, 15=所有.", CVAR_FLAGS);
 	g_esWeapon[4].cFlags =	CreateConVar("bots_give_slot4", 		"3", 		"药品给什么. \n0=不给, 3=所有.", CVAR_FLAGS);
@@ -437,7 +437,7 @@ Action cmdJoinSurvivor(int client, int args)
 
 	if(!iBot)
 	{
-		if(!(iBot = iAddSurvivorBot()))
+		if((iBot = iAddSurvivorBot()) != -1)
 		{
 			ChangeClientTeam(client, TEAM_SURVIVOR);
 			if(!IsPlayerAlive(client))
@@ -881,7 +881,7 @@ void vKickUnusedSurvivorBot()
 void vSpawnFakeSurvivorClient()
 {
 	int iBot = iAddSurvivorBot();
-	if(iBot)
+	if(iBot != -1)
 	{
 		if(!IsPlayerAlive(iBot))
 			vRoundRespawn(iBot);
@@ -1467,8 +1467,19 @@ void vInitGameData()
 		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon");
 
 	StartPrepSDKCall(SDKCall_Static);
-	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "NextBotCreatePlayerBot<SurvivorBot>"))
-		SetFailState("Failed to find signature: NextBotCreatePlayerBot<SurvivorBot>");
+	Address pAddr = hGameData.GetAddress("NextBotCreatePlayerBot<SurvivorBot>");
+	if(!pAddr)
+		SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot> in CDirector::AddSurvivorBot");
+	if(!hGameData.GetOffset("OS")) // (addr+5) + *(addr+1) = call function addr
+	{
+		Address offset = view_as<Address>(LoadFromAddress(pAddr + view_as<Address>(1), NumberType_Int32));
+		if(!offset)
+			SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot>");
+
+		pAddr += offset + view_as<Address>(5); // sizeof(instruction)
+	}
+	if(!PrepSDKCall_SetAddress(pAddr))
+		SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot>");
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
 	g_hSDK_NextBotCreatePlayerBot_SurvivorBot = EndPrepSDKCall();
@@ -1570,8 +1581,8 @@ int iAddSurvivorBot()
 {
 	g_bInSpawnTime = true;
 	int iBot = SDKCall(g_hSDK_NextBotCreatePlayerBot_SurvivorBot, NULL_STRING);
-	if(iBot)
-		ChangeClientTeam(iBot, 2);
+	if(iBot != -1)
+		ChangeClientTeam(iBot, TEAM_SURVIVOR);
 
 	g_bInSpawnTime = false;
 	return iBot;
@@ -1618,36 +1629,36 @@ void vTakeOverBot(int client, int iBot)
 
 void vSetupDetours(GameData hGameData = null)
 {
-	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD_CTerrorPlayer::GoAwayFromKeyboard");
+	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::GoAwayFromKeyboard");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD_CTerrorPlayer::GoAwayFromKeyboard");
+		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::GoAwayFromKeyboard");
 
 	if(!dDetour.Enable(Hook_Pre, DD_CTerrorPlayer_GoAwayFromKeyboard_Pre))
-		SetFailState("Failed to detour pre: DD_CTerrorPlayer::GoAwayFromKeyboard");
+		SetFailState("Failed to detour pre: DD::CTerrorPlayer::GoAwayFromKeyboard");
 
 	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_GoAwayFromKeyboard_Post))
-		SetFailState("Failed to detour post: DD_CTerrorPlayer::GoAwayFromKeyboard");
+		SetFailState("Failed to detour post: DD::CTerrorPlayer::GoAwayFromKeyboard");
 
-	dDetour = DynamicDetour.FromConf(hGameData, "DD_CTerrorPlayer::GetPlayerByCharacter");
+	dDetour = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::GetPlayerByCharacter");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD_CTerrorPlayer::GetPlayerByCharacter");
+		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::GetPlayerByCharacter");
 		
 	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_GetPlayerByCharacter_Post))
-		SetFailState("Failed to detour post: DD_CTerrorPlayer::GetPlayerByCharacter");
+		SetFailState("Failed to detour post: DD::CTerrorPlayer::GetPlayerByCharacter");
 
-	dDetour = DynamicDetour.FromConf(hGameData, "DD_CBasePlayer::SetModel");
+	dDetour = DynamicDetour.FromConf(hGameData, "DD::CBasePlayer::SetModel");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD_CBasePlayer::SetModel");
+		SetFailState("Failed to create DynamicDetour: DD::CBasePlayer::SetModel");
 		
 	if(!dDetour.Enable(Hook_Post, DD_CBasePlayer_SetModel_Post))
-		SetFailState("Failed to detour post: DD_CBasePlayer::SetModel");
+		SetFailState("Failed to detour post: DD::CBasePlayer::SetModel");
 
-	dDetour = DynamicDetour.FromConf(hGameData, "DD_CTerrorPlayer::GiveDefaultItems");
+	dDetour = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::GiveDefaultItems");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD_CTerrorPlayer::GiveDefaultItems");
+		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::GiveDefaultItems");
 
 	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_GiveDefaultItems_Post))
-		SetFailState("Failed to detour post: DD_CTerrorPlayer::GiveDefaultItems");
+		SetFailState("Failed to detour post: DD::CTerrorPlayer::GiveDefaultItems");
 }
 
 // [L4D1 & L4D2]Survivor_AFK_Fix[Left 4 Fix] (https://forums.alliedmods.net/showthread.php?p=2714236)
@@ -1661,7 +1672,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 	
 	if(classname[0] != 's' || strcmp(classname, "survivor_bot", false) != 0)
 		return;
-	
+
 	g_iSurvivorBot = entity;
 }
 
