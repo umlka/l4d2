@@ -1,18 +1,30 @@
 // Many thanks to Psykotikism for sharing the Windows signature (https://github.com/Psykotikism/L4D1-2_Signatures)
 "Games"
 {
+	"#default"
+	{
+		"Offsets"
+		{
+			"OS"
+			{
+				"linux"		"1"
+				"windows"	"0"
+			}
+		}
+	}
+
 	"left4dead2"
     {
 		"Functions"
 		{
-			"DD_CTerrorPlayer::GoAwayFromKeyboard"
+			"DD::CTerrorPlayer::GoAwayFromKeyboard"
 			{
 				"signature"	"CTerrorPlayer::GoAwayFromKeyboard"
 				"callconv"	"thiscall"
 				"return"	"void"
 				"this"		"entity"
 			}
-			"DD_CTerrorPlayer::GetPlayerByCharacter"
+			"DD::CTerrorPlayer::GetPlayerByCharacter"
 			{
 				"signature"	"CTerrorPlayer::GetPlayerByCharacter"
 				"callconv"	"cdecl"
@@ -25,7 +37,7 @@
 					}
 				}
 			}
-			"DD_CBasePlayer::SetModel"
+			"DD::CBasePlayer::SetModel"
 			{
 				"signature"	"CBasePlayer::SetModel"
 				"callconv"	"thiscall"
@@ -39,7 +51,7 @@
 					}
 				}
 			}
-			"DD_CTerrorPlayer::GiveDefaultItems"
+			"DD::CTerrorPlayer::GiveDefaultItems"
 			{
 				"signature"	"CTerrorPlayer::GiveDefaultItems"
 				"callconv"	"thiscall"
@@ -63,16 +75,13 @@
 				}
 				"read"	"0"
 			}
+			"NextBotCreatePlayerBot<SurvivorBot>"
+			{
+				"signature"	"NextBotCreatePlayerBot<SurvivorBot>"
+			}
 			"CTerrorPlayer::RoundRespawn"
 			{
-				"linux"
-				{
-					"signature"	"CTerrorPlayer::RoundRespawn"
-				}
-				"windows"
-				{
-					"signature"	"CTerrorPlayer::RoundRespawn"			
-				}
+				"signature"	"CTerrorPlayer::RoundRespawn"
 			}
 		}
 
@@ -129,13 +138,21 @@
 
 		"Signatures"
 		{
-			/* NextBotCreatePlayerBot<SurvivorBot>(char *src) */
+			/**
+			* C++ Function:		CBaseEntity* __cdecl NextBotCreatePlayerBotSurvivorBot(const char *src)
+			* Search string:	CreatePlayerBot: Could not Instance() from the bot edict
+			*
+			* Where call this function: 
+			* RestoreTransitionedSurvivorBots(void);	CDirector::AddSurvivorBot(SurvivorCharacterType)
+			**/
 			"NextBotCreatePlayerBot<SurvivorBot>"
 			{	
 				"library"	"server"
 				"linux"		"@_Z22NextBotCreatePlayerBotI11SurvivorBotEPT_PKc"
-				"windows"	"\x55\x8B\x2A\x83\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x56\x57\x8B\x2A\x2A\x68\x50\x7F"
-				/* 55 8B ? 83 ? ? A1 ? ? ? ? 33 ? 89 ? ? 56 57 8B ? ? 68 50 7F */
+				"windows"	"\xE8\x2A\x2A\x2A\x2A\x83\xC4\x08\x85\xC0\x74\x2A\x8B\x10\x8B\x92\xC8\x08\x00\x00"
+				/* E8 ? ? ? ? 83 C4 08 85 C0 74 ? 8B 10 8B 92 C8 08 00 00 */
+				/* (addr+5) + *(addr+1) = call function addr -> this  signature into <CDirector::AddSurvivorBot> */
+				/* Sig. should point to "call" opcode E8, not to the func. start */
 			}
 			/* CTerrorPlayer::RoundRespawn(void) */
 			"CTerrorPlayer::RoundRespawn"
