@@ -61,8 +61,8 @@
 			{
 				"library"	"server"
 				"linux"		"@_Z31RestoreTransitionedSurvivorBotsv"
-				"windows"	"\x55\x8B\xEC\xA1\x2A\x2A\x2A\x2A\x83\xEC\x08\x85\xC0"
-				/* 55 8B EC A1 ? ? ? ? 83 EC 08 85 C0 */
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x85\x2A\x0F\x84\x2A\x2A\x2A\x2A\x53\x56\x57\x50\x68"
+				/* ? ? ? ? ? ? ? ? 83 ? ? 85 ? 0F 84 ? ? ? ? 53 56 57 50 68 */
 			}
 		}
 	}
