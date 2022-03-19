@@ -43,8 +43,8 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZNK13CTerrorPlayer14IsTransitionedEv"
-				"windows"	"\x55\x8B\xEC\x8A\x45\x08\x88\x81\x88\x33\x00\x00"
-				/* 55 8B EC 8A 45 08 88 81 88 33 00 00 */
+				"windows"	"\x8A\x81\x88\x33\x00\x00"
+				/* 8A 81 88 33 00 00 */
 			}
 		}
     }
