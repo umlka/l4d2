@@ -81,8 +81,8 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZNK10Checkpoint14GetLargestAreaEv"
-				"windows"	"\x55\x8B\xEC\x51\x0F\x57\xC0\x8B\xD1"
-				/* 55 8B EC 51 0F 57 C0 8B D1 */
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x53\x8B\x2A\x2A\x33\x2A\x33\x2A\x89\x2A\x2A\x83"
+				/* ? ? ? ? ? ? ? 8B ? 53 8B ? ? 33 ? 33 ? 89 ? ? 83 */
 			}
 			/* TerrorNavMesh::GetLastCheckpoint(TerrorNavMesh *__hidden this) */
 			"TerrorNavMesh::GetLastCheckpoint"
