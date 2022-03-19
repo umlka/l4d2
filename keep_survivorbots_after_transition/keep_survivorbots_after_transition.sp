@@ -20,7 +20,7 @@ public Plugin myinfo =
 	name = "Keep SurvivorBots After Transition",
 	author = "sorallll",
 	description = "4 + Survivor Bots will no longer disappear after the transition",
-	version = "1.0.3",
+	version = "1.0.4",
 	url = "https://forums.alliedmods.net/showthread.php?t=336245"
 };
 
