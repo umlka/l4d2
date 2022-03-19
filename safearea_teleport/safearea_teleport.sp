@@ -6,6 +6,7 @@
 #include <left4dhooks>
 
 #define DEBUG						0
+#define CVAR_FLAGS					FCVAR_NOTIFY
 
 #define SAFE_ROOM					(1 << 0)
 #define RESCUE_VEHICLE				(1 << 1)
@@ -38,6 +39,11 @@ ArrayList
 	g_aRescueVehicle;
 
 ConVar
+	g_hCvarAllow,
+	g_hCvarModes,
+	g_hCvarModesOff,
+	g_hCvarModesTog,
+	g_hCvarMPGameMode,
 	g_hSafeAreaFlags,
 	g_hSafeAreaType,
 	g_hSafeAreaTime,
@@ -66,6 +72,9 @@ float
 	g_vOrigin[3];
 
 bool
+	g_bLateLoad,
+	g_bMapStarted,
+	g_bCvarAllow,
 	g_bTranslation,
 	g_bIsFinaleMap,
 	g_bIsTriggered,
@@ -158,48 +167,55 @@ public Plugin myinfo =
 	name = 			"SafeArea Teleport",
 	author = 		"sorallll",
 	description = 	"",
-	version = 		"1.1.8",
+	version = 		"1.1.9",
 	url = 			"https://forums.alliedmods.net/showthread.php?p=2766514#post2766514"
+}
+
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	g_bLateLoad = late;
+	return APLRes_Success;
 }
 
 public void OnPluginStart()
 {
-	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, PLATFORM_MAX_PATH, "translations/safearea_teleport.phrases.txt");
-	if(FileExists(sPath))
-	{
-		LoadTranslations("safearea_teleport.phrases");
-		g_bTranslation = true;
-	}
-
-	vLoadGameData();
+	vInitData();
 
 	g_aLastDoor = new ArrayList(2);
 	g_aEndNavArea = new ArrayList();
 	g_aRescueVehicle = new ArrayList();
 
-	g_hSafeAreaFlags = CreateConVar("st_enable", "3", "Where is it enabled? (1=Safe Room, 2=Rescue Vehicle, 3=Both)", _, true, 0.0, true, 3.0);
-	g_hSafeAreaType = CreateConVar("st_type", "1", "How to deal with players who have not entered the destination safe area (1=teleport, 2=slay)", _, true, 1.0, true, 2.0);
-	g_hSafeAreaTime = CreateConVar("st_time", "30", "How many seconds to count down before processing (0=disable the function)", _, true, 0.0);
-	g_hMinSurvivorPercent = CreateConVar("st_min_percent", "50", "What percentage of the survivors start the countdown when they reach the finish area", _, true, 0.0, true, 100.0);
+	g_hCvarAllow =			CreateConVar("st_allow",		"1",	"0=Plugin off, 1=Plugin on.", CVAR_FLAGS);
+	g_hCvarModes =			CreateConVar("st_modes",		"",		"Turn on the plugin in these game modes, separate by commas (no spaces). (Empty = all).", CVAR_FLAGS);
+	g_hCvarModesOff =		CreateConVar("st_modes_off",	"",		"Turn off the plugin in these game modes, separate by commas (no spaces). (Empty = none).", CVAR_FLAGS);
+	g_hCvarModesTog =		CreateConVar("st_modes_tog",	"0",	"Turn on the plugin in these game modes. 0=All, 1=Coop, 2=Survival, 4=Versus, 8=Scavenge. Add numbers together.", CVAR_FLAGS);
+
+	g_hSafeAreaFlags =		CreateConVar("st_enable",		"3",	"Where is it enabled? (1=Safe Room, 2=Rescue Vehicle, 3=Both)", CVAR_FLAGS);
+	g_hSafeAreaType =		CreateConVar("st_type",			"1",	"How to deal with players who have not entered the destination safe area (1=teleport, 2=slay)", CVAR_FLAGS);
+	g_hSafeAreaTime =		CreateConVar("st_time",			"30",	"How many seconds to count down before processing", CVAR_FLAGS);
+	g_hMinSurvivorPercent =	CreateConVar("st_min_percent",	"50",	"What percentage of the survivors start the countdown when they reach the finish area", CVAR_FLAGS);
 	
-	g_hSafeAreaFlags.AddChangeHook(vAllowConVarChanged);
-	g_hSafeAreaType.AddChangeHook(vConVarChanged);
-	g_hSafeAreaTime.AddChangeHook(vConVarChanged);
-	g_hMinSurvivorPercent.AddChangeHook(vConVarChanged);
+	g_hCvarMPGameMode = FindConVar("mp_gamemode");
+	g_hCvarMPGameMode.AddChangeHook(vAllowConVarChanged);
+	g_hCvarAllow.AddChangeHook(vAllowConVarChanged);
+	g_hCvarModes.AddChangeHook(vAllowConVarChanged);
+	g_hCvarModesOff.AddChangeHook(vAllowConVarChanged);
+	g_hCvarModesTog.AddChangeHook(vAllowConVarChanged);
+
+	g_hSafeAreaFlags.AddChangeHook(vGeneralConVarChanged);
+	g_hSafeAreaType.AddChangeHook(vGeneralConVarChanged);
+	g_hSafeAreaTime.AddChangeHook(vGeneralConVarChanged);
+	g_hMinSurvivorPercent.AddChangeHook(vGeneralConVarChanged);
 
 	AutoExecConfig(true, "safearea_teleport");
 
-	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("finale_vehicle_leaving", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_PostNoCopy);
-	
 	RegAdminCmd("sm_warpend", cmdWarpEnd, ADMFLAG_RCON, "Send all survivors to the destination safe area");
 	RegAdminCmd("sm_st", cmdSt, ADMFLAG_ROOT, "Test");
 	
 	HookEntityOutput("trigger_finale", "FinaleStart", vOnFinaleStart);
+
+	if(g_bLateLoad)
+		g_bIsFinaleMap = L4D_IsMissionFinalMap();
 }
 
 void vOnFinaleStart(const char[] output, int caller, int activator, float delay)
@@ -235,12 +251,6 @@ void vOnFinaleStart(const char[] output, int caller, int activator, float delay)
 
 Action cmdWarpEnd(int client, int args)
 {
-	if(!g_iRoundStart || !g_iPlayerSpawn)
-	{
-		ReplyToCommand(client, "Round has not yet started");
-		return Plugin_Handled;
-	}
-
 	if(!g_aEndNavArea.Length)
 	{
 		ReplyToCommand(client, "No endpoint nav area found");
@@ -259,7 +269,6 @@ Action cmdSt(int client, int args)
 
 public void OnConfigsExecuted()
 {
-	vGetCvars();
 	vIsAllowed();
 }
 
@@ -268,15 +277,18 @@ void vAllowConVarChanged(ConVar convar, const char[] oldValue, const char[] newV
 	vIsAllowed();
 }
 
-void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vGeneralConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	vGetCvars();
 }
 
-void vIsAllowed()
+void vGetCvars()
 {
 	int iLast = g_iSafeAreaFlags;
 	g_iSafeAreaFlags = g_hSafeAreaFlags.IntValue;
+	g_iSafeAreaType = g_hSafeAreaType.IntValue;
+	g_iSafeAreaTime = g_hSafeAreaTime.IntValue;
+	g_iMinSurvivorPercent = g_hMinSurvivorPercent.IntValue;
 
 	if(iLast != g_iSafeAreaFlags)
 	{
@@ -302,18 +314,106 @@ void vIsAllowed()
 	}
 }
 
-void vGetCvars()
+// redit to Silvers
+void vIsAllowed()
 {
-	g_iSafeAreaType = g_hSafeAreaType.IntValue;
-	g_iSafeAreaTime = g_hSafeAreaTime.IntValue;
-	g_iMinSurvivorPercent = g_hMinSurvivorPercent.IntValue;
+	bool bCvarAllow = g_hCvarAllow.BoolValue;
+	bool bAllowMode = bIsAllowedGameMode();
+	vGetCvars();
+
+	if(g_bCvarAllow == false && bCvarAllow == true && bAllowMode == true)
+	{
+		g_bCvarAllow = true;
+
+		vInitPlugin();
+
+		HookEvent("round_end", 				Event_RoundEnd, 	EventHookMode_PostNoCopy);
+		HookEvent("map_transition", 		Event_RoundEnd, 	EventHookMode_PostNoCopy);
+		HookEvent("finale_vehicle_leaving", Event_RoundEnd, 	EventHookMode_PostNoCopy);
+		HookEvent("round_start", 			Event_RoundStart, 	EventHookMode_PostNoCopy);
+		HookEvent("player_spawn", 			Event_PlayerSpawn, 	EventHookMode_PostNoCopy);
+	}
+	else if(g_bCvarAllow == true && (bCvarAllow == false || bAllowMode == false))
+	{
+		g_bCvarAllow = false;
+
+		UnhookEvent("round_end", 				Event_RoundEnd, 	EventHookMode_PostNoCopy);
+		UnhookEvent("map_transition", 			Event_RoundEnd, 	EventHookMode_PostNoCopy);
+		UnhookEvent("finale_vehicle_leaving",	Event_RoundEnd, 	EventHookMode_PostNoCopy);
+		UnhookEvent("round_start", 				Event_RoundStart, 	EventHookMode_PostNoCopy);
+		UnhookEvent("player_spawn", 			Event_PlayerSpawn, 	EventHookMode_PostNoCopy);
+
+		vResetPlugin();
+		delete g_hTimer;
+
+		if(bIsValidEntRef(g_iChangelevel))
+		{
+			UnhookSingleEntityOutput(g_iChangelevel, "OnStartTouch",  OnStartTouch);
+			UnhookSingleEntityOutput(g_iChangelevel, "OnEndTouch", OnEndTouch);
+		}
+
+		int i;
+		int iEntRef;
+		int iLength = g_aRescueVehicle.Length;
+		for(; i < iLength; i++)
+		{
+			if((iEntRef = g_aRescueVehicle.Get(i)) != g_iRescueVehicle && EntRefToEntIndex(iEntRef) != INVALID_ENT_REFERENCE)
+			{
+				UnhookSingleEntityOutput(iEntRef, "OnStartTouch",  OnStartTouch);
+				UnhookSingleEntityOutput(iEntRef, "OnEndTouch", OnEndTouch);
+			}
+		}
+	}
+}
+
+int g_iCurrentMode;
+public void L4D_OnGameModeChange(int gamemode)
+{
+	g_iCurrentMode = gamemode;
+}
+
+bool bIsAllowedGameMode()
+{
+	if(!g_hCvarMPGameMode)
+		return false;
+
+	if(!g_iCurrentMode)
+		g_iCurrentMode = L4D_GetGameModeType();
+
+	if(!g_bMapStarted)
+		return false;
+
+	int iCvarModesTog = g_hCvarModesTog.IntValue;
+	if(iCvarModesTog && !(iCvarModesTog & g_iCurrentMode))
+		return false;
+
+	char sGameModes[64], sGameMode[64];
+	g_hCvarMPGameMode.GetString(sGameMode, sizeof sGameMode);
+	Format(sGameMode, sizeof sGameMode, ",%s,", sGameMode);
+
+	g_hCvarModes.GetString(sGameModes, sizeof sGameModes);
+	if(sGameModes[0])
+	{
+		Format(sGameModes, sizeof sGameModes, ",%s,", sGameModes);
+		if(StrContains(sGameModes, sGameMode, false) == -1)
+			return false;
+	}
+
+	g_hCvarModesOff.GetString(sGameModes, sizeof sGameModes);
+	if(sGameModes[0])
+	{
+		Format(sGameModes, sizeof sGameModes, ",%s,", sGameModes);
+		if(StrContains(sGameModes, sGameMode, false) != -1)
+			return false;
+	}
+
+	return true;
 }
 
 public void OnMapStart()
 {
-	vGetNavAreaCount();
+	g_bMapStarted = true;
 	PrecacheSound(SOUND_COUNTDOWN);
-
 	g_bIsFinaleMap = L4D_IsMissionFinalMap();
 }
 
@@ -321,6 +421,9 @@ public void OnMapEnd()
 {
 	vResetPlugin();
 	delete g_hTimer;
+	g_iTheCount = 0;
+	g_aEndNavArea.Clear();
+	g_bMapStarted = false;
 }
 
 void vResetPlugin()
@@ -357,30 +460,28 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 
 void vInitPlugin()
 {
-	if(!g_iTheCount)
-		return;
-
-	vHookEndAreaEntity();
-	vFindSafeRoomDoors();
-
-	if(!iGetMissionWipes())
-		vFindTerrorNavAreas();
+	if(bGetNavAreaCount() && bFindEndNavAreas())
+	{
+		vHookEndAreaEntity();
+		vFindSafeRoomDoors();
+	}
 }
 
-void vFindTerrorNavAreas()
+bool bFindEndNavAreas()
 {
+	if(g_aEndNavArea.Length)
+		return true;
+
 	if(g_bIsFinaleMap)
 	{
 		if(g_iSafeAreaFlags & RESCUE_VEHICLE == 0)
-			return;
+			return false;
 	}
 	else
 	{
 		if(g_iSafeAreaFlags & SAFE_ROOM == 0)
-			return;
+			return false;
 	}
-
-	g_aEndNavArea.Clear();
 
 	int iSpawnAttributes;
 	TerrorNavArea navarea;
@@ -395,7 +496,7 @@ void vFindTerrorNavAreas()
 
 	for(int i; i < g_iTheCount; i++)
 	{
-		if((navarea = view_as<TerrorNavArea>(LoadFromAddress(pTheNavAreas + view_as<Address>(i * 4), NumberType_Int32))).IsNull() == true)
+		if((navarea = view_as<TerrorNavArea>(LoadFromAddress(pTheNavAreas + view_as<Address>(i * 4), NumberType_Int32))).IsNull())
 			continue;
 
 		if(navarea.m_flow == -9999.0)
@@ -419,6 +520,8 @@ void vFindTerrorNavAreas()
 				g_aEndNavArea.Push(navarea);
 		}
 	}
+
+	return g_aEndNavArea.Length > 0;
 }
 
 void vHookEndAreaEntity()
@@ -829,20 +932,34 @@ void vTeleportToCheckpoint()
 
 		float vPos[3];
 		TerrorNavArea largest;
-		TerrorNavArea navarea;
-	
+
 		if(!g_bIsFinaleMap)
 			largest = SDKCall(g_hSDK_Checkpoint_GetLargestArea, SDKCall(g_hSDK_TerrorNavMesh_GetLastCheckpoint, L4D_GetPointer(POINTER_NAVMESH)));
-		
-		for(i = 1; i <= MaxClients; i++)
-		{
-			if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPlayerInEndArea(i))
-			{
-				vTeleportFix(i);
 
-				navarea = largest ? largest : g_aEndNavArea.Get(GetRandomInt(0, iLength - 1));
-				navarea.FindRandomSpot(vPos);
-				TeleportEntity(i, vPos, NULL_VECTOR, NULL_VECTOR);
+		if(largest)
+		{
+			for(i = 1; i <= MaxClients; i++)
+			{
+				if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPlayerInEndArea(i))
+				{
+					vTeleportFix(i);
+
+					largest.FindRandomSpot(vPos);
+					TeleportEntity(i, vPos, NULL_VECTOR, NULL_VECTOR);
+				}
+			}
+		}
+		else
+		{
+			for(i = 1; i <= MaxClients; i++)
+			{
+				if(IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPlayerInEndArea(i))
+				{
+					vTeleportFix(i);
+
+					view_as<TerrorNavArea>(g_aEndNavArea.Get(GetRandomInt(0, iLength - 1))).FindRandomSpot(vPos);
+					TeleportEntity(i, vPos, NULL_VECTOR, NULL_VECTOR);
+				}
 			}
 		}
 	}
@@ -935,9 +1052,16 @@ void vEmitSoundToSurvivor(const char[] sample,
 	}
 }
 
-void vLoadGameData()
+void vInitData()
 {
 	char sPath[PLATFORM_MAX_PATH];
+	BuildPath(Path_SM, sPath, PLATFORM_MAX_PATH, "translations/safearea_teleport.phrases.txt");
+	if(FileExists(sPath))
+	{
+		LoadTranslations("safearea_teleport.phrases");
+		g_bTranslation = true;
+	}
+
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
 	if(!FileExists(sPath))
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
@@ -1034,15 +1158,22 @@ void vLoadGameData()
 	delete hGameData;
 }
 
-void vGetNavAreaCount()
+bool bGetNavAreaCount()
 {
+	if(g_iTheCount)
+		return true;
+
 	g_iTheCount = LoadFromAddress(g_pTheCount, NumberType_Int32);
 	if(!g_iTheCount)
 	{
 		#if DEBUG
 		PrintToServer("The current number of Nav areas is 0, which may be some test maps");
 		#endif
+
+		return false;
 	}
+
+	return true;
 }
 
 int iGetMissionWipes()
