@@ -3,7 +3,7 @@
 #include <sourcemod>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.10.3"
+#define PLUGIN_VERSION "1.10.4"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
 #define MAX_SLOTS		5
@@ -56,12 +56,13 @@ int
 	g_iOff_m_hHiddenWeapon;
 
 bool
-	g_bShouldFixAFK,
 	g_bAutoJoin,
 	g_bRespawnJoin,
 	g_bGiveWeaponType,
 	g_bGiveWeaponTime,
 	g_bInSpawnTime,
+	g_bShouldFixAFK,
+	g_bShouldIgnore,
 	g_bHideNameChange;
 
 enum struct esWeapon
@@ -1639,12 +1640,12 @@ void vSetupDetours(GameData hGameData = null)
 	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_GoAwayFromKeyboard_Post))
 		SetFailState("Failed to detour post: DD::CTerrorPlayer::GoAwayFromKeyboard");
 
-	dDetour = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::GetPlayerByCharacter");
+	dDetour = DynamicDetour.FromConf(hGameData, "DD::SurvivorBot::SetHumanSpectator");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::GetPlayerByCharacter");
+		SetFailState("Failed to create DynamicDetour: DD::SurvivorBot::SetHumanSpectator");
 		
-	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_GetPlayerByCharacter_Post))
-		SetFailState("Failed to detour post: DD::CTerrorPlayer::GetPlayerByCharacter");
+	if(!dDetour.Enable(Hook_Pre, DD_SurvivorBot_SetHumanSpectator_Pre))
+		SetFailState("Failed to detour pre: DD::SurvivorBot::SetHumanSpectator");
 
 	dDetour = DynamicDetour.FromConf(hGameData, "DD::CBasePlayer::SetModel");
 	if(!dDetour)
@@ -1670,7 +1671,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 	if(entity < 1 || entity > MaxClients)
 		return;
 	
-	if(classname[0] != 's' || strcmp(classname, "survivor_bot", false) != 0)
+	if(classname[0] != 's' || strcmp(classname[1], "urvivor_bot", false) != 0)
 		return;
 
 	g_iSurvivorBot = entity;
@@ -1684,23 +1685,24 @@ MRESReturn DD_CTerrorPlayer_GoAwayFromKeyboard_Pre(int pThis, DHookReturn hRetur
 
 MRESReturn DD_CTerrorPlayer_GoAwayFromKeyboard_Post(int pThis, DHookReturn hReturn)
 {
+	if(g_bShouldFixAFK && g_iSurvivorBot > 0 && IsFakeClient(g_iSurvivorBot))
+	{
+		g_bShouldIgnore = true;
+		vSetHumanSpectator(g_iSurvivorBot, pThis);
+		vWriteTakeoverPanel(pThis, g_iSurvivorBot);
+		g_bShouldIgnore = false;
+	}
+
 	g_iSurvivorBot = 0;
 	g_bShouldFixAFK = false;
 	return MRES_Ignored;
 }
 
-MRESReturn DD_CTerrorPlayer_GetPlayerByCharacter_Post(DHookReturn hReturn, DHookParam hParams)
+MRESReturn DD_SurvivorBot_SetHumanSpectator_Pre(int pThis, DHookParam hParams)
 {
-	if(!g_bShouldFixAFK)
-		return MRES_Ignored;
-	
-	if(!g_iSurvivorBot)
+	if(!g_bShouldFixAFK || g_bShouldIgnore || g_iSurvivorBot < 1)
 		return MRES_Ignored;
 
-	if(!IsFakeClient(g_iSurvivorBot))
-		return MRES_Ignored;
-
-	hReturn.Value = g_iSurvivorBot;
 	return MRES_Supercede;
 }
 
@@ -1741,6 +1743,19 @@ MRESReturn DD_CTerrorPlayer_GiveDefaultItems_Post(int pThis)
 	vGiveDefaultItems(pThis);
 	vResetRestoreWeapons(pThis);
 	return MRES_Ignored;
+}
+
+void vWriteTakeoverPanel(int client, int iBot)
+{
+	char sBuffer[2];
+	IntToString(GetEntProp(iBot, Prop_Send, "m_survivorCharacter"), sBuffer, sizeof sBuffer);
+	BfWrite bf = view_as<BfWrite>(StartMessageOne("VGUIMenu", client));
+	bf.WriteString("takeover_survivor_bar");
+	bf.WriteByte(true);
+	bf.WriteByte(IN_ATTACK);
+	bf.WriteString("character");
+	bf.WriteString(sBuffer);
+	EndMessage();
 }
 
 bool bTakingOverBot(int client)
