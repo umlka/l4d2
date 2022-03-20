@@ -76,7 +76,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !IsClientInGame(client) || !IsFakeClient(client))
+	if(!client || !IsClientInGame(client) || !IsFakeClient(client))
 		return;
 
 	int flags = GetEntityFlags(client);
@@ -87,7 +87,7 @@ void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast
 
 public Action OnPlayerRunCmd(int client, int &buttons)
 {
-	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+	if(!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
 	static float fSurvivorProximity;

@@ -150,7 +150,7 @@ bool bIsPinned(int client)
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
 {
 	
-	if(!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") == 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if(!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") == 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		return Plugin_Continue;
 
 	static float fSurvivorProximity;
