@@ -201,10 +201,10 @@ Address
 	g_pStatsCondition;
 
 DynamicDetour
-	g_dCTerrorPlayer_OnEnterGhostState,
-	g_dCTerrorPlayer_MaterializeFromGhost,
-	g_dCTerrorPlayer_PlayerZombieAbortControl,
-	g_dForEachTerrorPlayer_SpawnablePZScan;
+	g_ddCTerrorPlayer_OnEnterGhostState,
+	g_ddCTerrorPlayer_MaterializeFromGhost,
+	g_ddCTerrorPlayer_PlayerZombieAbortControl,
+	g_ddForEachTerrorPlayer_SpawnablePZScan;
 
 ConVar
 	g_hGameMode,
@@ -320,7 +320,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.3.5",
+	version = "3.3.6",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -2833,16 +2833,16 @@ void vInitPatchs(GameData hGameData = null)
 
 void vSetupDetours(GameData hGameData = null)
 {
-	g_dCTerrorPlayer_OnEnterGhostState = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::OnEnterGhostState");
-	if(!g_dCTerrorPlayer_OnEnterGhostState)
+	g_ddCTerrorPlayer_OnEnterGhostState = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::OnEnterGhostState");
+	if(!g_ddCTerrorPlayer_OnEnterGhostState)
 		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::OnEnterGhostState");
 
-	g_dCTerrorPlayer_MaterializeFromGhost = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::MaterializeFromGhost");
-	if(!g_dCTerrorPlayer_MaterializeFromGhost)
+	g_ddCTerrorPlayer_MaterializeFromGhost = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::MaterializeFromGhost");
+	if(!g_ddCTerrorPlayer_MaterializeFromGhost)
 		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::MaterializeFromGhost");
 
-	g_dCTerrorPlayer_PlayerZombieAbortControl = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::PlayerZombieAbortControl");
-	if(!g_dCTerrorPlayer_PlayerZombieAbortControl)
+	g_ddCTerrorPlayer_PlayerZombieAbortControl = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::PlayerZombieAbortControl");
+	if(!g_ddCTerrorPlayer_PlayerZombieAbortControl)
 		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::PlayerZombieAbortControl");
 
 	//Method from MicroLeo (https://forums.alliedmods.net/showthread.php?t=329183)
@@ -2858,9 +2858,11 @@ void vSetupDetours(GameData hGameData = null)
 		pAddr += offset + view_as<Address>(5); // sizeof(instruction)
 	}
 
-	g_dForEachTerrorPlayer_SpawnablePZScan = new DynamicDetour(pAddr, CallConv_CDECL, ReturnType_Void, ThisPointer_Ignore);
-	if(!g_dForEachTerrorPlayer_SpawnablePZScan)
+	g_ddForEachTerrorPlayer_SpawnablePZScan = new DynamicDetour(pAddr, CallConv_CDECL, ReturnType_Void, ThisPointer_Ignore);
+	if(!g_ddForEachTerrorPlayer_SpawnablePZScan)
 		SetFailState("Failed to create DynamicDetour: ForEachTerrorPlayer<SpawnablePZScan>");
+
+	g_ddForEachTerrorPlayer_SpawnablePZScan.AddParam(HookParamType_CBaseEntity, -1, DHookPass_ByRef, DHookRegister_Default);
 }
 
 void vSetInfectedGhost(int client, bool bSavePos = false)
@@ -2942,29 +2944,26 @@ void vToggleDetours(bool bEnable)
 	{
 		bEnabled = true;
 
-		if(!g_dCTerrorPlayer_OnEnterGhostState.Enable(Hook_Pre, DD_CTerrorPlayer_OnEnterGhostState_Pre))
+		if(!g_ddCTerrorPlayer_OnEnterGhostState.Enable(Hook_Pre, DD_CTerrorPlayer_OnEnterGhostState_Pre))
 			SetFailState("Failed to detour pre: DD::CTerrorPlayer::OnEnterGhostState");
 		
-		if(!g_dCTerrorPlayer_OnEnterGhostState.Enable(Hook_Post, DD_CTerrorPlayer_OnEnterGhostState_Post))
+		if(!g_ddCTerrorPlayer_OnEnterGhostState.Enable(Hook_Post, DD_CTerrorPlayer_OnEnterGhostState_Post))
 			SetFailState("Failed to detour post: DD::CTerrorPlayer::OnEnterGhostState");
 			
-		if(!g_dCTerrorPlayer_MaterializeFromGhost.Enable(Hook_Pre, DD_CTerrorPlayer_MaterializeFromGhost_Pre))
+		if(!g_ddCTerrorPlayer_MaterializeFromGhost.Enable(Hook_Pre, DD_CTerrorPlayer_MaterializeFromGhost_Pre))
 			SetFailState("Failed to detour pre: DD::CTerrorPlayer::MaterializeFromGhost");
 		
-		if(!g_dCTerrorPlayer_MaterializeFromGhost.Enable(Hook_Post, DD_CTerrorPlayer_MaterializeFromGhost_Post))
+		if(!g_ddCTerrorPlayer_MaterializeFromGhost.Enable(Hook_Post, DD_CTerrorPlayer_MaterializeFromGhost_Post))
 			SetFailState("Failed to detour post: DD::CTerrorPlayer::MaterializeFromGhost");
 			
-		if(!g_dCTerrorPlayer_PlayerZombieAbortControl.Enable(Hook_Pre, DD_CTerrorPlayer_PlayerZombieAbortControl_Pre))
+		if(!g_ddCTerrorPlayer_PlayerZombieAbortControl.Enable(Hook_Pre, DD_CTerrorPlayer_PlayerZombieAbortControl_Pre))
 			SetFailState("Failed to detour pre: DD::CTerrorPlayer::PlayerZombieAbortControl");
 		
-		if(!g_dCTerrorPlayer_PlayerZombieAbortControl.Enable(Hook_Post, DD_CTerrorPlayer_PlayerZombieAbortControl_Post))
+		if(!g_ddCTerrorPlayer_PlayerZombieAbortControl.Enable(Hook_Post, DD_CTerrorPlayer_PlayerZombieAbortControl_Post))
 			SetFailState("Failed to detour post: DD::CTerrorPlayer::PlayerZombieAbortControl");
 
-		if(!(g_bIsSpawnablePZSupported = g_dForEachTerrorPlayer_SpawnablePZScan.Enable(Hook_Pre, DD_ForEachTerrorPlayer_SpawnablePZScan_Pre)))
+		if(!(g_bIsSpawnablePZSupported = g_ddForEachTerrorPlayer_SpawnablePZScan.Enable(Hook_Pre, DD_ForEachTerrorPlayer_SpawnablePZScan_Pre)))
 			SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
-		
-		if(!(g_bIsSpawnablePZSupported = g_dForEachTerrorPlayer_SpawnablePZScan.Enable(Hook_Post, DD_ForEachTerrorPlayer_SpawnablePZScan_Post)))
-			SetFailState("Failed to detour post: ForEachTerrorPlayer<SpawnablePZScan>");
 	}
 	else if(bEnabled && !bEnable)
 	{
@@ -2972,16 +2971,16 @@ void vToggleDetours(bool bEnable)
 
 		g_bIsSpawnablePZSupported = false;
 
-		if(!g_dCTerrorPlayer_OnEnterGhostState.Disable(Hook_Pre, DD_CTerrorPlayer_OnEnterGhostState_Pre) || !g_dCTerrorPlayer_OnEnterGhostState.Disable(Hook_Post, DD_CTerrorPlayer_OnEnterGhostState_Post))
+		if(!g_ddCTerrorPlayer_OnEnterGhostState.Disable(Hook_Pre, DD_CTerrorPlayer_OnEnterGhostState_Pre) || !g_ddCTerrorPlayer_OnEnterGhostState.Disable(Hook_Post, DD_CTerrorPlayer_OnEnterGhostState_Post))
 			SetFailState("Failed to disable detour: DD::CTerrorPlayer::OnEnterGhostState");
 		
-		if(!g_dCTerrorPlayer_MaterializeFromGhost.Disable(Hook_Pre, DD_CTerrorPlayer_MaterializeFromGhost_Pre) || !g_dCTerrorPlayer_MaterializeFromGhost.Disable(Hook_Post, DD_CTerrorPlayer_MaterializeFromGhost_Post))
+		if(!g_ddCTerrorPlayer_MaterializeFromGhost.Disable(Hook_Pre, DD_CTerrorPlayer_MaterializeFromGhost_Pre) || !g_ddCTerrorPlayer_MaterializeFromGhost.Disable(Hook_Post, DD_CTerrorPlayer_MaterializeFromGhost_Post))
 			SetFailState("Failed to disable detour: DD::CTerrorPlayer::MaterializeFromGhost");
 		
-		if(!g_dCTerrorPlayer_PlayerZombieAbortControl.Disable(Hook_Pre, DD_CTerrorPlayer_PlayerZombieAbortControl_Pre) || !g_dCTerrorPlayer_PlayerZombieAbortControl.Disable(Hook_Post, DD_CTerrorPlayer_PlayerZombieAbortControl_Post))
+		if(!g_ddCTerrorPlayer_PlayerZombieAbortControl.Disable(Hook_Pre, DD_CTerrorPlayer_PlayerZombieAbortControl_Pre) || !g_ddCTerrorPlayer_PlayerZombieAbortControl.Disable(Hook_Post, DD_CTerrorPlayer_PlayerZombieAbortControl_Post))
 			SetFailState("Failed to disable detour: DD::CTerrorPlayer::PlayerZombieAbortControl");
 
-		if(!g_dForEachTerrorPlayer_SpawnablePZScan.Disable(Hook_Pre, DD_ForEachTerrorPlayer_SpawnablePZScan_Pre) || !g_dForEachTerrorPlayer_SpawnablePZScan.Disable(Hook_Post, DD_ForEachTerrorPlayer_SpawnablePZScan_Post))
+		if(!g_ddForEachTerrorPlayer_SpawnablePZScan.Disable(Hook_Pre, DD_ForEachTerrorPlayer_SpawnablePZScan_Pre))
 			SetFailState("Failed to disable detour: DD_ForEachTerrorPlayer<SpawnablePZScan>");
 	}
 }
@@ -3043,22 +3042,21 @@ MRESReturn DD_CTerrorPlayer_PlayerZombieAbortControl_Post(int pThis)
 	return MRES_Ignored;
 }
 
-MRESReturn DD_ForEachTerrorPlayer_SpawnablePZScan_Pre()
+MRESReturn DD_ForEachTerrorPlayer_SpawnablePZScan_Pre(DHookParam hParams)
 {
-	if(!g_iSpawnablePZ)
+	if(!g_iSpawnablePZ || hParams.IsNull(1))
 		return MRES_Supercede;
 
-	vSpawnablePZScanProtect(0);
-	return MRES_Ignored;
-}
+	if(!IsClientInGame(g_iSpawnablePZ) || IsFakeClient(g_iSpawnablePZ) || GetClientTeam(g_iSpawnablePZ) != 3)
+		return MRES_Supercede;
 
-MRESReturn DD_ForEachTerrorPlayer_SpawnablePZScan_Post()
-{
-	if(!g_iSpawnablePZ)
-		return MRES_Ignored;
+	static Address pSpawnablePZ;
+	pSpawnablePZ = hParams.GetAddress(1);
+	if(!pSpawnablePZ)
+		return MRES_Supercede;
 
-	vSpawnablePZScanProtect(1);
-	return MRES_Ignored;
+	StoreToAddress(pSpawnablePZ, GetEntityAddress(g_iSpawnablePZ), NumberType_Int32);
+	return MRES_ChangedOverride;
 }
 
 void OnNextFrame_EnterGhostState(int client)
@@ -3088,49 +3086,5 @@ void vClassSelectionMenu(int client)
 	{
 		vDisplayClassMenu(client);
 		EmitSoundToClient(client, SOUND_CLASSMENU, SOUND_FROM_PLAYER, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
-	}
-}
-
-static void vSpawnablePZScanProtect(int iState)
-{
-	static int i;
-	static bool bResetGhost[MAXPLAYERS + 1];
-	static bool bResetLifeState[MAXPLAYERS + 1];
-
-	switch(iState)
-	{
-		case 0: 
-		{
-			for(i = 1; i <= MaxClients; i++)
-			{
-				if(i == g_iSpawnablePZ || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
-					continue;
-
-				if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
-				{
-					bResetGhost[i] = true;
-					SetEntProp(i, Prop_Send, "m_isGhost", 0);
-				}
-				else if(!IsPlayerAlive(i))
-				{
-					bResetLifeState[i] = true;
-					SetEntProp(i, Prop_Send, "m_lifeState", 0);
-				}
-			}
-		}
-
-		case 1: 
-		{
-			for(i = 1; i <= MaxClients; i++)
-			{
-				if(bResetGhost[i])
-					SetEntProp(i, Prop_Send, "m_isGhost", 1);
-				if(bResetLifeState[i])
-					SetEntProp(i, Prop_Send, "m_lifeState", 1);
-			
-				bResetGhost[i] = false;
-				bResetLifeState[i] = false;
-			}
-		}
 	}
 }
