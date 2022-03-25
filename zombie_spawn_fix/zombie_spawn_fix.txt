@@ -4,7 +4,7 @@
 	{
 		"MemPatches"
 		{
-			"ZombieManager::CanZombieSpawnHere::IsInTransitionCheck"
+			"ZombieManager::CanZombieSpawnHere::IsInTransitionCondition"
 			{
 				"signature"		"ZombieManager::CanZombieSpawnHere"
 				"linux"
@@ -21,7 +21,7 @@
 					"patch"		"\x0F\x88\x33\x04\x00\x00"
 				}
 			}
-			"CTerrorPlayer::OnPreThinkGhostState::IsInTransitionCheck"
+			"CTerrorPlayer::OnPreThinkGhostState::IsInTransitionCondition"
 			{
 				"signature"		"CTerrorPlayer::OnPreThinkGhostState"
 				"linux"
@@ -38,7 +38,7 @@
 					"patch"		"\x0F\x88\xA5\x07\x00\x00"
 				}
 			}
-			"CTerrorPlayer::OnPreThinkGhostState::SpawnDisabledCheck"
+			"CTerrorPlayer::OnPreThinkGhostState::SpawnDisabledCondition"
 			{
 				"signature"		"CTerrorPlayer::OnPreThinkGhostState"
 				"linux"
@@ -55,7 +55,7 @@
 					"patch"		"\x79\x39"
 				}
 			}
-			"ZombieManager::AccumulateSpawnAreaCollection::EnforceFinaleNavSpawnRulesCheck"
+			"ZombieManager::AccumulateSpawnAreaCollection::EnforceFinaleNavSpawnRulesCondition"
 			{
 				"signature"		"ZombieManager::AccumulateSpawnAreaCollection"
 				"linux"

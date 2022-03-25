@@ -9,12 +9,12 @@ ArrayStack
 	g_aMemPatches;
 
 static const char g_sPatchNames[][] =
-	{
-		"ZombieManager::CanZombieSpawnHere::IsInTransitionCheck",
-		"CTerrorPlayer::OnPreThinkGhostState::IsInTransitionCheck",
-		"CTerrorPlayer::OnPreThinkGhostState::SpawnDisabledCheck",
-		"ZombieManager::AccumulateSpawnAreaCollection::EnforceFinaleNavSpawnRulesCheck"
-	};
+{
+	"ZombieManager::CanZombieSpawnHere::IsInTransitionCondition",
+	"CTerrorPlayer::OnPreThinkGhostState::IsInTransitionCondition",
+	"CTerrorPlayer::OnPreThinkGhostState::SpawnDisabledCondition",
+	"ZombieManager::AccumulateSpawnAreaCollection::EnforceFinaleNavSpawnRulesCondition"
+};
 
 // some code from [L4D2] Air Ability Patch (https://forums.alliedmods.net/showthread.php?p=2660278)
 public Plugin myinfo = 
@@ -22,7 +22,7 @@ public Plugin myinfo =
 	name = "[L4D2]Zombie Spawn Fix",
 	author = "sorallll & Psyk0tik (Crasher_3637)",
 	description = "Fixed Special Inected and Player Zombie spawning failures in some cases",
-	version = "1.0.5",
+	version = "1.0.6",
 	url = "https://forums.alliedmods.net/showthread.php?t=333351"
 };
 
@@ -37,19 +37,21 @@ public void OnPluginStart()
 	if(!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
-	MemoryPatch mpPatch;
+	MemoryPatch patch;
 	g_aMemPatches = new ArrayStack();
 	for(int i; i < sizeof g_sPatchNames; i++)
 	{
-		mpPatch = MemoryPatch.CreateFromConf(hGameData, g_sPatchNames[i]);
-		if(!mpPatch)
-			SetFailState("Failed to create MemoryPatch: \"%s\"", g_sPatchNames[i]);
-
-		if(!mpPatch.Validate())
-			SetFailState("Failed to validate MemoryPatch: \"%s\"", g_sPatchNames[i]);
-
-		mpPatch.Enable();
-		g_aMemPatches.Push(mpPatch);
+		patch = MemoryPatch.CreateFromConf(hGameData, g_sPatchNames[i]);
+		if(!patch.Validate())
+		{
+			LogError("Failed to validate patch: \"%s\"", g_sPatchNames[i]);
+			continue;
+		}
+		else if(patch.Enable())
+		{
+			g_aMemPatches.Push(patch);
+			PrintToServer("Enabled patch: \"%s\"", g_sPatchNames[i]);
+		}
 	}
 
 	delete hGameData;
@@ -57,10 +59,10 @@ public void OnPluginStart()
 
 public void OnPluginEnd()
 {
-	MemoryPatch mpPatch;
+	MemoryPatch patch;
 	while(!g_aMemPatches.Empty)
 	{
-		mpPatch = g_aMemPatches.Pop();
-		mpPatch.Disable();
+		patch = g_aMemPatches.Pop();
+		patch.Disable();
 	}
 }
