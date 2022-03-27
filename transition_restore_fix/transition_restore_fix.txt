@@ -36,8 +36,8 @@
 				"windows"
 				{
 					"offset"	"55h"
-					"verify"	"\x0F\x84"
-					"patch"		"\x90\xE9"
+					"verify"	"\x0F\x84\x22\x01\x00\x00"
+					"patch"		"\x90\xE9\x22\x01\x00\x00"
 				}
 			}
 		}
