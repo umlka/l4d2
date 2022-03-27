@@ -43,7 +43,7 @@ public void OnPluginStart()
 	{
 		patch = MemoryPatch.CreateFromConf(hGameData, g_sPatchNames[i]);
 		if(!patch.Validate())
-			LogError("Failed to validate patch: \"%s\"", g_sPatchNames[i]);
+			LogError("Failed to verify patch: \"%s\"", g_sPatchNames[i]);
 		else if(patch.Enable())
 		{
 			//g_aMemPatches.Push(patch);
