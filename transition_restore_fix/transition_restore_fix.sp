@@ -39,7 +39,7 @@ public Plugin myinfo =
 	name = "Transition Restore Fix",
 	author = "sorallll",
 	description = "Restoring transition data by player's UserId instead of character",
-	version = "1.1.4",
+	version = "1.1.5",
 	url = "https://forums.alliedmods.net/showthread.php?t=336287"
 };
 
@@ -52,11 +52,11 @@ public void OnPluginStart()
 
 	AutoExecConfig(true, "transition_restore_fix");
 }
-
+/**
 public void OnPluginEnd()
 {
 	g_mpRestoreByUserId.Disable();
-}
+}**/
 
 public void OnConfigsExecuted()
 {
@@ -136,11 +136,8 @@ void vInitGameData()
 void vInitPatchs(GameData hGameData = null)
 {
 	g_mpRestoreByUserId = MemoryPatch.CreateFromConf(hGameData, "CTerrorPlayer::TransitionRestore::RestoreByUserId");
-	if(!g_mpRestoreByUserId)
-		SetFailState("Failed to create MemoryPatch: CTerrorPlayer::TransitionRestore::RestoreByUserId");
-
 	if(!g_mpRestoreByUserId.Validate())
-		SetFailState("Failed to validate MemoryPatch: CTerrorPlayer::TransitionRestore::RestoreByUserId");
+		SetFailState("Failed to verify patch: CTerrorPlayer::TransitionRestore::RestoreByUserId");
 }
 
 void vSetupDetours(GameData hGameData = null)
