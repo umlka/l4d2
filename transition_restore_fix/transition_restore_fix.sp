@@ -4,26 +4,38 @@
 #include <dhooks>
 #include <sourcescramble>
 
+#define DEBUG 0
+
 #define GAMEDATA	"transition_restore_fix"
 
-Address
-	g_pSavedPlayerCount;
-
 Handle
-	g_hSDK_KVGetString,
-	g_hSDK_KVSetString;
+	g_hSDK_KeyValues_GetString,
+	g_hSDK_KeyValues_SetString;
+
+#if DEBUG
+Handle
+	g_hSDK_CTerrorPlayer_TransitionRestore;
+#endif
 
 ConVar
 	g_hKeepIdentity;
 
+Address
+	g_pSavedPlayerCount;
+
 DynamicDetour
-	g_dDetourRestart;
+	g_ddCDirector_Restart;
 
 MemoryPatch
 	g_mpRestoreByUserId;
 
 bool
-	g_bCDirectorRestart;
+	g_bCDirector_Restart;
+
+#if DEBUG
+int
+	g_iOff_m_isTransitioned;
+#endif
 
 enum struct PlayerSaveData
 {
@@ -39,7 +51,7 @@ public Plugin myinfo =
 	name = "Transition Restore Fix",
 	author = "sorallll",
 	description = "Restoring transition data by player's UserId instead of character",
-	version = "1.1.5",
+	version = "1.1.6",
 	url = "https://forums.alliedmods.net/showthread.php?t=336287"
 };
 
@@ -51,12 +63,31 @@ public void OnPluginStart()
 	g_hKeepIdentity.AddChangeHook(vConVarChanged);
 
 	AutoExecConfig(true, "transition_restore_fix");
+
+	#if DEBUG
+	RegAdminCmd("sm_restore", cmdRestore, ADMFLAG_ROOT);
+	#endif
 }
-/**
-public void OnPluginEnd()
+
+#if DEBUG
+Action cmdRestore(int client, int args)
 {
-	g_mpRestoreByUserId.Disable();
-}**/
+	if(!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 2)
+		return Plugin_Handled;
+
+	Address pSavedData = pFindSavedDataByUserId(GetClientUserId(client));
+	if(pSavedData)
+	{
+		char restoreState[4];
+		SDKCall(g_hSDK_KeyValues_GetString, pSavedData, restoreState, sizeof restoreState, "restoreState", "0");
+		ReplyToCommand(client, "restoreState->%s", restoreState);
+	}
+	
+	//SetEntData(client, g_iOff_m_isTransitioned, 1);
+	//SDKCall(g_hSDK_CTerrorPlayer_TransitionRestore, client);
+	return Plugin_Handled;
+}
+#endif
 
 public void OnConfigsExecuted()
 {
@@ -75,20 +106,20 @@ void vToggleDetours(bool bEnable)
 	{
 		bEnabled = true;
 
-		if(!g_dDetourRestart.Enable(Hook_Pre, DD_CDirector_Restart_Pre))
+		if(!g_ddCDirector_Restart.Enable(Hook_Pre, DD_CDirector_Restart_Pre))
 			SetFailState("Failed to detour pre: DD::CDirector::Restart");
 		
-		if(!g_dDetourRestart.Enable(Hook_Post, DD_CDirector_Restart_Post))
+		if(!g_ddCDirector_Restart.Enable(Hook_Post, DD_CDirector_Restart_Post))
 			SetFailState("Failed to detour post: DD::CDirector::Restart");
 	}
 	else if(bEnabled && !bEnable)
 	{
 		bEnabled = false;
 
-		if(!g_dDetourRestart.Disable(Hook_Pre, DD_CDirector_Restart_Pre))
+		if(!g_ddCDirector_Restart.Disable(Hook_Pre, DD_CDirector_Restart_Pre))
 			SetFailState("Failed to disable detour pre: DD::CDirector::Restart");
 
-		if(!g_dDetourRestart.Disable(Hook_Post, DD_CDirector_Restart_Post))
+		if(!g_ddCDirector_Restart.Disable(Hook_Post, DD_CDirector_Restart_Post))
 			SetFailState("Failed to disable detour post: DD::CDirector::Restart");
 	}
 }
@@ -114,8 +145,8 @@ void vInitGameData()
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_String, SDKPass_Pointer);
-	g_hSDK_KVGetString = EndPrepSDKCall();
-	if(!g_hSDK_KVGetString)
+	g_hSDK_KeyValues_GetString = EndPrepSDKCall();
+	if(!g_hSDK_KeyValues_GetString)
 		SetFailState("Failed to create SDKCall: KeyValues::GetString");
 
 	StartPrepSDKCall(SDKCall_Raw);
@@ -123,9 +154,22 @@ void vInitGameData()
 		SetFailState("Failed to find signature: KeyValues::SetString");
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
-	g_hSDK_KVSetString = EndPrepSDKCall();
-	if(!g_hSDK_KVSetString)
+	g_hSDK_KeyValues_SetString = EndPrepSDKCall();
+	if(!g_hSDK_KeyValues_SetString)
 		SetFailState("Failed to create SDKCall: KeyValues::SetString");
+
+	#if DEBUG
+	g_iOff_m_isTransitioned = hGameData.GetOffset("CTerrorPlayer::IsTransitioned::m_isTransitioned");
+	if(g_iOff_m_isTransitioned == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::IsTransitioned::m_isTransitioned");
+
+	StartPrepSDKCall(SDKCall_Player);
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TransitionRestore"))
+		SetFailState("Failed to find signature: CTerrorPlayer::TransitionRestore");
+	g_hSDK_CTerrorPlayer_TransitionRestore = EndPrepSDKCall();
+	if(!g_hSDK_CTerrorPlayer_TransitionRestore)
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::TransitionRestore");
+	#endif
 
 	vInitPatchs(hGameData);
 	vSetupDetours(hGameData);
@@ -138,12 +182,28 @@ void vInitPatchs(GameData hGameData = null)
 	g_mpRestoreByUserId = MemoryPatch.CreateFromConf(hGameData, "CTerrorPlayer::TransitionRestore::RestoreByUserId");
 	if(!g_mpRestoreByUserId.Validate())
 		SetFailState("Failed to verify patch: CTerrorPlayer::TransitionRestore::RestoreByUserId");
+
+	static const char sPatchNames[][] =
+	{
+		"CTerrorPlayer::OnEndChangeLevel::restoreStateCondition",
+		"CDirectorSessionManager::UpdateNewPlayers::NoSurvivorBotsCondition"
+	};
+
+	MemoryPatch patch;
+	for(int i; i < sizeof sPatchNames; i++)
+	{
+		patch = MemoryPatch.CreateFromConf(hGameData, sPatchNames[i]);
+		if(!patch.Validate())
+			SetFailState("Failed to verify patch: \"%s\"", sPatchNames[i]);
+		else if(patch.Enable())
+			PrintToServer("Enabled patch: \"%s\"", sPatchNames[i]);
+	}
 }
 
 void vSetupDetours(GameData hGameData = null)
 {
-	g_dDetourRestart = DynamicDetour.FromConf(hGameData, "DD::CDirector::Restart");
-	if(!g_dDetourRestart)
+	g_ddCDirector_Restart = DynamicDetour.FromConf(hGameData, "DD::CDirector::Restart");
+	if(!g_ddCDirector_Restart)
 		SetFailState("Failed to create DynamicDetour: DD::CDirector::Restart");
 
 	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::TransitionRestore");
@@ -159,41 +219,41 @@ void vSetupDetours(GameData hGameData = null)
 
 MRESReturn DD_CDirector_Restart_Pre(Address pThis)
 {
-	g_bCDirectorRestart = true;
+	g_bCDirector_Restart = true;
 	return MRES_Ignored;
 }
 
 MRESReturn DD_CDirector_Restart_Post(Address pThis)
 {
-	g_bCDirectorRestart = false;
+	g_bCDirector_Restart = false;
 	return MRES_Ignored;
 }
 
 MRESReturn DD_CTerrorPlayer_TransitionRestore_Pre(int pThis)
 {
-	if(IsFakeClient(pThis) || GetClientTeam(pThis) != 2)
+	if(IsFakeClient(pThis))
 		return MRES_Ignored;
 
 	Address pSavedData = pFindSavedDataByUserId(GetClientUserId(pThis));
 	if(!pSavedData)
 		return MRES_Ignored;
 
-	if(g_bCDirectorRestart)
+	if(g_bCDirector_Restart && GetClientTeam(pThis) == 2)
 	{
 		char sCharacter[4];
 		char sModelName[128];
-		SDKCall(g_hSDK_KVGetString, pSavedData, sCharacter, sizeof sCharacter, "character", "");
-		SDKCall(g_hSDK_KVGetString, pSavedData, sModelName, sizeof sModelName, "modelName", "");
+		SDKCall(g_hSDK_KeyValues_GetString, pSavedData, sCharacter, sizeof sCharacter, "character", "");
+		SDKCall(g_hSDK_KeyValues_GetString, pSavedData, sModelName, sizeof sModelName, "modelName", "");
 		if(sCharacter[0] != '\0' && sModelName[0] != '\0')
 		{
 			strcopy(g_esSavedData.character, sizeof PlayerSaveData::character, sCharacter);
 			strcopy(g_esSavedData.modelName, sizeof PlayerSaveData::modelName, sModelName);
 
 			IntToString(GetEntProp(pThis, Prop_Send, "m_survivorCharacter"), sCharacter, sizeof sCharacter);
-			SDKCall(g_hSDK_KVSetString, pSavedData, "character", sCharacter);
+			SDKCall(g_hSDK_KeyValues_SetString, pSavedData, "character", sCharacter);
 
 			GetEntPropString(pThis, Prop_Data, "m_ModelName", sModelName, sizeof sModelName);
-			SDKCall(g_hSDK_KVSetString, pSavedData, "modelName", sModelName);
+			SDKCall(g_hSDK_KeyValues_SetString, pSavedData, "modelName", sModelName);
 		}
 	}
 
@@ -208,8 +268,8 @@ MRESReturn DD_CTerrorPlayer_TransitionRestore_Post(int pThis)
 		Address pSavedData = pFindSavedDataByUserId(GetClientUserId(pThis));
 		if(pSavedData)
 		{
-			SDKCall(g_hSDK_KVSetString, pSavedData, "character", g_esSavedData.character);
-			SDKCall(g_hSDK_KVSetString, pSavedData, "modelName", g_esSavedData.modelName);
+			SDKCall(g_hSDK_KeyValues_SetString, pSavedData, "character", g_esSavedData.character);
+			SDKCall(g_hSDK_KeyValues_SetString, pSavedData, "modelName", g_esSavedData.modelName);
 		}
 	}
 
@@ -238,7 +298,7 @@ Address pFindSavedDataByUserId(int userid)
 		if(!pThis)
 			continue;
 
-		SDKCall(g_hSDK_KVGetString, pThis, sUserId, sizeof sUserId, "userID", "");
+		SDKCall(g_hSDK_KeyValues_GetString, pThis, sUserId, sizeof sUserId, "userID", "");
 		if(sUserId[0] != '\0' && StringToInt(sUserId) == userid)
 			return pThis;
 	}
