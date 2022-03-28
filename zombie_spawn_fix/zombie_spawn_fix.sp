@@ -4,9 +4,6 @@
 #include <sourcescramble>
 
 #define GAMEDATA "zombie_spawn_fix"
-/**
-ArrayStack
-	g_aMemPatches;**/
 
 static const char g_sPatchNames[][] =
 {
@@ -22,7 +19,7 @@ public Plugin myinfo =
 	name = "[L4D2]Zombie Spawn Fix",
 	author = "sorallll & Psyk0tik (Crasher_3637)",
 	description = "Fixed Special Inected and Player Zombie spawning failures in some cases",
-	version = "1.0.7",
+	version = "1.0.8",
 	url = "https://forums.alliedmods.net/showthread.php?t=333351"
 };
 
@@ -38,28 +35,14 @@ public void OnPluginStart()
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	MemoryPatch patch;
-	//g_aMemPatches = new ArrayStack();
 	for(int i; i < sizeof g_sPatchNames; i++)
 	{
 		patch = MemoryPatch.CreateFromConf(hGameData, g_sPatchNames[i]);
 		if(!patch.Validate())
 			LogError("Failed to verify patch: \"%s\"", g_sPatchNames[i]);
 		else if(patch.Enable())
-		{
-			//g_aMemPatches.Push(patch);
 			PrintToServer("Enabled patch: \"%s\"", g_sPatchNames[i]);
-		}
 	}
 
 	delete hGameData;
 }
-/**
-public void OnPluginEnd()
-{
-	MemoryPatch patch;
-	while(!g_aMemPatches.Empty)
-	{
-		patch = g_aMemPatches.Pop();
-		patch.Disable();
-	}
-}**/

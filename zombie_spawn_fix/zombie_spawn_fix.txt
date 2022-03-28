@@ -28,7 +28,7 @@
 				{
 					"offset"	"1Eh"
 					"verify"	"\x74\x10"
-					"patch"		"\x90\x90"
+					"patch"		"\xEB\x10"
 				}
 				
 				"windows"
@@ -45,14 +45,14 @@
 				{
 					"offset"	"104h"
 					"verify"	"\x74\x3A"
-					"patch"		"\x90\x90"
+					"patch"		"\xEB\x3A"
 				}
 				
 				"windows"
 				{
 					"offset"	"FAh"
 					"verify"	"\x74\x39"
-					"patch"		"\x90\x90"
+					"patch"		"\xEB\x39"
 				}
 			}
 			"ZombieManager::AccumulateSpawnAreaCollection::EnforceFinaleNavSpawnRulesCondition"
