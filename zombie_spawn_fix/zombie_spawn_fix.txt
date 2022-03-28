@@ -35,7 +35,7 @@
 				{
 					"offset"	"37h"
 					"verify"	"\x0F\x85\xA5\x07\x00\x00"
-					"patch"		"\x90\x90\x90\x90\x90\x90"
+					"patch"		"\x90\xE9\xA5\x07\x00\x00"
 				}
 			}
 			"CTerrorPlayer::OnPreThinkGhostState::SpawnDisabledCondition"
