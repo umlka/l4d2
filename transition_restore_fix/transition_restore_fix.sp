@@ -30,10 +30,13 @@ DynamicDetour
 	g_ddCDirector_Restart;
 
 MemoryPatch
-	g_mpRestoreByUserId;
+	g_mpRestoreByUserId,
+	g_mpNoSurvivorBotsCondition;
 
 bool
-	g_bCDirector_Restart;
+	g_bCDirector_Restart,
+	g_bPatchedNoSurvivorBots,
+	g_bCDirectorSessionManager_UpdateNewPlayers;
 
 #if DEBUG
 int
@@ -197,6 +200,19 @@ void vInitPatchs(GameData hGameData = null)
 	g_mpRestoreByUserId = MemoryPatch.CreateFromConf(hGameData, "CTerrorPlayer::TransitionRestore::RestoreByUserId");
 	if(!g_mpRestoreByUserId.Validate())
 		SetFailState("Failed to verify patch: CTerrorPlayer::TransitionRestore::RestoreByUserId");
+
+	g_mpNoSurvivorBotsCondition = MemoryPatch.CreateFromConf(hGameData, "CDirectorSessionManager::UpdateNewPlayers::NoSurvivorBotsCondition");
+	if(!g_mpNoSurvivorBotsCondition.Validate())
+		SetFailState("Failed to verify patch: CDirectorSessionManager::UpdateNewPlayers::NoSurvivorBotsCondition");
+
+	MemoryPatch patch = MemoryPatch.CreateFromConf(hGameData, "RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots");
+	if(!patch.Validate())
+		SetFailState("Failed to verify patch: RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots");
+	else if(patch.Enable())
+	{
+		PrintToServer("Enabled patch: RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots");
+		StoreToAddress(patch.Address + view_as<Address>(2), MaxClients, NumberType_Int8);
+	}
 }
 
 void vSetupDetours(GameData hGameData = null)
@@ -221,6 +237,16 @@ void vSetupDetours(GameData hGameData = null)
 
 	if(!dDetour.Enable(Hook_Pre, DD_CDirector_IsHumanSpectatorValid_Pre))
 		SetFailState("Failed to detour pre: DD::CDirector::IsHumanSpectatorValid");
+
+	dDetour = DynamicDetour.FromConf(hGameData, "DD::CDirectorSessionManager::UpdateNewPlayers");
+	if(!dDetour)
+		SetFailState("Failed to create DynamicDetour: DD::CDirectorSessionManager::UpdateNewPlayers");
+
+	if(!dDetour.Enable(Hook_Pre, DD_CDirectorSessionManager_UpdateNewPlayers_Pre))
+		SetFailState("Failed to detour pre: DD::CDirectorSessionManager::UpdateNewPlayers");
+
+	if(!dDetour.Enable(Hook_Post, DD_CDirectorSessionManager_UpdateNewPlayers_Post))
+		SetFailState("Failed to detour post: DD::CDirectorSessionManager::UpdateNewPlayers");
 }
 
 MRESReturn DD_CDirector_Restart_Pre(Address pThis)
@@ -288,11 +314,8 @@ MRESReturn DD_CTerrorPlayer_TransitionRestore_Post(int pThis)
 // Newly joined players during transition may take over to the SurvivorBot of the transitioning player
 MRESReturn DD_CDirector_IsHumanSpectatorValid_Pre(Address pThis, DHookReturn hReturn, DHookParam hParams)
 {
-	if(hParams.IsNull(1))
-	{
-		hReturn.Value = 1;
-		return MRES_Supercede;
-	}
+	if(!g_bCDirectorSessionManager_UpdateNewPlayers)
+		return MRES_Ignored;
 
 	if(!SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector))
 		return MRES_Ignored;
@@ -334,8 +357,32 @@ MRESReturn DD_CDirector_IsHumanSpectatorValid_Pre(Address pThis, DHookReturn hRe
 	vLogCustom("logs/transition_restore_fix.log", "[SurvivorBot]->%d %s [IdlePlayer]->%d %N restoreState->%d m_humanSpectatorUserID->%d", iSurvivorBot, sSurvivorNames[GetEntProp(iSurvivorBot, Prop_Send, "m_survivorCharacter")], iIdlePlayer, iIdlePlayer, StringToInt(restoreState), m_humanSpectatorUserID);
 	#endif
 
+	g_bPatchedNoSurvivorBots = true;
+	g_mpNoSurvivorBotsCondition.Enable();
+
 	hReturn.Value = 1;
 	return MRES_Supercede;
+}
+
+MRESReturn DD_CDirectorSessionManager_UpdateNewPlayers_Pre(Address pThis)
+{
+	g_bCDirectorSessionManager_UpdateNewPlayers = true;
+	return MRES_Ignored;
+}
+
+MRESReturn DD_CDirectorSessionManager_UpdateNewPlayers_Post(Address pThis)
+{
+	if(g_bPatchedNoSurvivorBots)
+	{
+		g_mpNoSurvivorBotsCondition.Disable();
+		#if DEBUG
+		vLogCustom("logs/transition_restore_fix.log", "Disabled patch: CDirectorSessionManager::UpdateNewPlayers::NoSurvivorBotsCondition");
+		#endif
+	}
+
+	g_bPatchedNoSurvivorBots = false;
+	g_bCDirectorSessionManager_UpdateNewPlayers = false;
+	return MRES_Ignored;
 }
 
 // 读取玩家过关时保存的userID

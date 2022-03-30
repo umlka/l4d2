@@ -33,6 +33,13 @@
 					}
 				}
 			}
+			"DD::CDirectorSessionManager::UpdateNewPlayers"
+			{
+				"signature"		"CDirectorSessionManager::UpdateNewPlayers"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"address"
+			}
 		}
 
 		"MemPatches"
@@ -52,6 +59,40 @@
 					"offset"	"55h"
 					"verify"	"\x0F\x84\x22\x01\x00\x00"
 					"patch"		"\x90\xE9\x22\x01\x00\x00"
+				}
+			}
+			"RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots"
+			{
+				"signature"		"RestoreTransitionedSurvivorBots"
+				"linux"
+				{
+					"offset"	"6Ah"
+					"verify"	"\x83\xF8"
+					"patch"		"\x83\xF8\x03"
+				}
+				
+				"windows"
+				{
+					"offset"	"50h"
+					"verify"	"\x83\xF8"
+					"patch"		"\x83\xF8\x04"
+				}
+			}
+			"CDirectorSessionManager::UpdateNewPlayers::NoSurvivorBotsCondition"
+			{
+				"signature"		"CDirectorSessionManager::UpdateNewPlayers"
+				"linux"
+				{
+					"offset"	"AAh"
+					"verify"	"\x75\x0C"
+					"patch"		"\xEB\x0C"
+				}
+				
+				"windows"
+				{
+					"offset"	"C9h"
+					"verify"	"\x75\x07"
+					"patch"		"\xEB\x07"
 				}
 			}
 		}
@@ -121,6 +162,14 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x2A\x2A\x2A\x50\xE8\x2A\x2A\x2A\x2A\x83\x2A\x2A\x85\x2A\x74\x2A\x8B\x2A\x2A\x2A\x2A\x2A\x8B"
 				/* ? ? ? ? ? ? ? 8B ? ? ? ? ? 50 E8 ? ? ? ? 83 ? ? 85 ? 74 ? 8B ? ? ? ? ? 8B */
 			}
+			/* CDirectorSessionManager::UpdateNewPlayers(CDirectorSessionManager *__hidden this) */
+			"CDirectorSessionManager::UpdateNewPlayers"
+			{
+				"library"	"server"
+				"linux"		"@_ZN23CDirectorSessionManager16UpdateNewPlayersEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x0F\x85\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x83\x2A\x2A\x2A\x7E\x2A\x8B"
+				/* ? ? ? ? ? ? ? 0F 85 ? ? ? ? A1 ? ? ? ? 83 ? ? ? 7E ? 8B */
+			}
 			/* KeyValues::GetString(KeyValues *__hidden this, const char *, const char *) */
 			"KeyValues::GetString"
 			{
@@ -158,6 +207,14 @@
 				"linux"		"@_ZNK9CDirector14IsInTransitionEv"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x75\x2A\x80\xB9\xCC"
 				/* ? ? ? ? ? ? ? 75 ? 80 B9 CC */
+			}
+			/* RestoreTransitionedSurvivorBots(void) */
+			"RestoreTransitionedSurvivorBots"
+			{
+				"library"	"server"
+				"linux"		"@_Z31RestoreTransitionedSurvivorBotsv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x85\x2A\x0F\x84\x2A\x2A\x2A\x2A\x53\x56\x57\x50\x68"
+				/* ? ? ? ? ? ? ? ? 83 ? ? 85 ? 0F 84 ? ? ? ? 53 56 57 50 68 */
 			}
 		}
 	}
