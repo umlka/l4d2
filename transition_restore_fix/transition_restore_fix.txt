@@ -68,14 +68,16 @@
 				{
 					"offset"	"6Ah"
 					"verify"	"\x83\xF8"
-					"patch"		"\x83\xF8\x03"
+					"patch"		"\x00\x00\x00"
+					"preserve"	"\xFF\xFF\xFF"
 				}
 				
 				"windows"
 				{
 					"offset"	"50h"
 					"verify"	"\x83\xF8"
-					"patch"		"\x83\xF8\x04"
+					"patch"		"\x00\x00\x00"
+					"preserve"	"\xFF\xFF\xFF"
 				}
 			}
 			"CDirectorSessionManager::UpdateNewPlayers::NoSurvivorBotsCondition"
