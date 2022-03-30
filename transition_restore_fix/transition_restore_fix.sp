@@ -65,7 +65,7 @@ public void OnPluginStart()
 	g_hKeepIdentity = CreateConVar("restart_keep_identity", "1", "Whether to keep the current character and model after the mission lost and restarts? (0=restore to pre-transition identity, 1=game default)", FCVAR_NOTIFY);
 	g_hKeepIdentity.AddChangeHook(vConVarChanged);
 
-	//AutoExecConfig(true, "transition_restore_fix");
+	AutoExecConfig(true, "transition_restore_fix");
 
 	#if DEBUG
 	RegAdminCmd("sm_restore", cmdRestore, ADMFLAG_ROOT);
