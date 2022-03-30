@@ -3,7 +3,7 @@
 #include <sourcemod>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.10.4"
+#define PLUGIN_VERSION "1.10.5"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
 #define MAX_SLOTS		5
@@ -438,7 +438,7 @@ Action cmdJoinSurvivor(int client, int args)
 
 	if(!iBot)
 	{
-		if((iBot = iAddSurvivorBot()) != -1)
+		if((iBot = iAddSurvivorBot()) == -1)
 		{
 			ChangeClientTeam(client, TEAM_SURVIVOR);
 			if(!IsPlayerAlive(client))
@@ -1252,8 +1252,7 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 public void OnMapStart()
 {
 	int i;
-	int iLength = sizeof g_sWeaponModels;
-	for(; i < iLength; i++)
+	for(; i < sizeof g_sWeaponModels; i++)
 	{
 		if(!IsModelPrecached(g_sWeaponModels[i]))
 			PrecacheModel(g_sWeaponModels[i], true);
@@ -1449,90 +1448,83 @@ void vInitGameData()
 
 	g_pDirector = hGameData.GetAddress("CDirector");
 	if(!g_pDirector)
-		SetFailState("Failed to find address: CDirector");
+		SetFailState("Failed to find address: CDirector (%s)", PLUGIN_VERSION);
 
 	g_iOff_m_iRestoreCSWeaponID = hGameData.GetOffset("CTerrorPlayer::RestoreWeapons::m_iRestoreCSWeaponID");
 	if(g_iOff_m_iRestoreCSWeaponID == -1)
-		SetFailState("Failed to find offset: CTerrorPlayer::RestoreWeapons::m_iRestoreCSWeaponID");
+		SetFailState("Failed to find offset: CTerrorPlayer::RestoreWeapons::m_iRestoreCSWeaponID (%s)", PLUGIN_VERSION);
 	
 	g_iOff_m_iRestoreAmmoMax = hGameData.GetOffset("CTerrorPlayer::RestoreWeapons::m_iRestoreAmmoMax");
 	if(g_iOff_m_iRestoreAmmoMax == -1)
-		SetFailState("Failed to find offset: CTerrorPlayer::RestoreWeapons::m_iRestoreAmmoMax");
+		SetFailState("Failed to find offset: CTerrorPlayer::RestoreWeapons::m_iRestoreAmmoMax (%s)", PLUGIN_VERSION);
 
 	g_iOff_m_iRestoreWeaponID = hGameData.GetOffset("CTerrorPlayer::RestoreWeapons::m_iRestoreWeaponID");
 	if(g_iOff_m_iRestoreWeaponID == -1)
-		SetFailState("Failed to find offset: CTerrorPlayer::RestoreWeapons::m_iRestoreWeaponID");
+		SetFailState("Failed to find offset: CTerrorPlayer::RestoreWeapons::m_iRestoreWeaponID (%s)", PLUGIN_VERSION);
 
 	g_iOff_m_hHiddenWeapon = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon");
 	if(g_iOff_m_hHiddenWeapon == -1)
-		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon");
+		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon (%s)", PLUGIN_VERSION);
 
 	StartPrepSDKCall(SDKCall_Static);
 	Address pAddr = hGameData.GetAddress("NextBotCreatePlayerBot<SurvivorBot>");
 	if(!pAddr)
-		SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot> in CDirector::AddSurvivorBot");
+		SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot> in CDirector::AddSurvivorBot (%s)", PLUGIN_VERSION);
 	if(!hGameData.GetOffset("OS")) // (addr+5) + *(addr+1) = call function addr
 	{
 		Address offset = view_as<Address>(LoadFromAddress(pAddr + view_as<Address>(1), NumberType_Int32));
 		if(!offset)
-			SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot>");
+			SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot> (%s)", PLUGIN_VERSION);
 
 		pAddr += offset + view_as<Address>(5); // sizeof(instruction)
 	}
 	if(!PrepSDKCall_SetAddress(pAddr))
-		SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot>");
+		SetFailState("Failed to find address: NextBotCreatePlayerBot<SurvivorBot> (%s)", PLUGIN_VERSION);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDK_NextBotCreatePlayerBot_SurvivorBot = EndPrepSDKCall();
-	if(!g_hSDK_NextBotCreatePlayerBot_SurvivorBot)
-		SetFailState("Failed to create SDKCall: NextBotCreatePlayerBot<SurvivorBot>");
+	if(!(g_hSDK_NextBotCreatePlayerBot_SurvivorBot = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: NextBotCreatePlayerBot<SurvivorBot> (%s)", PLUGIN_VERSION);
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn"))
-		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
-	g_hSDK_CTerrorPlayer_RoundRespawn = EndPrepSDKCall();
-	if(!g_hSDK_CTerrorPlayer_RoundRespawn)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
+		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn (%s)", PLUGIN_VERSION);
+	if(!(g_hSDK_CTerrorPlayer_RoundRespawn = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn (%s)", PLUGIN_VERSION);
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CCSPlayer::State_Transition"))
-		SetFailState("Failed to find signature: CCSPlayer::State_Transition");
+		SetFailState("Failed to find signature: CCSPlayer::State_Transition (%s)", PLUGIN_VERSION);
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
-	g_hSDK_CCSPlayer_State_Transition = EndPrepSDKCall();
-	if(!g_hSDK_CCSPlayer_State_Transition)
-		SetFailState("Failed to create SDKCall: CCSPlayer::State_Transition");
+	if(!(g_hSDK_CCSPlayer_State_Transition = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: CCSPlayer::State_Transition (%s)", PLUGIN_VERSION);
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SurvivorBot::SetHumanSpectator"))
-		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator");
+		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator (%s)", PLUGIN_VERSION);
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
-	g_hSDK_SurvivorBot_SetHumanSpectator = EndPrepSDKCall();
-	if(!g_hSDK_SurvivorBot_SetHumanSpectator)
-		SetFailState("Failed to create SDKCall: SurvivorBot::SetHumanSpectator");
+	if(!(g_hSDK_SurvivorBot_SetHumanSpectator = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: SurvivorBot::SetHumanSpectator (%s)", PLUGIN_VERSION);
 	
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TakeOverBot"))
-		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverBot");
+		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverBot (%s)", PLUGIN_VERSION);
 	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_CTerrorPlayer_TakeOverBot = EndPrepSDKCall();
-	if(!g_hSDK_CTerrorPlayer_TakeOverBot)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::TakeOverBot");
+	if(!(g_hSDK_CTerrorPlayer_TakeOverBot = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::TakeOverBot (%s)", PLUGIN_VERSION);
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::GoAwayFromKeyboard"))
-		SetFailState("Failed to find signature: CTerrorPlayer::GoAwayFromKeyboard");
+		SetFailState("Failed to find signature: CTerrorPlayer::GoAwayFromKeyboard (%s)", PLUGIN_VERSION);
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_CTerrorPlayer_GoAwayFromKeyboard = EndPrepSDKCall();
-	if(!g_hSDK_CTerrorPlayer_GoAwayFromKeyboard)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard");
+	if(!(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard (%s)", PLUGIN_VERSION);
 
 	StartPrepSDKCall(SDKCall_Raw);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CDirector::IsInTransition"))
-		SetFailState("Failed to find signature: CDirector::IsInTransition");
+		SetFailState("Failed to find signature: CDirector::IsInTransition (%s)", PLUGIN_VERSION);
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_CDirector_IsInTransition = EndPrepSDKCall();
-	if(!g_hSDK_CDirector_IsInTransition)
-		SetFailState("Failed to create SDKCall: CDirector::IsInTransition");
+	if(!(g_hSDK_CDirector_IsInTransition = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: CDirector::IsInTransition (%s)", PLUGIN_VERSION);
 
 	vInitPatchs(hGameData);
 	vSetupDetours(hGameData);
@@ -1544,21 +1536,21 @@ void vInitPatchs(GameData hGameData = null)
 {
 	int iOffset = hGameData.GetOffset("RoundRespawn_Offset");
 	if(iOffset == -1)
-		SetFailState("Failed to find offset: RoundRespawn_Offset");
+		SetFailState("Failed to find offset: RoundRespawn_Offset (%s)", PLUGIN_VERSION);
 
 	int iByteMatch = hGameData.GetOffset("RoundRespawn_Byte");
 	if(iByteMatch == -1)
-		SetFailState("Failed to find byte: RoundRespawn_Byte");
+		SetFailState("Failed to find byte: RoundRespawn_Byte (%s)", PLUGIN_VERSION);
 
 	g_pStatsCondition = hGameData.GetAddress("CTerrorPlayer::RoundRespawn");
 	if(!g_pStatsCondition)
-		SetFailState("Failed to find address: CTerrorPlayer::RoundRespawn");
+		SetFailState("Failed to find address: CTerrorPlayer::RoundRespawn (%s)", PLUGIN_VERSION);
 	
 	g_pStatsCondition += view_as<Address>(iOffset);
 	
 	int iByteOrigin = LoadFromAddress(g_pStatsCondition, NumberType_Int8);
 	if(iByteOrigin != iByteMatch)
-		SetFailState("Failed to load 'CTerrorPlayer::RoundRespawn', byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
+		SetFailState("Failed to load 'CTerrorPlayer::RoundRespawn', byte mis-match @ %d (0x%02X != 0x%02X) (%s)", iOffset, iByteOrigin, iByteMatch, PLUGIN_VERSION);
 }
 
 // [L4D1 & L4D2] SM Respawn Improved (https://forums.alliedmods.net/showthread.php?t=323220)
@@ -1632,34 +1624,34 @@ void vSetupDetours(GameData hGameData = null)
 {
 	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::GoAwayFromKeyboard");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::GoAwayFromKeyboard");
+		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::GoAwayFromKeyboard (%s)", PLUGIN_VERSION);
 
 	if(!dDetour.Enable(Hook_Pre, DD_CTerrorPlayer_GoAwayFromKeyboard_Pre))
-		SetFailState("Failed to detour pre: DD::CTerrorPlayer::GoAwayFromKeyboard");
+		SetFailState("Failed to detour pre: DD::CTerrorPlayer::GoAwayFromKeyboard (%s)", PLUGIN_VERSION);
 
 	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_GoAwayFromKeyboard_Post))
-		SetFailState("Failed to detour post: DD::CTerrorPlayer::GoAwayFromKeyboard");
+		SetFailState("Failed to detour post: DD::CTerrorPlayer::GoAwayFromKeyboard (%s)", PLUGIN_VERSION);
 
 	dDetour = DynamicDetour.FromConf(hGameData, "DD::SurvivorBot::SetHumanSpectator");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD::SurvivorBot::SetHumanSpectator");
+		SetFailState("Failed to create DynamicDetour: DD::SurvivorBot::SetHumanSpectator (%s)", PLUGIN_VERSION);
 		
 	if(!dDetour.Enable(Hook_Pre, DD_SurvivorBot_SetHumanSpectator_Pre))
-		SetFailState("Failed to detour pre: DD::SurvivorBot::SetHumanSpectator");
+		SetFailState("Failed to detour pre: DD::SurvivorBot::SetHumanSpectator (%s)", PLUGIN_VERSION);
 
 	dDetour = DynamicDetour.FromConf(hGameData, "DD::CBasePlayer::SetModel");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD::CBasePlayer::SetModel");
+		SetFailState("Failed to create DynamicDetour: DD::CBasePlayer::SetModel (%s)", PLUGIN_VERSION);
 		
 	if(!dDetour.Enable(Hook_Post, DD_CBasePlayer_SetModel_Post))
-		SetFailState("Failed to detour post: DD::CBasePlayer::SetModel");
+		SetFailState("Failed to detour post: DD::CBasePlayer::SetModel (%s)", PLUGIN_VERSION);
 
 	dDetour = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::GiveDefaultItems");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::GiveDefaultItems");
+		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::GiveDefaultItems (%s)", PLUGIN_VERSION);
 
 	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_GiveDefaultItems_Post))
-		SetFailState("Failed to detour post: DD::CTerrorPlayer::GiveDefaultItems");
+		SetFailState("Failed to detour post: DD::CTerrorPlayer::GiveDefaultItems (%s)", PLUGIN_VERSION);
 }
 
 // [L4D1 & L4D2]Survivor_AFK_Fix[Left 4 Fix] (https://forums.alliedmods.net/showthread.php?p=2714236)
