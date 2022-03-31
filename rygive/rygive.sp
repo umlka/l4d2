@@ -1255,10 +1255,13 @@ int iSelectZombieClassMenuHandler(Menu menu, MenuAction action, int client, int 
 			char sInfo[2][16];
 			ExplodeString(sItem, "|", sInfo, 2, 16);
 			int iTarget = GetClientOfUserId(StringToInt(sInfo[0]));
-			if(iTarget && IsClientInGame(iTarget) && GetClientTeam(iTarget) == 3 && !IsFakeClient(iTarget) && !IsPlayerAlive(iTarget))
-				vRespawnPZ(iTarget, StringToInt(sInfo[1]));
+			if(iTarget && IsClientInGame(iTarget) && !IsFakeClient(iTarget))
+			{
+				if(GetClientTeam(iTarget) == 3 && !IsPlayerAlive(iTarget))
+					vRespawnPZ(iTarget, StringToInt(sInfo[1]));
 
-			vSelectZombieClassMenu(client, iTarget, menu.Selection);
+				vSelectZombieClassMenu(client, iTarget, menu.Selection);
+			}
 		}
 		case MenuAction_End:
 			delete menu;
