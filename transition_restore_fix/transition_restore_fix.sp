@@ -321,7 +321,9 @@ MRESReturn DD_CTerrorPlayer_TransitionRestore_Post(int pThis)
 	return MRES_Ignored;
 }
 
-// Newly joined players during transition may take over to the SurvivorBot of the transitioning player
+/**
+* Prevents players joining the game during transition from taking over the Survivor Bot of transitioning players
+**/
 MRESReturn DD_CDirector_IsHumanSpectatorValid_Pre(Address pThis, DHookReturn hReturn, DHookParam hParams)
 {
 	if(!g_bCDirectorSessionManager_UpdateNewPlayers)
@@ -377,6 +379,9 @@ MRESReturn DD_CDirectorSessionManager_UpdateNewPlayers_Post(Address pThis)
 	return MRES_Ignored;
 }
 
+/**
+* Prevent CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots from triggering before RestoreTransitionedSurvivorBots(void) during transition
+**/
 MRESReturn DD_CDirectorSessionManager_FillRemainingSurvivorTeamSlotsWithBots_Pre(Address pThis)
 {
 	if(!g_bCDirectorSessionManager_UpdateNewPlayers)
