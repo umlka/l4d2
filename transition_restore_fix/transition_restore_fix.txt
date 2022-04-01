@@ -40,6 +40,13 @@
 				"return"		"void"
 				"this"			"address"
 			}
+			"DD::CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots"
+			{
+				"signature"		"CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"address"
+			}
 		}
 
 		"MemPatches"
@@ -80,23 +87,6 @@
 					"preserve"	"\xFF\xFF\xFF"
 				}
 			}
-			"CDirectorSessionManager::UpdateNewPlayers::NoSurvivorBotsCondition"
-			{
-				"signature"		"CDirectorSessionManager::UpdateNewPlayers"
-				"linux"
-				{
-					"offset"	"AAh"
-					"verify"	"\x75\x0C"
-					"patch"		"\xEB\x0C"
-				}
-				
-				"windows"
-				{
-					"offset"	"C9h"
-					"verify"	"\x75\x07"
-					"patch"		"\xEB\x07"
-				}
-			}
 		}
 
 		"Addresses"
@@ -112,6 +102,19 @@
 				{
 					"signature"	"CTerrorPlayer::TransitionRestore"
 					"read"		"446"
+				}
+			}
+			"SavedSurvivorBotCount"
+			{
+				"linux"
+				{
+					"signature"	"RestoreTransitionedSurvivorBots"
+					"read"		"57"
+				}
+				"windows"
+				{
+					"signature"	"RestoreTransitionedSurvivorBots"
+					"read"		"53"
 				}
 			}
 			"CDirector"
@@ -171,6 +174,14 @@
 				"linux"		"@_ZN23CDirectorSessionManager16UpdateNewPlayersEv"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x0F\x85\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x83\x2A\x2A\x2A\x7E\x2A\x8B"
 				/* ? ? ? ? ? ? ? 0F 85 ? ? ? ? A1 ? ? ? ? 83 ? ? ? 7E ? 8B */
+			}
+			/* CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots(CDirectorSessionManager *__hidden this) */
+			"CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots"
+			{
+				"library"	"server"
+				"linux"		"@_ZN23CDirectorSessionManager38FillRemainingSurvivorTeamSlotsWithBotsEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x83\x2A\x2A\x85\x2A\x74\x2A\x8B\x2A\x8B\x2A\x2A\x2A\x2A\x2A\x8B\x2A\xFF\x2A\x83\x2A\x2A\x7D\x2A\x8B\x2A\x8B\x2A\x2A\x2A\x2A\x2A\x8B\x2A\xFF\x2A\xB9\x2A\x2A\x2A\x2A\x2B\x2A\x85\x2A\x7E\x2A\x8B\x2A\xEB"
+				/* ? ? ? ? ? ? ? ? 8B ? 83 ? ? 85 ? 74 ? 8B ? 8B ? ? ? ? ? 8B ? FF ? 83 ? ? 7D ? 8B ? 8B ? ? ? ? ? 8B ? FF ? B9 ? ? ? ? 2B ? 85 ? 7E ? 8B ? EB */
 			}
 			/* KeyValues::GetString(KeyValues *__hidden this, const char *, const char *) */
 			"KeyValues::GetString"

@@ -15,8 +15,7 @@ Handle
 
 #if DEBUG
 Handle
-	g_hSDK_CTerrorPlayer_TransitionRestore,
-	g_hSDK_CDirector_IsHumanSpectatorValid;
+	g_hSDK_CTerrorPlayer_TransitionRestore;
 #endif
 
 ConVar
@@ -24,18 +23,17 @@ ConVar
 
 Address
 	g_pDirector,
-	g_pSavedPlayerCount;
+	g_pSavedPlayerCount,
+	g_pSavedSurvivorBotCount;
+
+MemoryPatch
+	g_mpRestoreByUserId;
 
 DynamicDetour
 	g_ddCDirector_Restart;
 
-MemoryPatch
-	g_mpRestoreByUserId,
-	g_mpNoSurvivorBotsCondition;
-
 bool
 	g_bCDirector_Restart,
-	g_bPatchedNoSurvivorBots,
 	g_bCDirectorSessionManager_UpdateNewPlayers;
 
 #if DEBUG
@@ -57,7 +55,7 @@ public Plugin myinfo =
 	name = "Transition Restore Fix",
 	author = "sorallll",
 	description = "Restoring transition data by player's UserId instead of character",
-	version = "1.1.7",
+	version = "1.1.8",
 	url = "https://forums.alliedmods.net/showthread.php?t=336287"
 };
 
@@ -141,6 +139,10 @@ void vInitGameData()
 	if(!g_pSavedPlayerCount)
 		SetFailState("Failed to find address: SavedPlayerCount");
 
+	g_pSavedSurvivorBotCount = hGameData.GetAddress("SavedSurvivorBotCount");
+	if(!g_pSavedSurvivorBotCount)
+		SetFailState("Failed to find address: SavedSurvivorBotCount");
+
 	StartPrepSDKCall(SDKCall_Raw);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::GetString"))
 		SetFailState("Failed to find signature: KeyValues::GetString");
@@ -179,14 +181,6 @@ void vInitGameData()
 	g_hSDK_CTerrorPlayer_TransitionRestore = EndPrepSDKCall();
 	if(!g_hSDK_CTerrorPlayer_TransitionRestore)
 		SetFailState("Failed to create SDKCall: CTerrorPlayer::TransitionRestore");
-
-	StartPrepSDKCall(SDKCall_Raw);
-	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CDirector::IsHumanSpectatorValid"))
-		SetFailState("Failed to find signature: CDirector::IsHumanSpectatorValid");
-	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	g_hSDK_CDirector_IsHumanSpectatorValid = EndPrepSDKCall();
-	if(!g_hSDK_CDirector_IsHumanSpectatorValid)
-		SetFailState("Failed to create SDKCall: CDirector::IsHumanSpectatorValid");
 	#endif
 
 	vInitPatchs(hGameData);
@@ -200,10 +194,6 @@ void vInitPatchs(GameData hGameData = null)
 	g_mpRestoreByUserId = MemoryPatch.CreateFromConf(hGameData, "CTerrorPlayer::TransitionRestore::RestoreByUserId");
 	if(!g_mpRestoreByUserId.Validate())
 		SetFailState("Failed to verify patch: CTerrorPlayer::TransitionRestore::RestoreByUserId");
-
-	g_mpNoSurvivorBotsCondition = MemoryPatch.CreateFromConf(hGameData, "CDirectorSessionManager::UpdateNewPlayers::NoSurvivorBotsCondition");
-	if(!g_mpNoSurvivorBotsCondition.Validate())
-		SetFailState("Failed to verify patch: CDirectorSessionManager::UpdateNewPlayers::NoSurvivorBotsCondition");
 
 	MemoryPatch patch = MemoryPatch.CreateFromConf(hGameData, "RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots");
 	if(!patch.Validate())
@@ -247,6 +237,13 @@ void vSetupDetours(GameData hGameData = null)
 
 	if(!dDetour.Enable(Hook_Post, DD_CDirectorSessionManager_UpdateNewPlayers_Post))
 		SetFailState("Failed to detour post: DD::CDirectorSessionManager::UpdateNewPlayers");
+
+	dDetour = DynamicDetour.FromConf(hGameData, "DD::CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots");
+	if(!dDetour)
+		SetFailState("Failed to create DynamicDetour: DD::CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots");
+
+	if(!dDetour.Enable(Hook_Pre, DD_CDirectorSessionManager_FillRemainingSurvivorTeamSlotsWithBots_Pre))
+		SetFailState("Failed to detour pre: DD::CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots");
 }
 
 MRESReturn DD_CDirector_Restart_Pre(Address pThis)
@@ -266,26 +263,38 @@ MRESReturn DD_CTerrorPlayer_TransitionRestore_Pre(int pThis)
 	if(IsFakeClient(pThis))
 		return MRES_Ignored;
 
+	int iTeam = GetClientTeam(pThis);
+	if(iTeam > 2)
+		return MRES_Ignored;
+
 	Address pSavedData = pFindSavedDataByUserId(GetClientUserId(pThis));
 	if(!pSavedData)
 		return MRES_Ignored;
 
-	if(g_bCDirector_Restart && GetClientTeam(pThis) == 2)
+	char teamNumber[4];
+	SDKCall(g_hSDK_KeyValues_GetString, pSavedData, teamNumber, sizeof teamNumber, "teamNumber", "0");
+	if(StringToInt(teamNumber) != 2)
+		return MRES_Ignored;
+
+	if(g_bCDirector_Restart && iTeam == 2)
 	{
 		char character[4];
-		char modelName[128];
 		SDKCall(g_hSDK_KeyValues_GetString, pSavedData, character, sizeof character, "character", "");
-		SDKCall(g_hSDK_KeyValues_GetString, pSavedData, modelName, sizeof modelName, "modelName", "");
-		if(character[0] != '\0' && modelName[0] != '\0')
+		if(character[0] != '\0')
 		{
-			strcopy(g_esSavedData.character, sizeof PlayerSaveData::character, character);
-			strcopy(g_esSavedData.modelName, sizeof PlayerSaveData::modelName, modelName);
+			char modelName[128];
+			SDKCall(g_hSDK_KeyValues_GetString, pSavedData, modelName, sizeof modelName, "modelName", "");
+			if(modelName[0] != '\0')
+			{
+				strcopy(g_esSavedData.character, sizeof PlayerSaveData::character, character);
+				strcopy(g_esSavedData.modelName, sizeof PlayerSaveData::modelName, modelName);
 
-			IntToString(GetEntProp(pThis, Prop_Send, "m_survivorCharacter"), character, sizeof character);
-			SDKCall(g_hSDK_KeyValues_SetString, pSavedData, "character", character);
+				IntToString(GetEntProp(pThis, Prop_Send, "m_survivorCharacter"), character, sizeof character);
+				SDKCall(g_hSDK_KeyValues_SetString, pSavedData, "character", character);
 
-			GetEntPropString(pThis, Prop_Data, "m_ModelName", modelName, sizeof modelName);
-			SDKCall(g_hSDK_KeyValues_SetString, pSavedData, "modelName", modelName);
+				GetEntPropString(pThis, Prop_Data, "m_ModelName", modelName, sizeof modelName);
+				SDKCall(g_hSDK_KeyValues_SetString, pSavedData, "modelName", modelName);
+			}
 		}
 	}
 
@@ -297,6 +306,9 @@ MRESReturn DD_CTerrorPlayer_TransitionRestore_Post(int pThis)
 {
 	if(g_esSavedData.character[0] != '\0' && g_esSavedData.modelName[0] != '\0')
 	{
+		g_esSavedData.character[0] = '\0';
+		g_esSavedData.modelName[0] = '\0';
+
 		Address pSavedData = pFindSavedDataByUserId(GetClientUserId(pThis));
 		if(pSavedData)
 		{
@@ -305,8 +317,6 @@ MRESReturn DD_CTerrorPlayer_TransitionRestore_Post(int pThis)
 		}
 	}
 
-	g_esSavedData.character[0] = '\0';
-	g_esSavedData.modelName[0] = '\0';
 	g_mpRestoreByUserId.Disable();
 	return MRES_Ignored;
 }
@@ -320,16 +330,9 @@ MRESReturn DD_CDirector_IsHumanSpectatorValid_Pre(Address pThis, DHookReturn hRe
 	if(!SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector))
 		return MRES_Ignored;
 
-	int iSurvivorBot = hParams.Get(1);
-	if(!iSurvivorBot)
-	{
-		hReturn.Value = 1;
-		return MRES_Supercede;
-	}
-
-	int m_humanSpectatorUserID = GetEntProp(iSurvivorBot, Prop_Send, "m_humanSpectatorUserID");
-	/**if(!GetClientOfUserId(m_humanSpectatorUserID))
-		return MRES_Ignored;*/
+	int m_humanSpectatorUserID = GetEntProp(hParams.Get(1), Prop_Send, "m_humanSpectatorUserID");
+	if(!GetClientOfUserId(m_humanSpectatorUserID))
+		return MRES_Ignored;
 
 	Address pSavedData = pFindSavedDataByUserId(m_humanSpectatorUserID);
 	if(!pSavedData)
@@ -353,12 +356,10 @@ MRESReturn DD_CDirector_IsHumanSpectatorValid_Pre(Address pThis, DHookReturn hRe
 		"Louis",
 	};
 
+	int iSurvivorBot = hParams.Get(1);
 	int iIdlePlayer = GetClientOfUserId(m_humanSpectatorUserID);
 	vLogCustom("logs/transition_restore_fix.log", "[SurvivorBot]->%d %s [IdlePlayer]->%d %N restoreState->%d m_humanSpectatorUserID->%d", iSurvivorBot, sSurvivorNames[GetEntProp(iSurvivorBot, Prop_Send, "m_survivorCharacter")], iIdlePlayer, iIdlePlayer, StringToInt(restoreState), m_humanSpectatorUserID);
 	#endif
-
-	g_bPatchedNoSurvivorBots = true;
-	g_mpNoSurvivorBotsCondition.Enable();
 
 	hReturn.Value = 1;
 	return MRES_Supercede;
@@ -372,17 +373,25 @@ MRESReturn DD_CDirectorSessionManager_UpdateNewPlayers_Pre(Address pThis)
 
 MRESReturn DD_CDirectorSessionManager_UpdateNewPlayers_Post(Address pThis)
 {
-	if(g_bPatchedNoSurvivorBots)
-	{
-		g_mpNoSurvivorBotsCondition.Disable();
-		#if DEBUG
-		vLogCustom("logs/transition_restore_fix.log", "Disabled patch: CDirectorSessionManager::UpdateNewPlayers::NoSurvivorBotsCondition");
-		#endif
-	}
-
-	g_bPatchedNoSurvivorBots = false;
 	g_bCDirectorSessionManager_UpdateNewPlayers = false;
 	return MRES_Ignored;
+}
+
+MRESReturn DD_CDirectorSessionManager_FillRemainingSurvivorTeamSlotsWithBots_Pre(Address pThis)
+{
+	if(!g_bCDirectorSessionManager_UpdateNewPlayers)
+		return MRES_Ignored;
+
+	if(!SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector))
+		return MRES_Ignored;
+
+	if(!LoadFromAddress(g_pSavedSurvivorBotCount, NumberType_Int32))
+		return MRES_Ignored;
+
+	#if DEBUG
+	vLogCustom("logs/transition_restore_fix.log", "SavedSurvivorBotCount->%d", LoadFromAddress(g_pSavedSurvivorBotCount, NumberType_Int32));
+	#endif
+	return MRES_Supercede;
 }
 
 // 读取玩家过关时保存的userID
@@ -397,7 +406,7 @@ Address pFindSavedDataByUserId(int userid)
 		return Address_Null;
 
 	Address pThis;
-	char userID[4];
+	char userID[12];
 	for(int i; i < iSavedPlayerCount; i++)
 	{
 		pThis = view_as<Address>(LoadFromAddress(pSavedPlayers + view_as<Address>(4 * i), NumberType_Int32));
