@@ -93,22 +93,22 @@
 				"linux"		"25" // 0x19
 				"windows"	"15" // 0xF
 			}
-			"RoundRespawn_Byte" // JNZ => JNS
+			"RoundRespawn_Byte" // JNZ => JMP rel8
 			{
 				"linux"		"117" // 0x75
 				"windows"	"117" // 0x75
 			}
-			"CTerrorPlayer::RestoreWeapons::m_iRestoreCSWeaponID"
+			"CTerrorPlayer::RestoreWeapons::m_restoreCSWeaponID1"
 			{
 				"linux"		"16272"
 				"windows"	"16292"
 			}
-			"CTerrorPlayer::RestoreWeapons::m_iRestoreAmmoMax"
+			"CTerrorPlayer::RestoreWeapons::m_iRestoreAmmoCount"
 			{
 				"linux"		"16276"
 				"windows"	"16296"
 			}
-			"CTerrorPlayer::RestoreWeapons::m_iRestoreWeaponID"
+			"CTerrorPlayer::RestoreWeapons::m_restoreCSWeaponID2"
 			{
 				"linux"		"16280"
 				"windows"	"16300"
