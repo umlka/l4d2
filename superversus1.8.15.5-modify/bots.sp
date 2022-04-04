@@ -1754,11 +1754,15 @@ void vWriteTakeoverPanel(int client, int iBot)
 
 bool bTakingOverBot(int client)
 {
+	if(IsFakeClient(client))
+		return false;
+
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == TEAM_SPECTATOR && iGetIdlePlayerOfBot(i) == client)
 			return true;
 	}
+
 	return false;
 }
 
