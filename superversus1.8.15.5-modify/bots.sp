@@ -116,47 +116,47 @@ static const char
 	g_sWeaponName[MAX_SLOTS][17][] =
 	{
 		{//slot 0(主武器)
-			"smg",						//1 UZI微冲
-			"smg_mp5",					//2 MP5
-			"smg_silenced",				//4 MAC微冲
-			"pumpshotgun",				//8 木喷
-			"shotgun_chrome",			//16 铁喷
-			"rifle",					//32 M16步枪
-			"rifle_desert",				//64 三连步枪
-			"rifle_ak47",				//128 AK47
-			"rifle_sg552",				//256 SG552
-			"autoshotgun",				//512 一代连喷
-			"shotgun_spas",				//1024 二代连喷
-			"hunting_rifle",			//2048 木狙
-			"sniper_military",			//4096 军狙
-			"sniper_scout",				//8192 鸟狙
-			"sniper_awp",				//16384 AWP
-			"rifle_m60",				//32768 M60
-			"grenade_launcher"			//65536 榴弹发射器
+			"weapon_smg",						//1 UZI微冲
+			"weapon_smg_mp5",					//2 MP5
+			"weapon_smg_silenced",				//4 MAC微冲
+			"weapon_pumpshotgun",				//8 木喷
+			"weapon_shotgun_chrome",			//16 铁喷
+			"weapon_rifle",						//32 M16步枪
+			"weapon_rifle_desert",				//64 三连步枪
+			"weapon_rifle_ak47",				//128 AK47
+			"weapon_rifle_sg552",				//256 SG552
+			"weapon_autoshotgun",				//512 一代连喷
+			"weapon_shotgun_spas",				//1024 二代连喷
+			"weapon_hunting_rifle",				//2048 木狙
+			"weapon_sniper_military",			//4096 军狙
+			"weapon_sniper_scout",				//8192 鸟狙
+			"weapon_sniper_awp",				//16384 AWP
+			"weapon_rifle_m60",					//32768 M60
+			"weapon_grenade_launcher"			//65536 榴弹发射器
 		},
 		{//slot 1(副武器)
-			"pistol",					//1 小手枪
-			"pistol_magnum",			//2 马格南
-			"chainsaw",					//4 电锯
-			"fireaxe",					//8 斧头
-			"frying_pan",				//16 平底锅
-			"machete",					//32 砍刀
-			"baseball_bat",				//64 棒球棒
-			"crowbar",					//128 撬棍
-			"cricket_bat",				//256 球拍
-			"tonfa",					//512 警棍
-			"katana",					//1024 武士刀
-			"electric_guitar",			//2048 电吉他
-			"knife",					//4096 小刀
-			"golfclub",					//8192 高尔夫球棍
-			"shovel",					//16384 铁铲
-			"pitchfork",				//32768 草叉
-			"riotshield",				//65536 盾牌
+			"weapon_pistol",					//1 小手枪
+			"weapon_pistol_magnum",				//2 马格南
+			"weapon_chainsaw",					//4 电锯
+			"fireaxe",							//8 斧头
+			"frying_pan",						//16 平底锅
+			"machete",							//32 砍刀
+			"baseball_bat",						//64 棒球棒
+			"crowbar",							//128 撬棍
+			"cricket_bat",						//256 球拍
+			"tonfa",							//512 警棍
+			"katana",							//1024 武士刀
+			"electric_guitar",					//2048 电吉他
+			"knife",							//4096 小刀
+			"golfclub",							//8192 高尔夫球棍
+			"shovel",							//16384 铁铲
+			"pitchfork",						//32768 草叉
+			"riotshield",						//65536 盾牌
 		},
 		{//slot 2(投掷物)
-			"molotov",					//1 燃烧瓶
-			"pipe_bomb",				//2 管制炸弹
-			"vomitjar",					//4 胆汁瓶
+			"weapon_molotov",					//1 燃烧瓶
+			"weapon_pipe_bomb",					//2 管制炸弹
+			"weapon_vomitjar",					//4 胆汁瓶
 			"",
 			"",
 			"",
@@ -173,10 +173,10 @@ static const char
 			""
 		},
 		{//slot 3
-			"first_aid_kit",			//1 医疗包
-			"defibrillator",			//2 电击器
-			"upgradepack_incendiary",	//4 燃烧弹药包
-			"upgradepack_explosive",	//8 高爆弹药包
+			"weapon_first_aid_kit",				//1 医疗包
+			"weapon_defibrillator",				//2 电击器
+			"weapon_upgradepack_incendiary",	//4 燃烧弹药包
+			"weapon_upgradepack_explosive",		//8 高爆弹药包
 			"",
 			"",
 			"",
@@ -192,8 +192,8 @@ static const char
 			""
 		},
 		{//slot 4
-			"pain_pills",				//1 止痛药
-			"adrenaline",				//2 肾上腺素
+			"weapon_pain_pills",				//1 止痛药
+			"weapon_adrenaline",				//2 肾上腺素
 			"",
 			"",
 			"",
@@ -1731,7 +1731,7 @@ MRESReturn DD_CTerrorPlayer_GiveDefaultItems_Pre(int pThis)
 	if(pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis))
 		return MRES_Ignored;
 
-	if(GetClientTeam(pThis) != TEAM_SURVIVOR || !IsPlayerAlive(pThis) || bTakingOverBot(pThis))
+	if(GetClientTeam(pThis) != TEAM_SURVIVOR || !IsPlayerAlive(pThis) || bShouldIgnore(pThis))
 		return MRES_Ignored;
 
 	vGiveDefaultItems(pThis);
@@ -1741,21 +1741,26 @@ MRESReturn DD_CTerrorPlayer_GiveDefaultItems_Pre(int pThis)
 
 void vWriteTakeoverPanel(int client, int iBot)
 {
-	char sBuffer[2];
-	IntToString(GetEntProp(iBot, Prop_Send, "m_survivorCharacter"), sBuffer, sizeof sBuffer);
+	char m_survivorCharacter[2];
+	IntToString(GetEntProp(iBot, Prop_Send, "m_survivorCharacter"), m_survivorCharacter, sizeof m_survivorCharacter);
 	BfWrite bf = view_as<BfWrite>(StartMessageOne("VGUIMenu", client));
 	bf.WriteString("takeover_survivor_bar");
 	bf.WriteByte(true);
 	bf.WriteByte(IN_ATTACK);
 	bf.WriteString("character");
-	bf.WriteString(sBuffer);
+	bf.WriteString(m_survivorCharacter);
 	EndMessage();
 }
 
-bool bTakingOverBot(int client)
+bool bShouldIgnore(int client)
 {
 	if(IsFakeClient(client))
+	{
+		if(iGetIdlePlayerOfBot(client))
+			return true;
+
 		return false;
+	}
 
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -1821,7 +1826,7 @@ bool bIsWeaponTier1(int iWeapon)
 	GetEntityClassname(iWeapon, sWeapon, sizeof sWeapon);
 	for(int i; i < 5; i++)
 	{
-		if(strcmp(sWeapon[7], g_sWeaponName[0][i], false) == 0)
+		if(strcmp(sWeapon, g_sWeaponName[0][i], false) == 0)
 			return true;
 	}
 	return false;
