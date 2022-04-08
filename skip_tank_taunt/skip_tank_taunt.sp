@@ -37,7 +37,7 @@ public void OnPluginStart()
 {
 	vInitGameData();
 
-	g_hAnimationPlaybackRate = CreateConVar("tank_animation_playbackrate", "10.0", "Obstacle animation playback rate", _, true, 0.0);
+	g_hAnimationPlaybackRate = CreateConVar("tank_animation_playbackrate", "5.0", "Obstacle animation playback rate", _, true, 0.0);
 	g_hAnimationPlaybackRate.AddChangeHook(vConVarChanged);
 	AutoExecConfig(true);
 
