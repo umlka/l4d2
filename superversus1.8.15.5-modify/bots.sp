@@ -1427,8 +1427,8 @@ int iGetTempHealth(int client)
 	if(!hPainPillsDecay)
 		hPainPillsDecay = FindConVar("pain_pills_decay_rate");
 
-	int iTempHealth = RoundToCeil(GetEntPropFloat(client, Prop_Send, "m_healthBuffer") - ((GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime")) * hPainPillsDecay.FloatValue)) - 1;
-	return iTempHealth < 0 ? 0 : iTempHealth;
+	int iHealth = RoundToFloor(GetEntPropFloat(client, Prop_Send, "m_healthBuffer") - (GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime")) * hPainPillsDecay.FloatValue);
+	return iHealth < 0 ? 0 : iHealth;
 }
 
 void vInitGameData()
