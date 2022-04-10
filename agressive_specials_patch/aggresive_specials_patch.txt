@@ -1,55 +1,43 @@
 "Games"
 {
-    "left4dead2"
-    {
-		"Addresses"
+	"left4dead2"
+	{
+		"MemPatches"
 		{
-			"CDirectorChallengeMode::SpecialsShouldAssault"
+			"SpecialsShouldAssault"
 			{
+				"signature"		"CDirectorChallengeMode::SpecialsShouldAssault"
 				"linux"
 				{
-					"signature"	"CDirectorChallengeMode::SpecialsShouldAssault"
+					"offset"	"Fh"
+					"verify"	"\x75"
+					"patch"		"\x90\x90"
+				}
+				"windows"
+				{
+					"offset"	"4"
+					"verify"	"\x74"
+					"patch"		"\xEB"
 				}
 			}
-			"CDirector::SpecialsShouldAdvanceOnSurvivors"
+			"SpecialsShouldAdvanceOnSurvivors"
 			{
+				"signature"		"CDirector::SpecialsShouldAdvanceOnSurvivors"
 				"linux"
 				{
-					"signature"	"CDirector::SpecialsShouldAdvanceOnSurvivors"
+					"offset"	"11h"
+					"verify"	"\x75"
+					"patch"		"\x79"
+				}
+				"windows"
+				{
+					"offset"	"Ah"
+					"verify"	"\x75"
+					"patch"		"\x79"
 				}
 			}
 		}
-
-		"Offsets"
-		{
-			"SpecialsShouldAssault_Offset"
-			{
-				"linux"		"15" // 0xF
-
-			}
-			"SpecialsShouldAssault_Byte"
-			{
-				"linux"		"117" // 0x75
-			}
-			"SpecialsShouldAssault_Count"
-			{
-				"linux"		"2"
-			}
-			"SpecialsShouldAdvanceOnSurvivors_Offset"
-			{
-				"linux"		"17" // 0x11
-
-			}
-			"SpecialsShouldAdvanceOnSurvivors_Byte"
-			{
-				"linux"		"117" // 0x75
-			}
-			"SpecialsShouldAdvanceOnSurvivors_Count"
-			{
-				"linux"		"1"
-			}
-		}
-
+		
 		"Signatures"
 		{
 			/* CDirectorChallengeMode::SpecialsShouldAssault(CDirectorChallengeMode *__hidden this) */
@@ -57,13 +45,17 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZNK22CDirectorChallengeMode21SpecialsShouldAssaultEv"
+				"windows"	"\x80\x2A\x2A\x2A\x74\x2A\x8B\x2A\x2A\x2A\x2A\x2A\x6A\x00\x68\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x33"
+				/* 80 ? ? ? 74 ? 8B ? ? ? ? ? 6A 00 68 ? ? ? ? E8 ? ? ? ? 33 */
 			}
 			/* CDirector::SpecialsShouldAdvanceOnSurvivors(CDirector *__hidden this) */
 			"CDirector::SpecialsShouldAdvanceOnSurvivors"
 			{
 				"library"	"server"
 				"linux"		"@_ZNK9CDirector32SpecialsShouldAdvanceOnSurvivorsEv"
+				"windows"	"\x56\x8B\x2A\xE8\x2A\x2A\x2A\x2A\x84\x2A\x75\x2A\x8B\x2A\x2A\x2A\x2A\x2A\x80"
+				/* 56 8B ? E8 ? ? ? ? 84 ? 75 ? 8B ? ? ? ? ? 80 */
 			}
 		}
-    }
+	}
 }
