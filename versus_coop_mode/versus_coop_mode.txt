@@ -1,0 +1,107 @@
+"Games"
+{
+	"left4dead2" 
+	{
+		"Functions"
+		{
+			"DD::CDirectorVersusMode::RestartVsMode"
+			{
+				"signature"		"CDirectorVersusMode::RestartVsMode"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"address"
+			}
+		}
+
+		"MemPatches"
+		{
+			"SwapTeams::Patch1"
+			{
+				"signature"		"CDirector::Restart"
+
+				"linux"
+				{
+					"offset"	"3CFh"
+					"verify"	"\x0F\x85"
+					"patch"		"\x90\x90\x90\x90\x90\x90"
+				}
+			}
+
+			"SwapTeams::Patch2"
+			{
+				"signature"		"CDirectorVersusMode::RestartVersusLevelOnVote"
+
+				"linux"
+				{
+					"offset"	"1Ah"
+					"verify"	"\x75"
+					"patch"		"\x90\x90"
+				}
+			}
+
+			"CleanUpMap::ShouldCreateEntity::Patch"
+			{
+				"signature"		"CleanUpMap::ShouldCreateEntity"
+
+				"linux"
+				{
+					"offset"	"11h"
+					"verify"	"\x75"
+					"patch"		"\x90\x90"
+				}
+			}
+		}
+
+		"Offsets"
+		{
+			/**
+			* 搜索字符串 "#L4D_Scenario_Restart"
+			**/
+			/* CDirector->m_bIsFirstRoundFinished (CDirector::OnEndScenario) */
+			"m_bIsFirstRoundFinished"
+			{
+				"linux"		"1253"
+			}
+
+			/**
+			* 搜索字符串 "#L4D_Scenario_Restart"
+			**/
+			/* CDirector->m_bIsSecondRoundFinished (CDirector::OnEndScenario) */
+			"m_bIsSecondRoundFinished"
+			{
+				"linux"		"1254"
+			}
+		}
+
+		"Signatures"
+		{
+			/* CDirector::Restart(CDirector *__hidden this) */
+			"CDirector::Restart"
+			{
+				"library"	"server"
+				"linux"		"@_ZN9CDirector7RestartEv"
+			}
+
+			/* CDirectorVersusMode::RestartVersusLevelOnVote(CDirectorVersusMode *__hidden this) */
+			"CDirectorVersusMode::RestartVersusLevelOnVote"
+			{
+				"library"	"server"
+				"linux"		"@_ZN19CDirectorVersusMode24RestartVersusLevelOnVoteEv"
+			}
+
+			/* CTerrorGameRules::CleanUpMap(void)::CTerrorMapEntityFilter::ShouldCreateEntity(int, char *) */
+			"CleanUpMap::ShouldCreateEntity"
+			{
+				"library"	"server"
+				"linux"		"@_ZZN16CTerrorGameRules10CleanUpMapEvEN22CTerrorMapEntityFilter18ShouldCreateEntityEPKc"
+			}
+
+			/* CDirectorVersusMode::RestartVsMode(CDirectorVersusMode *__hidden this) */
+			"CDirectorVersusMode::RestartVsMode"
+			{
+				"library"	"server"
+				"linux"		"@_ZN19CDirectorVersusMode13RestartVsModeEv"
+			}
+		}
+	}
+}

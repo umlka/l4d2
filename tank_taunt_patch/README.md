@@ -1,0 +1,1 @@
+禁用playercontrolledzombies为0的模式中坦克的捶胸嘲讽动画

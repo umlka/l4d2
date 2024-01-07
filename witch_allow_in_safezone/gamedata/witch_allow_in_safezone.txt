@@ -1,0 +1,38 @@
+"Games" 
+{
+	"left4dead2"
+	{
+		"MemPatches"
+		{
+			"CDirector::AllowWitchesInCheckpoints::IsSurvivalModeCondition"
+			{
+				"signature"		"CDirector::AllowWitchesInCheckpoints"
+				"linux"
+				{
+					"offset"	"11h"
+					"verify"	"\x74\x0D"
+					"patch"		"\x90\x90"
+				}
+				
+				"windows"
+				{
+					"offset"	"Ah"
+					"verify"	"\x75\x1C"
+					"patch"		"\xEB\x1C"
+				}
+			}
+		}
+
+		"Signatures"
+		{
+			/* CDirector::AllowWitchesInCheckpoints(CDirector *__hidden this) */
+			"CDirector::AllowWitchesInCheckpoints"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK9CDirector25AllowWitchesInCheckpointsEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x84\x2A\x75\x2A\xE8\x2A\x2A\x2A\x2A\x84\x2A\x75\x2A\x8B\x8E"
+				/* ? ? ? ? ? ? ? ? 84 ? 75 ? E8 ? ? ? ? 84 ? 75 ? 8B 8E */
+			}
+		}
+	}
+}

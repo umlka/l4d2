@@ -1,0 +1,144 @@
+"Games"
+{
+    "left4dead2"
+    {
+		"MemPatches"
+		{
+			"CDirector::SpecialsShouldAdvanceOnSurvivors::HasPlayerControlledZombiesCondition"
+			{
+				"signature"		"CDirector::SpecialsShouldAdvanceOnSurvivors"
+
+				"linux"
+				{
+					"offset"	"11h"
+					"verify"	"\x75\x0B"
+					"patch"		"\xEB\x0B"
+				}
+			}
+
+			"SmokerBehavior::InitialContainedAction::SpecialsShouldAssaultCondition"
+			{
+				"signature"		"SmokerBehavior::InitialContainedAction"
+
+				"linux"
+				{
+					"offset"	"1Eh"
+					"verify"	"\x74\x20"
+					"patch"		"\x90\x90"
+				}
+			}
+
+			"BoomerBehavior::InitialContainedAction::SpecialsShouldAssaultCondition"
+			{
+				"signature"		"BoomerBehavior::InitialContainedAction"
+
+				"linux"
+				{
+					"offset"	"17h"
+					"verify"	"\x74\x27"
+					"patch"		"\x90\x90"
+				}
+			}
+
+			"HunterBehavior::InitialContainedAction::SpecialsShouldAssaultCondition"
+			{
+				"signature"		"HunterBehavior::InitialContainedAction"
+
+				"linux"
+				{
+					"offset"	"1Eh"
+					"verify"	"\x74\x20"
+					"patch"		"\x90\x90"
+				}
+			}
+
+			"SpitterBehavior::InitialContainedAction::SpecialsShouldAssaultCondition"
+			{
+				"signature"		"SpitterBehavior::InitialContainedAction"
+
+				"linux"
+				{
+					"offset"	"17h"
+					"verify"	"\x74\x27"
+					"patch"		"\x90\x90"
+				}
+			}
+
+			"JockeyBehavior::InitialContainedAction::SpecialsShouldAssaultCondition"
+			{
+				"signature"		"JockeyBehavior::InitialContainedAction"
+
+				"linux"
+				{
+					"offset"	"1Eh"
+					"verify"	"\x74\x20"
+					"patch"		"\x90\x90"
+				}
+			}
+
+			"ChargerBehavior::InitialContainedAction::SpecialsShouldAssaultCondition"
+			{
+				"signature"		"ChargerBehavior::InitialContainedAction"
+
+				"linux"
+				{
+					"offset"	"1Eh"
+					"verify"	"\x74\x20"
+					"patch"		"\x90\x90"
+				}
+			}
+		}
+
+		"Signatures"
+		{
+			/* CDirector::SpecialsShouldAdvanceOnSurvivors(CDirector *__hidden this) */
+			"CDirector::SpecialsShouldAdvanceOnSurvivors"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK9CDirector32SpecialsShouldAdvanceOnSurvivorsEv"
+			}
+
+			/* SmokerBehavior::InitialContainedAction(SmokerBehavior *__hidden this, Smoker *) */
+			"SmokerBehavior::InitialContainedAction"
+			{
+				"library"	"server"
+				"linux"		"@_ZN14SmokerBehavior22InitialContainedActionEP6Smoker"
+			}
+
+			/* BoomerBehavior::InitialContainedAction(BoomerBehavior *__hidden this, Boomer *) */
+			"BoomerBehavior::InitialContainedAction"
+			{
+				"library"	"server"
+				"linux"		"@_ZN14BoomerBehavior22InitialContainedActionEP6Boomer"
+			}
+
+			/* HunterBehavior::InitialContainedAction(HunterBehavior *__hidden this, Hunter *) */
+			"HunterBehavior::InitialContainedAction"
+			{
+				"library"	"server"
+				"linux"		"@_ZN14HunterBehavior22InitialContainedActionEP6Hunter"
+			}
+
+			/* SpitterBehavior::InitialContainedAction(SpitterBehavior *__hidden this, Spitter *) */
+			"SpitterBehavior::InitialContainedAction"
+			{
+				"library"	"server"
+				"linux"		"@_ZN15SpitterBehavior22InitialContainedActionEP7Spitter"
+			}
+
+			/* JockeyBehavior::InitialContainedAction(JockeyBehavior *__hidden this, Jockey *) */
+			"JockeyBehavior::InitialContainedAction"
+			{
+				"library"	"server"
+				"linux"		"@_ZN14JockeyBehavior22InitialContainedActionEP6Jockey"
+			}
+
+			/* ChargerBehavior::InitialContainedAction(ChargerBehavior *__hidden this, Charger *) */
+			"ChargerBehavior::InitialContainedAction"
+			{
+				"library"	"server"
+				"linux"		"@_ZN15ChargerBehavior22InitialContainedActionEP7Charger"
+			}
+		}
+	}
+}

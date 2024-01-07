@@ -1,0 +1,33 @@
+"Phrases"
+{
+	//Sprayed by: {Name} ({SteamID})
+	"Sprayed"
+	{
+		"#format"		"{1:s},{2:s}"
+		"en"			"Sprayed by: {1} ({2})"
+		"fr"			"Spray de {1} ({2})"
+		"de"			"Gespruht von: {1} ({2})"
+		"hu"			"{1} ({2}) fujta"
+		"da"			"Malet af: {1} ({2})"
+		"ru"			"Спрей сделан: {1} ({2})"
+		"pl"			"Namalowane przez: {1} ({2})"
+		"pt"			"Colocado por: {1} ({2})"
+		"es"			"Spray de: {1} ({2})"
+		"chi"			"{1} ({2}) 的喷漆"
+	}
+
+	//Sprayed by: {Name}
+	"Sprayed Name"
+	{
+		"en"			"Sprayed by: %s"
+		"fr"			"Spray de %s"
+		"de"			"Gespruht von: %s"
+		"hu"			"%s fujtva"
+		"da"			"Malet af: %s"
+		"ru"			"Спрей сделан: %s"
+		"pl"			"Namalowane przez: %s"
+		"pt"			"Colocado por: %s"
+		"es"			"Spray de: %s"
+		"chi"			"%s 的喷漆"
+	}
+}

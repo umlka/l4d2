@@ -1,0 +1,63 @@
+"Games"
+{
+	"left4dead2"
+	{
+		"Functions"
+		{
+			"DD::CWeaponSpawn::GiveItem"
+			{
+				"signature"		"CWeaponSpawn::GiveItem"
+				"callconv"		"thiscall"
+				"return"		"int"
+				"this"			"entity"
+				"arguments"
+				{
+					"recipient"
+					{
+						"type"	"cbaseentity"
+					}
+					"itemname"
+					{
+						"type"	"charptr"
+					}
+				}
+			}
+
+			"DD::CWeaponSpawn::AbsorbWeapon"
+			{
+				"signature"		"CWeaponSpawn::AbsorbWeapon"
+				"callconv"		"thiscall"
+				"return"		"int"
+				"this"			"entity"
+				"arguments"
+				{
+					"weapon"
+					{
+						"type"	"cbaseentity"
+					}
+				}
+			}
+		}
+
+		"Signatures" 
+		{
+			/* CWeaponSpawn::GiveItem(CWeaponSpawn *__hidden this, CTerrorPlayer *, const char *) */
+			"CWeaponSpawn::GiveItem"
+			{
+				"library"	"server"
+				"linux"		"@_ZN12CWeaponSpawn8GiveItemEP13CTerrorPlayerPKc"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x57\x6A\x2A\x8B\x2A\x8B\x2A\x2A\x8B"
+				/* ? ? ? ? ? ? 53 57 6A ? 8B ? 8B ? ? 8B */
+			}
+
+			/* CWeaponSpawn::AbsorbWeapon(CWeaponSpawn *__hidden this, CWeaponCSBase *) */
+			"CWeaponSpawn::AbsorbWeapon"
+			{
+				"library"	"server"
+				"linux"		"@_ZN12CWeaponSpawn12AbsorbWeaponEP13CWeaponCSBase"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x85\x2A\x75\x2A\x5F\x32\x2A\x5E\x5D\xC2\x2A\x2A\x8B\x2A\x2A\x2A\x2A\x2A\xC1"
+				/* ? ? ? ? ? ? ? ? 8B ? 85 ? 75 ? 5F 32 ? 5E 5D C2 ? ? 8B ? ? ? ? ? C1 */
+			}
+		}
+	}
+}

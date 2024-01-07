@@ -1,0 +1,140 @@
+"Games"
+{
+    "left4dead2"
+    {
+		"Functions"
+		{
+			"DD::RestoreTransitionedSurvivorBots"
+			{
+				"signature"		"RestoreTransitionedSurvivorBots"
+				"callconv"		"cdecl"
+				"return"		"void"
+				"this"			"ignore"
+			}
+
+			"DD::InfoChangelevel::ChangeLevelNow"
+			{
+				"signature"		"InfoChangelevel::ChangeLevelNow"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"address"
+			}
+		}
+
+		"Addresses"
+		{
+			"CDirector"
+			{
+				"linux"
+				{
+					"signature"	"TheDirector"
+				}
+				"windows"
+				{
+					"signature"	"CDirectorMusicBanks::OnRoundStart"
+					"read"		"12"
+				}
+				"read"	"0"
+			}
+
+			"SavedPlayersCount"
+			{
+				"linux"
+				{
+					"signature"	"CTerrorPlayer::TransitionRestore"
+					"read"		"107"
+				}
+				"windows"
+				{
+					"signature"	"CTerrorPlayer::TransitionRestore"
+					"read"		"446"
+				}
+			}
+
+			"SavedSurvivorBotsCount"
+			{
+				"linux"
+				{
+					"signature"	"RestoreTransitionedSurvivorBots"
+					"read"		"57"
+				}
+				"windows"
+				{
+					"signature"	"RestoreTransitionedSurvivorBots"
+					"read"		"53"
+				}
+			}
+		}
+
+		"Signatures"
+		{
+			"TheDirector"
+			{
+				"library"	"server"
+				"linux"		"@TheDirector"
+			}
+
+			/* CDirectorMusicBanks::OnRoundStart(CDirectorMusicBanks *__hidden this) */
+			"CDirectorMusicBanks::OnRoundStart"
+			{
+				"library"	"server"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x57\x8B\x2A\x8B\x0D\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x84\x2A\x0F"
+				/* ? ? ? ? ? ? 56 57 8B ? 8B 0D ? ? ? ? E8 ? ? ? ? 84 ? 0F */
+			}
+
+			/* CTerrorGameRules::GetMissionInfo(CTerrorGameRules *__hidden this) */
+			"CTerrorGameRules::GetMissionInfo"
+			{
+				"library"	"server"
+				"linux"		"@_ZN16CTerrorGameRules14GetMissionInfoEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x2A\x2A\x56\xFF\x2A\x8B\x2A\x8B\x2A\x8B\x2A\x2A\x6A\x2A\xFF\x2A\x8B\x2A\x85\x2A\x75\x2A\x5E"
+				/* ? ? ? ? ? ? ? ? ? ? 8B ? 8B ? ? 56 FF ? 8B ? 8B ? 8B ? ? 6A ? FF ? 8B ? 85 ? 75 ? 5E */
+			}
+
+			/* CTerrorPlayer::TransitionRestore(CTerrorPlayer *__hidden this) */
+			"CTerrorPlayer::TransitionRestore"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer17TransitionRestoreEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x80\xBE\x2A\x2A\x2A\x2A\x2A\x75\x2A\x33\x2A\x5E\x8B\x2A\x5D\xC3"
+				/* ? ? ? ? ? ? ? 80 BE ? ? ? ? ? 75 ? 33 ? 5E 8B ? 5D C3 */
+			}
+
+			/* RestoreTransitionedSurvivorBots(void) */
+			"RestoreTransitionedSurvivorBots"
+			{
+				"library"	"server"
+				"linux"		"@_Z31RestoreTransitionedSurvivorBotsv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x85\x2A\x0F\x84\x2A\x2A\x2A\x2A\x53\x56\x57\x50\x68"
+				/* ? ? ? ? ? ? ? ? 83 ? ? 85 ? 0F 84 ? ? ? ? 53 56 57 50 68 */
+			}
+
+			/* CDirector::IsInTransition(CDirector *__hidden this) */
+			"CDirector::IsInTransition"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK9CDirector14IsInTransitionEv"
+				"windows"	"\x80\x3D\x2A\x2A\x2A\x2A\x00\x75\x2A\x80\xB9\x8C\x02\x00\x00\x00"
+				/* 80 3D ? ? ? ? 00 75 ? 80 B9 8C 02 00 00 00 */
+			}
+
+			/* KeyValues::GetInt(KeyValues *__hidden this, const char *s, int) */
+			"KeyValues::GetInt"
+			{
+				"library"	"server"
+				"linux"		"@_ZN9KeyValues6GetIntEPKci"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x6A\x2A\x50\xE8\x2A\x2A\x2A\x2A\x85\x2A\x74\x2A\x0F\x2A\x2A\x2A\x49"
+				/* ? ? ? ? ? ? 6A ? 50 E8 ? ? ? ? 85 ? 74 ? 0F ? ? ? 49 */
+			}
+
+			/* InfoChangelevel::ChangeLevelNow(InfoChangelevel *__hidden this) */
+			"InfoChangelevel::ChangeLevelNow"
+			{
+				"library"	"server"
+				"linux"		"@_ZN15InfoChangelevel14ChangeLevelNowEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x2A\x2A\xFF\x2A\x84\x2A\x74\x2A\x8B\x0D\x2A\x2A\x2A\x2A\x6A"
+				/* ? ? ? ? ? ? ? ? ? 8B ? 8B ? ? FF ? 84 ? 74 ? 8B 0D ? ? ? ? 6A */
+			}
+		}
+    }
+}

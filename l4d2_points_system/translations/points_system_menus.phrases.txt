@@ -1,0 +1,387 @@
+"Phrases"
+{
+	"Weapons"
+	{
+		"en"	"Weapons"
+	}
+
+	"Upgrades"
+	{
+		"en"	"Upgrades"
+	}
+
+	"Health"
+	{
+		"en"	"Health Items"
+	}
+
+	"Traitor"
+	{
+		"en"	"Traitor"
+	}
+
+	"Heal"
+	{
+		"en"	"Heal"
+	}
+	
+	"Suicide"
+	{
+		"en"	"Suicide"
+	}
+
+	"Smoker"
+	{
+		"en"	"Smoker"
+	}
+
+	"Boomer"
+	{
+		"en"	"Boomer"
+	}
+
+	"Hunter"
+	{
+		"en"	"Hunter"
+	}
+
+	"Spitter"
+	{
+		"en"	"Spitter"
+	}
+
+	"Jockey"
+	{
+		"en"	"Jockey"
+	}
+
+	"Charger"
+	{
+		"en"	"Charger"
+	}
+
+	"Tank"
+	{
+		"en"	"Tank"
+	}
+
+	"Witch Bride"
+	{
+		"en"	"Witch Bride"
+	}
+
+	"Witch"
+	{
+		"en"	"Witch"
+	}
+
+	"Horde"
+	{
+		"en"	"Horde"
+	}
+
+	"Mob"
+	{
+		"en"	"Mob"
+	}
+
+	"Melee"
+	{
+		"en"	"Melee"
+	}
+
+	"Sniper Rifles"
+	{
+		"en"	"Sniper Rifles"
+	}
+
+	"Assault Rifles"
+	{
+		"en"	"Assault Rifles"
+	}
+
+	"Shotguns"
+	{
+		"en"	"Shotguns"
+	}
+
+	"Submachine Guns"
+	{
+		"en"	"Submachine Guns"
+	}
+
+	"Throwables"
+	{
+		"en"	"Throwables"
+	}
+
+	"Misc"
+	{
+		"en"	"Misc"
+	}
+
+	"fireaxe"
+	{
+		"en"	"Fire Axe"
+	}
+
+	"frying_pan"
+	{
+		"en"	"Frying Pan"
+	}
+
+	"machete"
+	{
+		"en"	"Machete"
+	}
+
+	"baseball_bat"
+	{
+		"en"	"Baseball Bat"
+	}
+
+	"crowbar"
+	{
+		"en"	"Crowbar"
+	}
+
+	"cricket_bat"
+	{
+		"en"	"Cricket Bat"
+	}
+
+	"tonfa"
+	{
+		"en"	"Nightstick"
+	}
+
+	"katana"
+	{
+		"en"	"Katana"
+	}
+
+	"electric_guitar"
+	{
+		"en"	"Electric Guitar"
+	}
+
+	"knife"
+	{
+		"en"	"Knife"
+	}
+
+	"golfclub"
+	{
+		"en"	"Golf Club"
+	}
+
+	"shovel"
+	{
+		"en"	"Shovel"
+	}
+
+	"pitchfork"
+	{
+		"en"	"Pitchfork"
+	}
+
+	"Hunting Rifle"
+	{
+		"en"	"Hunting Rifle"
+	}
+
+	"Military Sniper Rifle"
+	{
+		"en"	"Military Sniper Rifle"
+	}
+
+	"AWP Sniper Rifle"
+	{
+		"en"	"AWP Sniper Rifle"
+	}
+
+	"Scout Sniper Rifle"
+	{
+		"en"	"Scout Sniper Rifle"
+	}
+
+	"M60 Assault Rifle"
+	{
+		"en"	"M60 Assault Rifle"
+	}
+
+	"M16 Assault Rifle"
+	{
+		"en"	"M16 Assault Rifle"
+	}
+
+	"SCAR-L Assault Rifle"
+	{
+		"en"	"SCAR-L Assault Rifle"
+	}
+
+	"AK-47 Assault Rifle"
+	{
+		"en"	"AK-47 Assault Rifle"
+	}	
+
+	"SG552 Assault Rifle"
+	{
+		"en"	"SG552 Assault Rifle"
+	}
+
+	"Tactical Shotgun"
+	{
+		"en"	"Tactical Shotgun"
+	}
+
+	"Chrome Shotgun"
+	{
+		"en"	"Chrome Shotgun"
+	}
+
+	"SPAS Shotgun"
+	{
+		"en"	"SPAS Shotgun"
+	}
+
+	"Pump Shotgun"
+	{
+		"en"	"Pump Shotgun"
+	}
+
+	"Uzi"
+	{
+		"en"	"Uzi"
+	}
+
+	"Silenced SMG"
+	{
+		"en"	"Silenced SMG"
+	}
+
+	"MP5 SMG"
+	{
+		"en"	"MP5 SMG"
+	}
+
+	"First Aid Kit"
+	{
+		"en"	"First Aid Kit"
+	}
+
+	"Defibrillator"
+	{
+		"en"	"Defibrillator"
+	}
+
+	"Pills"
+	{
+		"en"	"Pills"
+	}
+
+	"Adrenaline"
+	{
+		"en"	"Adrenaline"
+	}
+
+	"Full Heal"
+	{
+		"en"	"Full Heal"
+	}
+
+	"Molotov"
+	{
+		"en"	"Molotov"
+	}
+
+	"Pipe Bomb"
+	{
+		"en"	"Pipe Bomb"
+	}
+
+	"Bile Bomb"
+	{
+		"en"	"Bile Bomb"
+	}
+
+	"Grenade Launcher"
+	{
+		"en"	"Grenade Launcher"
+	}
+
+	"P220 Pistol"
+	{
+		"en"	"P220 Pistol"
+	}
+
+	"Magnum Pistol"
+	{
+		"en"	"Magnum Pistol"
+	}
+
+	"Chainsaw"
+	{
+		"en"	"Chainsaw"
+	}
+
+	"Gnome"
+	{
+		"en"	"Gnome"
+	}
+
+	"Cola Bottles"
+	{
+		"en"	"Cola"
+	}
+
+	"Fireworks Crate"
+	{
+		"en"	"Fireworks Crate"
+	}
+
+	"Gascan"
+	{
+		"en"	"Gascan"
+	}
+
+	"Oxygen Tank"
+	{
+		"en"	"Oxygen Tank"
+	}
+
+	"Propane Tank"
+	{
+		"en"	"Propane Tank"
+	}
+
+	"Laser Sight"
+	{
+		"en"	"Laser Sight"
+	}
+
+	"Explosive Ammo"
+	{
+		"en"	"Explosive Ammo"
+	}
+
+	"Incendiary Ammo"
+	{
+		"en"	"Incendiary Ammo"
+	}
+
+	"Explosive Ammo Pack"
+	{
+		"en"	"Explosive Ammo Pack"
+	}
+
+	"Incendiary Ammo Pack"
+	{
+		"en"	"Incendiary Ammo Pack"
+	}
+
+	"Ammo"
+	{
+		"en"	"Ammo"
+	}
+}	

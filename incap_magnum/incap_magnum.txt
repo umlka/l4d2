@@ -1,0 +1,53 @@
+"Games"
+{
+	"#default"
+	{
+		"Offsets"
+		{
+			"OS"
+			{
+				"linux"		"1"
+				"windows"	"0"
+			}
+		}
+	}
+
+	"left4dead2" 
+	{
+		"MemPatches"
+		{
+			"CTerrorPlayer::OnIncapacitatedAsSurvivor::IncappedWeapon"
+			{
+				"signature"		"CTerrorPlayer::OnIncapacitatedAsSurvivor"
+
+				"linux"
+				{
+					"offset"	"4A7h"
+					"verify"	"\xC7\x44\x24\x04"
+					"patch"		"\xC7\x44\x24\x04\x00\x00\x00\x00"
+					"preserve"	"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
+				}
+				
+				"windows"
+				{
+					"offset"	"45Ah"
+					"verify"	"\x68"
+					"patch"		"\x68\x00\x00\x00\x00"
+					"preserve"	"\xFF\xFF\xFF\xFF\xFF"
+				}
+			}
+		}
+
+		"Signatures"
+		{
+			/* CTerrorPlayer::OnIncapacitatedAsSurvivor(CTerrorPlayer *__hidden this, const CTakeDamageInfo *) */
+			"CTerrorPlayer::OnIncapacitatedAsSurvivor"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer25OnIncapacitatedAsSurvivorERK15CTakeDamageInfo"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x83\x2A\x2A\x55\x8B\x2A\x2A\x89\x2A\x2A\x2A\x8B\x2A\x81\xEC\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x56\x57\x8B\x2A\x2A\x6A"
+				/* ? ? ? ? ? ? 83 ? ? 83 ? ? 55 8B ? ? 89 ? ? ? 8B ? 81 EC ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 56 57 8B ? ? 6A */
+			}
+		}
+	}
+}

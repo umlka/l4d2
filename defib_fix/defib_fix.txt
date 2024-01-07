@@ -1,0 +1,115 @@
+"Games"
+{
+	"left4dead2"
+	{
+		"Functions"
+		{
+			"DD::CSurvivorDeathModel::Create"
+			{
+				"signature"		"CSurvivorDeathModel::Create"
+				"callconv"		"thiscall"
+				"return"		"cbaseentity"
+				"this"			"entity"
+			}
+
+			"DH::CItemDefibrillator::OnStartAction"
+			{
+				"offset"		"CItemDefibrillator::OnStartAction"
+				"hooktype"		"entity"
+				"return"		"int"
+				"this"			"ignore"
+				"arguments"
+				{
+					"BackpackItemActionType"
+					{
+						type	"int"
+					}
+					"Reviver"
+					{
+						"type"	"cbaseentity"
+					}
+					"DeathModel"
+					{
+						"type"	"cbaseentity"
+					}
+					"somefloat"
+					{
+						"type"	"float"
+					}
+				}
+			}
+
+			"DH::CItemDefibrillator::OnActionComplete"
+			{
+				"offset"		"CItemDefibrillator::OnActionComplete"
+				"hooktype"		"entity"
+				"return"		"int"
+				"this"			"ignore"
+				"arguments"
+				{
+					"Reviver"
+					{
+						"type"	"cbaseentity"
+					}
+					"DeathModel"
+					{
+						"type"	"cbaseentity"
+					}
+				}
+			}
+
+			"DD::CTerrorPlayer::GetPlayerByCharacter"
+			{
+				"signature"		"CTerrorPlayer::GetPlayerByCharacter"
+				"callconv"		"cdecl"
+				"return"		"cbaseentity"
+				"arguments"
+				{
+					"CharacterIndex"
+					{
+						"type"	"int"
+					}
+				}
+			}
+		}
+
+		"Offsets"
+		{
+			/* CItemDefibrillator::OnStartAction(int, int, CBaseEntity *, void *lpsrc) */
+			"CItemDefibrillator::OnStartAction"
+			{
+				"linux"		"451"
+				"windows"	"449"
+			}
+	
+			/* CItemDefibrillator::OnActionComplete(CItemDefibrillator *__hidden this, CTerrorPlayer *, CBaseEntity *lpsrc */
+			"CItemDefibrillator::OnActionComplete"
+			{
+				"linux"		"456"
+				"windows"	"454"
+			}
+		}
+
+		"Signatures"
+		{
+			/* CSurvivorDeathModel::Create(CSurvivorDeathModel *__hidden this, CTerrorPlayer *) */
+			"CSurvivorDeathModel::Create"
+			{
+				"library"	"server"
+				"linux"		"@_ZN19CSurvivorDeathModel6CreateEP13CTerrorPlayer"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x85\x2A\x75\x2A\x33\x2A\x5F\x5D\xC3\x8B"
+				/* ? ? ? ? ? ? ? 85 ? 75 ? 33 ? 5F 5D C3 8B */
+			}
+	
+			/* CTerrorPlayer::GetPlayerByCharacter(SurvivorCharacterType) */
+			"CTerrorPlayer::GetPlayerByCharacter"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer20GetPlayerByCharacterE21SurvivorCharacterType"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x83\x2A\x2A\x75\x2A\x33\x2A\x8B\x2A\x5D\xC3\x50\xE8\x2A\x2A\x2A\x2A\x89"
+				/* ? ? ? ? ? ? 83 ? ? 83 ? ? 75 ? 33 ? 8B ? 5D C3 50 E8 ? ? ? ? 89 */
+			}
+		}
+	}
+}
+//some gamedata from here https://github.com/Satanic-Spirit/defib-fix/blob/master/defibfix.txt credit to whoever 

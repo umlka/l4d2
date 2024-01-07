@@ -1,0 +1,38 @@
+"Games"
+{
+    "left4dead2"
+    {
+		"Functions"
+		{
+			"DD::CTerrorGameMovement::ClimbSpeed"
+			{
+				"signature"	"CTerrorGameMovement::ClimbSpeed"
+				"callconv"	"thiscall"
+				"return"	"float"
+				"this"		"address"
+			}
+		}
+
+		"Offsets"
+		{
+			/* CBaseEntity::GetRefEHandle(CBaseEntity *__hidden this) */
+			"CBaseEntity::GetRefEHandle"
+			{
+				"linux"		"3"
+				"windows"	"2"
+			}
+		}
+	
+		"Signatures"
+		{
+			/* CTerrorGameMovement::ClimbSpeed(CTerrorGameMovement *__hidden this) */
+			"CTerrorGameMovement::ClimbSpeed"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK19CTerrorGameMovement10ClimbSpeedEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\xFF\x2A\x84\x2A\x74\x2A\xD9\x05"
+				/* ? ? ? ? ? ? 8B ? 8B 90 ? ? ? ? FF ? 84 ? 74 ? D9 05 */
+			}
+		}
+	}
+}

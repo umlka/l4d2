@@ -1,0 +1,285 @@
+﻿"Phrases"
+{
+	"Head Hunter"
+	{
+		"#format"	"{1:d}"
+		"chi"		"大量爆头 +{1} 点"
+	}
+	
+	"Killing Spree"
+	{
+		"#format"	"{1:d}"
+		"chi"		"大量击杀僵尸 +{1} 点"
+	}
+	
+	"Incapped Survivor"
+	{
+		"#format"	"{1:d}"
+		"chi"		"放倒幸存者 +{1} 点"
+	}
+	
+	"Killed SI"
+	{
+		"#format"	"{1:d}"
+		"chi"		"击杀特感 +{1} 点"
+	}
+	
+	"Killed Survivor"
+	{
+		"#format"	"{1:d}"
+		"chi"		"杀死幸存者 +{1} 点"
+	}
+	
+	"TANK SOLO"
+	{
+		"#format"	"{1:d}"
+		"chi"		"单挑坦克! +{1} 点"
+	}
+	
+	"Killed Tank"
+	{
+		"#format"	"{1:d}"
+		"chi"		"击杀坦克 +{1} 点"
+	}
+	
+	"Killed Witch"
+	{
+		"#format"	"{1:d}"
+		"chi"		"击杀Witch +{1} 点"
+	}
+	
+	"Crowned Witch"
+	{
+		"#format"	"{1:d}"
+		"chi"		"引秒Witch +{1} 点"
+	}
+	
+	"Team Heal"
+	{
+		"#format"	"{1:d}"
+		"chi"		"治疗同伴 +{1} 点"
+	}
+	
+	"Team Heal Warning"
+	{
+		"#format"	"{1:d}"
+		"chi"		"不要刷点数! +{1} 点"
+	}
+	
+	"Protect"
+	{
+		"#format"	"{1:d}"
+		"chi"		"保护队友 +{1} 点"
+	}
+	
+	"Revive"
+	{
+		"#format"	"{1:d}"
+		"chi"		"救起队友 +{1} 点"
+	}
+	
+	"Ledge Revive"
+	{
+		"#format"	"{1:d}"
+		"chi"		"拉起队友 +{1} 点"
+	}
+	
+	"Defib"
+	{
+		"#format"	"{1:d}"
+		"chi"		"救活队友 +{1} 点"
+	}
+	
+	"Smoke"
+	{
+		"#format"	"{1:d}"
+		"chi"		"捆绑幸存者 +{1} 点"
+	}
+	
+	"Boom"
+	{
+		"#format"	"{1:d}"
+		"chi"		"呕吐幸存者 +{1} 点"
+	}
+	
+	"Biled"
+	{
+		"#format"	"{1:d}"
+		"chi"		"胆汁化坦克 +{1} 点"
+	}
+	
+	"Pounce"
+	{
+		"#format"	"{1:d}"
+		"chi"		"扑倒幸存者 +{1} 点"
+	}
+	
+	"Jockey Ride"
+	{
+		"#format"	"{1:d}"
+		"chi"		"骑幸存者 +{1} 点"
+	}
+	
+	"Charge"
+	{
+		"#format"	"{1:d}"
+		"chi"		"锤幸存者 +{1} 点"
+	}
+	
+	"Charge Collateral"
+	{
+		"#format"	"{1:d}"
+		"chi"		"撞飞幸存者 +{1} 点"
+	}
+	
+	"Burn Tank"
+	{
+		"#format"	"{1:d}"
+		"chi"		"点燃坦克 +{1} 点"
+	}
+	
+	"Burn Witch"
+	{
+		"#format"	"{1:d}"
+		"chi"		"点燃Witch +{1} 点"
+	}
+	
+	"Spit Damage"
+	{
+		"#format"	"{1:d}"
+		"chi"		"痰液伤害 +{1} 点"
+	}
+	
+	"Cloud Damage"
+	{
+		"#format"	"{1:d}"
+		"chi"		"Smoker烟熏 +{1} 点"
+	}
+	
+	"Damage"
+	{
+		"#format"	"{1:d}"
+		"chi"		"多重伤害 +{1} 点"
+	}
+	
+	"Your Points"
+	{
+		"#format"	"{1:d}"
+		"chi"		"你有 {1} 点"
+	}
+	
+	"Usage sm_repeatbuy"
+	{
+		"#format"	"{1:s}"
+		"chi"		"{1} 用法: sm_repeatbuy"
+	}
+	
+	"Insufficient Funds"
+	{
+		"chi"		"点数不足!"
+	}
+	
+	"Item Disabled"
+	{
+		"chi"		"物品被禁用"
+	}
+	
+	"Primary Warning"
+	{
+		"chi"		"你必须有主武器才能填充子弹!"
+	}
+	
+	"Usage sm_heal"
+	{
+		"chi"		"用法: sm_heal <target>"
+	}
+	
+	"Give Health"
+	{
+		"#format"	"{1:s}"
+		"chi"		"治疗了 {1}"
+	}
+	
+	"Usage sm_givepoints"
+	{
+		"chi"		"用法: sm_givepoints <#userid|用户名> [点数]"
+	}
+	
+	"Give Points"
+	{
+		"#format"	"{1:d},{2:N}"
+		"chi"		"{2} 获得了 {1} 点"
+	}
+	
+	"Give Target"
+	{
+		"#format"	"{1:N},{2:d}"
+		"chi"		"{1} 给了你 {2} 点"
+	}
+	
+	"Give Null"
+	{
+		"chi"	"数量不能为零!"
+	}	
+	
+	"Usage sm_setpoints"
+	{
+		"#format"	"{1:s}"
+		"chi"		"用法: sm_setpoints <#userid|用户名> [点数]"
+	}
+	
+	"Set Points"
+	{
+		"#format"	"{1:N},{2:d}"
+		"chi"		"{1} 的点数被设置为 {2}"
+	}
+	
+	"Set Target"
+	{
+		"#format"	"{1:N},{2:d}"
+		"chi"		"{1} 将你的点数设置为 {2}"
+	}
+
+	"Points Limit"
+	{
+		"#format"	"{1:d}"
+		"chi"		"达到点数上限 {1}"
+	}
+
+	"Traitor Limit"
+	{
+		"chi"		"达到特感玩家限制"
+	}
+
+	"Tank Limit"
+	{
+		"chi"		"达到坦克数量限制"
+	}
+	
+	"Witch Limit"
+	{
+		"chi"		"达到Witch数量限制"
+	}
+	
+	"Points Left"
+	{
+		"#format"	"{1:d}"
+		"chi"		"剩余 {1} 点"
+	}
+	
+	"Cost"
+	{
+		"#format"	"{1:d}"
+		"chi"		"消耗: {1}"
+	}
+
+	"Spawn Failed"
+	{
+		"chi"		"无法重生!"
+	}
+	
+	"Modules"
+	{
+		"chi"		"已加载积分系统模块："
+	}
+}	
