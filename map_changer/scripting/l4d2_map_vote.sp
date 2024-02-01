@@ -2,9 +2,9 @@
 #pragma newdecls required
 
 #define PLUGIN_NAME				"L4D2 Map vote"
-#define PLUGIN_AUTHOR			"fdxx, sorallll"
+#define PLUGIN_AUTHOR			"fdxx, sorallll, HatsuneImagine"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"0.9"
+#define PLUGIN_VERSION			"1.0"
 #define PLUGIN_URL				""
 
 #define TRANSLATION_MISSIONS	"missions.phrases.txt"
@@ -111,9 +111,10 @@ public void OnPluginStart() {
 	RegConsoleCmd("sm_v3", 		cmdMapVote);
 	RegConsoleCmd("sm_maps", 	cmdMapVote);
 	RegConsoleCmd("sm_chmap", 	cmdMapVote);
-	RegConsoleCmd("sm_mapvote",	cmdMapVote);
+	RegConsoleCmd("sm_vmap",	cmdMapVote);
 	RegConsoleCmd("sm_votemap",	cmdMapVote);
 
+	RegConsoleCmd("sm_mapvote",		cmdMapNext);
 	RegConsoleCmd("sm_mapnext",		cmdMapNext);
 	RegConsoleCmd("sm_votenext",	cmdMapNext);
 
@@ -458,7 +459,7 @@ Action cmdMapNext(int client, int args) {
 	menu.SetTitle("选择下一张地图:");
 	menu.AddItem("", "官方地图");
 	menu.AddItem("", "三方地图");
-	menu.Display(client, 30);
+	menu.Display(client, MENU_TIME_FOREVER);
 	return Plugin_Handled;
 }
 
@@ -572,7 +573,8 @@ void VoteNextMap(int client, const char[] item) {
 	vote.SetInfo(buffer);
 
 	int team;
-	int clients[1];
+	int playerCount = 0;
+	int[] clients = new int[MaxClients];
 	for (int i = 1; i <= MaxClients; i++) {
 		if (!IsClientInGame(i) || IsFakeClient(i) || (team = GetClientTeam(i)) < 2 || team > 3)
 			continue;
@@ -580,9 +582,9 @@ void VoteNextMap(int client, const char[] item) {
 		fmt_Translate(item, buffer, sizeof buffer, i, item);
 		vote.SetTitle("设置下一张地图为: %s", buffer);
 
-		clients[0] = i;
-		vote.DisplayVote(clients, 1, 20);
+		clients[playerCount++] = i;
 	}
+	vote.DisplayVote(clients, playerCount, 20);
 }
 
 void NextMap_Handler(L4D2NativeVote vote, VoteAction action, int param1, int param2) {
@@ -643,7 +645,7 @@ Action cmdMapVote(int client, int args) {
 	menu.SetTitle("选择地图类型:");
 	menu.AddItem("", "官方地图");
 	menu.AddItem("", "三方地图");
-	menu.Display(client, 30);
+	menu.Display(client, MENU_TIME_FOREVER);
 	return Plugin_Handled;
 }
 
@@ -749,7 +751,7 @@ void ShowChaptersMenu(int client, const char[] item) {
 		PrintToChat(client, "无有效的章节地图存在");
 
 	menu.ExitBackButton = true;
-	menu.Display(client, 30);
+	menu.Display(client, MENU_TIME_FOREVER);
 }
 
 int Chapters_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
@@ -786,7 +788,8 @@ void VoteChangeMap(int client, const char[] item) {
 	ExplodeString(item, "//", info, sizeof info, sizeof info[]);
 
 	int team;
-	int clients[1];
+	int playerCount = 0;
+	int[] clients = new int[MaxClients];
 	for (int i = 1; i <= MaxClients; i++) {
 		if (!IsClientInGame(i) || IsFakeClient(i) || (team = GetClientTeam(i)) < 2 || team > 3)
 			continue;
@@ -795,9 +798,9 @@ void VoteChangeMap(int client, const char[] item) {
 		fmt_Translate(info[1], info[1], sizeof info[], i, info[1]);
 		vote.SetTitle("更换地图: %s (%s)", info[0], info[1]);
 
-		clients[0] = i;
-		vote.DisplayVote(clients, 1, 20);
+		clients[playerCount++] = i;
 	}
+	vote.DisplayVote(clients, playerCount, 20);
 }
 
 void ChangeMap_Handler(L4D2NativeVote vote, VoteAction action, int param1, int param2) {
