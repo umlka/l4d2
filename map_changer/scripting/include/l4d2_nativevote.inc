@@ -1,14 +1,7 @@
-
 #if defined _l4d2_nativevote_included
  #endinput
 #endif
 #define _l4d2_nativevote_included
-
-enum L4D2NativeVote
-{
-	Invalid_Vote = 0,
-	Valid_Vote = 1,
-};
 
 enum VoteAction
 {
@@ -17,14 +10,14 @@ enum VoteAction
 	VoteAction_End,			// param1 = reason
 };
 
-enum
+enum 
 {
 	VOTE_YES = 1,
 	VOTE_NO = 2,
 };
 
 // VoteAction_End reason
-enum
+enum 
 {
 	VOTEEND_FULLVOTED = 1,	// All players have voted
 	VOTEEND_TIMEEND = 2,	// Time to vote ends
@@ -47,8 +40,8 @@ native bool L4D2NativeVote_IsAllowNewVote();
  */
 typedef L4D2VoteHandler = function void (L4D2NativeVote vote, VoteAction action, int param1, int param2);
 
-// methodmap of enum L4D2NativeVote
-methodmap L4D2NativeVote
+
+methodmap L4D2NativeVote 
 {
 	// Creates a new NativeVote.
 	// You should check L4D2NativeVote_IsAllowNewVote() first.
@@ -61,17 +54,20 @@ methodmap L4D2NativeVote
 	//
 	// @param fmt           text string format.
 	// @param ...           text string arguments.
+	public native void SetDisplayText(const char[] fmt, any ...);
 	public native void SetTitle(const char[] fmt, any ...);
 
 	// Returns text displayed on the vote screen.
 	//
 	// @param buffer        Buffer to store text.
 	// @param maxlength     Maximum length of the buffer.
+	public native void GetDisplayText(char[] buffer, int maxlength);
 	public native void GetTitle(char[] buffer, int maxlength);
 
 	// Arbitrary value storage or get.
-	property any Value {
-		public native set(any value);
+	property any Value
+	{
+		public native set(any val);
 		public native get();
 	}
 
@@ -79,18 +75,21 @@ methodmap L4D2NativeVote
 	//
 	// @param fmt           Info string format.
 	// @param ...           Info string arguments.
+	public native void SetInfoString(const char[] fmt, any ...);
 	public native void SetInfo(const char[] fmt, any ...);
 
 	// Get the stored info string.
 	//
 	// @param buffer        Buffer to store Info.
 	// @param maxlength     Maximum length of the buffer.
+	public native void GetInfoString(char[] buffer, int maxlength);
 	public native void GetInfo(char[] buffer, int maxlength);
 
 	// Get or set the client index of the player who initiated the vote.
 	//
 	// Default value 0.
-	property int Initiator {
+	property int Initiator
+	{
 		public native set(int client);
 		public native get();
 	}
@@ -104,19 +103,24 @@ methodmap L4D2NativeVote
 	//						Or vote is invalid, Or there are other vote in progress.
 	public native bool DisplayVote(int[] clients, int numClients, int time);
 
-	// Get current number of yes votes.
-	property int YesCount {
+	// Get or set the current affirmative vote.
+	property int YesCount
+	{
+		public native set(int value);
 		public native get();
 	}
 
-	// Get current number of no votes.
-	property int NoCount {
+	// Get or set the current negative vote.
+	property int NoCount
+	{
+		public native set(int value);
 		public native get();
 	}
 
 	// Get the number of players eligible to vote.
 	// Like numClients. but exclude clients that are not in the game.
-	property int PlayerCount {
+	property int PlayerCount
+	{
 		public native get();
 	}
 	
@@ -125,14 +129,14 @@ methodmap L4D2NativeVote
 	//
 	// @param fmt           text displayed on the vote screen after passed.
 	// @param ...           text string arguments.
-	public native void SetPass(const char[] fmt="", any ...);
+	public native void SetPass(const char[] fmt, any ...);
 
 	// Set vote Failed.
 	// You must manually call SetPass or SetFail in L4D2VoteHandler.
 	public native void SetFail();
 }
 
-public SharedPlugin __pl_l4d2_nativevote =
+public SharedPlugin __pl_l4d2_nativevote = 
 {
 	name = "l4d2_nativevote",
 	file = "l4d2_nativevote.smx",
@@ -148,17 +152,23 @@ public void __pl_l4d2_nativevote_SetNTVOptional()
 {
 	MarkNativeAsOptional("L4D2NativeVote_IsAllowNewVote");
 	MarkNativeAsOptional("L4D2NativeVote.L4D2NativeVote");
+	MarkNativeAsOptional("L4D2NativeVote.SetDisplayText");
 	MarkNativeAsOptional("L4D2NativeVote.SetTitle");
+	MarkNativeAsOptional("L4D2NativeVote.GetDisplayText");
 	MarkNativeAsOptional("L4D2NativeVote.GetTitle");
 	MarkNativeAsOptional("L4D2NativeVote.Value.set");
 	MarkNativeAsOptional("L4D2NativeVote.Value.get");
+	MarkNativeAsOptional("L4D2NativeVote.SetInfoString");
 	MarkNativeAsOptional("L4D2NativeVote.SetInfo");
+	MarkNativeAsOptional("L4D2NativeVote.GetInfoString");
 	MarkNativeAsOptional("L4D2NativeVote.GetInfo");
 	MarkNativeAsOptional("L4D2NativeVote.Initiator.set");
 	MarkNativeAsOptional("L4D2NativeVote.Initiator.get");
 	MarkNativeAsOptional("L4D2NativeVote.DisplayVote");
 	MarkNativeAsOptional("L4D2NativeVote.YesCount.get");
+	MarkNativeAsOptional("L4D2NativeVote.YesCount.set");
 	MarkNativeAsOptional("L4D2NativeVote.NoCount.get");
+	MarkNativeAsOptional("L4D2NativeVote.NoCount.set");
 	MarkNativeAsOptional("L4D2NativeVote.PlayerCount.get");
 	MarkNativeAsOptional("L4D2NativeVote.SetPass");
 	MarkNativeAsOptional("L4D2NativeVote.SetFail");
